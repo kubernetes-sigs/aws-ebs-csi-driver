@@ -3,7 +3,7 @@ package driver
 import (
 	"context"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloudprovider/aws"
+	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
@@ -17,11 +17,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	if req.GetCapacityRange() == nil {
-		return nil, status.Error(codes.InvalidArgument, "Volume size not provided")
-	}
+	volSizeBytes := int64(4000000000)
+	//if req.GetCapacityRange() == nil {
+	//return nil, status.Error(codes.InvalidArgument, "Volume size not provided")
+	//}
 	roundSize := volumeutil.RoundUpSize(
-		req.GetCapacityRange().GetRequiredBytes(),
+		volSizeBytes,
 		1024*1024*1024,
 	)
 
@@ -38,7 +39,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.Internal, "multiple volumes with same name")
 	} else {
 		// TODO check for int overflow
-		v, err := d.cloud.CreateDisk(&aws.VolumeOptions{
+		v, err := d.cloud.CreateDisk(&cloud.DiskOptions{
 			CapacityGB: int(roundSize),
 			Tags:       map[string]string{volNameTagKey: volName},
 		})
@@ -64,15 +65,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 }
 
 func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	volID := req.GetVolumeId()
-	if len(volID) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
-	}
+	//volID := req.GetVolumeId()
+	//if len(volID) == 0 {
+	//return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	//}
 
-	_, err := d.cloud.DeleteDisk(aws.KubernetesVolumeID(volID))
-	if err != nil {
-		glog.V(3).Infof("Failed to delete volume: %v", err)
-	}
+	//_, err := d.cloud.DeleteDisk(aws.KubernetesVolumeID(volID))
+	//if err != nil {
+	//glog.V(3).Infof("Failed to delete volume: %v", err)
+	//}
 
 	return &csi.DeleteVolumeResponse{}, nil
 }

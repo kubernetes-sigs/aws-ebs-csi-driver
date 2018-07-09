@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloudprovider/aws"
+	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
@@ -26,11 +26,11 @@ type Driver struct {
 	endpoint string
 	nodeID   string
 
-	cloud aws.Volumes
+	cloud cloud.CloudProvider
 	srv   *grpc.Server
 }
 
-func NewDriver(cloud aws.Volumes, endpoint, nodeID string) *Driver {
+func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
 	glog.Infof("Driver: %v version: %v", driverName, driverVersion)
 	return &Driver{
 		endpoint: endpoint,

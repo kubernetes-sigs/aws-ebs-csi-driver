@@ -590,7 +590,7 @@
     "third_party/forked/golang/json",
     "third_party/forked/golang/reflect"
   ]
-  revision = "f534d624797b270e5e46104dc7e2c2d61edbb85d"
+  revision = "9c0d9e23a515298bbe709bccf24fe790ecdd6f72"
 
 [[projects]]
   branch = "master"
@@ -602,7 +602,7 @@
     "pkg/features",
     "pkg/util/feature"
   ]
-  revision = "43b4c6cb0920528bd7a0822d677cb780b6ea2f2c"
+  revision = "b6ded262a3f8d467e92149e04d8cd48bedc2eecd"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -799,6 +799,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5867de03ea1a3ca2bea97ccbf00c6abd013c41ebd5cead57523a3e890b2a6b81"
+  inputs-digest = "7dd29114333151a5f34ddf872f7dabed96c299b0328c708f7d0c2ccf62589d46"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloudprovider/aws"
+	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	"github.com/bertinatto/ebs-csi-driver/pkg/driver"
 )
 
@@ -15,7 +15,7 @@ func main() {
 	)
 	flag.Parse()
 
-	cloudProvider, err := aws.NewCloudProvider()
+	cloudProvider, err := cloud.NewCloudProvider()
 	if err != nil {
 		log.Fatalln(err)
 	}
