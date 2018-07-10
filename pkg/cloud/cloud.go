@@ -4,17 +4,14 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/golang/glog"
-	"k8s.io-bkp/kubernetes/staging/src/k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/types"
-	// AI
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/golang/glog"
 )
 
 type CloudProvider interface {
@@ -66,6 +63,7 @@ func NewCloudProvider() (*awsEBS, error) {
 			&credentials.SharedCredentialsProvider{},
 		})
 
+	// TODO: put this in a config file
 	regionName := "us-east-1"
 	awsConfig := &aws.Config{
 		Region:      &regionName,
@@ -148,34 +146,6 @@ func (c *awsEBS) DeleteDisk(volumeID VolumeID) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (c *awsEBS) AttachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
-	return "", nil
-}
-
-func (c *awsEBS) DetachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
-	return "", nil
-}
-
-func (c *awsEBS) GetVolumeLabels(volumeID VolumeID) (map[string]string, error) {
-	return nil, nil
-}
-
-func (c *awsEBS) GetDiskPath(volumeID VolumeID) (string, error) {
-	return "", nil
-}
-
-func (c *awsEBS) DiskIsAttached(diskName VolumeID, nodeName types.NodeName) (bool, error) {
-	return false, nil
-}
-
-func (c *awsEBS) DisksAreAttached(map[types.NodeName][]VolumeID) (map[types.NodeName]map[VolumeID]bool, error) {
-	return nil, nil
-}
-
-func (c *awsEBS) ResizeDisk(diskName VolumeID, oldSize resource.Quantity, newSize resource.Quantity) (resource.Quantity, error) {
-	return resource.Quantity{}, nil
 }
 
 func (c *awsEBS) GetVolumesByTagName(tagKey, tagVal string) ([]string, error) {
