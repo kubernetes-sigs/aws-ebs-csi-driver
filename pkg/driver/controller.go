@@ -11,14 +11,18 @@ import (
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 
+const (
+	volNameTagKey           = "VolumeName"
+	DefaultVolumeSize int64 = 4000000000 //TODO: what should be the default size?
+)
+
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	volName := req.GetName()
 	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	// TODO: what should be the default size?
-	volSizeBytes := int64(4 * 1024 * 1024 * 1034)
+	volSizeBytes := DefaultVolumeSize
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
 	}
@@ -27,7 +31,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		1024*1024*1024,
 	)
 
-	const volNameTagKey = "VolumeName"
 	// FIXME: this is racy. Block until tag is detected?
 	volumes, err := d.cloud.GetVolumesByTagName(volNameTagKey, volName)
 	if err != nil {
@@ -61,7 +64,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            volID,
-			CapacityBytes: roundSize * 1024 * 1024 * 1024,
+			CapacityBytes: roundSize * 1000 * 1000 * 1000,
 		},
 	}, nil
 }
@@ -74,7 +77,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 
 	_, err := d.cloud.DeleteDisk(cloud.VolumeID(volID))
 	if err != nil {
-		glog.V(3).Infof("Failed to delete volume: %v", err)
+		return nil, err
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
