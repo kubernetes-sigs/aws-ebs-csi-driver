@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloudprovider/aws"
+	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
 )
 
@@ -20,7 +20,7 @@ func TestDriverSanity(t *testing.T) {
 		t.Fatalf("could not remove socket file %s: %v", socket, err)
 	}
 
-	awsDriver := NewDriver(&aws.FakeCloudProvider{}, endpoint, "")
+	awsDriver := NewDriver(cloud.NewFakeCloudProvider(), endpoint, "")
 	defer awsDriver.Stop()
 
 	go func() {
