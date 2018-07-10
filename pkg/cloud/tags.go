@@ -280,3 +280,13 @@ func (t *awsTagging) buildTags(lifecycle ResourceLifecycle, additionalTags map[s
 func (t *awsTagging) clusterID() string {
 	return t.ClusterID
 }
+
+func newEc2Filter(name string, values ...string) *ec2.Filter {
+	filter := &ec2.Filter{
+		Name: aws.String(name),
+	}
+	for _, value := range values {
+		filter.Values = append(filter.Values, aws.String(value))
+	}
+	return filter
+}
