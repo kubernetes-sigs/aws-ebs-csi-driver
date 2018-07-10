@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 
 type CloudProvider interface {
@@ -24,23 +23,11 @@ type CloudProvider interface {
 	GetVolumesByTagName(tagKey, tagVal string) ([]string, error)
 }
 
-// DiskOptions specifies capacity and tags for a volume.
 type DiskOptions struct {
-	CapacityGB        int
-	Tags              map[string]string
-	PVCName           string
-	VolumeType        string
-	ZonePresent       bool
-	ZonesPresent      bool
-	AvailabilityZone  string
-	AvailabilityZones string
-	// IOPSPerGB x CapacityGB will give total IOPS of the volume to create.
-	// Calculated total IOPS will be capped at MaxTotalIOPS.
-	IOPSPerGB int
-	//Encrypted bool
-	// fully qualified resource name to the key to use for encryption.
-	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
-	//KmsKeyId string
+	CapacityGB int
+	Tags       map[string]string
+	VolumeType string
+	IOPSPerGB  int
 }
 
 type awsEBS struct {
@@ -48,38 +35,50 @@ type awsEBS struct {
 	tagging awsTagging
 }
 
-func (c *awsEBS) AttachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
-	return "", nil
-}
+func NewCloudProvider() (*awsEBS, error) {
+	cfg, err := readAWSCloudConfig(nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
+	}
 
-func (c *awsEBS) DetachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
-	return "", nil
+	sess, err := session.NewSession(&aws.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
+	}
+
+	var provider credentials.Provider
+	if cfg.Global.RoleARN == "" {
+		provider = &ec2rolecreds.EC2RoleProvider{
+			Client: ec2metadata.New(sess),
+		}
+	} else {
+		glog.Infof("Using AWS assumed role %v", cfg.Global.RoleARN)
+		provider = &stscreds.AssumeRoleProvider{
+			Client:  sts.New(sess),
+			RoleARN: cfg.Global.RoleARN,
+		}
+	}
+
+	creds := credentials.NewChainCredentials(
+		[]credentials.Provider{
+			&credentials.EnvProvider{},
+			provider,
+			&credentials.SharedCredentialsProvider{},
+		})
+
+	regionName := "us-east-1"
+	awsConfig := &aws.Config{
+		Region:      &regionName,
+		Credentials: creds,
+	}
+	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
+
+	return &awsEBS{
+		ec2: ec2.New(session.New(awsConfig)),
+	}, nil
 }
 
 func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
-	allZones, err := c.getCandidateZonesForDynamicVolume()
-	if err != nil {
-		return "", fmt.Errorf("error querying for all zones: %v", err)
-	}
-
-	var createAZ string
-	if !diskOptions.ZonePresent && !diskOptions.ZonesPresent {
-		createAZ = volumeutil.ChooseZoneForVolume(allZones, diskOptions.PVCName)
-	}
-	if !diskOptions.ZonePresent && diskOptions.ZonesPresent {
-		if adminSetOfZones, err := volumeutil.ZonesToSet(diskOptions.AvailabilityZones); err != nil {
-			return "", err
-		} else {
-			createAZ = volumeutil.ChooseZoneForVolume(adminSetOfZones, diskOptions.PVCName)
-		}
-	}
-	if diskOptions.ZonePresent && !diskOptions.ZonesPresent {
-		if err := volumeutil.ValidateZone(diskOptions.AvailabilityZone); err != nil {
-			return "", err
-		}
-		createAZ = diskOptions.AvailabilityZone
-	}
-
 	var createType string
 	var iops int64
 	switch diskOptions.VolumeType {
@@ -87,14 +86,8 @@ func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
 		createType = diskOptions.VolumeType
 
 	case VolumeTypeIO1:
-		// See http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateVolume.html
-		// for IOPS constraints. AWS will throw an error if IOPS per GB gets out
-		// of supported bounds, no need to check it here.
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.CapacityGB * diskOptions.IOPSPerGB)
-
-		// Cap at min/max total IOPS, AWS would throw an error if it gets too
-		// low/high.
 		if iops < MinTotalIOPS {
 			iops = MinTotalIOPS
 		}
@@ -109,14 +102,15 @@ func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
 		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	// TODO: Should we tag this with the cluster id (so it gets deleted when the cluster does?)
-	request := &ec2.CreateVolumeInput{}
-	request.AvailabilityZone = aws.String(createAZ)
-	request.Size = aws.Int64(int64(diskOptions.CapacityGB))
-	request.VolumeType = aws.String(createType)
+	request := &ec2.CreateVolumeInput{
+		AvailabilityZone: aws.String("us-east-1d"), // TODO: read this from config file
+		Size:             aws.Int64(int64(diskOptions.CapacityGB)),
+		VolumeType:       aws.String(createType),
+	}
 	if iops > 0 {
 		request.Iops = aws.Int64(iops)
 	}
+
 	response, err := c.ec2.CreateVolume(request)
 	if err != nil {
 		return "", err
@@ -128,7 +122,6 @@ func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
 	}
 	volumeID := VolumeID("aws://" + aws.StringValue(response.AvailabilityZone) + "/" + string(awsID))
 
-	// apply tags
 	if err := c.tagging.createTags(c.ec2, string(awsID), ResourceLifecycleOwned, diskOptions.Tags); err != nil {
 		// delete the volume and hope it succeeds
 		_, delerr := c.DeleteDisk(volumeID)
@@ -155,6 +148,14 @@ func (c *awsEBS) DeleteDisk(volumeID VolumeID) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (c *awsEBS) AttachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
+	return "", nil
+}
+
+func (c *awsEBS) DetachDisk(diskName VolumeID, nodeName types.NodeName) (string, error) {
+	return "", nil
 }
 
 func (c *awsEBS) GetVolumeLabels(volumeID VolumeID) (map[string]string, error) {
@@ -201,47 +202,4 @@ func (c *awsEBS) GetVolumesByTagName(tagKey, tagVal string) ([]string, error) {
 		request.NextToken = nextToken
 	}
 	return volumes, nil
-}
-
-func NewCloudProvider() (*awsEBS, error) {
-	cfg, err := readAWSCloudConfig(nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
-	}
-
-	sess, err := session.NewSession(&aws.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
-	}
-
-	var provider credentials.Provider
-	if cfg.Global.RoleARN == "" {
-		provider = &ec2rolecreds.EC2RoleProvider{
-			Client: ec2metadata.New(sess),
-		}
-	} else {
-		glog.Infof("Using AWS assumed role %v", cfg.Global.RoleARN)
-		provider = &stscreds.AssumeRoleProvider{
-			Client:  sts.New(sess),
-			RoleARN: cfg.Global.RoleARN,
-		}
-	}
-
-	creds := credentials.NewChainCredentials(
-		[]credentials.Provider{
-			&credentials.EnvProvider{},
-			provider,
-			&credentials.SharedCredentialsProvider{},
-		})
-
-	regionName := "us-east-1"
-	awsConfig := &aws.Config{
-		Region:      &regionName,
-		Credentials: creds,
-	}
-	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
-
-	return &awsEBS{
-		ec2: ec2.New(session.New(awsConfig)),
-	}, nil
 }
