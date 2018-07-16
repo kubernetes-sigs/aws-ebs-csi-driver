@@ -6,3 +6,6 @@ ebs-csi-driver:
 
 test:
 	go test github.com/bertinatto/ebs-csi-driver/pkg/driver
+
+test-sanity: ebs-csi-driver
+	go test -timeout 30s github.com/bertinatto/ebs-csi-driver/pkg/test -run ^TestSanity$
