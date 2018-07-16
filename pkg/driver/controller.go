@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -31,6 +32,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		1024*1024*1024,
 	)
 
+	volCaps := req.GetVolumeCapabilities()
+	if volCaps == nil || len(volCaps) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
+	}
+
 	// FIXME: this is racy. Block until tag is detected?
 	volumes, err := d.cloud.GetVolumesByTagName(volNameTagKey, volName)
 	if err != nil {
@@ -41,7 +47,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if len(volumes) == 1 {
 		volID = volumes[0]
 	} else if len(volumes) > 1 {
-		return nil, status.Error(codes.Internal, "multiple volumes with same name")
+		msg := fmt.Sprintf("multiple volumes with same name: %v", volumes)
+		return nil, status.Error(codes.Internal, msg)
 	} else {
 		// TODO check for int overflow
 		v, err := d.cloud.CreateDisk(&cloud.DiskOptions{
