@@ -28,8 +28,7 @@ type DiskOptions struct {
 }
 
 type awsEBS struct {
-	ec2     *ec2.EC2
-	tagging awsTagging
+	ec2 *ec2.EC2
 }
 
 func NewCloudProvider() (*awsEBS, error) {
@@ -100,10 +99,17 @@ func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
 		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
+	var tags []*ec2.Tag
+	for key, value := range diskOptions.Tags {
+		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
+	}
+
+	resourceType := "volume"
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String("us-east-1d"), // TODO: read this from config file
-		Size:             aws.Int64(int64(diskOptions.CapacityGB)),
-		VolumeType:       aws.String(createType),
+		AvailabilityZone:  aws.String("us-east-1d"), // TODO: read this from config file
+		Size:              aws.Int64(int64(diskOptions.CapacityGB)),
+		VolumeType:        aws.String(createType),
+		TagSpecifications: []*ec2.TagSpecification{{ResourceType: &resourceType, Tags: tags}},
 	}
 	if iops > 0 {
 		request.Iops = aws.Int64(iops)
@@ -119,16 +125,6 @@ func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
 		return "", fmt.Errorf("VolumeID was not returned by CreateVolume")
 	}
 	volumeID := VolumeID("aws://" + aws.StringValue(response.AvailabilityZone) + "/" + string(awsID))
-
-	if err := c.tagging.createTags(c.ec2, string(awsID), ResourceLifecycleOwned, diskOptions.Tags); err != nil {
-		// delete the volume and hope it succeeds
-		_, delerr := c.DeleteDisk(volumeID)
-		if delerr != nil {
-			// delete did not succeed, we have a stray volume!
-			return "", fmt.Errorf("error tagging volume %s, could not delete the volume: %q", volumeID, delerr)
-		}
-		return "", fmt.Errorf("error tagging volume %s: %q", volumeID, err)
-	}
 
 	return volumeID, nil
 }
