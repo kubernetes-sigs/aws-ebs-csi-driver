@@ -6,7 +6,6 @@ import (
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
@@ -46,39 +45,39 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	var volID string
+	var volumeID string
 	if len(volumes) == 1 {
-		volID = volumes[0]
+		volumeID = volumes[0]
 	} else if len(volumes) > 1 {
 		msg := fmt.Sprintf("multiple volumes with same name: %v", volumes)
 		return nil, status.Error(codes.Internal, msg)
 	} else {
-		v, err := d.cloud.CreateDisk(volName, &cloud.DiskOptions{
+		opts := &cloud.DiskOptions{
 			CapacityGB: roundSize,
 			Tags:       map[string]string{cloud.VolumeNameTagKey: volName},
-		})
+		}
+		v, err := d.cloud.CreateDisk(volName, opts)
 		if err != nil {
-			glog.V(3).Infof("Failed to create volume: %v", err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		volID = v
+		volumeID = v
 	}
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            volID,
+			Id:            volumeID,
 			CapacityBytes: int64(roundSize * 1000 * 1000 * 1000),
 		},
 	}, nil
 }
 
 func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	volID := req.GetVolumeId()
-	if len(volID) == 0 {
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if _, err := d.cloud.DeleteDisk(volID); err != nil {
+	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
 		return nil, status.Error(codes.Internal, "Could not delete volume")
 	}
 
