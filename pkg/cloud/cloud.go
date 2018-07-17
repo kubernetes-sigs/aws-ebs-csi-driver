@@ -15,14 +15,9 @@ import (
 	"github.com/golang/glog"
 )
 
-const (
-	DefaultVolumeSize int64  = 4000000000 //TODO: what should be the default size?
-	VolumeNameTagKey  string = "VolumeName"
-)
-
 type CloudProvider interface {
-	CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error)
-	DeleteDisk(volumeID VolumeID) (bool, error)
+	CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error)
+	DeleteDisk(volumeID string) (bool, error)
 	GetVolumesByNameAndSize(tagKey, name string, size int) ([]string, error)
 }
 
@@ -85,7 +80,7 @@ func NewCloudProvider(region, zone string) (*awsEBS, error) {
 
 var ErrWrongDiskSize = errors.New("disk sizes are different")
 
-func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error) {
+func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
 	var createType string
 	var iops int64
 	switch diskOptions.VolumeType {
@@ -109,7 +104,6 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (Volume
 		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	// Build tags
 	var tags []*ec2.Tag
 	for key, value := range diskOptions.Tags {
 		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
@@ -119,7 +113,6 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (Volume
 		Tags:         tags,
 	}
 
-	// Build request
 	request := &ec2.CreateVolumeInput{
 		AvailabilityZone:  aws.String(c.zone),
 		Size:              aws.Int64(int64(diskOptions.CapacityGB)),
@@ -130,36 +123,28 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (Volume
 		request.Iops = aws.Int64(iops)
 	}
 
-	// Create volume
 	response, err := c.ec2.CreateVolume(request)
 	if err != nil {
 		return "", err
 	}
 
-	awsID := awsVolumeID(aws.StringValue(response.VolumeId))
-	if awsID == "" {
+	volumeID := aws.StringValue(response.VolumeId)
+	if len(volumeID) == 0 {
 		return "", fmt.Errorf("VolumeID was not returned by CreateVolume")
 	}
-	volumeID := VolumeID("aws://" + aws.StringValue(response.AvailabilityZone) + "/" + string(awsID))
 
 	return volumeID, nil
 }
 
-func (c *awsEBS) DeleteDisk(volumeID VolumeID) (bool, error) {
-	awsVolID, err := volumeID.MapToAWSVolumeID()
-	if err != nil {
-		return false, err
+func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
+	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
+	if _, err := c.ec2.DeleteVolume(request); err != nil {
+		return false, fmt.Errorf("DeleteDisk could not delete volume")
 	}
-
-	request := &ec2.DeleteVolumeInput{VolumeId: awsVolID.awsString()}
-	_, err = c.ec2.DeleteVolume(request)
-	if err != nil {
-		return false, err
-	}
-
 	return true, nil
 }
 
+//TODO: use filters instead
 func (c *awsEBS) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
 	var volumes []string
 	var nextToken *string

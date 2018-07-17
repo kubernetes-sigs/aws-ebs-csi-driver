@@ -11,7 +11,7 @@ type FakeCloudProvider struct {
 }
 
 type fakeDisk struct {
-	realVolumeID VolumeID
+	realVolumeID string
 	options      *DiskOptions
 }
 
@@ -21,20 +21,20 @@ func NewFakeCloudProvider() *FakeCloudProvider {
 	}
 }
 
-func (f *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error) {
+func (f *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
 	if d, ok := f.disks[volumeName]; ok {
 		if d.options.CapacityGB == diskOptions.CapacityGB {
 			return d.realVolumeID, nil
 		}
-		return VolumeID(""), fmt.Errorf("volume already exist with different capacity")
+		return "", fmt.Errorf("volume already exist with different capacity")
 	}
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-	realVolumeID := VolumeID(fmt.Sprintf("vol-%d", r1.Uint64()))
+	realVolumeID := fmt.Sprintf("vol-%d", r1.Uint64())
 	f.disks[volumeName] = &fakeDisk{realVolumeID, diskOptions}
 	return realVolumeID, nil
 }
 
-func (f *FakeCloudProvider) DeleteDisk(volumeID VolumeID) (bool, error) {
+func (f *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	for volName, disk := range f.disks {
 		if disk.realVolumeID == volumeID {
 			delete(f.disks, volName)

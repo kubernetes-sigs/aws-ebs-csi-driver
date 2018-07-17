@@ -61,13 +61,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			glog.V(3).Infof("Failed to create volume: %v", err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
-		awsID, err := v.MapToAWSVolumeID()
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		volID = string(awsID)
+		volID = v
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -84,9 +78,8 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	_, err := d.cloud.DeleteDisk(cloud.VolumeID(volID))
-	if err != nil {
-		return nil, err
+	if _, err := d.cloud.DeleteDisk(volID); err != nil {
+		return nil, status.Error(codes.Internal, "Could not delete volume")
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -114,8 +107,8 @@ func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.Control
 	var caps []*csi.ControllerServiceCapability
 	for _, cap := range []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-		csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		//csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
 	} {
 		caps = append(caps, newCap(cap))
 	}
