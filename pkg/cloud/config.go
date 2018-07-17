@@ -6,9 +6,9 @@ import (
 	gcfg "gopkg.in/gcfg.v1"
 )
 
-// readAWSCloudConfig reads an instance of AWSCloudConfig from config reader.
-func readAWSCloudConfig(config io.Reader) (*CloudConfig, error) {
-	var cfg CloudConfig
+// readAWSConfig reads an instance of AWSCloudConfig from config reader.
+func readAWSConfig(config io.Reader) (*Config, error) {
+	var cfg Config
 	var err error
 	if config != nil {
 		err = gcfg.ReadInto(&cfg, config)
@@ -19,8 +19,8 @@ func readAWSCloudConfig(config io.Reader) (*CloudConfig, error) {
 	return &cfg, nil
 }
 
-// CloudConfig wraps the settings for the AWS cloud provider.
-type CloudConfig struct {
+// Config wraps the settings for the AWS cloud provider.
+type Config struct {
 	Global struct {
 		// RoleARN is the IAM role to assume when interaction with AWS APIs.
 		RoleARN string

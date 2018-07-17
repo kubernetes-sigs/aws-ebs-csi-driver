@@ -43,7 +43,7 @@ func (f *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (f *FakeCloudProvider) GetVolumesByNameAndSize(name string, size int) ([]string, error) {
+func (f *FakeCloudProvider) GetVolumeByNameAndSize(name string, size int) ([]string, error) {
 	var disks []*fakeDisk
 	for _, disk := range f.disks {
 		for key, value := range disk.options.Tags {
@@ -54,7 +54,7 @@ func (f *FakeCloudProvider) GetVolumesByNameAndSize(name string, size int) ([]st
 	}
 	if len(disks) == 1 {
 		if disks[0].options.CapacityGB != size {
-			return nil, ErrWrongDiskSize
+			return nil, ErrDiskExistsDiffSize
 		}
 	}
 	var results []string

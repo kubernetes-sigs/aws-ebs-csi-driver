@@ -17,7 +17,7 @@ import (
 type CloudProvider interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error)
 	DeleteDisk(volumeID string) (bool, error)
-	GetVolumesByNameAndSize(name string, size int) ([]string, error)
+	GetVolumeByNameAndSize(name string, size int) (string, error)
 }
 
 type DiskOptions struct {
@@ -33,8 +33,8 @@ type awsEBS struct {
 	ec2    *ec2.EC2
 }
 
-func NewCloudProvider(region, zone string) (*awsEBS, error) {
-	cfg, err := readAWSCloudConfig(nil)
+func NewCloudProvider(region, zone string) (CloudProvider, error) {
+	cfg, err := readAWSConfig(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
 	}
@@ -74,8 +74,6 @@ func NewCloudProvider(region, zone string) (*awsEBS, error) {
 		ec2:    ec2.New(session.New(awsConfig)),
 	}, nil
 }
-
-var ErrWrongDiskSize = errors.New("Disk already exists with a different size")
 
 func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
 	var createType string
@@ -141,8 +139,11 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *awsEBS) GetVolumesByNameAndSize(name string, size int) ([]string, error) {
-	var volumes []string
+var ErrMultiDisks = errors.New("Multiple disks with same name")
+var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
+
+func (c *awsEBS) GetVolumeByNameAndSize(name string, size int) (string, error) {
+	var volumes []*ec2.Volume
 	var nextToken *string
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
@@ -155,21 +156,27 @@ func (c *awsEBS) GetVolumesByNameAndSize(name string, size int) ([]string, error
 	for {
 		response, err := c.ec2.DescribeVolumes(request)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-
 		for _, volume := range response.Volumes {
-			if *volume.Size != int64(size) {
-				return nil, ErrWrongDiskSize
-			}
-			volumes = append(volumes, *volume.VolumeId)
+			volumes = append(volumes, volume)
 		}
-
 		nextToken = response.NextToken
 		if aws.StringValue(nextToken) == "" {
 			break
 		}
 		request.NextToken = nextToken
 	}
-	return volumes, nil
+
+	nVol := len(volumes)
+	if nVol > 1 {
+		return "", ErrMultiDisks
+	} else if nVol == 1 {
+		vol := volumes[0]
+		if aws.Int64Value(vol.Size) != int64(size) {
+			return "", ErrDiskExistsDiffSize
+		}
+		return aws.StringValue(vol.VolumeId), nil
+	}
+	return "", nil
 }

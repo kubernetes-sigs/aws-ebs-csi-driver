@@ -20,8 +20,10 @@ const (
 	// VolumeTypeST1 represents a throughput-optimized HDD.
 	VolumeTypeST1 = "st1"
 
-	// AWS provisioning limits. See: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html.
+	// MinTotalIOPS represents the minimum Input Output per second.
 	MinTotalIOPS = 100
+
+	// MaxTotalIOPS represents the maximum Input Output per second.
 	MaxTotalIOPS = 20000
 
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.

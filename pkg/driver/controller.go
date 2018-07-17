@@ -2,7 +2,6 @@ package driver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -33,23 +32,19 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	volumes, err := d.cloud.GetVolumesByNameAndSize(volName, roundSize)
+	volumeID, err := d.cloud.GetVolumeByNameAndSize(volName, roundSize)
 	if err != nil {
 		switch err {
-		case cloud.ErrWrongDiskSize:
+		case cloud.ErrMultiDisks:
+			return nil, status.Error(codes.Internal, err.Error())
+		case cloud.ErrDiskExistsDiffSize:
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		default:
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
-	var volumeID string
-	if len(volumes) == 1 {
-		volumeID = volumes[0]
-	} else if len(volumes) > 1 {
-		msg := fmt.Sprintf("multiple volumes with same name: %v", volumes)
-		return nil, status.Error(codes.Internal, msg)
-	} else {
+	if len(volumeID) == 0 {
 		opts := &cloud.DiskOptions{
 			CapacityGB: roundSize,
 			Tags:       map[string]string{cloud.VolumeNameTagKey: volName},
