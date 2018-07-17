@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/golang/glog"
 )
 
 type CloudProvider interface {
@@ -51,23 +50,21 @@ func NewCloudProvider(region, zone string) (*awsEBS, error) {
 			Client: ec2metadata.New(sess),
 		}
 	} else {
-		glog.Infof("Using AWS assumed role %v", cfg.Global.RoleARN)
 		provider = &stscreds.AssumeRoleProvider{
 			Client:  sts.New(sess),
 			RoleARN: cfg.Global.RoleARN,
 		}
 	}
 
-	creds := credentials.NewChainCredentials(
-		[]credentials.Provider{
-			&credentials.EnvProvider{},
-			provider,
-			&credentials.SharedCredentialsProvider{},
-		})
-
 	awsConfig := &aws.Config{
-		Region:      &region, // TODO: point this to value in awsEBS struct
-		Credentials: creds,
+		Region: &region,
+		Credentials: credentials.NewChainCredentials(
+			[]credentials.Provider{
+				&credentials.EnvProvider{},
+				provider,
+				&credentials.SharedCredentialsProvider{},
+			},
+		),
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
@@ -150,10 +147,8 @@ func (c *awsEBS) GetVolumesByNameAndSize(name string, size int) ([]string, error
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
-				Name: aws.String("tag:" + VolumeNameTagKey),
-				Values: []*string{
-					aws.String(name),
-				},
+				Name:   aws.String("tag:" + VolumeNameTagKey),
+				Values: []*string{aws.String(name)},
 			},
 		},
 	}
