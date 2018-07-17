@@ -34,10 +34,12 @@ type DiskOptions struct {
 }
 
 type awsEBS struct {
-	ec2 *ec2.EC2
+	region string
+	zone   string
+	ec2    *ec2.EC2
 }
 
-func NewCloudProvider() (*awsEBS, error) {
+func NewCloudProvider(region, zone string) (*awsEBS, error) {
 	cfg, err := readAWSCloudConfig(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
@@ -68,16 +70,16 @@ func NewCloudProvider() (*awsEBS, error) {
 			&credentials.SharedCredentialsProvider{},
 		})
 
-	// TODO: put this in a config file
-	regionName := "us-east-1"
 	awsConfig := &aws.Config{
-		Region:      &regionName,
+		Region:      &region, // TODO: point this to value in awsEBS struct
 		Credentials: creds,
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
 	return &awsEBS{
-		ec2: ec2.New(session.New(awsConfig)),
+		region: region,
+		zone:   zone,
+		ec2:    ec2.New(session.New(awsConfig)),
 	}, nil
 }
 
@@ -107,22 +109,28 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (Volume
 		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
+	// Build tags
 	var tags []*ec2.Tag
 	for key, value := range diskOptions.Tags {
 		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
 	}
+	tagSpec := ec2.TagSpecification{
+		ResourceType: aws.String("volume"),
+		Tags:         tags,
+	}
 
-	resourceType := "volume"
+	// Build request
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String("us-east-1d"), // TODO: read this from config file
+		AvailabilityZone:  aws.String(c.zone),
 		Size:              aws.Int64(int64(diskOptions.CapacityGB)),
 		VolumeType:        aws.String(createType),
-		TagSpecifications: []*ec2.TagSpecification{{ResourceType: &resourceType, Tags: tags}},
+		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
 	}
 	if iops > 0 {
 		request.Iops = aws.Int64(iops)
 	}
 
+	// Create volume
 	response, err := c.ec2.CreateVolume(request)
 	if err != nil {
 		return "", err

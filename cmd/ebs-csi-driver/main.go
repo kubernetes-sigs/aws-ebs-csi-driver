@@ -12,10 +12,12 @@ func main() {
 	var (
 		endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
 		nodeID   = flag.String("node", "CSINode", "Node ID")
+		region   = flag.String("region", "us-east-1", "Region is a geographic area where AWS is available")
+		zone     = flag.String("zone", "us-east-1d", "Zone is an isolated location within falsee regions")
 	)
 	flag.Parse()
 
-	cloudProvider, err := cloud.NewCloudProvider()
+	cloudProvider, err := cloud.NewCloudProvider(*region, *zone)
 	if err != nil {
 		log.Fatalln(err)
 	}
