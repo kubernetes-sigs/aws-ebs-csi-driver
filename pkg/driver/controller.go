@@ -12,35 +12,38 @@ import (
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 
-const (
-	volNameTagKey           = "VolumeName"
-	DefaultVolumeSize int64 = 4000000000 //TODO: what should be the default size?
-)
-
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	volName := req.GetName()
 	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	volSizeBytes := DefaultVolumeSize
+	volSizeBytes := cloud.DefaultVolumeSize
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
 	}
-	roundSize := volumeutil.RoundUpSize(
+	// TODO: check for int overflow
+	// TODO: check if this round up is really necessary
+	roundSize := int(volumeutil.RoundUpSize(
 		volSizeBytes,
 		1024*1024*1024,
-	)
+	))
 
 	volCaps := req.GetVolumeCapabilities()
 	if volCaps == nil || len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	// FIXME: this is racy. Block until tag is detected?
-	volumes, err := d.cloud.GetVolumesByTagName(volNameTagKey, volName)
+	// FIXME: for some reason, AWS takes a while to tag the volume after it's created.
+	// As a result, this call could be racy.
+	volumes, err := d.cloud.GetVolumesByNameAndSize(cloud.VolumeNameTagKey, volName, roundSize)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		switch err {
+		case cloud.ErrWrongDiskSize:
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		default:
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	var volID string
@@ -50,10 +53,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		msg := fmt.Sprintf("multiple volumes with same name: %v", volumes)
 		return nil, status.Error(codes.Internal, msg)
 	} else {
-		// TODO check for int overflow
-		v, err := d.cloud.CreateDisk(&cloud.DiskOptions{
-			CapacityGB: int(roundSize),
-			Tags:       map[string]string{volNameTagKey: volName},
+		v, err := d.cloud.CreateDisk(volName, &cloud.DiskOptions{
+			CapacityGB: roundSize,
+			Tags:       map[string]string{cloud.VolumeNameTagKey: volName},
 		})
 		if err != nil {
 			glog.V(3).Infof("Failed to create volume: %v", err)
@@ -71,7 +73,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            volID,
-			CapacityBytes: roundSize * 1000 * 1000 * 1000,
+			CapacityBytes: int64(roundSize * 1000 * 1000 * 1000),
 		},
 	}, nil
 }
@@ -91,7 +93,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 }
 
 func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	return &csi.ControllerPublishVolumeResponse{}, nil
+	return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {

@@ -4,45 +4,62 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type FakeCloudProvider struct {
-	disks map[string]*DiskOptions
+	disks map[string]*fakeDisk
+}
+
+type fakeDisk struct {
+	realVolumeID VolumeID
+	options      *DiskOptions
 }
 
 func NewFakeCloudProvider() *FakeCloudProvider {
 	return &FakeCloudProvider{
-		disks: make(map[string]*DiskOptions),
+		disks: make(map[string]*fakeDisk),
 	}
 }
 
-func (f *FakeCloudProvider) CreateDisk(diskOptions *DiskOptions) (volumeID VolumeID, err error) {
+func (f *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error) {
+	if d, ok := f.disks[volumeName]; ok {
+		if d.options.CapacityGB == diskOptions.CapacityGB {
+			return d.realVolumeID, nil
+		}
+		return VolumeID(""), fmt.Errorf("volume already exist with different capacity")
+	}
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-	volID := fmt.Sprintf("vol-%d", r1.Uint64())
-	f.disks[volID] = diskOptions
-	return VolumeID(volID), nil
+	realVolumeID := VolumeID(fmt.Sprintf("vol-%d", r1.Uint64()))
+	f.disks[volumeName] = &fakeDisk{realVolumeID, diskOptions}
+	return realVolumeID, nil
 }
 
 func (f *FakeCloudProvider) DeleteDisk(volumeID VolumeID) (bool, error) {
-	volID := string(volumeID)
-	if _, ok := f.disks[volID]; !ok {
-		return false, status.Error(codes.NotFound, "")
+	for volName, disk := range f.disks {
+		if disk.realVolumeID == volumeID {
+			delete(f.disks, volName)
+		}
 	}
-	delete(f.disks, volID)
 	return true, nil
 }
 
-func (f *FakeCloudProvider) GetVolumesByTagName(tagKey, tagVal string) ([]string, error) {
-	var results []string
-	for volID, opts := range f.disks {
-		for key, value := range opts.Tags {
-			if key == tagKey && value == tagVal {
-				results = append(results, volID)
+func (f *FakeCloudProvider) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
+	var disks []*fakeDisk
+	for _, disk := range f.disks {
+		for key, value := range disk.options.Tags {
+			if key == VolumeNameTagKey && value == tagVal {
+				disks = append(disks, disk)
 			}
 		}
+	}
+	if len(disks) == 1 {
+		if disks[0].options.CapacityGB != size {
+			return nil, ErrWrongDiskSize
+		}
+	}
+	var results []string
+	for _, disk := range disks {
+		results = append(results, string(disk.realVolumeID))
 	}
 	return results, nil
 }

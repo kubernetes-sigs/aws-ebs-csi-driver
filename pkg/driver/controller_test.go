@@ -28,6 +28,7 @@ func TestCreateVolume(t *testing.T) {
 	testCases := []struct {
 		name       string
 		req        *csi.CreateVolumeRequest
+		extraReq   *csi.CreateVolumeRequest
 		expVol     *csi.Volume
 		expErrCode codes.Code
 	}{
@@ -56,6 +57,62 @@ func TestCreateVolume(t *testing.T) {
 			expErrCode: codes.InvalidArgument,
 		},
 		{
+			name: "success same name and capacity",
+			req: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			extraReq: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    nil,
+			},
+		},
+		{
+			name: "success same name and same capacity",
+			req: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			extraReq: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    nil,
+			},
+		},
+		{
+			name: "fail same name and different capacity",
+			req: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			extraReq: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      &csi.CapacityRange{RequiredBytes: 10000},
+				VolumeCapabilities: stdVolCap,
+				Parameters:         stdParams,
+			},
+			expErrCode: codes.AlreadyExists,
+		},
+		{
 			name: "success no capacity range",
 			req: &csi.CreateVolumeRequest{
 				Name:               "test-vol",
@@ -63,7 +120,7 @@ func TestCreateVolume(t *testing.T) {
 				Parameters:         stdParams,
 			},
 			expVol: &csi.Volume{
-				CapacityBytes: DefaultVolumeSize,
+				CapacityBytes: cloud.DefaultVolumeSize,
 				Id:            "vol-test",
 				Attributes:    nil,
 			},
@@ -85,6 +142,22 @@ func TestCreateVolume(t *testing.T) {
 			}
 			continue
 		}
+
+		// Repeat the same request and check they results of the second call
+		if tc.extraReq != nil {
+			resp, err = awsDriver.CreateVolume(context.TODO(), tc.extraReq)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != tc.expErrCode {
+					t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+				}
+				continue
+			}
+		}
+
 		if tc.expErrCode != codes.OK {
 			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
 		}
@@ -97,10 +170,6 @@ func TestCreateVolume(t *testing.T) {
 		if vol.GetCapacityBytes() != tc.expVol.GetCapacityBytes() {
 			t.Fatalf("Expected volume capacity bytes: %v, got: %v", tc.expVol.GetCapacityBytes(), vol.GetCapacityBytes())
 		}
-
-		//if vol.GetId() != tc.expVol.GetId() {
-		//t.Fatalf("Expected volume id: %v, got: %v", tc.expVol.GetId(), vol.GetId())
-		//}
 
 		for expKey, expVal := range tc.expVol.GetAttributes() {
 			attrs := vol.GetAttributes()
@@ -118,15 +187,22 @@ func TestDeleteVolume(t *testing.T) {
 	testCases := []struct {
 		name       string
 		req        *csi.DeleteVolumeRequest
-		expVol     *csi.Volume
+		expResp    *csi.DeleteVolumeResponse
 		expErrCode codes.Code
 	}{
 		{
-			name: "fail volume not found",
+			name: "success normal",
 			req: &csi.DeleteVolumeRequest{
-				VolumeId: "vol-not-found",
+				VolumeId: "vol-test",
 			},
-			expErrCode: codes.NotFound,
+			expResp: &csi.DeleteVolumeResponse{},
+		},
+		{
+			name: "success invalid volume id",
+			req: &csi.DeleteVolumeRequest{
+				VolumeId: "invalid-volume-name",
+			},
+			expResp: &csi.DeleteVolumeResponse{},
 		},
 	}
 

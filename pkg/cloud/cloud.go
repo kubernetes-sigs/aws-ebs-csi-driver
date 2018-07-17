@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,10 +15,15 @@ import (
 	"github.com/golang/glog"
 )
 
+const (
+	DefaultVolumeSize int64  = 4000000000 //TODO: what should be the default size?
+	VolumeNameTagKey  string = "VolumeName"
+)
+
 type CloudProvider interface {
-	CreateDisk(diskOptions *DiskOptions) (volumeID VolumeID, err error)
+	CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error)
 	DeleteDisk(volumeID VolumeID) (bool, error)
-	GetVolumesByTagName(tagKey, tagVal string) ([]string, error)
+	GetVolumesByNameAndSize(tagKey, name string, size int) ([]string, error)
 }
 
 type DiskOptions struct {
@@ -75,7 +81,9 @@ func NewCloudProvider() (*awsEBS, error) {
 	}, nil
 }
 
-func (c *awsEBS) CreateDisk(diskOptions *DiskOptions) (VolumeID, error) {
+var ErrWrongDiskSize = errors.New("disk sizes are different")
+
+func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (VolumeID, error) {
 	var createType string
 	var iops int64
 	switch diskOptions.VolumeType {
@@ -144,7 +152,7 @@ func (c *awsEBS) DeleteDisk(volumeID VolumeID) (bool, error) {
 	return true, nil
 }
 
-func (c *awsEBS) GetVolumesByTagName(tagKey, tagVal string) ([]string, error) {
+func (c *awsEBS) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
 	var volumes []string
 	var nextToken *string
 	request := &ec2.DescribeVolumesInput{}
@@ -154,6 +162,9 @@ func (c *awsEBS) GetVolumesByTagName(tagKey, tagVal string) ([]string, error) {
 			return nil, err
 		}
 		for _, volume := range response.Volumes {
+			if *volume.Size == int64(size) {
+				continue
+			}
 			for _, tag := range volume.Tags {
 				if *tag.Key == tagKey && *tag.Value == tagVal {
 					volumes = append(volumes, *volume.VolumeId)
