@@ -78,7 +78,7 @@ func NewCloudProvider(region, zone string) (*awsEBS, error) {
 	}, nil
 }
 
-var ErrWrongDiskSize = errors.New("disk sizes are different")
+var ErrWrongDiskSize = errors.New("There are disks with same name but different sizes")
 
 func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
 	var createType string
@@ -144,7 +144,9 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-//TODO: use filters instead
+// FIXME: for some reason, AWS takes a while to tag the volume after it's created.
+// As a result, this call could be racy.
+//TODO: try to use filters instead
 func (c *awsEBS) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
 	var volumes []string
 	var nextToken *string
@@ -155,13 +157,15 @@ func (c *awsEBS) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]str
 			return nil, err
 		}
 		for _, volume := range response.Volumes {
-			if *volume.Size == int64(size) {
-				continue
-			}
+		TAGS:
 			for _, tag := range volume.Tags {
 				if *tag.Key == tagKey && *tag.Value == tagVal {
-					volumes = append(volumes, *volume.VolumeId)
-					break
+					if *volume.Size == int64(size) {
+						volumes = append(volumes, *volume.VolumeId)
+						break TAGS
+					} else {
+						return nil, ErrWrongDiskSize
+					}
 				}
 			}
 		}

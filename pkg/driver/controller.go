@@ -33,8 +33,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	// FIXME: for some reason, AWS takes a while to tag the volume after it's created.
-	// As a result, this call could be racy.
 	volumes, err := d.cloud.GetVolumesByNameAndSize(cloud.VolumeNameTagKey, volName, roundSize)
 	if err != nil {
 		switch err {
