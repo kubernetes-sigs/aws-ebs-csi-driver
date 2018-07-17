@@ -18,7 +18,7 @@ import (
 type CloudProvider interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error)
 	DeleteDisk(volumeID string) (bool, error)
-	GetVolumesByNameAndSize(tagKey, name string, size int) ([]string, error)
+	GetVolumesByNameAndSize(name string, size int) ([]string, error)
 }
 
 type DiskOptions struct {
@@ -144,15 +144,15 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *awsEBS) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
+func (c *awsEBS) GetVolumesByNameAndSize(name string, size int) ([]string, error) {
 	var volumes []string
 	var nextToken *string
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
-				Name: aws.String("tag:" + tagKey),
+				Name: aws.String("tag:" + VolumeNameTagKey),
 				Values: []*string{
-					aws.String(tagVal),
+					aws.String(name),
 				},
 			},
 		},

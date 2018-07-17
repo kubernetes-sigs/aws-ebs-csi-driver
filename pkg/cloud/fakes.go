@@ -43,11 +43,11 @@ func (f *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (f *FakeCloudProvider) GetVolumesByNameAndSize(tagKey, tagVal string, size int) ([]string, error) {
+func (f *FakeCloudProvider) GetVolumesByNameAndSize(name string, size int) ([]string, error) {
 	var disks []*fakeDisk
 	for _, disk := range f.disks {
 		for key, value := range disk.options.Tags {
-			if key == VolumeNameTagKey && value == tagVal {
+			if key == VolumeNameTagKey && value == name {
 				disks = append(disks, disk)
 			}
 		}

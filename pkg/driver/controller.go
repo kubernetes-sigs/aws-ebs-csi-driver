@@ -33,7 +33,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	volumes, err := d.cloud.GetVolumesByNameAndSize(cloud.VolumeNameTagKey, volName, roundSize)
+	volumes, err := d.cloud.GetVolumesByNameAndSize(volName, roundSize)
 	if err != nil {
 		switch err {
 		case cloud.ErrWrongDiskSize:
