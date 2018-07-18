@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sts"
-	volumeutil "k8s.io/kubernetes/pkg/volume/util"
+	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 )
 
 type CloudProvider interface {
@@ -199,5 +199,5 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk
 }
 
 func bytesToGiB(bytes int64) int64 {
-	return volumeutil.RoundUpSize(bytes, 1024*1024*1024)
+	return util.RoundUpSize(bytes, 1024*1024*1024)
 }
