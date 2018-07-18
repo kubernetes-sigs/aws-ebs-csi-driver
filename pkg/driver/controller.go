@@ -20,7 +20,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
 	}
-	// TODO: check for int overflow
+	// TODO: check for int overflow?
 	// TODO: check if this round up is really necessary
 	roundSize := int(volumeutil.RoundUpSize(
 		volSizeBytes,

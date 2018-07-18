@@ -22,12 +22,6 @@ func NewFakeCloudProvider() *FakeCloudProvider {
 }
 
 func (f *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
-	if d, ok := f.disks[volumeName]; ok {
-		if d.options.CapacityGB == diskOptions.CapacityGB {
-			return d.realVolumeID, nil
-		}
-		return "", fmt.Errorf("volume already exist with different capacity")
-	}
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	realVolumeID := fmt.Sprintf("vol-%d", r1.Uint64())
 	f.disks[volumeName] = &fakeDisk{realVolumeID, diskOptions}
@@ -43,7 +37,7 @@ func (f *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (f *FakeCloudProvider) GetVolumeByNameAndSize(name string, size int) ([]string, error) {
+func (f *FakeCloudProvider) GetVolumeByNameAndSize(name string, size int) (string, error) {
 	var disks []*fakeDisk
 	for _, disk := range f.disks {
 		for key, value := range disk.options.Tags {
@@ -52,14 +46,13 @@ func (f *FakeCloudProvider) GetVolumeByNameAndSize(name string, size int) ([]str
 			}
 		}
 	}
-	if len(disks) == 1 {
+	if len(disks) > 1 {
+		return "", ErrMultiDisks
+	} else if len(disks) == 1 {
 		if disks[0].options.CapacityGB != size {
-			return nil, ErrDiskExistsDiffSize
+			return "", ErrDiskExistsDiffSize
 		}
+		return disks[0].realVolumeID, nil
 	}
-	var results []string
-	for _, disk := range disks {
-		results = append(results, string(disk.realVolumeID))
-	}
-	return results, nil
+	return "", nil
 }

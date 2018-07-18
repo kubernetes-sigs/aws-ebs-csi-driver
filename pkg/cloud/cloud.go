@@ -78,10 +78,10 @@ func NewCloudProvider(region, zone string) (CloudProvider, error) {
 func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
 	var createType string
 	var iops int64
+
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1:
 		createType = diskOptions.VolumeType
-
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.CapacityGB * diskOptions.IOPSPerGB)
@@ -91,10 +91,8 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string
 		if iops > MaxTotalIOPS {
 			iops = MaxTotalIOPS
 		}
-
 	case "":
 		createType = DefaultVolumeType
-
 	default:
 		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
@@ -171,12 +169,13 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, size int) (string, error) {
 	nVol := len(volumes)
 	if nVol > 1 {
 		return "", ErrMultiDisks
-	} else if nVol == 1 {
-		vol := volumes[0]
-		if aws.Int64Value(vol.Size) != int64(size) {
-			return "", ErrDiskExistsDiffSize
-		}
-		return aws.StringValue(vol.VolumeId), nil
+	} else if nVol == 0 {
+		return "", nil
 	}
-	return "", nil
+
+	vol := volumes[0]
+	if aws.Int64Value(vol.Size) != int64(size) {
+		return "", ErrDiskExistsDiffSize
+	}
+	return aws.StringValue(vol.VolumeId), nil
 }
