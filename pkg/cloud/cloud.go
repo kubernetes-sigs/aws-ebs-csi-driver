@@ -155,6 +155,7 @@ var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name a
 func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
+
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
@@ -178,10 +179,11 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk
 		request.NextToken = nextToken
 	}
 
-	nVol := len(volumes)
-	if nVol > 1 {
+	if len(volumes) > 1 {
 		return nil, ErrMultiDisks
-	} else if nVol == 0 {
+	}
+
+	if len(volumes) == 0 {
 		return nil, nil
 	}
 
