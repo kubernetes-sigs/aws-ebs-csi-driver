@@ -17,14 +17,14 @@ import (
 type CloudProvider interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error)
 	DeleteDisk(volumeID string) (bool, error)
-	GetVolumeByNameAndSize(name string, size int) (string, error)
+	GetVolumeByNameAndSize(name string, size int64) (string, error)
 }
 
 type DiskOptions struct {
-	CapacityGB int
+	CapacityGB int64
 	Tags       map[string]string
 	VolumeType string
-	IOPSPerGB  int
+	IOPSPerGB  int64
 }
 
 type awsEBS struct {
@@ -84,7 +84,7 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = int64(diskOptions.CapacityGB * diskOptions.IOPSPerGB)
+		iops = diskOptions.CapacityGB * diskOptions.IOPSPerGB
 		if iops < MinTotalIOPS {
 			iops = MinTotalIOPS
 		}
@@ -140,7 +140,7 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 var ErrMultiDisks = errors.New("Multiple disks with same name")
 var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
-func (c *awsEBS) GetVolumeByNameAndSize(name string, size int) (string, error) {
+func (c *awsEBS) GetVolumeByNameAndSize(name string, size int64) (string, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 	request := &ec2.DescribeVolumesInput{

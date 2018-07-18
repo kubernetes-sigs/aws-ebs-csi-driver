@@ -20,12 +20,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
 	}
-	// TODO: check for int overflow?
-	// TODO: check if this round up is really necessary
-	roundSize := int(volumeutil.RoundUpSize(
-		volSizeBytes,
-		1024*1024*1024,
-	))
+	roundSize := volumeutil.RoundUpSize(volSizeBytes, 1024*1024*1024)
 
 	volCaps := req.GetVolumeCapabilities()
 	if volCaps == nil || len(volCaps) == 0 {
@@ -59,7 +54,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            volumeID,
-			CapacityBytes: int64(roundSize * 1000 * 1000 * 1000),
+			CapacityBytes: int64(roundSize * 1024 * 1024 * 1024),
 		},
 	}, nil
 }

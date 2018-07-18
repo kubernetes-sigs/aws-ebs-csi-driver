@@ -21,7 +21,7 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 	}
-	stdVolSize := int64(5000000000)
+	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
 
