@@ -18,7 +18,6 @@ import (
 
 const (
 	driverName    = "com.amazon.aws.csi.ebs"
-	driverVersion = "0.0.1"
 	vendorVersion = "0.0.1" // FIXME
 )
 
@@ -31,7 +30,7 @@ type Driver struct {
 }
 
 func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
-	glog.Infof("Driver: %v version: %v", driverName, driverVersion)
+	glog.Infof("Driver: %v version: %v", driverName)
 	return &Driver{
 		endpoint: endpoint,
 		nodeID:   nodeID,
