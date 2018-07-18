@@ -13,12 +13,49 @@ Golang `TestXXX` functions. For example:
 
 ```go
 func TestMyDriver(t *testing.T) {
-    // Setup the full driver and its environment
-    ... setup driver ...
+	// Setup the full driver and its environment
+	... setup driver ...
+	config := &sanity.Config{
+		TargetPath:     ...
+		StagingPath:    ...
+		Address:        endpoint,
+	}
 
-    // Now call the test suite
-    sanity.Test(t, driverEndpointAddress, "/mnt")
+
+	// Now call the test suite
+	sanity.Test(t, config)
 }
+```
+
+Only one such test function is supported because under the hood a
+Ginkgo test suite gets constructed and executed by the call.
+
+Alternatively, the tests can also be embedded inside a Ginkgo test
+suite. In that case it is possible to define multiple tests with
+different configurations:
+
+```go
+var _ = Describe("MyCSIDriver", func () {
+	Context("Config A", func () {
+		var config &sanity.Config
+
+		BeforeEach() {
+			... setup driver and config...
+		}
+
+		AfterEach() {
+			...tear down driver...
+		}
+
+		Describe("CSI sanity", func() {
+			sanity.GinkgoTest(config)
+		})
+	})
+
+	Context("Config B", func () {
+		...
+	})
+})
 ```
 
 ## Command line program

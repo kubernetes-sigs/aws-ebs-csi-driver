@@ -36,9 +36,9 @@ const (
 	DefTestVolumeSize int64 = 10 * 1024 * 1024 * 1024
 )
 
-func TestVolumeSize() int64 {
-	if config.TestVolumeSize > 0 {
-		return config.TestVolumeSize
+func TestVolumeSize(sc *SanityContext) int64 {
+	if sc.Config.TestVolumeSize > 0 {
+		return sc.Config.TestVolumeSize
 	}
 	return DefTestVolumeSize
 }
@@ -69,13 +69,13 @@ func isControllerCapabilitySupported(
 	return false
 }
 
-var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
+var _ = DescribeSanity("ControllerGetCapabilities [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 	})
 
 	It("should return appropriate capabilities", func() {
@@ -105,13 +105,13 @@ var _ = Describe("ControllerGetCapabilities [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("GetCapacity [Controller Server]", func() {
+var _ = DescribeSanity("GetCapacity [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_GET_CAPACITY) {
 			Skip("GetCapacity not supported")
@@ -129,13 +129,13 @@ var _ = Describe("GetCapacity [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("ListVolumes [Controller Server]", func() {
+var _ = DescribeSanity("ListVolumes [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_LIST_VOLUMES) {
 			Skip("ListVolumes not supported")
@@ -160,13 +160,13 @@ var _ = Describe("ListVolumes [Controller Server]", func() {
 	//       and not there when deleted.
 })
 
-var _ = Describe("CreateVolume [Controller Server]", func() {
+var _ = DescribeSanity("CreateVolume [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME) {
 			Skip("CreateVolume not supported")
@@ -177,8 +177,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		req := &csi.CreateVolumeRequest{}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		_, err := c.CreateVolume(context.Background(), req)
@@ -195,8 +195,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			Name: "name",
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		_, err := c.CreateVolume(context.Background(), req)
@@ -226,8 +226,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -242,8 +242,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -268,12 +268,12 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 				},
 			},
 			CapacityRange: &csi.CapacityRange{
-				RequiredBytes: TestVolumeSize(),
+				RequiredBytes: TestVolumeSize(sc),
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -289,7 +289,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			Expect(vol).NotTo(BeNil())
 			Expect(vol.GetVolume()).NotTo(BeNil())
 			Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize()))
+			Expect(vol.GetVolume().GetCapacityBytes()).To(BeNumerically(">=", TestVolumeSize(sc)))
 		}
 		By("cleaning up deleting the volume")
 
@@ -297,8 +297,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -308,7 +308,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size := TestVolumeSize()
+		size := TestVolumeSize(sc)
 
 		req := &csi.CreateVolumeRequest{
 			Name: name,
@@ -327,8 +327,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol1, err := c.CreateVolume(context.Background(), req)
@@ -355,8 +355,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req2.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req2.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol2, err := c.CreateVolume(context.Background(), req2)
@@ -373,8 +373,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			VolumeId: vol1.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -384,7 +384,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 
 		By("creating a volume")
 		name := "sanity"
-		size1 := TestVolumeSize()
+		size1 := TestVolumeSize(sc)
 
 		req := &csi.CreateVolumeRequest{
 			Name: name,
@@ -404,8 +404,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol1, err := c.CreateVolume(context.Background(), req)
@@ -413,7 +413,7 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 		Expect(vol1).NotTo(BeNil())
 		Expect(vol1.GetVolume()).NotTo(BeNil())
 		Expect(vol1.GetVolume().GetId()).NotTo(BeEmpty())
-		size2 := 2 * TestVolumeSize()
+		size2 := 2 * TestVolumeSize(sc)
 
 		req2 := &csi.CreateVolumeRequest{
 			Name: name,
@@ -433,8 +433,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req2.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req2.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		_, err = c.CreateVolume(context.Background(), req2)
@@ -449,8 +449,8 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 			VolumeId: vol1.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -458,13 +458,13 @@ var _ = Describe("CreateVolume [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("DeleteVolume [Controller Server]", func() {
+var _ = DescribeSanity("DeleteVolume [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME) {
 			Skip("DeleteVolume not supported")
@@ -475,8 +475,8 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 
 		req := &csi.DeleteVolumeRequest{}
 
-		if secrets != nil {
-			req.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err := c.DeleteVolume(context.Background(), req)
@@ -493,8 +493,8 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 			VolumeId: "reallyfakevolumeid",
 		}
 
-		if secrets != nil {
-			req.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err := c.DeleteVolume(context.Background(), req)
@@ -521,8 +521,8 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			createReq.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			createReq.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), createReq)
@@ -539,8 +539,8 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			req.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), req)
@@ -548,13 +548,13 @@ var _ = Describe("DeleteVolume [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
+var _ = DescribeSanity("ValidateVolumeCapabilities [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
 	})
 
 	It("should fail when no volume id is provided", func() {
@@ -603,8 +603,8 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -640,8 +640,8 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -674,15 +674,15 @@ var _ = Describe("ValidateVolumeCapabilities [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
+var _ = DescribeSanity("ControllerPublishVolume [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 		n csi.NodeClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
-		n = csi.NewNodeClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
+		n = csi.NewNodeClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME) {
 			Skip("ControllerPublishVolume not supported")
@@ -693,8 +693,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 
 		req := &csi.ControllerPublishVolumeRequest{}
 
-		if secrets != nil {
-			req.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		_, err := c.ControllerPublishVolume(context.Background(), req)
@@ -711,8 +711,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			VolumeId: "id",
 		}
 
-		if secrets != nil {
-			req.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		_, err := c.ControllerPublishVolume(context.Background(), req)
@@ -730,8 +730,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			NodeId:   "fakenode",
 		}
 
-		if secrets != nil {
-			req.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		_, err := c.ControllerPublishVolume(context.Background(), req)
@@ -761,8 +761,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -796,8 +796,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			Readonly: false,
 		}
 
-		if secrets != nil {
-			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -812,8 +812,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			NodeId: nid.GetNodeId(),
 		}
 
-		if secrets != nil {
-			unpubReq.ControllerUnpublishSecrets = secrets.ControllerUnpublishVolumeSecret
+		if sc.Secrets != nil {
+			unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
 		}
 
 		conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
@@ -826,8 +826,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -852,8 +852,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			Readonly: false,
 		}
 
-		if secrets != nil {
-			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -884,8 +884,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -911,8 +911,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			Readonly: false,
 		}
 
-		if secrets != nil {
-			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -929,8 +929,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -956,8 +956,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -991,8 +991,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			Readonly: false,
 		}
 
-		if secrets != nil {
-			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -1018,8 +1018,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			NodeId: nid.GetNodeId(),
 		}
 
-		if secrets != nil {
-			unpubReq.ControllerUnpublishSecrets = secrets.ControllerUnpublishVolumeSecret
+		if sc.Secrets != nil {
+			unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
 		}
 
 		conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
@@ -1032,8 +1032,8 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)
@@ -1041,15 +1041,15 @@ var _ = Describe("ControllerPublishVolume [Controller Server]", func() {
 	})
 })
 
-var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
+var _ = DescribeSanity("ControllerUnpublishVolume [Controller Server]", func(sc *SanityContext) {
 	var (
 		c csi.ControllerClient
 		n csi.NodeClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewControllerClient(conn)
-		n = csi.NewNodeClient(conn)
+		c = csi.NewControllerClient(sc.Conn)
+		n = csi.NewNodeClient(sc.Conn)
 
 		if !isControllerCapabilitySupported(c, csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME) {
 			Skip("ControllerUnpublishVolume not supported")
@@ -1060,8 +1060,8 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 
 		req := &csi.ControllerUnpublishVolumeRequest{}
 
-		if secrets != nil {
-			req.ControllerUnpublishSecrets = secrets.ControllerUnpublishVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
 		}
 
 		_, err := c.ControllerUnpublishVolume(context.Background(), req)
@@ -1092,8 +1092,8 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 			},
 		}
 
-		if secrets != nil {
-			req.ControllerCreateSecrets = secrets.CreateVolumeSecret
+		if sc.Secrets != nil {
+			req.ControllerCreateSecrets = sc.Secrets.CreateVolumeSecret
 		}
 
 		vol, err := c.CreateVolume(context.Background(), req)
@@ -1127,8 +1127,8 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 			Readonly: false,
 		}
 
-		if secrets != nil {
-			pubReq.ControllerPublishSecrets = secrets.ControllerPublishVolumeSecret
+		if sc.Secrets != nil {
+			pubReq.ControllerPublishSecrets = sc.Secrets.ControllerPublishVolumeSecret
 		}
 
 		conpubvol, err := c.ControllerPublishVolume(context.Background(), pubReq)
@@ -1144,8 +1144,8 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 			NodeId: nid.GetNodeId(),
 		}
 
-		if secrets != nil {
-			unpubReq.ControllerUnpublishSecrets = secrets.ControllerUnpublishVolumeSecret
+		if sc.Secrets != nil {
+			unpubReq.ControllerUnpublishSecrets = sc.Secrets.ControllerUnpublishVolumeSecret
 		}
 
 		conunpubvol, err := c.ControllerUnpublishVolume(context.Background(), unpubReq)
@@ -1158,8 +1158,8 @@ var _ = Describe("ControllerUnpublishVolume [Controller Server]", func() {
 			VolumeId: vol.GetVolume().GetId(),
 		}
 
-		if secrets != nil {
-			delReq.ControllerDeleteSecrets = secrets.DeleteVolumeSecret
+		if sc.Secrets != nil {
+			delReq.ControllerDeleteSecrets = sc.Secrets.DeleteVolumeSecret
 		}
 
 		_, err = c.DeleteVolume(context.Background(), delReq)

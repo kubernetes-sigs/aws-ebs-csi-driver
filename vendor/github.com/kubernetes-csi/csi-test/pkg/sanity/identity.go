@@ -30,13 +30,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("GetPluginCapabilities [Identity Service]", func() {
+var _ = DescribeSanity("GetPluginCapabilities [Identity Service]", func(sc *SanityContext) {
 	var (
 		c csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewIdentityClient(conn)
+		c = csi.NewIdentityClient(sc.Conn)
 	})
 
 	It("should return appropriate capabilities", func() {
@@ -60,13 +60,13 @@ var _ = Describe("GetPluginCapabilities [Identity Service]", func() {
 
 })
 
-var _ = Describe("Probe [Identity Service]", func() {
+var _ = DescribeSanity("Probe [Identity Service]", func(sc *SanityContext) {
 	var (
 		c csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewIdentityClient(conn)
+		c = csi.NewIdentityClient(sc.Conn)
 	})
 
 	It("should return appropriate information", func() {
@@ -88,13 +88,13 @@ var _ = Describe("Probe [Identity Service]", func() {
 	})
 })
 
-var _ = Describe("GetPluginInfo [Identity Server]", func() {
+var _ = DescribeSanity("GetPluginInfo [Identity Server]", func(sc *SanityContext) {
 	var (
 		c csi.IdentityClient
 	)
 
 	BeforeEach(func() {
-		c = csi.NewIdentityClient(conn)
+		c = csi.NewIdentityClient(sc.Conn)
 	})
 
 	It("should return appropriate information", func() {
