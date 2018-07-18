@@ -7,7 +7,6 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
@@ -20,14 +19,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
 	}
-	roundSize := volumeutil.RoundUpSize(volSizeBytes, 1024*1024*1024)
 
 	volCaps := req.GetVolumeCapabilities()
 	if volCaps == nil || len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	volumeID, err := d.cloud.GetVolumeByNameAndSize(volName, roundSize)
+	disk, err := d.cloud.GetVolumeByNameAndSize(volName, volSizeBytes)
 	if err != nil {
 		switch err {
 		case cloud.ErrMultiDisks:
@@ -39,22 +37,22 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if len(volumeID) == 0 {
+	if disk == nil {
 		opts := &cloud.DiskOptions{
-			CapacityGB: roundSize,
-			Tags:       map[string]string{cloud.VolumeNameTagKey: volName},
+			CapacityBytes: volSizeBytes,
+			Tags:          map[string]string{cloud.VolumeNameTagKey: volName},
 		}
-		v, err := d.cloud.CreateDisk(volName, opts)
+		newDisk, err := d.cloud.CreateDisk(volName, opts)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		volumeID = v
+		disk = newDisk
 	}
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            volumeID,
-			CapacityBytes: int64(roundSize * 1024 * 1024 * 1024),
+			Id:            disk.VolumeID,
+			CapacityBytes: disk.CapacityGiB * 1024 * 1024 * 1024,
 		},
 	}, nil
 }

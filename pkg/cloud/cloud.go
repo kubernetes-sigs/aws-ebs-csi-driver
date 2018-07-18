@@ -12,19 +12,25 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sts"
+	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 
 type CloudProvider interface {
-	CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error)
+	CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error)
 	DeleteDisk(volumeID string) (bool, error)
-	GetVolumeByNameAndSize(name string, size int64) (string, error)
+	GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error)
 }
 
 type DiskOptions struct {
-	CapacityGB int64
-	Tags       map[string]string
-	VolumeType string
-	IOPSPerGB  int64
+	CapacityBytes int64
+	Tags          map[string]string
+	VolumeType    string
+	IOPSPerGB     int64
+}
+
+type Disk struct {
+	VolumeID    string
+	CapacityGiB int64
 }
 
 type awsEBS struct {
@@ -75,16 +81,17 @@ func NewCloudProvider(region, zone string) (CloudProvider, error) {
 	}, nil
 }
 
-func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
+func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var createType string
 	var iops int64
+	capacityGiB := bytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1:
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = diskOptions.CapacityGB * diskOptions.IOPSPerGB
+		iops = capacityGiB * diskOptions.IOPSPerGB
 		if iops < MinTotalIOPS {
 			iops = MinTotalIOPS
 		}
@@ -94,7 +101,7 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string
 	case "":
 		createType = DefaultVolumeType
 	default:
-		return "", fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
+		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
 	var tags []*ec2.Tag
@@ -108,7 +115,7 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string
 
 	request := &ec2.CreateVolumeInput{
 		AvailabilityZone:  aws.String(c.zone),
-		Size:              aws.Int64(int64(diskOptions.CapacityGB)),
+		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
 	}
@@ -118,15 +125,20 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (string
 
 	response, err := c.ec2.CreateVolume(request)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
 	}
 
 	volumeID := aws.StringValue(response.VolumeId)
 	if len(volumeID) == 0 {
-		return "", fmt.Errorf("VolumeID was not returned by CreateVolume")
+		return nil, fmt.Errorf("volume ID was not returned by CreateVolume")
 	}
 
-	return volumeID, nil
+	size := aws.Int64Value(response.Size)
+	if size == 0 {
+		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
+	}
+
+	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
 func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
@@ -140,7 +152,7 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 var ErrMultiDisks = errors.New("Multiple disks with same name")
 var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
-func (c *awsEBS) GetVolumeByNameAndSize(name string, size int64) (string, error) {
+func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 	request := &ec2.DescribeVolumesInput{
@@ -154,7 +166,7 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, size int64) (string, error)
 	for {
 		response, err := c.ec2.DescribeVolumes(request)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		for _, volume := range response.Volumes {
 			volumes = append(volumes, volume)
@@ -168,14 +180,22 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, size int64) (string, error)
 
 	nVol := len(volumes)
 	if nVol > 1 {
-		return "", ErrMultiDisks
+		return nil, ErrMultiDisks
 	} else if nVol == 0 {
-		return "", nil
+		return nil, nil
 	}
 
-	vol := volumes[0]
-	if aws.Int64Value(vol.Size) != int64(size) {
-		return "", ErrDiskExistsDiffSize
+	volSizeBytes := aws.Int64Value(volumes[0].Size)
+	if volSizeBytes != bytesToGiB(capacityBytes) {
+		return nil, ErrDiskExistsDiffSize
 	}
-	return aws.StringValue(vol.VolumeId), nil
+
+	return &Disk{
+		VolumeID:    aws.StringValue(volumes[0].VolumeId),
+		CapacityGiB: volSizeBytes,
+	}, nil
+}
+
+func bytesToGiB(bytes int64) int64 {
+	return volumeutil.RoundUpSize(bytes, 1024*1024*1024)
 }

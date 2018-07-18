@@ -57,26 +57,6 @@ func TestCreateVolume(t *testing.T) {
 			expErrCode: codes.InvalidArgument,
 		},
 		{
-			name: "success same name and capacity",
-			req: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
-			},
-			extraReq: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
-			},
-			expVol: &csi.Volume{
-				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    nil,
-			},
-		},
-		{
 			name: "success same name and same capacity",
 			req: &csi.CreateVolumeRequest{
 				Name:               "test-vol",

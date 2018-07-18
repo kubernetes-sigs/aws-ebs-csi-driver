@@ -1,11 +1,12 @@
 package cloud
 
 const (
-	// DefaultVolumeSize represents the default volume size. TODO: what should be the default size?
+	// TODO: what should be the default size?
+	// DefaultVolumeSize represents the default volume size.
 	DefaultVolumeSize int64 = 1 * 1024 * 1024 * 1024
 
 	// VolumeNameTagKey is the key value that refers to the volume's name.
-	VolumeNameTagKey string = "VolumeName"
+	VolumeNameTagKey = "VolumeName"
 
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"

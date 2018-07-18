@@ -11,8 +11,8 @@ type FakeCloudProvider struct {
 }
 
 type fakeDisk struct {
-	realVolumeID string
-	options      *DiskOptions
+	*Disk
+	tags map[string]string
 }
 
 func NewFakeCloudProvider() *FakeCloudProvider {
@@ -21,38 +21,44 @@ func NewFakeCloudProvider() *FakeCloudProvider {
 	}
 }
 
-func (f *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (string, error) {
+func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-	realVolumeID := fmt.Sprintf("vol-%d", r1.Uint64())
-	f.disks[volumeName] = &fakeDisk{realVolumeID, diskOptions}
-	return realVolumeID, nil
+	d := &fakeDisk{
+		Disk: &Disk{
+			VolumeID:    fmt.Sprintf("vol-%d", r1.Uint64()),
+			CapacityGiB: bytesToGiB(diskOptions.CapacityBytes),
+		},
+		tags: diskOptions.Tags,
+	}
+	c.disks[volumeName] = d
+	return d.Disk, nil
 }
 
-func (f *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
-	for volName, disk := range f.disks {
-		if disk.realVolumeID == volumeID {
-			delete(f.disks, volName)
+func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
+	for volName, f := range c.disks {
+		if f.Disk.VolumeID == volumeID {
+			delete(c.disks, volName)
 		}
 	}
 	return true, nil
 }
 
-func (f *FakeCloudProvider) GetVolumeByNameAndSize(name string, size int64) (string, error) {
+func (c *FakeCloudProvider) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
-	for _, disk := range f.disks {
-		for key, value := range disk.options.Tags {
+	for _, d := range c.disks {
+		for key, value := range d.tags {
 			if key == VolumeNameTagKey && value == name {
-				disks = append(disks, disk)
+				disks = append(disks, d)
 			}
 		}
 	}
 	if len(disks) > 1 {
-		return "", ErrMultiDisks
+		return nil, ErrMultiDisks
 	} else if len(disks) == 1 {
-		if disks[0].options.CapacityGB != size {
-			return "", ErrDiskExistsDiffSize
+		if capacityBytes != disks[0].Disk.CapacityGiB*1024*1024*1024 {
+			return nil, ErrDiskExistsDiffSize
 		}
-		return disks[0].realVolumeID, nil
+		return disks[0].Disk, nil
 	}
-	return "", nil
+	return nil, nil
 }
