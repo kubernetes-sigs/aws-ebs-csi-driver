@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	driverName    = "csi-aws"
+	driverName    = "com.amazon.aws.csi.ebs"
 	driverVersion = "0.0.1"
 	vendorVersion = "0.0.1" // FIXME
 )
