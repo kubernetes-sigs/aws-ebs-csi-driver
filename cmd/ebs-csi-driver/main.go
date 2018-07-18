@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	"github.com/bertinatto/ebs-csi-driver/pkg/driver"
+	"github.com/golang/glog"
 )
 
 func main() {
@@ -19,11 +19,11 @@ func main() {
 
 	cloudProvider, err := cloud.NewCloudProvider(*region, *zone)
 	if err != nil {
-		log.Fatalln(err)
+		glog.Fatalln(err)
 	}
 
 	drv := driver.NewDriver(cloudProvider, *endpoint, *nodeID)
 	if err := drv.Run(); err != nil {
-		log.Fatalln(err)
+		glog.Fatalln(err)
 	}
 }

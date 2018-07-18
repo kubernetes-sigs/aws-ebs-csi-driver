@@ -70,6 +70,7 @@ func (d *Driver) Run() error {
 }
 
 func (d *Driver) Stop() {
+	glog.Infof("Stopping server")
 	d.srv.Stop()
 }
 
