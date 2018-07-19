@@ -9,3 +9,6 @@ test:
 
 test-sanity:
 	go test -timeout 30s github.com/bertinatto/ebs-csi-driver/tests -run ^TestSanity$
+
+test-e2e:
+	go test -v github.com/bertinatto/ebs-csi-driver/tests -run ^TestControllerE2E$
