@@ -4,8 +4,6 @@ import (
 	"context"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
@@ -34,5 +32,5 @@ func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCa
 }
 
 func (d *Driver) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return &csi.ProbeResponse{}, nil
 }
