@@ -140,6 +140,24 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/rexray/gocsi"
+  packages = ["utils"]
+  revision = "a517fde9d69b7915ae73202c084867cac0588472"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -158,7 +176,10 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
 
 [[projects]]
@@ -268,9 +289,18 @@
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
   version = "v2.2.1"
 
+[[projects]]
+  branch = "master"
+  name = "k8s.io/apimachinery"
+  packages = [
+    "pkg/util/runtime",
+    "pkg/util/wait"
+  ]
+  revision = "001f0307e2ebcfc31265ae32d8d3130c1b81b44e"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0621618f1794dede0b00149b451a14ea3e4386c6b9deb6748acd10483d5cbcc3"
+  inputs-digest = "94863d2380e9ae0b9e99ba2661a312b6e2b8c04f306cdaccd8238f260c4a53a2"
   solver-name = "gps-cdcl"
   solver-version = 1
