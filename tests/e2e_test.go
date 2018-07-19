@@ -83,7 +83,7 @@ func TestControllerE2E(t *testing.T) {
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
 
-		// Create volume
+		t.Logf("Creating volume with name %q", tc.req.GetName())
 		createResp, err := cc.CreateVolume(context.Background(), tc.req)
 		if err != nil {
 			t.Fatalf("could not create volume: %v", err)
@@ -93,8 +93,8 @@ func TestControllerE2E(t *testing.T) {
 		if volume == nil {
 			t.Fatalf("expected valid volume, got nil")
 		}
+		t.Logf("Volume %q was created", volume.Id)
 
-		// Verify that volume was create in EC2 and that it has the right ID
 		descParams := &ec2.DescribeVolumesInput{
 			Filters: []*ec2.Filter{
 				&ec2.Filter{
@@ -104,6 +104,7 @@ func TestControllerE2E(t *testing.T) {
 			},
 		}
 
+		t.Logf("Verifying that volume %q was created", volume.Id)
 		var volumes []*ec2.Volume
 		if waitErr := wait.Poll(5*time.Second, 30*time.Second, func() (bool, error) {
 			if volumes, err = describeVolumes(ec2c, descParams); err != nil {
@@ -121,7 +122,7 @@ func TestControllerE2E(t *testing.T) {
 			log.Fatalf("expected volume name %q, got %q", volume.Id, *volumes[0].VolumeId)
 		}
 
-		// Delete volume and verify that it was indeed deleted
+		t.Logf("Deleting volume %q", volume.Id)
 		_, err = cc.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{
 			VolumeId: volume.Id,
 		})
@@ -129,6 +130,7 @@ func TestControllerE2E(t *testing.T) {
 			t.Fatalf("could not delete volume %q: %v", volume.Id, err)
 		}
 
+		t.Logf("Verifying that volume %q was deleted", volume.Id)
 		if waitErr := wait.Poll(5*time.Second, 30*time.Second, func() (bool, error) {
 			if volumes, err = describeVolumes(ec2c, descParams); err != nil {
 				t.Fatalf("could not get list of volumes: %v", err)
