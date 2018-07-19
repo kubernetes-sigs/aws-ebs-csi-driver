@@ -84,7 +84,7 @@ func NewCloudProvider(region, zone string) (CloudProvider, error) {
 func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var createType string
 	var iops int64
-	capacityGiB := bytesToGiB(diskOptions.CapacityBytes)
+	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1:
@@ -188,7 +188,7 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk
 	}
 
 	volSizeBytes := aws.Int64Value(volumes[0].Size)
-	if volSizeBytes != bytesToGiB(capacityBytes) {
+	if volSizeBytes != util.BytesToGiB(capacityBytes) {
 		return nil, ErrDiskExistsDiffSize
 	}
 
@@ -196,8 +196,4 @@ func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk
 		VolumeID:    aws.StringValue(volumes[0].VolumeId),
 		CapacityGiB: volSizeBytes,
 	}, nil
-}
-
-func bytesToGiB(bytes int64) int64 {
-	return util.RoundUpSize(bytes, 1024*1024*1024)
 }

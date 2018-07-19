@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 )
 
 type FakeCloudProvider struct {
@@ -26,7 +28,7 @@ func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptio
 	d := &fakeDisk{
 		Disk: &Disk{
 			VolumeID:    fmt.Sprintf("vol-%d", r1.Uint64()),
-			CapacityGiB: bytesToGiB(diskOptions.CapacityBytes),
+			CapacityGiB: util.BytesToGiB(diskOptions.CapacityBytes),
 		},
 		tags: diskOptions.Tags,
 	}

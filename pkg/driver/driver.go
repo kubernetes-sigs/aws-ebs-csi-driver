@@ -2,15 +2,10 @@ package driver
 
 import (
 	"context"
-	"fmt"
 	"net"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
+	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
@@ -39,7 +34,7 @@ func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
 }
 
 func (d *Driver) Run() error {
-	scheme, addr, err := parseEndpoint(d.endpoint)
+	scheme, addr, err := util.ParseEndpoint(d.endpoint)
 	if err != nil {
 		return err
 	}
@@ -72,27 +67,4 @@ func (d *Driver) Run() error {
 func (d *Driver) Stop() {
 	glog.Infof("Stopping server")
 	d.srv.Stop()
-}
-
-func parseEndpoint(endpoint string) (string, string, error) {
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return "", "", fmt.Errorf("could not parse endpoint: %v", err)
-	}
-
-	addr := path.Join(u.Host, filepath.FromSlash(u.Path))
-
-	scheme := strings.ToLower(u.Scheme)
-	switch scheme {
-	case "tcp":
-	case "unix":
-		addr = path.Join("/", addr)
-		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {
-			return "", "", fmt.Errorf("could not remove unix domain socket %q: %v", addr, err)
-		}
-	default:
-		return "", "", fmt.Errorf("unsupported protocol: %s", scheme)
-	}
-
-	return scheme, addr, nil
 }
