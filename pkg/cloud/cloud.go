@@ -18,6 +18,7 @@ import (
 type CloudProvider interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error)
 	DeleteDisk(volumeID string) (bool, error)
+	AttachDisk(volumeID, nodeName string) error
 	GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error)
 }
 
@@ -147,6 +148,22 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 		return false, fmt.Errorf("DeleteDisk could not delete volume")
 	}
 	return true, nil
+}
+
+func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
+	device := "/dev/xvda"
+	request := &ec2.AttachVolumeInput{
+		Device:     aws.String(device),
+		InstanceId: aws.String(nodeID),
+		VolumeId:   aws.String(volumeID),
+	}
+
+	_, err := c.ec2.AttachVolume(request)
+	if err != nil {
+		return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+	}
+
+	return nil
 }
 
 var ErrMultiDisks = errors.New("Multiple disks with same name")

@@ -45,6 +45,10 @@ func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
+func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) error {
+	return nil
+}
+
 func (c *FakeCloudProvider) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
