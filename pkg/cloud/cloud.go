@@ -16,10 +16,11 @@ import (
 )
 
 type CloudProvider interface {
-	CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error)
-	DeleteDisk(volumeID string) (bool, error)
-	AttachDisk(volumeID, nodeName string) error
-	GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error)
+	CreateDisk(string, *DiskOptions) (*Disk, error)
+	DeleteDisk(string) (bool, error)
+	AttachDisk(string, string) error
+	DetachDisk(string, string) error
+	GetVolumeByNameAndSize(string, int64) (*Disk, error)
 }
 
 type DiskOptions struct {
@@ -151,7 +152,7 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 }
 
 func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
-	device := "/dev/xvda"
+	device := "/dev/xvdbc"
 	request := &ec2.AttachVolumeInput{
 		Device:     aws.String(device),
 		InstanceId: aws.String(nodeID),
@@ -161,6 +162,20 @@ func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
 	_, err := c.ec2.AttachVolume(request)
 	if err != nil {
 		return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+	}
+
+	return nil
+}
+
+func (c *awsEBS) DetachDisk(volumeID, nodeID string) error {
+	request := &ec2.DetachVolumeInput{
+		InstanceId: aws.String(nodeID),
+		VolumeId:   aws.String(volumeID),
+	}
+
+	_, err := c.ec2.DetachVolume(request)
+	if err != nil {
+		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
 	return nil

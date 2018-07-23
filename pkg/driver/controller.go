@@ -64,6 +64,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
+		//TODO: check if it wasn't found and return valid response instead of error
 		return nil, status.Error(codes.Internal, "Could not delete volume")
 	}
 
@@ -94,7 +95,20 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 }
 
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	nodeID := req.GetNodeId()
+	if len(nodeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
+	}
+
+	if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
 func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
