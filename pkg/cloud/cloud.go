@@ -152,6 +152,7 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 }
 
 func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
+	// TODO: choose a valid and non-duplicate device name
 	device := "/dev/xvdbc"
 	request := &ec2.AttachVolumeInput{
 		Device:     aws.String(device),

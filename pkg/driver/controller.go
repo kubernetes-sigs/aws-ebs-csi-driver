@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// TODO: verbose glog
+
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	volName := req.GetName()
 	if len(volName) == 0 {
@@ -112,29 +114,18 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 }
 
 func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
-	newCap := func(cap csi.ControllerServiceCapability_RPC_Type) *csi.ControllerServiceCapability {
-		return &csi.ControllerServiceCapability{
+	var caps []*csi.ControllerServiceCapability
+	for _, cap := range d.capabilities {
+		c := &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
 					Type: cap,
 				},
 			},
 		}
+		caps = append(caps, c)
 	}
-
-	var caps []*csi.ControllerServiceCapability
-	for _, cap := range []csi.ControllerServiceCapability_RPC_Type{
-		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-	} {
-		caps = append(caps, newCap(cap))
-	}
-
-	resp := &csi.ControllerGetCapabilitiesResponse{
-		Capabilities: caps,
-	}
-
-	return resp, nil
+	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
 func (d *Driver) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
@@ -146,6 +137,7 @@ func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (
 }
 
 func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+	// TODO: implement
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
