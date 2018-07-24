@@ -27,5 +27,5 @@ const (
 	MaxTotalIOPS int64 = 20000
 
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.
-	DefaultVolumeType = "gp2"
+	DefaultVolumeType = VolumeTypeGP2
 )
