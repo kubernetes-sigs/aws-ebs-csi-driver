@@ -176,7 +176,7 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk,
 func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
-		return false, fmt.Errorf("DeleteDisk could not delete volume")
+		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
 	}
 	return true, nil
 }
