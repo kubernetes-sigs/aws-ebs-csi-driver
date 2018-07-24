@@ -27,6 +27,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
+	if !d.isValidVolumeCapabilities(volCaps) {
+		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
+	}
+
 	disk, err := d.cloud.GetVolumeByNameAndSize(volName, volSizeBytes)
 	if err != nil {
 		switch err {
@@ -89,6 +93,11 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
 	}
 
+	caps := []*csi.VolumeCapability{volCap}
+	if !d.isValidVolumeCapabilities(caps) {
+		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+	}
+
 	if err := d.cloud.AttachDisk(volumeID, nodeID); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -137,8 +146,6 @@ func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (
 }
 
 func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-	// TODO: move to separate function and use it in other functions as well
-
 	//TODO: validate if volume exists
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -150,6 +157,14 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
+	found := d.isValidVolumeCapabilities(volCaps)
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Supported: found,
+	}, nil
+
+}
+
+func (d *Driver) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	hasSupport := func(cap *csi.VolumeCapability) bool {
 		for _, c := range d.volumeCaps {
 			if c.GetMode() == cap.AccessMode.GetMode() {
@@ -165,11 +180,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 			foundAll = false
 		}
 	}
-
-	return &csi.ValidateVolumeCapabilitiesResponse{
-		Supported: foundAll,
-	}, nil
-
+	return foundAll
 }
 
 func (d *Driver) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
