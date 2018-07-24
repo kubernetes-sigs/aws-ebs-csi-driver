@@ -6,7 +6,7 @@ const (
 	DefaultVolumeSize int64 = 1 * 1024 * 1024 * 1024
 
 	// VolumeNameTagKey is the key value that refers to the volume's name.
-	VolumeNameTagKey = "VolumeName"
+	VolumeNameTagKey = "com.amazon.aws.csi.volume"
 
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
