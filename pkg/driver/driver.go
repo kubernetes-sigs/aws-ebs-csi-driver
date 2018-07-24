@@ -39,6 +39,9 @@ func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
 			csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
+			csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+			},
 		},
 	}
 }
