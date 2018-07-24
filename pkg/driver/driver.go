@@ -17,11 +17,12 @@ const (
 )
 
 type Driver struct {
-	endpoint     string
-	nodeID       string
-	cloud        cloud.CloudProvider
-	capabilities []csi.ControllerServiceCapability_RPC_Type
-	srv          *grpc.Server
+	endpoint       string
+	nodeID         string
+	cloud          cloud.CloudProvider
+	controllerCaps []csi.ControllerServiceCapability_RPC_Type
+	volumeCaps     []csi.VolumeCapability_AccessMode
+	srv            *grpc.Server
 }
 
 func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
@@ -30,9 +31,14 @@ func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
 		endpoint: endpoint,
 		nodeID:   nodeID,
 		cloud:    cloud,
-		capabilities: []csi.ControllerServiceCapability_RPC_Type{
+		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
 			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		},
+		volumeCaps: []csi.VolumeCapability_AccessMode{
+			csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
 		},
 	}
 }
