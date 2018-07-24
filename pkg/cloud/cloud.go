@@ -20,7 +20,7 @@ type CloudProvider interface {
 	DeleteDisk(string) (bool, error)
 	AttachDisk(string, string) error
 	DetachDisk(string, string) error
-	GetVolumeByNameAndSize(string, int64) (*Disk, error)
+	GetDiskByNameAndSize(string, int64) (*Disk, error)
 }
 
 type DiskOptions struct {
@@ -185,7 +185,7 @@ func (c *awsEBS) DetachDisk(volumeID, nodeID string) error {
 var ErrMultiDisks = errors.New("Multiple disks with same name")
 var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
-func (c *awsEBS) GetVolumeByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
+func (c *awsEBS) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
