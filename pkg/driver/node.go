@@ -9,7 +9,10 @@ import (
 )
 
 func (d *Driver) NodeGetId(ctx context.Context, req *csi.NodeGetIdRequest) (*csi.NodeGetIdResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	metadata := d.cloud.GetMetadata()
+	return &csi.NodeGetIdResponse{
+		NodeId: metadata.InstanceID,
+	}, nil
 }
 
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
@@ -33,5 +36,8 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 }
 
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	metadata := d.cloud.GetMetadata()
+	return &csi.NodeGetInfoResponse{
+		NodeId: metadata.InstanceID,
+	}, nil
 }
