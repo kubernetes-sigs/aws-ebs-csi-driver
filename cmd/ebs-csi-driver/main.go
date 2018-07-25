@@ -12,14 +12,14 @@ func main() {
 	var endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
 	flag.Parse()
 
-	cloudProvider, err := cloud.NewCloudProvider()
+	cloud, err := cloud.NewCloud()
 	if err != nil {
 		glog.Fatalln(err)
 	}
 
-	m := cloudProvider.GetMetadata()
+	m := cloud.GetMetadata()
 
-	drv := driver.NewDriver(cloudProvider, *endpoint, m.InstanceID)
+	drv := driver.NewDriver(cloud, *endpoint, m.InstanceID)
 	if err := drv.Run(); err != nil {
 		glog.Fatalln(err)
 	}

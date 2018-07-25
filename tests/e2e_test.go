@@ -136,14 +136,14 @@ func TestControllerE2E(t *testing.T) {
 }
 
 func runCSIDriver() {
-	cloudProvider, err := cloud.NewCloudProvider()
+	cloud, err := cloud.NewCloud()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	metadata := cloudProvider.GetMetadata()
+	metadata := cloud.GetMetadata()
 
-	drv := driver.NewDriver(cloudProvider, endpoint, metadata.InstanceID)
+	drv := driver.NewDriver(cloud, endpoint, metadata.InstanceID)
 	if err := drv.Run(); err != nil {
 		log.Fatalln(err)
 	}

@@ -19,13 +19,13 @@ const (
 type Driver struct {
 	endpoint       string
 	nodeID         string
-	cloud          cloud.CloudProvider
+	cloud          cloud.Compute
 	controllerCaps []csi.ControllerServiceCapability_RPC_Type
 	volumeCaps     []csi.VolumeCapability_AccessMode
 	srv            *grpc.Server
 }
 
-func NewDriver(cloud cloud.CloudProvider, endpoint, nodeID string) *Driver {
+func NewDriver(cloud cloud.Compute, endpoint, nodeID string) *Driver {
 	glog.Infof("Driver: %v version: %v", driverName)
 	return &Driver{
 		endpoint: endpoint,

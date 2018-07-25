@@ -21,11 +21,11 @@ func TestSanity(t *testing.T) {
 		t.Fatalf("could not remove socket file %s: %v", socket, err)
 	}
 
-	awsDriver := driver.NewDriver(cloud.NewFakeCloudProvider(), endpoint, "")
-	defer awsDriver.Stop()
+	ebsDriver := driver.NewDriver(cloud.NewFakeCloudProvider(), endpoint, "")
+	defer ebsDriver.Stop()
 
 	go func() {
-		if err := awsDriver.Run(); err != nil {
+		if err := ebsDriver.Run(); err != nil {
 			t.Fatalf("could not run CSI driver: %v", err)
 		}
 	}()

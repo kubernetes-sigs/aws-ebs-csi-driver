@@ -45,7 +45,7 @@ const (
 	DefaultVolumeType = VolumeTypeGP2
 )
 
-type CloudProvider interface {
+type Compute interface {
 	GetMetadata() *Metadata
 	CreateDisk(string, *DiskOptions) (*Disk, error)
 	DeleteDisk(string) (bool, error)
@@ -66,12 +66,14 @@ type Disk struct {
 	CapacityGiB int64
 }
 
-type awsEBS struct {
+type Cloud struct {
 	metadata *Metadata
 	ec2      *ec2.EC2
 }
 
-func NewCloudProvider() (CloudProvider, error) {
+var _ Compute = &Cloud{}
+
+func NewCloud() (*Cloud, error) {
 	cfg, err := readAWSConfig(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
@@ -111,17 +113,17 @@ func NewCloudProvider() (CloudProvider, error) {
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
-	return &awsEBS{
+	return &Cloud{
 		metadata: metadata,
 		ec2:      ec2.New(session.New(awsConfig)),
 	}, nil
 }
 
-func (c *awsEBS) GetMetadata() *Metadata {
+func (c *Cloud) GetMetadata() *Metadata {
 	return c.metadata
 }
 
-func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
+func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var createType string
 	var iops int64
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -182,7 +184,7 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk,
 	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
-func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
+func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
 		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
@@ -190,7 +192,7 @@ func (c *awsEBS) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
+func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 	// TODO: choose a valid and non-duplicate device name
 	device := "/dev/xvdbc"
 	request := &ec2.AttachVolumeInput{
@@ -207,7 +209,7 @@ func (c *awsEBS) AttachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *awsEBS) DetachDisk(volumeID, nodeID string) error {
+func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	request := &ec2.DetachVolumeInput{
 		InstanceId: aws.String(nodeID),
 		VolumeId:   aws.String(volumeID),
@@ -224,7 +226,7 @@ func (c *awsEBS) DetachDisk(volumeID, nodeID string) error {
 var ErrMultiDisks = errors.New("Multiple disks with same name")
 var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
-func (c *awsEBS) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
+func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
