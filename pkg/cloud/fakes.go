@@ -23,6 +23,10 @@ func NewFakeCloudProvider() *FakeCloudProvider {
 	}
 }
 
+func (c *FakeCloudProvider) GetMetadata() *Metadata {
+	return nil
+}
+
 func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := &fakeDisk{

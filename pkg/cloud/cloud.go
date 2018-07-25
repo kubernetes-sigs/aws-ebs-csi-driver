@@ -46,6 +46,7 @@ const (
 )
 
 type CloudProvider interface {
+	GetMetadata() *Metadata
 	CreateDisk(string, *DiskOptions) (*Disk, error)
 	DeleteDisk(string) (bool, error)
 	AttachDisk(string, string) error
@@ -66,12 +67,11 @@ type Disk struct {
 }
 
 type awsEBS struct {
-	region string
-	zone   string
-	ec2    *ec2.EC2
+	metadata *Metadata
+	ec2      *ec2.EC2
 }
 
-func NewCloudProvider(region, zone string) (CloudProvider, error) {
+func NewCloudProvider() (CloudProvider, error) {
 	cfg, err := readAWSConfig(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
@@ -94,8 +94,13 @@ func NewCloudProvider(region, zone string) (CloudProvider, error) {
 		}
 	}
 
+	metadata, err := NewMetadata()
+	if err != nil {
+		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
+	}
+
 	awsConfig := &aws.Config{
-		Region: &region,
+		Region: &metadata.Region,
 		Credentials: credentials.NewChainCredentials(
 			[]credentials.Provider{
 				&credentials.EnvProvider{},
@@ -107,10 +112,13 @@ func NewCloudProvider(region, zone string) (CloudProvider, error) {
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
 	return &awsEBS{
-		region: region,
-		zone:   zone,
-		ec2:    ec2.New(session.New(awsConfig)),
+		metadata: metadata,
+		ec2:      ec2.New(session.New(awsConfig)),
 	}, nil
+}
+
+func (c *awsEBS) GetMetadata() *Metadata {
+	return c.metadata
 }
 
 func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
@@ -145,8 +153,9 @@ func (c *awsEBS) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk,
 		Tags:         tags,
 	}
 
+	m := c.GetMetadata()
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String(c.zone),
+		AvailabilityZone:  aws.String(m.AvailabilityZone),
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},

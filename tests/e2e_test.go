@@ -44,17 +44,7 @@ var (
 )
 
 func TestControllerE2E(t *testing.T) {
-	go func() {
-		cloudProvider, err := cloud.NewCloudProvider(region, zone)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		drv := driver.NewDriver(cloudProvider, endpoint, nodeID)
-		if err := drv.Run(); err != nil {
-			log.Fatalln(err)
-		}
-
-	}()
+	go runCSIDriver()
 
 	cc, err := newControllerClient()
 	if err != nil {
@@ -146,11 +136,14 @@ func TestControllerE2E(t *testing.T) {
 }
 
 func runCSIDriver() {
-	cloudProvider, err := cloud.NewCloudProvider(region, zone)
+	cloudProvider, err := cloud.NewCloudProvider()
 	if err != nil {
 		log.Fatalln(err)
 	}
-	drv := driver.NewDriver(cloudProvider, endpoint, nodeID)
+
+	metadata := cloudProvider.GetMetadata()
+
+	drv := driver.NewDriver(cloudProvider, endpoint, metadata.InstanceID)
 	if err := drv.Run(); err != nil {
 		log.Fatalln(err)
 	}
