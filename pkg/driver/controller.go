@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
+	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,6 +21,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	volSizeBytes := cloud.DefaultVolumeSize
 	if req.GetCapacityRange() != nil {
 		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
+	}
+
+	maxVolSizeBytes := req.GetCapacityRange().GetLimitBytes()
+	if maxVolSizeBytes > 0 {
+		if util.RoundUpSize(volSizeBytes, 1024*1024*1024) > maxVolSizeBytes {
+			return nil, status.Error(codes.InvalidArgument, "After round-up volume size exceeds the limit specified")
+		}
 	}
 
 	volCaps := req.GetVolumeCapabilities()
