@@ -7,11 +7,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 )
 
@@ -74,26 +72,9 @@ type Cloud struct {
 var _ Compute = &Cloud{}
 
 func NewCloud() (*Cloud, error) {
-	cfg, err := readAWSConfig(nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read AWS config file: %v", err)
-	}
-
 	sess, err := session.NewSession(&aws.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
-	}
-
-	var provider credentials.Provider
-	if cfg.Global.RoleARN == "" {
-		provider = &ec2rolecreds.EC2RoleProvider{
-			Client: ec2metadata.New(sess),
-		}
-	} else {
-		provider = &stscreds.AssumeRoleProvider{
-			Client:  sts.New(sess),
-			RoleARN: cfg.Global.RoleARN,
-		}
 	}
 
 	metadata, err := NewMetadata()
@@ -101,15 +82,15 @@ func NewCloud() (*Cloud, error) {
 		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
 	}
 
+	provider := []credentials.Provider{
+		&credentials.EnvProvider{},
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
+		&credentials.SharedCredentialsProvider{},
+	}
+
 	awsConfig := &aws.Config{
-		Region: &metadata.Region,
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&credentials.EnvProvider{},
-				provider,
-				&credentials.SharedCredentialsProvider{},
-			},
-		),
+		Region:      &metadata.Region,
+		Credentials: credentials.NewChainCredentials(provider),
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
