@@ -105,6 +105,20 @@ func TestCreateVolume(t *testing.T) {
 				Attributes:    nil,
 			},
 		},
+		{
+			name: "success with correct round up",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      &csi.CapacityRange{RequiredBytes: 1073741825},
+				VolumeCapabilities: stdVolCap,
+				Parameters:         nil,
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
+				Id:            "vol-test",
+				Attributes:    nil,
+			},
+		},
 	}
 
 	for _, tc := range testCases {

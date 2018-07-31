@@ -18,14 +18,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	volSizeBytes := cloud.DefaultVolumeSize
+	volSize := cloud.DefaultVolumeSize
 	if req.GetCapacityRange() != nil {
-		volSizeBytes = req.GetCapacityRange().GetRequiredBytes()
+		volSize = req.GetCapacityRange().GetRequiredBytes()
 	}
 
-	maxVolSizeBytes := req.GetCapacityRange().GetLimitBytes()
-	if maxVolSizeBytes > 0 {
-		if util.RoundUpSize(volSizeBytes, 1024*1024*1024) > maxVolSizeBytes {
+	volSizeBytes := util.RoundUpBytes(volSize)
+
+	maxVolSize := req.GetCapacityRange().GetLimitBytes()
+	if maxVolSize > 0 {
+		if volSizeBytes > maxVolSize {
 			return nil, status.Error(codes.InvalidArgument, "After round-up volume size exceeds the limit specified")
 		}
 	}
@@ -66,7 +68,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			Id:            disk.VolumeID,
-			CapacityBytes: disk.CapacityGiB * 1024 * 1024 * 1024,
+			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
 		},
 	}, nil
 }
