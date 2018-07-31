@@ -61,7 +61,7 @@ func TestControllerE2E(t *testing.T) {
 		req  *csi.CreateVolumeRequest
 	}{
 		{
-			name: "success: create volume",
+			name: "success: create and delete volume",
 			req: &csi.CreateVolumeRequest{
 				Name:               "volume-name-e2e-test",
 				CapacityRange:      stdCapRange,
@@ -131,6 +131,27 @@ func TestControllerE2E(t *testing.T) {
 			return true, nil
 		}); waitErr != nil {
 			log.Fatal(waitErr)
+		}
+
+		t.Logf("Deleting volume %q twice", volume.Id)
+		_, err = cc.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{
+			VolumeId: volume.Id,
+		})
+		if err != nil {
+			t.Fatalf("could not delete volume %q twice: %v", volume.Id, err)
+		}
+
+		nonexistentVolume := "vol-0f13f3ff21126cabf"
+		if nonexistentVolume != volume.Id {
+			t.Logf("Deleting nonexistent volume %q", nonexistentVolume)
+			_, err = cc.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{
+				VolumeId: nonexistentVolume,
+			})
+			if err != nil {
+				t.Fatalf("could not delete nonexistent volume %q: %v", nonexistentVolume, err)
+			}
+		} else {
+			t.Logf("Skipping nonexistent volume deletion because volume %q does exist", nonexistentVolume)
 		}
 	}
 }

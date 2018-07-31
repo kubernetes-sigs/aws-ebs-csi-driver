@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -165,9 +166,16 @@ func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
+var ErrVolumeNotFound = errors.New("Volume was not found")
+
 func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "InvalidVolume.NotFound" {
+				return false, ErrVolumeNotFound
+			}
+		}
 		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
 	}
 	return true, nil

@@ -80,7 +80,9 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
-		//TODO: check if it wasn't found and return valid response instead of error
+		if err == cloud.ErrVolumeNotFound {
+			return &csi.DeleteVolumeResponse{}, nil
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
