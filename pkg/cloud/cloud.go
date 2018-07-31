@@ -1,7 +1,6 @@
 package cloud
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -166,8 +165,6 @@ func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
-var ErrVolumeNotFound = errors.New("Volume was not found")
-
 func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
@@ -211,9 +208,6 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 
 	return nil
 }
-
-var ErrMultiDisks = errors.New("Multiple disks with same name")
-var ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
 func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
