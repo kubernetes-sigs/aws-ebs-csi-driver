@@ -64,9 +64,18 @@ type Disk struct {
 	CapacityGiB int64
 }
 
+// EC2 abstracts aws.EC2 to facilitate its mocking.
+type EC2 interface {
+	DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error)
+	CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error)
+	DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error)
+	DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error)
+	AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error)
+}
+
 type Cloud struct {
 	metadata *Metadata
-	ec2      *ec2.EC2
+	ec2      EC2
 }
 
 var _ Compute = &Cloud{}

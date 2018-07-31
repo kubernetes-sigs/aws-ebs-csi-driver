@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 )
 
@@ -75,4 +77,29 @@ func (c *FakeCloudProvider) GetDiskByNameAndSize(name string, capacityBytes int6
 		return disks[0].Disk, nil
 	}
 	return nil, nil
+}
+
+type fakeEC2 struct{}
+
+func (f *fakeEC2) DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error) {
+	return &ec2.DescribeVolumesOutput{}, nil
+}
+
+func (f *fakeEC2) CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error) {
+	return &ec2.Volume{
+		VolumeId: aws.String("vol-test"),
+		Size:     aws.Int64(1),
+	}, nil
+}
+
+func (f *fakeEC2) DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error) {
+	return &ec2.DeleteVolumeOutput{}, nil
+}
+
+func (f *fakeEC2) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error) {
+	return &ec2.VolumeAttachment{}, nil
+}
+
+func (f *fakeEC2) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error) {
+	return &ec2.VolumeAttachment{}, nil
 }
