@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -43,13 +44,22 @@ const (
 	DefaultVolumeType = VolumeTypeGP2
 )
 
-type Compute interface {
-	GetMetadata() *Metadata
-	CreateDisk(string, *DiskOptions) (*Disk, error)
-	DeleteDisk(string) (bool, error)
-	AttachDisk(string, string) error
-	DetachDisk(string, string) error
-	GetDiskByNameAndSize(string, int64) (*Disk, error)
+var (
+	// ErrMultiDisks is an error that is returned when multiple
+	// disks are found with the same volume name.
+	ErrMultiDisks = errors.New("Multiple disks with same name")
+
+	// ErrDiskExistsDiffSize is an error that is returned if a disk with a given
+	// name, but different size, is found.
+	ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
+
+	// ErrVolumeNotFound is returned when a volume with a given ID is not found.
+	ErrVolumeNotFound = errors.New("Volume was not found")
+)
+
+type Disk struct {
+	VolumeID    string
+	CapacityGiB int64
 }
 
 type DiskOptions struct {
@@ -59,11 +69,6 @@ type DiskOptions struct {
 	IOPSPerGB     int64
 }
 
-type Disk struct {
-	VolumeID    string
-	CapacityGiB int64
-}
-
 // EC2 abstracts aws.EC2 to facilitate its mocking.
 type EC2 interface {
 	DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error)
@@ -71,6 +76,15 @@ type EC2 interface {
 	DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error)
 	DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error)
 	AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error)
+}
+
+type Compute interface {
+	GetMetadata() *Metadata
+	CreateDisk(string, *DiskOptions) (*Disk, error)
+	DeleteDisk(string) (bool, error)
+	AttachDisk(string, string) error
+	DetachDisk(string, string) error
+	GetDiskByNameAndSize(string, int64) (*Disk, error)
 }
 
 type Cloud struct {
