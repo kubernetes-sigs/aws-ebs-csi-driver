@@ -39,6 +39,8 @@ type CSISecrets struct {
 	ControllerUnpublishVolumeSecret map[string]string `yaml:"ControllerUnpublishVolumeSecret"`
 	NodeStageVolumeSecret           map[string]string `yaml:"NodeStageVolumeSecret"`
 	NodePublishVolumeSecret         map[string]string `yaml:"NodePublishVolumeSecret"`
+	CreateSnapshotSecret            map[string]string `yaml:"CreateSnapshotSecret"`
+	DeleteSnapshotSecret            map[string]string `yaml:"DeleteSnapshotSecret"`
 }
 
 // Config provides the configuration for the sanity tests. It
