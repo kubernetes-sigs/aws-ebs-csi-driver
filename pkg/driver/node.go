@@ -32,7 +32,18 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 }
 
 func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	var caps []*csi.NodeServiceCapability
+	for _, cap := range d.nodeCaps {
+		c := &csi.NodeServiceCapability{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: cap,
+				},
+			},
+		}
+		caps = append(caps, c)
+	}
+	return &csi.NodeGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {

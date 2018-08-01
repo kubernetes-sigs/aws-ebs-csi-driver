@@ -17,12 +17,15 @@ const (
 )
 
 type Driver struct {
-	endpoint       string
-	nodeID         string
-	cloud          cloud.Compute
-	controllerCaps []csi.ControllerServiceCapability_RPC_Type
+	endpoint string
+	nodeID   string
+
+	cloud cloud.Compute
+	srv   *grpc.Server
+
 	volumeCaps     []csi.VolumeCapability_AccessMode
-	srv            *grpc.Server
+	controllerCaps []csi.ControllerServiceCapability_RPC_Type
+	nodeCaps       []csi.NodeServiceCapability_RPC_Type
 }
 
 func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
@@ -32,10 +35,6 @@ func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
 		endpoint: endpoint,
 		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
-		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
-			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-		},
 		volumeCaps: []csi.VolumeCapability_AccessMode{
 			csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
@@ -43,6 +42,13 @@ func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
 			csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
 			},
+		},
+		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
+			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		},
+		nodeCaps: []csi.NodeServiceCapability_RPC_Type{
+			csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 		},
 	}
 }
