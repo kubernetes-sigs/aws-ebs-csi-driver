@@ -86,19 +86,21 @@ func NewCloud() (*Cloud, error) {
 		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
 	}
 
-	metadata, err := NewMetadata()
+	svc := ec2metadata.New(sess)
+
+	metadata, err := NewMetadata(svc)
 	if err != nil {
 		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
 	}
 
 	provider := []credentials.Provider{
 		&credentials.EnvProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
+		&ec2rolecreds.EC2RoleProvider{Client: svc},
 		&credentials.SharedCredentialsProvider{},
 	}
 
 	awsConfig := &aws.Config{
-		Region:      &metadata.Region,
+		Region:      aws.String(metadata.GetRegion()),
 		Credentials: credentials.NewChainCredentials(provider),
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
@@ -147,7 +149,7 @@ func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 
 	m := c.GetMetadata()
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String(m.AvailabilityZone),
+		AvailabilityZone:  aws.String(m.GetAvailabilityZone()),
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},

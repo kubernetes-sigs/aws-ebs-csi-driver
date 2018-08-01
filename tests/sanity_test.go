@@ -21,7 +21,7 @@ func TestSanity(t *testing.T) {
 		t.Fatalf("could not remove socket file %s: %v", socket, err)
 	}
 
-	ebsDriver := driver.NewDriver(cloud.NewFakeCloudProvider(), endpoint, "")
+	ebsDriver := driver.NewDriver(cloud.NewFakeCloudProvider(), endpoint)
 	defer ebsDriver.Stop()
 
 	go func() {

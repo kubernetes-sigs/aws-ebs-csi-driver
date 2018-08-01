@@ -17,9 +17,7 @@ func main() {
 		glog.Fatalln(err)
 	}
 
-	m := cloud.GetMetadata()
-
-	drv := driver.NewDriver(cloud, *endpoint, m.InstanceID)
+	drv := driver.NewDriver(cloud, *endpoint)
 	if err := drv.Run(); err != nil {
 		glog.Fatalln(err)
 	}

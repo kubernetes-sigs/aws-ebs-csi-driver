@@ -9,9 +9,9 @@ import (
 )
 
 func (d *Driver) NodeGetId(ctx context.Context, req *csi.NodeGetIdRequest) (*csi.NodeGetIdResponse, error) {
-	metadata := d.cloud.GetMetadata()
+	m := d.cloud.GetMetadata()
 	return &csi.NodeGetIdResponse{
-		NodeId: metadata.InstanceID,
+		NodeId: m.GetInstanceID(),
 	}, nil
 }
 
@@ -36,8 +36,8 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 }
 
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	metadata := d.cloud.GetMetadata()
+	m := d.cloud.GetMetadata()
 	return &csi.NodeGetInfoResponse{
-		NodeId: metadata.InstanceID,
+		NodeId: m.GetInstanceID(),
 	}, nil
 }

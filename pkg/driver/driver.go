@@ -25,11 +25,12 @@ type Driver struct {
 	srv            *grpc.Server
 }
 
-func NewDriver(cloud cloud.Compute, endpoint, nodeID string) *Driver {
+func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
 	glog.Infof("Driver: %v version: %v", driverName)
+	m := cloud.GetMetadata()
 	return &Driver{
 		endpoint: endpoint,
-		nodeID:   nodeID,
+		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
 		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
 			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,

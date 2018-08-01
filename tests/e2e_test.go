@@ -162,9 +162,7 @@ func runCSIDriver() {
 		log.Fatalln(err)
 	}
 
-	metadata := cloud.GetMetadata()
-
-	drv := driver.NewDriver(cloud, endpoint, metadata.InstanceID)
+	drv := driver.NewDriver(cloud, endpoint)
 	if err := drv.Run(); err != nil {
 		log.Fatalln(err)
 	}
