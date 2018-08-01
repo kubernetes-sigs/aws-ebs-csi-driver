@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// TODO: check division by zero and int overflow
+
 func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 	return (volumeSizeBytes + allocationUnitBytes - 1) / allocationUnitBytes
 }
