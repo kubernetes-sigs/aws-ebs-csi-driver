@@ -9,6 +9,7 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
 	"google.golang.org/grpc"
+	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 const (
@@ -23,18 +24,31 @@ type Driver struct {
 	cloud cloud.Compute
 	srv   *grpc.Server
 
+	mounter *mount.SafeFormatAndMount
+
 	volumeCaps     []csi.VolumeCapability_AccessMode
 	controllerCaps []csi.ControllerServiceCapability_RPC_Type
 	nodeCaps       []csi.NodeServiceCapability_RPC_Type
 }
 
+func newSafeMounter() *mount.SafeFormatAndMount {
+	realMounter := mount.New("")
+	realExec := mount.NewOsExec()
+	return &mount.SafeFormatAndMount{
+		Interface: realMounter,
+		Exec:      realExec,
+	}
+}
+
 func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
-	glog.Infof("Driver: %v version: %v", driverName)
+	glog.Infof("Driver: %v", driverName)
 	m := cloud.GetMetadata()
+
 	return &Driver{
 		endpoint: endpoint,
 		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
+		mounter:  newSafeMounter(),
 		volumeCaps: []csi.VolumeCapability_AccessMode{
 			csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
