@@ -17,6 +17,7 @@ limitations under the License.
 package sanity
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -87,6 +88,8 @@ func (sc *SanityContext) setup() {
 	if len(sc.Config.SecretsFile) > 0 {
 		sc.Secrets, err = loadSecrets(sc.Config.SecretsFile)
 		Expect(err).NotTo(HaveOccurred())
+	} else {
+		sc.Secrets = &CSISecrets{}
 	}
 
 	By("connecting to CSI driver")
@@ -137,4 +140,24 @@ func loadSecrets(path string) (*CSISecrets, error) {
 	}
 
 	return &creds, nil
+}
+
+var uniqueSuffix = "-" + pseudoUUID()
+
+// pseudoUUID returns a unique string generated from random
+// bytes, empty string in case of error.
+func pseudoUUID() string {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		// Shouldn't happen?!
+		return ""
+	}
+	return fmt.Sprintf("%08X-%08X", b[0:4], b[4:8])
+}
+
+// uniqueString returns a unique string by appending a random
+// number. In case of an error, just the prefix is returned, so it
+// alone should already be fairly unique.
+func uniqueString(prefix string) string {
+	return prefix + uniqueSuffix
 }

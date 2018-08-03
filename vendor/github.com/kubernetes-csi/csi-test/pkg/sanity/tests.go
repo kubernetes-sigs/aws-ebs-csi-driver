@@ -42,16 +42,15 @@ func DescribeSanity(text string, body func(*SanityContext)) bool {
 func registerTestsInGinkgo(sc *SanityContext) {
 	for _, test := range tests {
 		Describe(test.text, func() {
-
 			BeforeEach(func() {
 				sc.setup()
 			})
 
+			test.body(sc)
+
 			AfterEach(func() {
 				sc.teardown()
 			})
-
-			test.body(sc)
 		})
 	}
 }

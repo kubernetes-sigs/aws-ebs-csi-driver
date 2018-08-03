@@ -34,8 +34,8 @@
     "service/ec2",
     "service/sts"
   ]
-  revision = "e3f7540480e3b9a733845f9fa5d35d7484bac3cd"
-  version = "v1.15.2"
+  revision = "d1f87361dea69f086010bc3d03c120a602320b97"
+  version = "v1.15.4"
 
 [[projects]]
   name = "github.com/container-storage-interface/spec"
@@ -91,8 +91,8 @@
     "pkg/sanity",
     "utils"
   ]
-  revision = "718c9544f5e16cba31881333e0f9dff371663dea"
-  version = "v0.3.0-1"
+  revision = "d6869a2704bb7e603ab294a42fbb893c18b8e46e"
+  version = "v0.3.0-2"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -154,7 +154,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
+  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
 
 [[projects]]
   branch = "master"
@@ -171,7 +171,7 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "49c15d80dfbc983ea25246ee959d970efe09ec09"
+  revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
 
 [[projects]]
   branch = "master"
@@ -180,7 +180,7 @@
     "unix",
     "windows"
   ]
-  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
+  revision = "0ffbfd41fbef8ffcf9b62b0b0aa3a5873ed7a4fe"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -278,13 +278,31 @@
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/util/runtime",
+    "pkg/util/sets",
     "pkg/util/wait"
   ]
   revision = "cbafd24d5796966031ae904aa88e2436a619ae8a"
 
+[[projects]]
+  name = "k8s.io/kubernetes"
+  packages = [
+    "pkg/util/file",
+    "pkg/util/io",
+    "pkg/util/mount",
+    "pkg/util/nsenter"
+  ]
+  revision = "b1b29978270dc22fecc592ac55d903350454310a"
+  version = "v1.11.1"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/utils"
+  packages = ["exec"]
+  revision = "045dc31ee5c40e8240241ce28dc24d7b56130373"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e67a4194cd2b20e3fc308229b0f6a944bba9dcde19a29b45c46c9f26a464099d"
+  inputs-digest = "3ed0d5a3a787f5b264ac7a32db92060c2a2343147cd2f3dc64d3759c7669f6c4"
   solver-name = "gps-cdcl"
   solver-version = 1

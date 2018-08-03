@@ -17,20 +17,20 @@ limitations under the License.
 package sanity
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	context "golang.org/x/net/context"
+	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = DescribeSanity("GetPluginCapabilities [Identity Service]", func(sc *SanityContext) {
+var _ = DescribeSanity("Identity Service", func(sc *SanityContext) {
 	var (
 		c csi.IdentityClient
 	)
@@ -39,75 +39,61 @@ var _ = DescribeSanity("GetPluginCapabilities [Identity Service]", func(sc *Sani
 		c = csi.NewIdentityClient(sc.Conn)
 	})
 
-	It("should return appropriate capabilities", func() {
-		req := &csi.GetPluginCapabilitiesRequest{}
-		res, err := c.GetPluginCapabilities(context.Background(), req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(res).NotTo(BeNil())
+	Describe("GetPluginCapabilities", func() {
+		It("should return appropriate capabilities", func() {
+			req := &csi.GetPluginCapabilitiesRequest{}
+			res, err := c.GetPluginCapabilities(context.Background(), req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).NotTo(BeNil())
 
-		By("checking successful response")
-		Expect(res.GetCapabilities()).NotTo(BeNil())
-		for _, cap := range res.GetCapabilities() {
-			switch cap.GetService().GetType() {
-			case csi.PluginCapability_Service_CONTROLLER_SERVICE:
-			case csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS:
-			default:
-				Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetService().GetType()))
+			By("checking successful response")
+			Expect(res.GetCapabilities()).NotTo(BeNil())
+			for _, cap := range res.GetCapabilities() {
+				switch cap.GetService().GetType() {
+				case csi.PluginCapability_Service_CONTROLLER_SERVICE:
+				case csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS:
+				default:
+					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetService().GetType()))
+				}
 			}
-		}
+
+		})
 
 	})
 
-})
+	Describe("Probe", func() {
+		It("should return appropriate information", func() {
+			req := &csi.ProbeRequest{}
+			res, err := c.Probe(context.Background(), req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).NotTo(BeNil())
 
-var _ = DescribeSanity("Probe [Identity Service]", func(sc *SanityContext) {
-	var (
-		c csi.IdentityClient
-	)
+			By("verifying return status")
+			serverError, ok := status.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(serverError.Code() == codes.FailedPrecondition ||
+				serverError.Code() == codes.OK).To(BeTrue())
 
-	BeforeEach(func() {
-		c = csi.NewIdentityClient(sc.Conn)
+			if res.GetReady() != nil {
+				Expect(res.GetReady().GetValue() == true ||
+					res.GetReady().GetValue() == false).To(BeTrue())
+			}
+		})
 	})
 
-	It("should return appropriate information", func() {
-		req := &csi.ProbeRequest{}
-		res, err := c.Probe(context.Background(), req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(res).NotTo(BeNil())
+	Describe("GetPluginInfo", func() {
+		It("should return appropriate information", func() {
+			req := &csi.GetPluginInfoRequest{}
+			res, err := c.GetPluginInfo(context.Background(), req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).NotTo(BeNil())
 
-		By("verifying return status")
-		serverError, ok := status.FromError(err)
-		Expect(ok).To(BeTrue())
-		Expect(serverError.Code() == codes.FailedPrecondition ||
-			serverError.Code() == codes.OK).To(BeTrue())
-
-		if res.GetReady() != nil {
-			Expect(res.GetReady().GetValue() == true ||
-				res.GetReady().GetValue() == false).To(BeTrue())
-		}
-	})
-})
-
-var _ = DescribeSanity("GetPluginInfo [Identity Server]", func(sc *SanityContext) {
-	var (
-		c csi.IdentityClient
-	)
-
-	BeforeEach(func() {
-		c = csi.NewIdentityClient(sc.Conn)
-	})
-
-	It("should return appropriate information", func() {
-		req := &csi.GetPluginInfoRequest{}
-		res, err := c.GetPluginInfo(context.Background(), req)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(res).NotTo(BeNil())
-
-		By("verifying name size and characters")
-		Expect(res.GetName()).ToNot(HaveLen(0))
-		Expect(len(res.GetName())).To(BeNumerically("<=", 63))
-		Expect(regexp.
-			MustCompile("^[a-zA-Z][A-Za-z0-9-\\.\\_]{0,61}[a-zA-Z]$").
-			MatchString(res.GetName())).To(BeTrue())
+			By("verifying name size and characters")
+			Expect(res.GetName()).ToNot(HaveLen(0))
+			Expect(len(res.GetName())).To(BeNumerically("<=", 63))
+			Expect(regexp.
+				MustCompile("^[a-zA-Z][A-Za-z0-9-\\.\\_]{0,61}[a-zA-Z]$").
+				MatchString(res.GetName())).To(BeTrue())
+		})
 	})
 })
