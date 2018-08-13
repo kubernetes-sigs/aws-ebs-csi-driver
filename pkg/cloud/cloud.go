@@ -3,6 +3,8 @@ package cloud
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -12,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
+	"github.com/golang/glog"
 )
 
 const (
@@ -76,6 +79,7 @@ type EC2 interface {
 	DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error)
 	DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error)
 	AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error)
+	DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
 }
 
 type Compute interface {
@@ -90,6 +94,15 @@ type Compute interface {
 type Cloud struct {
 	metadata *Metadata
 	ec2      EC2
+
+	// state of our device allocator for each node
+	deviceAllocators map[string]DeviceAllocator
+
+	// We keep an active list of devices we have assigned but not yet
+	// attached, to avoid a race condition where we assign a device mapping
+	// and then get a second request before we attach the volume
+	attachingMutex sync.Mutex
+	attaching      map[string]map[mountDevice]awsVolumeID
 }
 
 var _ Compute = &Cloud{}
@@ -120,8 +133,10 @@ func NewCloud() (*Cloud, error) {
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
 	return &Cloud{
-		metadata: metadata,
-		ec2:      ec2.New(session.New(awsConfig)),
+		metadata:         metadata,
+		ec2:              ec2.New(session.New(awsConfig)),
+		deviceAllocators: make(map[string]DeviceAllocator),
+		attaching:        make(map[string]map[mountDevice]awsVolumeID),
 	}, nil
 }
 
@@ -203,16 +218,143 @@ func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
+func (c *Cloud) DescribeInstances(instanceID string) ([]*ec2.Instance, error) {
+	// Instances are paged
+	results := []*ec2.Instance{}
+
+	request := &ec2.DescribeInstancesInput{
+		InstanceIds: []*string{&instanceID},
+	}
+
+	var nextToken *string
+	for {
+		response, err := c.ec2.DescribeInstances(request)
+		if err != nil {
+			return nil, fmt.Errorf("error listing AWS instances: %q", err)
+		}
+
+		for _, reservation := range response.Reservations {
+			results = append(results, reservation.Instances...)
+		}
+
+		nextToken = response.NextToken
+		if aws.StringValue(nextToken) == "" {
+			break
+		}
+		request.NextToken = nextToken
+	}
+	return results, nil
+}
+
+// Gets the mountDevice already assigned to the volume, or assigns an unused mountDevice.
+// If the volume is already assigned, this will return the existing mountDevice with alreadyAttached=true.
+// Otherwise the mountDevice is assigned by finding the first available mountDevice, and it is returned with alreadyAttached=false.
+func (c *Cloud) getMountDevice(instanceID string, info *ec2.Instance, v string, assign bool) (assigned string, alreadyAttached bool, err error) {
+	//instanceType := i.getInstanceType()
+	//if instanceType == nil {
+	//return "", false, fmt.Errorf("could not get instance type for instance: %s", i.awsID)
+	//}
+
+	volumeID := awsVolumeID(v)
+
+	deviceMappings := map[mountDevice]awsVolumeID{}
+	for _, blockDevice := range info.BlockDeviceMappings {
+		name := mountDevice(aws.StringValue(blockDevice.DeviceName))
+		if strings.HasPrefix(string(name), "/dev/sd") {
+			name = mountDevice(name[7:])
+		}
+		if strings.HasPrefix(string(name), "/dev/xvd") {
+			name = mountDevice(name[8:])
+		}
+		if len(name) < 1 || len(name) > 2 {
+			glog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
+		}
+		deviceMappings[name] = awsVolumeID(aws.StringValue(blockDevice.Ebs.VolumeId))
+	}
+
+	// We lock to prevent concurrent mounts from conflicting
+	// We may still conflict if someone calls the API concurrently,
+	// but the AWS API will then fail one of the two attach operations
+	c.attachingMutex.Lock()
+	defer c.attachingMutex.Unlock()
+
+	for mountDevice, volume := range c.attaching[instanceID] {
+		deviceMappings[mountDevice] = volume
+	}
+
+	// Check to see if this volume is already assigned a device on this machine
+	for mountDevice, mappingVolumeID := range deviceMappings {
+		if volumeID == mappingVolumeID {
+			if assign {
+				glog.Warningf("Got assignment call for already-assigned volume: %s@%s", mountDevice, mappingVolumeID)
+			}
+			return string(mountDevice), true, nil
+		}
+	}
+
+	if !assign {
+		return "", false, nil
+	}
+
+	// Find the next unused device name
+	deviceAllocator := c.deviceAllocators[instanceID]
+	if deviceAllocator == nil {
+		// we want device names with two significant characters, starting with /dev/xvdbb
+		// the allowed range is /dev/xvd[b-c][a-z]
+		// http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+		deviceAllocator = NewDeviceAllocator()
+		c.deviceAllocators[instanceID] = deviceAllocator
+	}
+	// We need to lock deviceAllocator to prevent possible race with Deprioritize function
+	deviceAllocator.Lock()
+	defer deviceAllocator.Unlock()
+
+	//chosen, err := deviceAllocator.GetNext(deviceMappings)
+	chosen, err := deviceAllocator.GetNext(deviceMappings)
+	if err != nil {
+		glog.Warningf("Could not assign a mount device.  mappings=%v, error: %v", deviceMappings, err)
+		return "", false, fmt.Errorf("Too many EBS volumes attached to node %s.", instanceID)
+	}
+
+	attaching := c.attaching[instanceID]
+	if attaching == nil {
+		attaching = make(map[mountDevice]awsVolumeID)
+		c.attaching[instanceID] = attaching
+	}
+	attaching[chosen] = volumeID
+	glog.V(2).Infof("Assigned mount device %s -> volume %s", chosen, volumeID)
+
+	return string(chosen), false, nil
+}
+
 func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
-	// TODO: choose a valid and non-duplicate device name
-	device := "/dev/xvdbc"
+	instances, err := c.DescribeInstances(nodeID)
+	if err != nil {
+		return fmt.Errorf("could not describe instance %q: %v", nodeID, err)
+	}
+
+	nInstances := len(instances)
+	if nInstances != 1 {
+		return fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
+	}
+
+	instance := instances[0]
+
+	// TODO: read and process alreadyAttached (second parameter)
+	mountDevice, _, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
+	if mntErr != nil {
+		return mntErr
+	}
+
+	// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+	device := "/dev/xvd" + string(mountDevice)
 	request := &ec2.AttachVolumeInput{
 		Device:     aws.String(device),
 		InstanceId: aws.String(nodeID),
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err := c.ec2.AttachVolume(request)
+	_, err = c.ec2.AttachVolume(request)
 	if err != nil {
 		return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
