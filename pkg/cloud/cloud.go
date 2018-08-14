@@ -341,36 +341,73 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 	instance := instances[0]
 
 	// TODO: read and process alreadyAttached (second parameter)
-	mountDevice, _, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
+	mntDevice, alreadyAttached, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
 	if mntErr != nil {
 		return mntErr
 	}
 
-	// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
-	device := "/dev/xvd" + string(mountDevice)
-	request := &ec2.AttachVolumeInput{
-		Device:     aws.String(device),
-		InstanceId: aws.String(nodeID),
-		VolumeId:   aws.String(volumeID),
+	if !alreadyAttached {
+		// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+		device := "/dev/xvd" + string(mntDevice)
+		request := &ec2.AttachVolumeInput{
+			Device:     aws.String(device),
+			InstanceId: aws.String(nodeID),
+			VolumeId:   aws.String(volumeID),
+		}
+
+		resp, err := c.ec2.AttachVolume(request)
+		if err != nil {
+			return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+		}
+		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
+
+		if da, ok := c.deviceAllocators[nodeID]; ok {
+			da.Deprioritize(mountDevice(mntDevice))
+		}
 	}
 
-	_, err = c.ec2.AttachVolume(request)
-	if err != nil {
-		return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
-	}
+	// TODO: wait attaching
+	//attachment, err := disk.waitForAttachmentStatus("attached")
+
+	//if err != nil {
+	//if err == wait.ErrWaitTimeout {
+	//c.applyUnSchedulableTaint(nodeName, "Volume stuck in attaching state - node needs reboot to fix impaired state.")
+	//}
+	//return "", err
+	//}
 
 	return nil
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
+	instances, err := c.DescribeInstances(nodeID)
+	if err != nil {
+		return fmt.Errorf("could not describe instance %q: %v", nodeID, err)
+	}
+
+	nInstances := len(instances)
+	if nInstances != 1 {
+		return fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
+	}
+
+	instance := instances[0]
+
+	mntDevice, _, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
+	if mntErr != nil {
+		return mntErr
+	}
 	request := &ec2.DetachVolumeInput{
 		InstanceId: aws.String(nodeID),
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err := c.ec2.DetachVolume(request)
+	_, err = c.ec2.DetachVolume(request)
 	if err != nil {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
+	}
+
+	if da, ok := c.deviceAllocators[nodeID]; ok {
+		da.Deprioritize(mountDevice(mntDevice))
 	}
 
 	return nil
