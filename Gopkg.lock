@@ -34,8 +34,8 @@
     "service/ec2",
     "service/sts"
   ]
-  revision = "d1f87361dea69f086010bc3d03c120a602320b97"
-  version = "v1.15.4"
+  revision = "2d51b5082ad9f540e68761c27522b0677b9a75c0"
+  version = "v1.15.13"
 
 [[projects]]
   name = "github.com/container-storage-interface/spec"
@@ -140,24 +140,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/rexray/gocsi"
-  packages = ["utils"]
-  revision = "a517fde9d69b7915ae73202c084867cac0588472"
-
-[[projects]]
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
-  version = "v1.0.6"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  revision = "56440b844dfe139a8ac053f4ecac0b20b79058f4"
-
-[[projects]]
-  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -171,16 +153,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
+  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "unix",
-    "windows"
-  ]
-  revision = "0ffbfd41fbef8ffcf9b62b0b0aa3a5873ed7a4fe"
+  packages = ["unix"]
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -219,7 +198,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "daca94659cb50e9f37c1b834680f2e46358f10b0"
+  revision = "d0a8f471bba2dbb160885b0000d814ee5d559bad"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -281,7 +260,7 @@
     "pkg/util/sets",
     "pkg/util/wait"
   ]
-  revision = "cbafd24d5796966031ae904aa88e2436a619ae8a"
+  revision = "ef51ab160544f9d05b68e132a4af0b0fab459954"
 
 [[projects]]
   name = "k8s.io/kubernetes"
@@ -291,8 +270,8 @@
     "pkg/util/mount",
     "pkg/util/nsenter"
   ]
-  revision = "b1b29978270dc22fecc592ac55d903350454310a"
-  version = "v1.11.1"
+  revision = "bb9ffb1654d4a729bb4cec18ff088eacc153c239"
+  version = "v1.11.2"
 
 [[projects]]
   branch = "master"
@@ -303,6 +282,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3ed0d5a3a787f5b264ac7a32db92060c2a2343147cd2f3dc64d3759c7669f6c4"
+  inputs-digest = "dc127c6c3fc88f62c4b99d78e8233d5bd5def9f5b69ea0c6fdf4aa55a002b3ad"
   solver-name = "gps-cdcl"
   solver-version = 1
