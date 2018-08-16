@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -340,11 +341,21 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 
 	instance := instances[0]
 
-	// TODO: read and process alreadyAttached (second parameter)
 	mntDevice, alreadyAttached, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
 	if mntErr != nil {
 		return mntErr
 	}
+
+	// attachEnded is set to true if the attach operation completed
+	// (successfully or not), and is thus no longer in progress
+	attachEnded := false
+	defer func() {
+		if attachEnded {
+			if !c.endAttaching(nodeID, awsVolumeID(volumeID), mountDevice(mntDevice)) {
+				glog.Errorf("endAttaching called for disk %q when attach not in progress", volumeID)
+			}
+		}
+	}()
 
 	if !alreadyAttached {
 		// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
@@ -357,6 +368,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 
 		resp, err := c.ec2.AttachVolume(request)
 		if err != nil {
+			attachEnded = true
 			return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
@@ -368,6 +380,10 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 
 	// TODO: wait attaching
 	//attachment, err := disk.waitForAttachmentStatus("attached")
+	time.Sleep(time.Second * 7)
+
+	// The attach operation has finished
+	attachEnded = true
 
 	//if err != nil {
 	//if err == wait.ErrWaitTimeout {
@@ -380,6 +396,8 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
+	// TODO: check if attached
+
 	instances, err := c.DescribeInstances(nodeID)
 	if err != nil {
 		return fmt.Errorf("could not describe instance %q: %v", nodeID, err)
@@ -410,7 +428,36 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 		da.Deprioritize(mountDevice(mntDevice))
 	}
 
+	if mntDevice != "" {
+		c.endAttaching(nodeID, awsVolumeID(volumeID), mountDevice(mntDevice))
+		// We don't check the return value - we don't really expect the attachment to have been
+		// in progress, though it might have been
+	}
+
 	return nil
+}
+
+// endAttaching removes the entry from the "attachments in progress" map
+// It returns true if it was found (and removed), false otherwise
+func (c *Cloud) endAttaching(nodeID string, volumeID awsVolumeID, mountDevice mountDevice) bool {
+	c.attachingMutex.Lock()
+	defer c.attachingMutex.Unlock()
+
+	existingVolumeID, found := c.attaching[nodeID][mountDevice]
+	if !found {
+		return false
+	}
+	if volumeID != existingVolumeID {
+		// This actually can happen, because getMountDevice combines the attaching map with the volumes
+		// attached to the instance (as reported by the EC2 API).  So if endAttaching comes after
+		// a 10 second poll delay, we might well have had a concurrent request to allocate a mountpoint,
+		// which because we allocate sequentially is _very_ likely to get the immediately freed volume
+		glog.Infof("endAttaching on device %q assigned to different volume: %q vs %q", mountDevice, volumeID, existingVolumeID)
+		return false
+	}
+	glog.V(2).Infof("Releasing in-process attachment entry: %s -> volume %s", mountDevice, volumeID)
+	delete(c.attaching[nodeID], mountDevice)
+	return true
 }
 
 func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
