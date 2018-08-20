@@ -87,7 +87,7 @@ type Compute interface {
 	GetMetadata() *Metadata
 	CreateDisk(string, *DiskOptions) (*Disk, error)
 	DeleteDisk(string) (bool, error)
-	AttachDisk(string, string) error
+	AttachDisk(string, string) (string, error)
 	DetachDisk(string, string) error
 	GetDiskByNameAndSize(string, int64) (*Disk, error)
 }
@@ -328,22 +328,22 @@ func (c *Cloud) getMountDevice(instanceID string, info *ec2.Instance, v string, 
 	return string(chosen), false, nil
 }
 
-func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
+func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	instances, err := c.DescribeInstances(nodeID)
 	if err != nil {
-		return fmt.Errorf("could not describe instance %q: %v", nodeID, err)
+		return "", fmt.Errorf("could not describe instance %q: %v", nodeID, err)
 	}
 
 	nInstances := len(instances)
 	if nInstances != 1 {
-		return fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
+		return "", fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
 	}
 
 	instance := instances[0]
 
 	mntDevice, alreadyAttached, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
 	if mntErr != nil {
-		return mntErr
+		return "", mntErr
 	}
 
 	// attachEnded is set to true if the attach operation completed
@@ -357,9 +357,9 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 		}
 	}()
 
+	device := "/dev/xvd" + string(mntDevice)
 	if !alreadyAttached {
 		// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
-		device := "/dev/xvd" + string(mntDevice)
 		request := &ec2.AttachVolumeInput{
 			Device:     aws.String(device),
 			InstanceId: aws.String(nodeID),
@@ -369,7 +369,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 		resp, err := c.ec2.AttachVolume(request)
 		if err != nil {
 			attachEnded = true
-			return fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 
@@ -392,7 +392,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) error {
 	//return "", err
 	//}
 
-	return nil
+	return device, nil
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {

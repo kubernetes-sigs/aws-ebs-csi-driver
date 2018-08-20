@@ -33,17 +33,22 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	// TODO: get device attached (source)
-	source := "/host/dev/xvdbc"
+	source, ok := req.PublishInfo["devicePath"]
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "devicePath not provided")
+	}
 
 	// TODO: consider replacing IsNotMountPoint by IsLikelyNotMountPoint
-	notMnt, err := d.mounter.Interface.IsNotMountPoint(target)
+	notMnt, err := d.mounter.Interface.IsLikelyNotMountPoint(target)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if os.IsNotExist(err) {
+			if errMkDir := d.mounter.Interface.MakeDir(target); errMkDir != nil {
+				msg := fmt.Sprintf("could not create target dir %q: %v", target, errMkDir)
+				return nil, status.Error(codes.Internal, msg)
+			}
+			notMnt = true
+		} else {
 			msg := fmt.Sprintf("could not determine if %q is valid mount point: %v", target, err)
-			return nil, status.Error(codes.Internal, msg)
-		}
-		if errMkDir := d.mounter.Interface.MakeDir(target); errMkDir != nil {
-			msg := fmt.Sprintf("could not create target dir %q: %v", target, errMkDir)
 			return nil, status.Error(codes.Internal, msg)
 		}
 	}
@@ -55,7 +60,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// FormatAndMount will format only if needed
 	err = d.mounter.FormatAndMount(source, target, "ext4", nil)
-	if err != err {
+	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
 		return nil, status.Error(codes.Internal, msg)
 	}
@@ -110,10 +115,9 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 
 	options := []string{"bind"}
-	options = append(options, "rw")
-	//if req.GetReadonly() {
-	//options = append(options, "ro")
-	//}
+	if req.GetReadonly() {
+		options = append(options, "ro")
+	}
 
 	if err := d.mounter.Interface.MakeDir(target); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

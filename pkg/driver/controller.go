@@ -110,11 +110,13 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
-	if err := d.cloud.AttachDisk(volumeID, nodeID); err != nil {
+	devicePath, err := d.cloud.AttachDisk(volumeID, nodeID)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &csi.ControllerPublishVolumeResponse{}, nil
+	pvInfo := map[string]string{"devicePath": devicePath}
+	return &csi.ControllerPublishVolumeResponse{PublishInfo: pvInfo}, nil
 }
 
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
