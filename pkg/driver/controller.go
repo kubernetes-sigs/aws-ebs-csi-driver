@@ -6,13 +6,13 @@ import (
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// TODO: verbose glog
-
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+	glog.V(4).Infof("CreateVolume: called with args %#v", req)
 	volName := req.GetName()
 	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
@@ -74,6 +74,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 }
 
 func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+	glog.V(4).Infof("DeleteVolume: called with args: %#v", req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -81,6 +82,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 
 	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
 		if err == cloud.ErrVolumeNotFound {
+			glog.V(4).Infof("DeleteVolume: volume not found, returning with success")
 			return &csi.DeleteVolumeResponse{}, nil
 		}
 		return nil, status.Error(codes.Internal, err.Error())
@@ -90,6 +92,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 }
 
 func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+	glog.V(4).Infof("ControllerPublishVolume: called with args %#v", req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -114,12 +117,14 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	glog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
 	pvInfo := map[string]string{"devicePath": devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishInfo: pvInfo}, nil
 }
 
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+	glog.V(4).Infof("ControllerUnpublishVolume: called with args %#v", req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -133,10 +138,13 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 	if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	glog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
+
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
 func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
+	glog.V(4).Infof("ControllerGetCapabilities: called with args %#v", req)
 	var caps []*csi.ControllerServiceCapability
 	for _, cap := range d.controllerCaps {
 		c := &csi.ControllerServiceCapability{
@@ -152,14 +160,17 @@ func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.Control
 }
 
 func (d *Driver) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
+	glog.V(4).Infof("GetCapacity: called with args %#v", req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
+	glog.V(4).Infof("ListVolumes: called with args %#v", req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+	glog.V(4).Infof("ValidateVolumeCapabilities: called with args %#v", req)
 	//TODO: validate if volume exists
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -175,7 +186,6 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Supported: found,
 	}, nil
-
 }
 
 func (d *Driver) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
