@@ -60,7 +60,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 		newDisk, err := d.cloud.CreateDisk(volName, opts)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 		}
 		disk = newDisk
 	}
@@ -82,10 +82,10 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 
 	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
 		if err == cloud.ErrVolumeNotFound {
-			glog.V(4).Infof("DeleteVolume: volume not found, returning with success")
+			glog.V(4).Info("DeleteVolume: volume not found, returning with success")
 			return &csi.DeleteVolumeResponse{}, nil
 		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "Could not delete volume ID %q: %v", volumeID, err)
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -115,7 +115,7 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 
 	devicePath, err := d.cloud.AttachDisk(volumeID, nodeID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	glog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
@@ -136,7 +136,7 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 	}
 
 	if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 	glog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
 

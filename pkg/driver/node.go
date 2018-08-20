@@ -32,13 +32,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
-	// TODO: get device attached (source)
 	source, ok := req.PublishInfo["devicePath"]
 	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "devicePath not provided")
+		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
 
-	// TODO: consider replacing IsNotMountPoint by IsLikelyNotMountPoint
+	// TODO: consider replacing IsLikelyNotMountPoint by IsNotMountPoint
 	notMnt, err := d.mounter.Interface.IsLikelyNotMountPoint(target)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -84,8 +83,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 	glog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
 	err := d.mounter.Interface.Unmount(target)
 	if err != nil {
-		msg := fmt.Sprintf("Could not unstage target %q: %v", target, err)
-		return nil, status.Error(codes.Internal, msg)
+		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
@@ -124,13 +122,13 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 
 	glog.V(5).Infof("NodePublishVolume: creating dir %s", target)
 	if err := d.mounter.Interface.MakeDir(target); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
 	}
 
 	glog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
 	if err := d.mounter.Interface.Mount(source, target, "ext4", options); err != nil {
 		os.Remove(target)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
@@ -151,8 +149,7 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 	glog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
 	err := d.mounter.Interface.Unmount(target)
 	if err != nil {
-		msg := fmt.Sprintf("Could not unpublish target %q: %v", target, err)
-		return nil, status.Error(codes.Internal, msg)
+		return nil, status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
 	}
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil
