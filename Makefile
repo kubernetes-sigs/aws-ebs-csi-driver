@@ -22,6 +22,7 @@ test-e2e:
 image: ebs-csi-driver
 	cp bin/ebs-csi-driver deploy/docker
 	docker build -t $(IMAGE):$(VERSION) deploy/docker
+	rm -f deploy/docker/ebs-csi-driver
 
 .PHONY: push
 push: image
