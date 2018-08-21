@@ -27,18 +27,18 @@ import (
 // A new longer format is also being introduced: "vol-12345678abcdef01"
 // We should not assume anything about the length or format, though it seems
 // reasonable to assume that volumes will continue to start with "vol-".
-type awsVolumeID string
+//type awsVolumeID string
 
 // Used to represent a mount device for attaching an EBS volume
 // This should be stored as a single letter (i.e. c, not sdc or /dev/sdc)
-type mountDevice string
+//type mountDevice string
 
 // ExistingDevices is a map of assigned devices. Presence of a key with a device
 // name in the map means that the device is allocated. Value is irrelevant and
 // can be used for anything that DeviceAllocator user wants.
 // Only the relevant part of device name should be in the map, e.g. "ba" for
 // "/dev/xvdba".
-type ExistingDevices map[mountDevice]awsVolumeID
+type ExistingDevices map[string]string
 
 // On AWS, we should assign new (not yet used) device names to attached volumes.
 // If we reuse a previously used name, we may get the volume "attaching" forever,
@@ -54,10 +54,10 @@ type DeviceAllocator interface {
 	// GetNext returns a free device name or error when there is no free device
 	// name. Only the device suffix is returned, e.g. "ba" for "/dev/xvdba".
 	// It's up to the called to add appropriate "/dev/sd" or "/dev/xvd" prefix.
-	GetNext(existingDevices ExistingDevices) (mountDevice, error)
+	GetNext(existingDevices ExistingDevices) (string, error)
 
 	// Deprioritize the device so as it can't be used immediately again
-	Deprioritize(mountDevice)
+	Deprioritize(string)
 
 	// Lock the deviceAllocator
 	Lock()
@@ -67,7 +67,7 @@ type DeviceAllocator interface {
 }
 
 type deviceAllocator struct {
-	possibleDevices map[mountDevice]int
+	possibleDevices map[string]int
 	counter         int
 	deviceLock      sync.Mutex
 }
@@ -75,7 +75,7 @@ type deviceAllocator struct {
 var _ DeviceAllocator = &deviceAllocator{}
 
 type devicePair struct {
-	deviceName  mountDevice
+	deviceName  string
 	deviceIndex int
 }
 
@@ -89,10 +89,10 @@ func (p devicePairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // it moves along the ring and always picks next device until
 // device list is exhausted.
 func NewDeviceAllocator() DeviceAllocator {
-	possibleDevices := make(map[mountDevice]int)
+	possibleDevices := make(map[string]int)
 	for _, firstChar := range []rune{'b', 'c'} {
 		for i := 'a'; i <= 'z'; i++ {
-			dev := mountDevice([]rune{firstChar, i})
+			dev := string([]rune{firstChar, i})
 			possibleDevices[dev] = 0
 		}
 	}
@@ -104,7 +104,7 @@ func NewDeviceAllocator() DeviceAllocator {
 
 // GetNext gets next available device from the pool, this function assumes that caller
 // holds the necessary lock on deviceAllocator
-func (d *deviceAllocator) GetNext(existingDevices ExistingDevices) (mountDevice, error) {
+func (d *deviceAllocator) GetNext(existingDevices ExistingDevices) (string, error) {
 	for _, devicePair := range d.sortByCount() {
 		if _, found := existingDevices[devicePair.deviceName]; !found {
 			return devicePair.deviceName, nil
@@ -131,7 +131,7 @@ func (d *deviceAllocator) Unlock() {
 }
 
 // Deprioritize the device so as it can't be used immediately again
-func (d *deviceAllocator) Deprioritize(chosen mountDevice) {
+func (d *deviceAllocator) Deprioritize(chosen string) {
 	d.deviceLock.Lock()
 	defer d.deviceLock.Unlock()
 	if _, ok := d.possibleDevices[chosen]; ok {

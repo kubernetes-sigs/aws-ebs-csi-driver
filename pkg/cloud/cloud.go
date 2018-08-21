@@ -19,9 +19,6 @@ package cloud
 import (
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -112,14 +109,7 @@ type Cloud struct {
 	metadata *Metadata
 	ec2      EC2
 
-	// state of our device allocator for each node
-	deviceAllocators map[string]DeviceAllocator
-
-	// We keep an active list of devices we have assigned but not yet
-	// attached, to avoid a race condition where we assign a device mapping
-	// and then get a second request before we attach the volume
-	attachingMutex sync.Mutex
-	attaching      map[string]map[mountDevice]awsVolumeID
+	dm DeviceManager
 }
 
 var _ Compute = &Cloud{}
@@ -150,10 +140,9 @@ func NewCloud() (*Cloud, error) {
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
 	return &Cloud{
-		metadata:         metadata,
-		ec2:              ec2.New(session.New(awsConfig)),
-		deviceAllocators: make(map[string]DeviceAllocator),
-		attaching:        make(map[string]map[mountDevice]awsVolumeID),
+		metadata: metadata,
+		ec2:      ec2.New(session.New(awsConfig)),
+		dm:       NewDeviceManager(),
 	}, nil
 }
 
@@ -263,87 +252,6 @@ func (c *Cloud) DescribeInstances(instanceID string) ([]*ec2.Instance, error) {
 	return results, nil
 }
 
-// Gets the mountDevice already assigned to the volume, or assigns an unused mountDevice.
-// If the volume is already assigned, this will return the existing mountDevice with alreadyAttached=true.
-// Otherwise the mountDevice is assigned by finding the first available mountDevice, and it is returned with alreadyAttached=false.
-func (c *Cloud) getMountDevice(instanceID string, info *ec2.Instance, v string, assign bool) (assigned string, alreadyAttached bool, err error) {
-	//instanceType := i.getInstanceType()
-	//if instanceType == nil {
-	//return "", false, fmt.Errorf("could not get instance type for instance: %s", i.awsID)
-	//}
-
-	volumeID := awsVolumeID(v)
-
-	deviceMappings := map[mountDevice]awsVolumeID{}
-	for _, blockDevice := range info.BlockDeviceMappings {
-		name := mountDevice(aws.StringValue(blockDevice.DeviceName))
-		if strings.HasPrefix(string(name), "/dev/sd") {
-			name = mountDevice(name[7:])
-		}
-		if strings.HasPrefix(string(name), "/dev/xvd") {
-			name = mountDevice(name[8:])
-		}
-		if len(name) < 1 || len(name) > 2 {
-			glog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
-		}
-		deviceMappings[name] = awsVolumeID(aws.StringValue(blockDevice.Ebs.VolumeId))
-	}
-
-	// We lock to prevent concurrent mounts from conflicting
-	// We may still conflict if someone calls the API concurrently,
-	// but the AWS API will then fail one of the two attach operations
-	c.attachingMutex.Lock()
-	defer c.attachingMutex.Unlock()
-
-	for mountDevice, volume := range c.attaching[instanceID] {
-		deviceMappings[mountDevice] = volume
-	}
-
-	// Check to see if this volume is already assigned a device on this machine
-	for mountDevice, mappingVolumeID := range deviceMappings {
-		if volumeID == mappingVolumeID {
-			if assign {
-				glog.Warningf("Got assignment call for already-assigned volume: %s@%s", mountDevice, mappingVolumeID)
-			}
-			return string(mountDevice), true, nil
-		}
-	}
-
-	if !assign {
-		return "", false, nil
-	}
-
-	// Find the next unused device name
-	deviceAllocator := c.deviceAllocators[instanceID]
-	if deviceAllocator == nil {
-		// we want device names with two significant characters, starting with /dev/xvdbb
-		// the allowed range is /dev/xvd[b-c][a-z]
-		// http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
-		deviceAllocator = NewDeviceAllocator()
-		c.deviceAllocators[instanceID] = deviceAllocator
-	}
-	// We need to lock deviceAllocator to prevent possible race with Deprioritize function
-	deviceAllocator.Lock()
-	defer deviceAllocator.Unlock()
-
-	//chosen, err := deviceAllocator.GetNext(deviceMappings)
-	chosen, err := deviceAllocator.GetNext(deviceMappings)
-	if err != nil {
-		glog.Warningf("Could not assign a mount device.  mappings=%v, error: %v", deviceMappings, err)
-		return "", false, fmt.Errorf("Too many EBS volumes attached to node %s.", instanceID)
-	}
-
-	attaching := c.attaching[instanceID]
-	if attaching == nil {
-		attaching = make(map[mountDevice]awsVolumeID)
-		c.attaching[instanceID] = attaching
-	}
-	attaching[chosen] = volumeID
-	glog.V(2).Infof("Assigned mount device %s -> volume %s", chosen, volumeID)
-
-	return string(chosen), false, nil
-}
-
 func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	instances, err := c.DescribeInstances(nodeID)
 	if err != nil {
@@ -357,7 +265,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 
 	instance := instances[0]
 
-	mntDevice, alreadyAttached, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
+	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(nodeID, instance, volumeID, true)
 	if mntErr != nil {
 		return "", mntErr
 	}
@@ -367,13 +275,11 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	attachEnded := false
 	defer func() {
 		if attachEnded {
-			if !c.endAttaching(nodeID, awsVolumeID(volumeID), mountDevice(mntDevice)) {
-				glog.Errorf("endAttaching called for disk %q when attach not in progress", volumeID)
-			}
+			c.dm.EndAttaching(nodeID, volumeID, mntDevice)
 		}
 	}()
 
-	device := "/dev/xvd" + string(mntDevice)
+	device := "/dev/xvd" + mntDevice
 	if !alreadyAttached {
 		// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
 		request := &ec2.AttachVolumeInput{
@@ -389,14 +295,12 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 		}
 		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 
-		if da, ok := c.deviceAllocators[nodeID]; ok {
-			da.Deprioritize(mountDevice(mntDevice))
-		}
+		c.dm.DeprioritizeDevice(nodeID, mntDevice)
 	}
 
 	// TODO: wait attaching
 	//attachment, err := disk.waitForAttachmentStatus("attached")
-	time.Sleep(time.Second * 7)
+	//time.Sleep(time.Second * 7)
 
 	// The attach operation has finished
 	attachEnded = true
@@ -426,7 +330,7 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 
 	instance := instances[0]
 
-	mntDevice, _, mntErr := c.getMountDevice(nodeID, instance, volumeID, true)
+	mntDevice, _, mntErr := c.dm.GetDevice(nodeID, instance, volumeID, true)
 	if mntErr != nil {
 		return mntErr
 	}
@@ -440,40 +344,15 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
-	if da, ok := c.deviceAllocators[nodeID]; ok {
-		da.Deprioritize(mountDevice(mntDevice))
-	}
+	c.dm.DeprioritizeDevice(nodeID, mntDevice)
 
 	if mntDevice != "" {
-		c.endAttaching(nodeID, awsVolumeID(volumeID), mountDevice(mntDevice))
+		c.dm.EndAttaching(nodeID, volumeID, mntDevice)
 		// We don't check the return value - we don't really expect the attachment to have been
 		// in progress, though it might have been
 	}
 
 	return nil
-}
-
-// endAttaching removes the entry from the "attachments in progress" map
-// It returns true if it was found (and removed), false otherwise
-func (c *Cloud) endAttaching(nodeID string, volumeID awsVolumeID, mountDevice mountDevice) bool {
-	c.attachingMutex.Lock()
-	defer c.attachingMutex.Unlock()
-
-	existingVolumeID, found := c.attaching[nodeID][mountDevice]
-	if !found {
-		return false
-	}
-	if volumeID != existingVolumeID {
-		// This actually can happen, because getMountDevice combines the attaching map with the volumes
-		// attached to the instance (as reported by the EC2 API).  So if endAttaching comes after
-		// a 10 second poll delay, we might well have had a concurrent request to allocate a mountpoint,
-		// which because we allocate sequentially is _very_ likely to get the immediately freed volume
-		glog.Infof("endAttaching on device %q assigned to different volume: %q vs %q", mountDevice, volumeID, existingVolumeID)
-		return false
-	}
-	glog.V(2).Infof("Releasing in-process attachment entry: %s -> volume %s", mountDevice, volumeID)
-	delete(c.attaching[nodeID], mountDevice)
-	return true
 }
 
 func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
