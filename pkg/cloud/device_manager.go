@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/glog"
 )
 
@@ -31,14 +32,14 @@ type DeviceManager interface {
 	// GetDevice gets the device already assigned to the volume, or assigns an unused device.
 	// If the volume is already assigned, this will return the existing device with alreadyAttached=true.
 	// Otherwise the device is assigned by finding the first available device, and it is returned with alreadyAttached=false.
-	GetDevice(nodeID string, volumeID string) (device string, alreadyAttached bool, err error)
+	GetDevice(instance *ec2.Instance, volumeID string) (device string, alreadyAttached bool, err error)
 
 	// ReleaseDevice removes the entry from the "attachments in progress" map
 	// It returns true if it was found (and removed), false otherwise.
-	ReleaseDevice(nodeID string, volumeID string, device string) (released bool, err error)
+	ReleaseDevice(instance *ec2.Instance, volumeID string, device string) (released bool, err error)
 
 	// GetAssignedDevice returns device already assigned to the volume.
-	GetAssignedDevice(nodeID string, volumeID string) (device string, err error)
+	GetAssignedDevice(instance *ec2.Instance, volumeID string) (device string, err error)
 }
 
 type deviceManager struct {
@@ -58,20 +59,24 @@ type deviceManager struct {
 
 var _ DeviceManager = &deviceManager{}
 
-func NewDeviceManager(cloud *Cloud) DeviceManager {
+func NewDeviceManager() DeviceManager {
 	return &deviceManager{
-		cloud:            cloud,
 		deviceAllocators: make(map[string]DeviceAllocator),
 		attaching:        make(map[string]map[string]string),
 	}
 }
 
-func (d *deviceManager) GetDevice(nodeID string, volumeID string) (string, bool, error) {
+func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (string, bool, error) {
+	nodeID, err := d.getInstanceID(instance)
+	if err != nil {
+		return "", false, err
+	}
+
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
 	// Get devices being attached and already attached to this instance
-	deviceMappings, err := d.getInUseDevices(nodeID)
+	deviceMappings, err := d.getInUseDevices(instance, nodeID)
 	if err != nil {
 		return "", false, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
@@ -110,7 +115,12 @@ func (d *deviceManager) GetDevice(nodeID string, volumeID string) (string, bool,
 	return device, false, nil
 }
 
-func (d *deviceManager) ReleaseDevice(nodeID string, volumeID string, device string) (bool, error) {
+func (d *deviceManager) ReleaseDevice(instance *ec2.Instance, volumeID string, device string) (bool, error) {
+	nodeID, err := d.getInstanceID(instance)
+	if err != nil {
+		return false, err
+	}
+
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -133,11 +143,16 @@ func (d *deviceManager) ReleaseDevice(nodeID string, volumeID string, device str
 	return true, nil
 }
 
-func (d *deviceManager) GetAssignedDevice(nodeID string, volumeID string) (string, error) {
+func (d *deviceManager) GetAssignedDevice(instance *ec2.Instance, volumeID string) (string, error) {
+	nodeID, err := d.getInstanceID(instance)
+	if err != nil {
+		return "", err
+	}
+
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse, err := d.getInUseDevices(nodeID)
+	inUse, err := d.getInUseDevices(instance, nodeID)
 	if err != nil {
 		return "", fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
@@ -145,12 +160,7 @@ func (d *deviceManager) GetAssignedDevice(nodeID string, volumeID string) (strin
 	return d.getAssignedDevice(inUse, volumeID), nil
 }
 
-func (d *deviceManager) getInUseDevices(nodeID string) (map[string]string, error) {
-	instance, err := d.cloud.getInstance(nodeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get instance %q", nodeID)
-	}
-
+func (d *deviceManager) getInUseDevices(instance *ec2.Instance, nodeID string) (map[string]string, error) {
 	deviceMappings := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
@@ -180,4 +190,11 @@ func (d *deviceManager) getAssignedDevice(deviceMappings map[string]string, volu
 		}
 	}
 	return ""
+}
+
+func (d *deviceManager) getInstanceID(instance *ec2.Instance) (string, error) {
+	if instance == nil {
+		return "", fmt.Errorf("nil instance")
+	}
+	return aws.StringValue(instance.InstanceId), nil
 }

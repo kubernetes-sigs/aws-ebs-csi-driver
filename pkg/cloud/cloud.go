@@ -139,13 +139,11 @@ func NewCloud() (*Cloud, error) {
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
-	cloud := &Cloud{
+	return &Cloud{
 		metadata: metadata,
+		dm:       NewDeviceManager(),
 		ec2:      ec2.New(session.New(awsConfig)),
-	}
-	cloud.dm = NewDeviceManager(cloud)
-
-	return cloud, nil
+	}, nil
 }
 
 func (c *Cloud) GetMetadata() *Metadata {
@@ -227,7 +225,12 @@ func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 }
 
 func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
-	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(nodeID, volumeID)
+	instance, err := c.getInstance(nodeID)
+	if err != nil {
+		return "", fmt.Errorf("could not get instance %q", nodeID)
+	}
+
+	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(instance, volumeID)
 	if mntErr != nil {
 		return "", mntErr
 	}
@@ -237,7 +240,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	attachEnded := false
 	defer func() {
 		if attachEnded {
-			c.dm.ReleaseDevice(nodeID, volumeID, mntDevice)
+			c.dm.ReleaseDevice(instance, volumeID, mntDevice)
 		}
 	}()
 
@@ -289,8 +292,13 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
+	instance, err := c.getInstance(nodeID)
+	if err != nil {
+		return fmt.Errorf("could not get instance %q", nodeID)
+	}
+
 	// TODO: check if attached
-	mntDevice, err := c.dm.GetAssignedDevice(nodeID, volumeID)
+	mntDevice, err := c.dm.GetAssignedDevice(instance, volumeID)
 	if err != nil {
 		return err
 	}
@@ -308,7 +316,7 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	//c.dm.DeprioritizeDevice(nodeID, mntDevice)
 
 	if mntDevice != "" {
-		c.dm.ReleaseDevice(nodeID, volumeID, mntDevice)
+		c.dm.ReleaseDevice(instance, volumeID, mntDevice)
 		// We don't check the return value - we don't really expect the attachment to have been
 		// in progress, though it might have been
 	}
