@@ -107,9 +107,9 @@ type Compute interface {
 
 type Cloud struct {
 	metadata *Metadata
-	ec2      EC2
+	dm       DeviceManager
 
-	dm DeviceManager
+	ec2 EC2
 }
 
 var _ Compute = &Cloud{}
@@ -139,11 +139,13 @@ func NewCloud() (*Cloud, error) {
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
-	return &Cloud{
+	cloud := &Cloud{
 		metadata: metadata,
 		ec2:      ec2.New(session.New(awsConfig)),
-		dm:       NewDeviceManager(),
-	}, nil
+	}
+	cloud.dm = NewDeviceManager(cloud)
+
+	return cloud, nil
 }
 
 func (c *Cloud) GetMetadata() *Metadata {
@@ -224,48 +226,8 @@ func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *Cloud) DescribeInstances(instanceID string) ([]*ec2.Instance, error) {
-	// Instances are paged
-	results := []*ec2.Instance{}
-
-	request := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&instanceID},
-	}
-
-	var nextToken *string
-	for {
-		response, err := c.ec2.DescribeInstances(request)
-		if err != nil {
-			return nil, fmt.Errorf("error listing AWS instances: %q", err)
-		}
-
-		for _, reservation := range response.Reservations {
-			results = append(results, reservation.Instances...)
-		}
-
-		nextToken = response.NextToken
-		if aws.StringValue(nextToken) == "" {
-			break
-		}
-		request.NextToken = nextToken
-	}
-	return results, nil
-}
-
 func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
-	instances, err := c.DescribeInstances(nodeID)
-	if err != nil {
-		return "", fmt.Errorf("could not describe instance %q: %v", nodeID, err)
-	}
-
-	nInstances := len(instances)
-	if nInstances != 1 {
-		return "", fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
-	}
-
-	instance := instances[0]
-
-	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(nodeID, instance, volumeID, true)
+	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(nodeID, volumeID)
 	if mntErr != nil {
 		return "", mntErr
 	}
@@ -275,13 +237,12 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	attachEnded := false
 	defer func() {
 		if attachEnded {
-			c.dm.EndAttaching(nodeID, volumeID, mntDevice)
+			c.dm.ReleaseDevice(nodeID, volumeID, mntDevice)
 		}
 	}()
 
-	device := "/dev/xvd" + mntDevice
+	device := mntDevice
 	if !alreadyAttached {
-		// See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
 		request := &ec2.AttachVolumeInput{
 			Device:     aws.String(device),
 			InstanceId: aws.String(nodeID),
@@ -294,16 +255,10 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
-
-		c.dm.DeprioritizeDevice(nodeID, mntDevice)
 	}
 
 	// TODO: wait attaching
 	//attachment, err := disk.waitForAttachmentStatus("attached")
-	//time.Sleep(time.Second * 7)
-
-	// The attach operation has finished
-	attachEnded = true
 
 	//if err != nil {
 	//if err == wait.ErrWaitTimeout {
@@ -312,28 +267,34 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	//return "", err
 	//}
 
+	// The attach operation has finished
+	attachEnded = true
+
+	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
+	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
+	// which could theoretically be against a different device (or even instance).
+	//if attachment == nil {
+	//// Impossible?
+	//return "", fmt.Errorf("unexpected state: attachment nil after attached %q to %q", diskName, nodeName)
+	//}
+	//if ec2Device != aws.StringValue(attachment.Device) {
+	//return "", fmt.Errorf("disk attachment of %q to %q failed: requested device %q but found %q", diskName, nodeName, ec2Device, aws.StringValue(attachment.Device))
+	//}
+	//if awsInstance.awsID != aws.StringValue(attachment.InstanceId) {
+	//return "", fmt.Errorf("disk attachment of %q to %q failed: requested instance %q but found %q", diskName, nodeName, awsInstance.awsID, aws.StringValue(attachment.InstanceId))
+	//}
+	//return hostDevice, nil
+
 	return device, nil
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	// TODO: check if attached
-
-	instances, err := c.DescribeInstances(nodeID)
+	mntDevice, err := c.dm.GetAssignedDevice(nodeID, volumeID)
 	if err != nil {
-		return fmt.Errorf("could not describe instance %q: %v", nodeID, err)
+		return err
 	}
 
-	nInstances := len(instances)
-	if nInstances != 1 {
-		return fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(instances))
-	}
-
-	instance := instances[0]
-
-	mntDevice, _, mntErr := c.dm.GetDevice(nodeID, instance, volumeID, true)
-	if mntErr != nil {
-		return mntErr
-	}
 	request := &ec2.DetachVolumeInput{
 		InstanceId: aws.String(nodeID),
 		VolumeId:   aws.String(volumeID),
@@ -344,10 +305,10 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
-	c.dm.DeprioritizeDevice(nodeID, mntDevice)
+	//c.dm.DeprioritizeDevice(nodeID, mntDevice)
 
 	if mntDevice != "" {
-		c.dm.EndAttaching(nodeID, volumeID, mntDevice)
+		c.dm.ReleaseDevice(nodeID, volumeID, mntDevice)
 		// We don't check the return value - we don't really expect the attachment to have been
 		// in progress, though it might have been
 	}
@@ -399,4 +360,37 @@ func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, e
 		VolumeID:    aws.StringValue(volumes[0].VolumeId),
 		CapacityGiB: volSizeBytes,
 	}, nil
+}
+
+func (c *Cloud) getInstance(nodeID string) (*ec2.Instance, error) {
+	results := []*ec2.Instance{}
+	request := &ec2.DescribeInstancesInput{
+		InstanceIds: []*string{&nodeID},
+	}
+
+	var nextToken *string
+	for {
+		response, err := c.ec2.DescribeInstances(request)
+		if err != nil {
+			return nil, fmt.Errorf("error listing AWS instances: %q", err)
+		}
+
+		for _, reservation := range response.Reservations {
+			results = append(results, reservation.Instances...)
+		}
+
+		nextToken = response.NextToken
+		if aws.StringValue(nextToken) == "" {
+			break
+		}
+		request.NextToken = nextToken
+	}
+
+	nInstances := len(results)
+	if nInstances != 1 {
+		return nil, fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(results))
+	}
+
+	instance := results[0]
+	return instance, nil
 }

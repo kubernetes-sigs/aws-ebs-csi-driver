@@ -22,17 +22,6 @@ import (
 	"sync"
 )
 
-// awsVolumeID represents the ID of the volume in the AWS API, e.g. vol-12345678
-// The "traditional" format is "vol-12345678"
-// A new longer format is also being introduced: "vol-12345678abcdef01"
-// We should not assume anything about the length or format, though it seems
-// reasonable to assume that volumes will continue to start with "vol-".
-//type awsVolumeID string
-
-// Used to represent a mount device for attaching an EBS volume
-// This should be stored as a single letter (i.e. c, not sdc or /dev/sdc)
-//type mountDevice string
-
 // ExistingDevices is a map of assigned devices. Presence of a key with a device
 // name in the map means that the device is allocated. Value is irrelevant and
 // can be used for anything that DeviceAllocator user wants.
@@ -58,12 +47,6 @@ type DeviceAllocator interface {
 
 	// Deprioritize the device so as it can't be used immediately again
 	Deprioritize(string)
-
-	// Lock the deviceAllocator
-	Lock()
-
-	// Unlock the deviceAllocator
-	Unlock()
 }
 
 type deviceAllocator struct {
@@ -105,29 +88,15 @@ func NewDeviceAllocator() DeviceAllocator {
 // GetNext gets next available device from the pool, this function assumes that caller
 // holds the necessary lock on deviceAllocator
 func (d *deviceAllocator) GetNext(existingDevices ExistingDevices) (string, error) {
+	d.deviceLock.Lock()
+	defer d.deviceLock.Unlock()
+
 	for _, devicePair := range d.sortByCount() {
 		if _, found := existingDevices[devicePair.deviceName]; !found {
 			return devicePair.deviceName, nil
 		}
 	}
 	return "", fmt.Errorf("no devices are available")
-}
-
-func (d *deviceAllocator) sortByCount() devicePairList {
-	dpl := make(devicePairList, 0)
-	for deviceName, deviceIndex := range d.possibleDevices {
-		dpl = append(dpl, devicePair{deviceName, deviceIndex})
-	}
-	sort.Sort(dpl)
-	return dpl
-}
-
-func (d *deviceAllocator) Lock() {
-	d.deviceLock.Lock()
-}
-
-func (d *deviceAllocator) Unlock() {
-	d.deviceLock.Unlock()
 }
 
 // Deprioritize the device so as it can't be used immediately again
@@ -138,4 +107,13 @@ func (d *deviceAllocator) Deprioritize(chosen string) {
 		d.counter++
 		d.possibleDevices[chosen] = d.counter
 	}
+}
+
+func (d *deviceAllocator) sortByCount() devicePairList {
+	dpl := make(devicePairList, 0)
+	for deviceName, deviceIndex := range d.possibleDevices {
+		dpl = append(dpl, devicePair{deviceName, deviceIndex})
+	}
+	sort.Sort(dpl)
+	return dpl
 }
