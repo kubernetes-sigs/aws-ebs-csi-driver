@@ -105,7 +105,6 @@ type Compute interface {
 	GetDiskByNameAndSize(string, int64) (*Disk, error)
 }
 
-// Cloud represents the AWS Cloud.
 type Cloud struct {
 	metadata MetadataService
 	dm       DeviceManager
@@ -231,48 +230,38 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 		return "", fmt.Errorf("could not get instance %q", nodeID)
 	}
 
-	mntDevice, alreadyAttached, mntErr := c.dm.GetDevice(instance, volumeID)
-	if mntErr != nil {
-		return "", mntErr
+	device, err := c.dm.NewDevice(instance, volumeID)
+	if err != nil {
+		return "", err
 	}
+	defer device.Release(false)
 
-	// attachEnded is set to true if the attach operation completed
-	// (successfully or not), and is thus no longer in progress
-	attachEnded := false
-	defer func() {
-		if attachEnded {
-			c.dm.ReleaseDevice(instance, volumeID, mntDevice)
-		}
-	}()
-
-	device := mntDevice
-	if !alreadyAttached {
+	if !device.IsAlreadyAssigned {
 		request := &ec2.AttachVolumeInput{
-			Device:     aws.String(device),
+			Device:     aws.String(device.Path),
 			InstanceId: aws.String(nodeID),
 			VolumeId:   aws.String(volumeID),
 		}
 
 		resp, err := c.ec2.AttachVolume(request)
 		if err != nil {
-			attachEnded = true
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 	}
 
 	// TODO: wait attaching
+	// FIXME: this is the only situation where this method returns and the device is not released
 	//attachment, err := disk.waitForAttachmentStatus("attached")
-
 	//if err != nil {
+	// device.Taint()
 	//if err == wait.ErrWaitTimeout {
 	//c.applyUnSchedulableTaint(nodeName, "Volume stuck in attaching state - node needs reboot to fix impaired state.")
 	//}
 	//return "", err
 	//}
 
-	// The attach operation has finished
-	attachEnded = true
+	// Manually release the device so it can be picked again.
 
 	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
 	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
@@ -289,7 +278,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	//}
 	//return hostDevice, nil
 
-	return device, nil
+	return device.Path, nil
 }
 
 func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
@@ -299,9 +288,16 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	}
 
 	// TODO: check if attached
-	mntDevice, err := c.dm.GetAssignedDevice(instance, volumeID)
+	device, err := c.dm.GetDevice(instance, volumeID)
 	if err != nil {
 		return err
+	}
+	defer device.Release(true)
+
+	if !device.IsAlreadyAssigned {
+		// There is no device attached for this volume in this node
+		glog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
+
 	}
 
 	request := &ec2.DetachVolumeInput{
@@ -316,11 +312,11 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 
 	//c.dm.DeprioritizeDevice(nodeID, mntDevice)
 
-	if mntDevice != "" {
-		c.dm.ReleaseDevice(instance, volumeID, mntDevice)
-		// We don't check the return value - we don't really expect the attachment to have been
-		// in progress, though it might have been
-	}
+	// if mntDevice != "" {
+	// 	c.dm.ReleaseDevice(instance, volumeID, mntDevice)
+	// 	// We don't check the return value - we don't really expect the attachment to have been
+	// 	// in progress, though it might have been
+	// }
 
 	return nil
 }
