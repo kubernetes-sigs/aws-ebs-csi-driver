@@ -41,8 +41,8 @@ func NewFakeCloudProvider() *FakeCloudProvider {
 	}
 }
 
-func (c *FakeCloudProvider) GetMetadata() *Metadata {
-	return &Metadata{"instanceID", "region", "az"}
+func (c *FakeCloudProvider) GetMetadata() MetadataService {
+	return &metadata{"instanceID", "region", "az"}
 }
 
 func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {

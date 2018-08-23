@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	// TODO: what should be the default size?
 	// DefaultVolumeSize represents the default volume size.
+	// TODO: what should be the default size?
 	DefaultVolumeSize int64 = 1 * 1024 * 1024 * 1024
 
 	// VolumeNameTagKey is the key value that refers to the volume's name.
@@ -97,7 +97,7 @@ type EC2 interface {
 }
 
 type Compute interface {
-	GetMetadata() *Metadata
+	GetMetadata() MetadataService
 	CreateDisk(string, *DiskOptions) (*Disk, error)
 	DeleteDisk(string) (bool, error)
 	AttachDisk(string, string) (string, error)
@@ -105,8 +105,9 @@ type Compute interface {
 	GetDiskByNameAndSize(string, int64) (*Disk, error)
 }
 
+// Cloud represents the AWS Cloud.
 type Cloud struct {
-	metadata *Metadata
+	metadata MetadataService
 	dm       DeviceManager
 
 	ec2 EC2
@@ -122,7 +123,7 @@ func NewCloud() (*Cloud, error) {
 
 	svc := ec2metadata.New(sess)
 
-	metadata, err := NewMetadata(svc)
+	metadata, err := NewMetadataService(svc)
 	if err != nil {
 		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
 	}
@@ -146,7 +147,7 @@ func NewCloud() (*Cloud, error) {
 	}, nil
 }
 
-func (c *Cloud) GetMetadata() *Metadata {
+func (c *Cloud) GetMetadata() MetadataService {
 	return c.metadata
 }
 

@@ -22,25 +22,38 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 )
 
-type Metadata struct {
+// MetadataService represents AWS metadata service.
+type MetadataService interface {
+	GetInstanceID() string
+	GetRegion() string
+	GetAvailabilityZone() string
+}
+
+type metadata struct {
 	instanceID       string
 	region           string
 	availabilityZone string
 }
 
-func (m *Metadata) GetInstanceID() string {
+var _ MetadataService = &metadata{}
+
+// GetInstanceID returns the instance identification.
+func (m *metadata) GetInstanceID() string {
 	return m.instanceID
 }
 
-func (m *Metadata) GetRegion() string {
+// GetRegion returns the region Zone which the instance is in.
+func (m *metadata) GetRegion() string {
 	return m.region
 }
 
-func (m *Metadata) GetAvailabilityZone() string {
+// GetAvailabilityZone returns the Availability Zone which the instance is in.
+func (m *metadata) GetAvailabilityZone() string {
 	return m.availabilityZone
 }
 
-func NewMetadata(svc *ec2metadata.EC2Metadata) (*Metadata, error) {
+// NewMetadataService returns a new MetadataServiceImplementation.
+func NewMetadataService(svc *ec2metadata.EC2Metadata) (MetadataService, error) {
 	if !svc.Available() {
 		return nil, fmt.Errorf("EC2 instance metadata is not available")
 	}
@@ -62,7 +75,7 @@ func NewMetadata(svc *ec2metadata.EC2Metadata) (*Metadata, error) {
 		return nil, fmt.Errorf("could not get valid EC2 availavility zone")
 	}
 
-	return &Metadata{
+	return &metadata{
 		instanceID:       doc.InstanceID,
 		region:           doc.Region,
 		availabilityZone: doc.AvailabilityZone,
