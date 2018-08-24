@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	dm "github.com/bertinatto/ebs-csi-driver/pkg/cloud/device_manager"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	"github.com/golang/glog"
 )
@@ -107,7 +108,7 @@ type Compute interface {
 
 type Cloud struct {
 	metadata MetadataService
-	dm       DeviceManager
+	dm       dm.BlockDeviceManager
 
 	ec2 EC2
 }
@@ -141,7 +142,7 @@ func NewCloud() (*Cloud, error) {
 
 	return &Cloud{
 		metadata: metadata,
-		dm:       NewDeviceManager(),
+		dm:       dm.NewBlockDeviceManager(),
 		ec2:      ec2.New(session.New(awsConfig)),
 	}, nil
 }
@@ -230,7 +231,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 		return "", fmt.Errorf("could not get instance %q", nodeID)
 	}
 
-	device, err := c.dm.NewDevice(instance, volumeID)
+	device, err := c.dm.NewBlockDevice(instance, volumeID)
 	if err != nil {
 		return "", err
 	}
@@ -251,7 +252,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	}
 
 	// TODO: wait attaching
-	// FIXME: this is the only situation where this method returns and the device is not released
+	// TODO: this is the only situation where this method returns and the device is not released
 	//attachment, err := disk.waitForAttachmentStatus("attached")
 	//if err != nil {
 	// device.Taint()
@@ -288,7 +289,7 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	}
 
 	// TODO: check if attached
-	device, err := c.dm.GetDevice(instance, volumeID)
+	device, err := c.dm.GetBlockDevice(instance, volumeID)
 	if err != nil {
 		return err
 	}
@@ -297,7 +298,6 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	if !device.IsAlreadyAssigned {
 		// There is no device attached for this volume in this node
 		glog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
-
 	}
 
 	request := &ec2.DetachVolumeInput{

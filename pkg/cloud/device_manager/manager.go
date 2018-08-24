@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cloud
+package device_manager
 
 import (
 	"fmt"
@@ -28,55 +28,39 @@ import (
 
 const devicePreffix = "/dev/xvd"
 
-type Device struct {
-	releaseFunc func()
-	isTainted   bool
-
+type BlockDevice struct {
 	Instance          *ec2.Instance
 	Path              string
 	VolumeID          string
 	IsAlreadyAssigned bool
+
+	isTainted   bool
+	releaseFunc func() error
 }
 
-func (d *Device) Release(force bool) {
+func (d *BlockDevice) Release(force bool) {
 	if !d.isTainted || force {
-		d.releaseFunc()
+		if err := d.releaseFunc(); err != nil {
+			glog.Errorf("Error releasing device: %v", err)
+		}
 	}
 }
 
-func (d *Device) Taint() {
+func (d *BlockDevice) Taint() {
 	d.isTainted = true
 }
 
-func NewDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool, release func()) *Device {
-	d := &Device{
-		Instance:          instance,
-		Path:              path,
-		VolumeID:          volumeID,
-		IsAlreadyAssigned: isAlreadyAssigned,
-
-		isTainted:   false,
-		releaseFunc: func() {},
-	}
-
-	if release != nil {
-		d.releaseFunc = release
-	}
-
-	return d
-}
-
-type DeviceManager interface {
-	// NewDevice gets the device already assigned to the volume, or assigns an unused device.
+type BlockDeviceManager interface {
+	// NewBlockDevice gets the device already assigned to the volume, or assigns an unused device.
 	// If the volume is already assigned, this will return the existing device with alreadyAttached=true.
 	// Otherwise the device is assigned by finding the first available device, and it is returned with alreadyAttached=false.
-	NewDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
+	NewBlockDevice(instance *ec2.Instance, volumeID string) (device *BlockDevice, err error)
 
-	// GetDevice returns device already assigned to the volume.
-	GetDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
+	// GetBlockDevice returns device already assigned to the volume.
+	GetBlockDevice(instance *ec2.Instance, volumeID string) (device *BlockDevice, err error)
 }
 
-type deviceManager struct {
+type blockDeviceManager struct {
 	// deviceAllocators holds the state of a device allocator for each node.
 	deviceAllocators map[string]DeviceAllocator
 
@@ -87,25 +71,32 @@ type deviceManager struct {
 	attaching map[string]map[string]string
 }
 
-var _ DeviceManager = &deviceManager{}
+var _ BlockDeviceManager = &blockDeviceManager{}
 
-func NewDeviceManager() DeviceManager {
-	return &deviceManager{
+func NewBlockDeviceManager() BlockDeviceManager {
+	return &blockDeviceManager{
 		deviceAllocators: make(map[string]DeviceAllocator),
 		attaching:        make(map[string]map[string]string),
 	}
 }
 
-func (d *deviceManager) newDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *Device {
-	device := NewDevice(instance, volumeID, path, isAlreadyAssigned, nil)
-	device.releaseFunc = func() {
-		d.releaseDevice(device)
+func (d *blockDeviceManager) newBlockDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *BlockDevice {
+	device := &BlockDevice{
+		Instance:          instance,
+		Path:              path,
+		VolumeID:          volumeID,
+		IsAlreadyAssigned: isAlreadyAssigned,
+
+		isTainted: false,
+	}
+	device.releaseFunc = func() error {
+		return d.release(device)
 	}
 	return device
 }
 
-func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
-	nodeID, err := d.getInstanceID(instance)
+func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID string) (*BlockDevice, error) {
+	nodeID, err := getInstanceID(instance)
 	if err != nil {
 		return nil, err
 	}
@@ -114,14 +105,14 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 	defer d.mux.Unlock()
 
 	// Get devices being attached and already attached to this instance
-	deviceMappings, err := d.getInUseDevices(instance, nodeID)
+	deviceMappings, err := d.getDevicesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
 
 	// Check if this volume is already assigned a device on this machine
-	if path := d.getAssignedDevicePath(deviceMappings, volumeID); path != "" {
-		return d.newDevice(instance, volumeID, path, true), nil
+	if path := d.getPath(deviceMappings, volumeID); path != "" {
+		return d.newBlockDevice(instance, volumeID, path, true), nil
 	}
 
 	// Find the next unused device name
@@ -151,40 +142,11 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 	// Deprioritize this suffix so it's not picked again right away.
 	deviceAllocator.Deprioritize(suffix)
 
-	return d.newDevice(instance, volumeID, path, false), nil
+	return d.newBlockDevice(instance, volumeID, path, false), nil
 }
 
-func (d *deviceManager) releaseDevice(device *Device) (bool, error) {
-	nodeID, err := d.getInstanceID(device.Instance)
-	if err != nil {
-		return false, err
-		fmt.Printf("--------------------------------------------------------------------------------------")
-	}
-
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	existingVolumeID, found := d.attaching[nodeID][device.Path]
-	if !found {
-		return false, fmt.Errorf("releaseDevice called for disk %q when attach not in progress", device.VolumeID)
-	}
-
-	if device.VolumeID != existingVolumeID {
-		// This actually can happen, because getMountDevice combines the attaching map with the volumes
-		// attached to the instance (as reported by the EC2 API).  So if endAttaching comes after
-		// a 10 second poll delay, we might well have had a concurrent request to allocate a mountpoint,
-		// which because we allocate sequentially is _very_ likely to get the immediately freed volume
-		return false, fmt.Errorf("releaseDevice on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
-	}
-
-	glog.V(5).Infof("Releasing in-process attachment entry: %s -> volume %s", device, device.VolumeID)
-	delete(d.attaching[nodeID], device.Path)
-
-	return true, nil
-}
-
-func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
-	nodeID, err := d.getInstanceID(instance)
+func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID string) (*BlockDevice, error) {
+	nodeID, err := getInstanceID(instance)
 	if err != nil {
 		return nil, err
 	}
@@ -192,23 +154,51 @@ func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Dev
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse, err := d.getInUseDevices(instance, nodeID)
+	inUse, err := d.getDevicesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
 
-	path := d.getAssignedDevicePath(inUse, volumeID)
-	device := NewDevice(instance, volumeID, path, false, nil)
+	path := d.getPath(inUse, volumeID)
+	device := d.newBlockDevice(instance, volumeID, path, false)
 
 	if path != "" {
 		device.IsAlreadyAssigned = true
-		device.releaseFunc = func() { d.releaseDevice(device) }
+		device.releaseFunc = func() error { return d.release(device) }
 	}
 
 	return device, nil
 }
 
-func (d *deviceManager) getInUseDevices(instance *ec2.Instance, nodeID string) (map[string]string, error) {
+func (d *blockDeviceManager) release(device *BlockDevice) error {
+	nodeID, err := getInstanceID(device.Instance)
+	if err != nil {
+		return err
+	}
+
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	existingVolumeID, found := d.attaching[nodeID][device.Path]
+	if !found {
+		return fmt.Errorf("release called for disk %q when attach not in progress", device.VolumeID)
+	}
+
+	if device.VolumeID != existingVolumeID {
+		// This actually can happen, because getMountDevice combines the attaching map with the volumes
+		// attached to the instance (as reported by the EC2 API).  So if endAttaching comes after
+		// a 10 second poll delay, we might well have had a concurrent request to allocate a mountpoint,
+		// which because we allocate sequentially is _very_ likely to get the immediately freed volume
+		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
+	}
+
+	glog.V(5).Infof("Releasing in-process attachment entry: %s -> volume %s", device, device.VolumeID)
+	delete(d.attaching[nodeID], device.Path)
+
+	return nil
+}
+
+func (d *blockDeviceManager) getDevicesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
 	deviceMappings := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
@@ -231,7 +221,7 @@ func (d *deviceManager) getInUseDevices(instance *ec2.Instance, nodeID string) (
 	return deviceMappings, nil
 }
 
-func (d *deviceManager) getAssignedDevicePath(deviceMappings map[string]string, volumeID string) string {
+func (d *blockDeviceManager) getPath(deviceMappings map[string]string, volumeID string) string {
 	for devicePath, mappingVolumeID := range deviceMappings {
 		if volumeID == mappingVolumeID {
 			return devicePath
@@ -240,7 +230,7 @@ func (d *deviceManager) getAssignedDevicePath(deviceMappings map[string]string, 
 	return ""
 }
 
-func (d *deviceManager) getInstanceID(instance *ec2.Instance) (string, error) {
+func getInstanceID(instance *ec2.Instance) (string, error) {
 	if instance == nil {
 		return "", fmt.Errorf("can't get ID from a nil instance")
 	}
