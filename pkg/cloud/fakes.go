@@ -67,8 +67,8 @@ func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) error {
-	return nil
+func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) (string, error) {
+	return "", nil
 }
 
 func (c *FakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
