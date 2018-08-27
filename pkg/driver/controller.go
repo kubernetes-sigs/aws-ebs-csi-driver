@@ -42,10 +42,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	volSizeBytes := util.RoundUpBytes(volSize)
 
 	maxVolSize := req.GetCapacityRange().GetLimitBytes()
-	if maxVolSize > 0 {
-		if volSizeBytes > maxVolSize {
-			return nil, status.Error(codes.InvalidArgument, "After round-up volume size exceeds the limit specified")
-		}
+	if (maxVolSize > 0) && (maxVolSize < volSizeBytes) {
+		return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 	}
 
 	volCaps := req.GetVolumeCapabilities()
@@ -57,7 +55,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
 	}
 
-	disk, err := d.cloud.GetDiskByNameAndSize(volName, volSizeBytes)
+	disk, err := d.cloud.GetDisk(volName, volSizeBytes)
 	if err != nil {
 		switch err {
 		case cloud.ErrMultiDisks:

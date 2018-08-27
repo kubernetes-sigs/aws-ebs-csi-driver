@@ -75,7 +75,7 @@ func (c *FakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *FakeCloudProvider) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
+func (c *FakeCloudProvider) GetDisk(name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
 		for key, value := range d.tags {
@@ -118,4 +118,7 @@ func (f *fakeEC2) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachm
 
 func (f *fakeEC2) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error) {
 	return &ec2.VolumeAttachment{}, nil
+}
+func (f *fakeEC2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+	return &ec2.DescribeInstancesOutput{}, nil
 }

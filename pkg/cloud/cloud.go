@@ -97,25 +97,24 @@ type EC2 interface {
 	DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
 }
 
-type Compute interface {
+type Cloud interface {
 	GetMetadata() MetadataService
 	CreateDisk(string, *DiskOptions) (*Disk, error)
 	DeleteDisk(string) (bool, error)
 	AttachDisk(string, string) (string, error)
 	DetachDisk(string, string) error
-	GetDiskByNameAndSize(string, int64) (*Disk, error)
+	GetDisk(string, int64) (*Disk, error)
 }
 
-type Cloud struct {
+type cloud struct {
 	metadata MetadataService
+	ec2      EC2
 	dm       dm.BlockDeviceManager
-
-	ec2 EC2
 }
 
-var _ Compute = &Cloud{}
+var _ Cloud = &cloud{}
 
-func NewCloud() (*Cloud, error) {
+func NewCloud() (Cloud, error) {
 	sess, err := session.NewSession(&aws.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
@@ -140,18 +139,18 @@ func NewCloud() (*Cloud, error) {
 	}
 	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
-	return &Cloud{
+	return &cloud{
 		metadata: metadata,
 		dm:       dm.NewBlockDeviceManager(),
 		ec2:      ec2.New(session.New(awsConfig)),
 	}, nil
 }
 
-func (c *Cloud) GetMetadata() MetadataService {
+func (c *cloud) GetMetadata() MetadataService {
 	return c.metadata
 }
 
-func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
+func (c *cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var createType string
 	var iops int64
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -212,7 +211,7 @@ func (c *Cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
-func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
+func (c *cloud) DeleteDisk(volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
@@ -225,7 +224,7 @@ func (c *Cloud) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
+func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(nodeID)
 	if err != nil {
 		return "", fmt.Errorf("could not get instance %q", nodeID)
@@ -282,7 +281,7 @@ func (c *Cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	return device.Path, nil
 }
 
-func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
+func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 	instance, err := c.getInstance(nodeID)
 	if err != nil {
 		return fmt.Errorf("could not get instance %q", nodeID)
@@ -321,7 +320,7 @@ func (c *Cloud) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, error) {
+func (c *cloud) GetDisk(name string, capacityBytes int64) (*Disk, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
@@ -367,7 +366,7 @@ func (c *Cloud) GetDiskByNameAndSize(name string, capacityBytes int64) (*Disk, e
 	}, nil
 }
 
-func (c *Cloud) getInstance(nodeID string) (*ec2.Instance, error) {
+func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
 	results := []*ec2.Instance{}
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&nodeID},

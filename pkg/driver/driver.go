@@ -37,7 +37,7 @@ type Driver struct {
 	endpoint string
 	nodeID   string
 
-	cloud cloud.Compute
+	cloud cloud.Cloud
 	srv   *grpc.Server
 
 	mounter *mount.SafeFormatAndMount
@@ -56,10 +56,9 @@ func newSafeMounter() *mount.SafeFormatAndMount {
 	}
 }
 
-func NewDriver(cloud cloud.Compute, endpoint string) *Driver {
+func NewDriver(cloud cloud.Cloud, endpoint string) *Driver {
 	glog.Infof("Driver: %v", driverName)
 	m := cloud.GetMetadata()
-
 	return &Driver{
 		endpoint: endpoint,
 		nodeID:   m.GetInstanceID(),

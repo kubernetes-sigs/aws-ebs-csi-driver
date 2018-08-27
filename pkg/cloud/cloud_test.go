@@ -47,11 +47,11 @@ func TestCreateDisk(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		c := &Cloud{
-			metadata: &Metadata{
-				InstanceID:       "test-instance",
-				Region:           "test-region",
-				AvailabilityZone: "test-az",
+		c := &cloud{
+			metadata: &metadata{
+				instanceID:       "test-instance",
+				region:           "test-region",
+				availabilityZone: "test-az",
 			},
 			ec2: &fakeEC2{},
 		}
