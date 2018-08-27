@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	dm "github.com/bertinatto/ebs-csi-driver/pkg/cloud/device_manager"
+	dm "github.com/bertinatto/ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	"github.com/golang/glog"
 )
