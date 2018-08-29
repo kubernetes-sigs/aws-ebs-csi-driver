@@ -8,7 +8,7 @@ ebs-csi-driver:
 
 .PHONY: test
 test:
-	go test github.com/bertinatto/ebs-csi-driver/pkg/driver
+	go test -v -race github.com/bertinatto/ebs-csi-driver/pkg/driver
 
 .PHONY: test-sanity
 test-sanity:

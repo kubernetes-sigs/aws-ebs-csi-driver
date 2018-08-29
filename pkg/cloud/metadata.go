@@ -22,6 +22,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 )
 
+type EC2Metadata interface {
+	Available() bool
+	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
+}
+
 // MetadataService represents AWS metadata service.
 type MetadataService interface {
 	GetInstanceID() string
@@ -53,14 +58,14 @@ func (m *metadata) GetAvailabilityZone() string {
 }
 
 // NewMetadataService returns a new MetadataServiceImplementation.
-func NewMetadataService(svc *ec2metadata.EC2Metadata) (MetadataService, error) {
+func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 	if !svc.Available() {
 		return nil, fmt.Errorf("EC2 instance metadata is not available")
 	}
 
 	doc, err := svc.GetInstanceIdentityDocument()
 	if err != nil {
-		return nil, fmt.Errorf("could not EC2 instance identity metadata")
+		return nil, fmt.Errorf("could not get EC2 instance identity metadata")
 	}
 
 	if len(doc.InstanceID) == 0 {
