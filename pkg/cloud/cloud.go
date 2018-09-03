@@ -360,10 +360,6 @@ func (c *cloud) getVolume(name string) (*ec2.Volume, error) {
 		return nil, ErrMultiDisks
 	}
 
-	if len(volumes) == 0 {
-		return nil, ErrVolumeNotFound
-	}
-
 	return volumes[0], nil
 }
 
