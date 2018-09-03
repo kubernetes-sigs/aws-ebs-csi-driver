@@ -309,18 +309,27 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
-	//c.dm.DeprioritizeDevice(nodeID, mntDevice)
-
-	// if mntDevice != "" {
-	// 	c.dm.ReleaseDevice(instance, volumeID, mntDevice)
-	// 	// We don't check the return value - we don't really expect the attachment to have been
-	// 	// in progress, though it might have been
-	// }
-
 	return nil
 }
 
 func (c *cloud) GetDisk(name string, capacityBytes int64) (*Disk, error) {
+	volume, err := c.getVolume(name)
+	if err != nil {
+		return nil, err
+	}
+
+	volSizeBytes := aws.Int64Value(volume.Size)
+	if volSizeBytes != util.BytesToGiB(capacityBytes) {
+		return nil, ErrDiskExistsDiffSize
+	}
+
+	return &Disk{
+		VolumeID:    aws.StringValue(volume.VolumeId),
+		CapacityGiB: volSizeBytes,
+	}, nil
+}
+
+func (c *cloud) getVolume(name string) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
@@ -352,18 +361,10 @@ func (c *cloud) GetDisk(name string, capacityBytes int64) (*Disk, error) {
 	}
 
 	if len(volumes) == 0 {
-		return nil, nil
+		return nil, ErrVolumeNotFound
 	}
 
-	volSizeBytes := aws.Int64Value(volumes[0].Size)
-	if volSizeBytes != util.BytesToGiB(capacityBytes) {
-		return nil, ErrDiskExistsDiffSize
-	}
-
-	return &Disk{
-		VolumeID:    aws.StringValue(volumes[0].VolumeId),
-		CapacityGiB: volSizeBytes,
-	}, nil
+	return volumes[0], nil
 }
 
 func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
@@ -395,6 +396,5 @@ func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
 		return nil, fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(results))
 	}
 
-	instance := results[0]
-	return instance, nil
+	return results[0], nil
 }
