@@ -117,7 +117,7 @@ func TestNewMetadataService(t *testing.T) {
 		m, err := NewMetadataService(mockEC2Metadata)
 		if tc.isAvailable && tc.err == nil && !tc.isPartial {
 			if err != nil {
-				t.Fatalf("NewMetadataService failed: expected no error, got %v", err)
+				t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
 			}
 
 			if m.GetInstanceID() != tc.identityDocument.InstanceID {
@@ -133,7 +133,7 @@ func TestNewMetadataService(t *testing.T) {
 			}
 		} else {
 			if err == nil {
-				t.Fatal("NewMetadataService failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
+				t.Fatal("NewMetadataService() failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
 			}
 		}
 
