@@ -48,22 +48,23 @@ type Driver struct {
 }
 
 func newSafeMounter() *mount.SafeFormatAndMount {
-	realMounter := mount.New("")
-	realExec := mount.NewOsExec()
 	return &mount.SafeFormatAndMount{
-		Interface: realMounter,
-		Exec:      realExec,
+		Interface: mount.New(""),
+		Exec:      mount.NewOsExec(),
 	}
 }
 
-func NewDriver(cloud cloud.Cloud, endpoint string) *Driver {
+func NewDriver(cloud cloud.Cloud, mounter *mount.SafeFormatAndMount, endpoint string) *Driver {
 	glog.Infof("Driver: %v", driverName)
+	if mounter == nil {
+		mounter = newSafeMounter()
+	}
 	m := cloud.GetMetadata()
 	return &Driver{
 		endpoint: endpoint,
 		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
-		mounter:  newSafeMounter(),
+		mounter:  mounter,
 		volumeCaps: []csi.VolumeCapability_AccessMode{
 			csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,

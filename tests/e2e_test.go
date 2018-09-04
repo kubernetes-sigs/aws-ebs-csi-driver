@@ -178,7 +178,7 @@ func runCSIDriver() {
 		log.Fatalln(err)
 	}
 
-	drv := driver.NewDriver(cloud, endpoint)
+	drv := driver.NewDriver(cloud, nil, endpoint)
 	if err := drv.Run(); err != nil {
 		log.Fatalln(err)
 	}
