@@ -34,8 +34,8 @@
     "service/ec2",
     "service/sts"
   ]
-  revision = "2d51b5082ad9f540e68761c27522b0677b9a75c0"
-  version = "v1.15.13"
+  revision = "04abd557eeaab3cfdded45467eea00fc03db9cb9"
+  version = "v1.15.26"
 
 [[projects]]
   name = "github.com/container-storage-interface/spec"
@@ -46,14 +46,20 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
-  version = "v1.38.1"
+  revision = "5cf292cae48347c2490ac1a58fe36735fb78df7e"
+  version = "v1.38.2"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/glog"
   packages = ["."]
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+
+[[projects]]
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  revision = "c34cdb4725f4c3844d095133c6e40e448b86589b"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -65,8 +71,8 @@
     "ptypes/timestamp",
     "ptypes/wrappers"
   ]
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/hpcloud/tail"
@@ -153,13 +159,13 @@
     "internal/timeseries",
     "trace"
   ]
-  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
+  revision = "8a410e7b638dca158bf9e766925842f6651ff828"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
+  revision = "2b024373dcd9800f0cae693839fac6ede8d64a8c"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -198,7 +204,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "d0a8f471bba2dbb160885b0000d814ee5d559bad"
+  revision = "11092d34479b07829b72e10713b159248caf5dad"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -260,7 +266,7 @@
     "pkg/util/sets",
     "pkg/util/wait"
   ]
-  revision = "ef51ab160544f9d05b68e132a4af0b0fab459954"
+  revision = "6429050ef506887d121f3e7306e894f8900d8a63"
 
 [[projects]]
   name = "k8s.io/kubernetes"
@@ -277,11 +283,11 @@
   branch = "master"
   name = "k8s.io/utils"
   packages = ["exec"]
-  revision = "045dc31ee5c40e8240241ce28dc24d7b56130373"
+  revision = "982821ea41da7e7c15f3d3738921eb2e7e241ccd"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dc127c6c3fc88f62c4b99d78e8233d5bd5def9f5b69ea0c6fdf4aa55a002b3ad"
+  inputs-digest = "05bd9001fdf6d1c7f195ed1a5b0475c17ce35188a11fdd2c460e7c7f1beed2b2"
   solver-name = "gps-cdcl"
   solver-version = 1
