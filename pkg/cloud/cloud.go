@@ -356,8 +356,10 @@ func (c *cloud) getVolume(name string) (*ec2.Volume, error) {
 		request.NextToken = nextToken
 	}
 
-	if len(volumes) > 1 {
+	if l := len(volumes); l > 1 {
 		return nil, ErrMultiDisks
+	} else if l < 1 {
+		return nil, ErrVolumeNotFound
 	}
 
 	return volumes[0], nil

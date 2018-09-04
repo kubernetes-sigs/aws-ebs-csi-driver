@@ -58,6 +58,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	disk, err := d.cloud.GetDisk(volName, volSizeBytes)
 	if err != nil {
 		switch err {
+		case cloud.ErrVolumeNotFound:
 		case cloud.ErrMultiDisks:
 			return nil, status.Error(codes.Internal, err.Error())
 		case cloud.ErrDiskExistsDiffSize:
