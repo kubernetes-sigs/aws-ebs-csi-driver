@@ -47,13 +47,6 @@ type Driver struct {
 	nodeCaps       []csi.NodeServiceCapability_RPC_Type
 }
 
-func newSafeMounter() *mount.SafeFormatAndMount {
-	return &mount.SafeFormatAndMount{
-		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
-	}
-}
-
 func NewDriver(cloud cloud.Cloud, mounter *mount.SafeFormatAndMount, endpoint string) *Driver {
 	glog.Infof("Driver: %v", driverName)
 	if mounter == nil {
@@ -117,4 +110,11 @@ func (d *Driver) Run() error {
 func (d *Driver) Stop() {
 	glog.Infof("Stopping server")
 	d.srv.Stop()
+}
+
+func newSafeMounter() *mount.SafeFormatAndMount {
+	return &mount.SafeFormatAndMount{
+		Interface: mount.New(""),
+		Exec:      mount.NewOsExec(),
+	}
 }
