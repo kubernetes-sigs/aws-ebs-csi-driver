@@ -185,7 +185,8 @@ func (d *blockDeviceManager) release(device *BlockDevice) error {
 
 	existingVolumeID, found := d.attaching[nodeID][suffix]
 	if !found {
-		return fmt.Errorf("release called for disk %q when attach not in progress", device.VolumeID)
+		// Attaching is not in progress, so there's nothing to release
+		return nil
 	}
 
 	if device.VolumeID != existingVolumeID {
