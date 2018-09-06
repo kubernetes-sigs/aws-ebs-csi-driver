@@ -104,14 +104,14 @@ func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID str
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	// Get devices being attached and already attached to this instance
-	deviceMappings, err := d.getDevicesInUse(instance, nodeID)
+	// Get device suffixes being attached and already attached to this instance
+	inUse, err := d.getSuffixesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
 
 	// Check if this volume is already assigned a device on this machine
-	if path := d.getPath(deviceMappings, volumeID); path != "" {
+	if path := d.getPath(inUse, volumeID); path != "" {
 		return d.newBlockDevice(instance, volumeID, path, true), nil
 	}
 
@@ -122,13 +122,12 @@ func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID str
 		d.deviceAllocators[nodeID] = deviceAllocator
 	}
 
-	suffix, err := deviceAllocator.GetNext(deviceMappings)
+	//TODO rename device allocator to suffix allocator
+	suffix, err := deviceAllocator.GetNext(inUse)
 	if err != nil {
-		glog.Warningf("Could not assign a mount device.  mappings=%v, error: %v", deviceMappings, err)
+		glog.Warningf("Could not assign a mount device.  mappings=%v, error: %v", inUse, err)
 		return nil, fmt.Errorf("too many EBS volumes attached to node %s", nodeID)
 	}
-
-	path := devicePreffix + suffix
 
 	// Add the chosen device and volume to the "attachments in progress" map
 	attaching := d.attaching[nodeID]
@@ -136,13 +135,13 @@ func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID str
 		attaching = make(map[string]string)
 		d.attaching[nodeID] = attaching
 	}
-	attaching[path] = volumeID
-	glog.V(5).Infof("Assigned mount device %s to volume %s", path, volumeID)
+	attaching[suffix] = volumeID
+	glog.V(5).Infof("Assigned device suffix %s to volume %s", suffix, volumeID)
 
 	// Deprioritize this suffix so it's not picked again right away.
 	deviceAllocator.Deprioritize(suffix)
 
-	return d.newBlockDevice(instance, volumeID, path, false), nil
+	return d.newBlockDevice(instance, volumeID, devicePreffix+suffix, false), nil
 }
 
 func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID string) (*BlockDevice, error) {
@@ -154,7 +153,7 @@ func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID str
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse, err := d.getDevicesInUse(instance, nodeID)
+	inUse, err := d.getSuffixesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
@@ -179,7 +178,12 @@ func (d *blockDeviceManager) release(device *BlockDevice) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	existingVolumeID, found := d.attaching[nodeID][device.Path]
+	var suffix string
+	if len(device.Path) > 2 {
+		suffix = device.Path[len(device.Path)-2:]
+	}
+
+	existingVolumeID, found := d.attaching[nodeID][suffix]
 	if !found {
 		return fmt.Errorf("release called for disk %q when attach not in progress", device.VolumeID)
 	}
@@ -193,13 +197,13 @@ func (d *blockDeviceManager) release(device *BlockDevice) error {
 	}
 
 	glog.V(5).Infof("Releasing in-process attachment entry: %s -> volume %s", device, device.VolumeID)
-	delete(d.attaching[nodeID], device.Path)
+	delete(d.attaching[nodeID], suffix)
 
 	return nil
 }
 
-func (d *blockDeviceManager) getDevicesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
-	deviceMappings := map[string]string{}
+func (d *blockDeviceManager) getSuffixesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
+	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
 		if strings.HasPrefix(name, "/dev/sd") {
@@ -211,20 +215,20 @@ func (d *blockDeviceManager) getDevicesInUse(instance *ec2.Instance, nodeID stri
 		if len(name) < 1 || len(name) > 2 {
 			glog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
 		}
-		deviceMappings[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
+		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}
 
-	for device, volume := range d.attaching[nodeID] {
-		deviceMappings[device] = volume
+	for suffix, volumeID := range d.attaching[nodeID] {
+		inUse[suffix] = volumeID
 	}
 
-	return deviceMappings, nil
+	return inUse, nil
 }
 
-func (d *blockDeviceManager) getPath(deviceMappings map[string]string, volumeID string) string {
-	for devicePath, mappingVolumeID := range deviceMappings {
-		if volumeID == mappingVolumeID {
-			return devicePath
+func (d *blockDeviceManager) getPath(inUse map[string]string, volumeID string) string {
+	for suffix, volID := range inUse {
+		if volumeID == volID {
+			return devicePreffix + suffix
 		}
 	}
 	return ""
