@@ -55,10 +55,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
 	}
 
-	disk, err := d.cloud.GetDisk(volName, volSizeBytes)
+	disk, err := d.cloud.GetDiskByName(volName, volSizeBytes)
 	if err != nil {
 		switch err {
-		case cloud.ErrVolumeNotFound:
+		case cloud.ErrNotFound:
 		case cloud.ErrMultiDisks:
 			return nil, status.Error(codes.Internal, err.Error())
 		case cloud.ErrDiskExistsDiffSize:
@@ -96,7 +96,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
-		if err == cloud.ErrVolumeNotFound {
+		if err == cloud.ErrNotFound {
 			glog.V(4).Info("DeleteVolume: volume not found, returning with success")
 			return &csi.DeleteVolumeResponse{}, nil
 		}
@@ -128,8 +128,22 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
+	if !d.cloud.IsExistInstance(nodeID) {
+		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
+	}
+
+	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
+		if err == cloud.ErrNotFound {
+			return nil, status.Error(codes.NotFound, "Volume not found")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
+	}
+
 	devicePath, err := d.cloud.AttachDisk(volumeID, nodeID)
 	if err != nil {
+		if err == cloud.ErrAlreadyExists {
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	glog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
@@ -186,7 +200,6 @@ func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (
 
 func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 	glog.V(4).Infof("ValidateVolumeCapabilities: called with args %#v", req)
-	//TODO: validate if volume exists
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -195,6 +208,13 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	volCaps := req.GetVolumeCapabilities()
 	if volCaps == nil || len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
+	}
+
+	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
+		if err == cloud.ErrNotFound {
+			return nil, status.Error(codes.NotFound, "Volume not found")
+		}
+		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
 	found := d.isValidVolumeCapabilities(volCaps)

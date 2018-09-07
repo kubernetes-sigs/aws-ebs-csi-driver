@@ -26,6 +26,8 @@ import (
 
 type FakeCloudProvider struct {
 	disks map[string]*fakeDisk
+	m     *metadata
+	pub   map[string]string
 }
 
 type fakeDisk struct {
@@ -36,11 +38,13 @@ type fakeDisk struct {
 func NewFakeCloudProvider() *FakeCloudProvider {
 	return &FakeCloudProvider{
 		disks: make(map[string]*fakeDisk),
+		pub:   make(map[string]string),
+		m:     &metadata{"instanceID", "region", "az"},
 	}
 }
 
 func (c *FakeCloudProvider) GetMetadata() MetadataService {
-	return &metadata{"instanceID", "region", "az"}
+	return c.m
 }
 
 func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
@@ -66,6 +70,10 @@ func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 }
 
 func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) (string, error) {
+	if _, ok := c.pub[volumeID]; ok {
+		return "", ErrAlreadyExists
+	}
+	c.pub[volumeID] = nodeID
 	return "/dev/xvdbc", nil
 }
 
@@ -73,7 +81,7 @@ func (c *FakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *FakeCloudProvider) GetDisk(name string, capacityBytes int64) (*Disk, error) {
+func (c *FakeCloudProvider) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
 		for key, value := range d.tags {
@@ -91,4 +99,20 @@ func (c *FakeCloudProvider) GetDisk(name string, capacityBytes int64) (*Disk, er
 		return disks[0].Disk, nil
 	}
 	return nil, nil
+}
+
+func (c *FakeCloudProvider) GetDiskByID(volumeID string) (*Disk, error) {
+	for _, f := range c.disks {
+		if f.Disk.VolumeID == volumeID {
+			return f.Disk, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (c *FakeCloudProvider) IsExistInstance(nodeID string) bool {
+	if nodeID != c.m.GetInstanceID() {
+		return false
+	}
+	return true
 }

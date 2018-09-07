@@ -246,7 +246,7 @@ func TestDetachDisk(t *testing.T) {
 	}
 }
 
-func TestGetDisk(t *testing.T) {
+func TestGetDiskByName(t *testing.T) {
 	testCases := []struct {
 		name           string
 		volumeName     string
@@ -279,7 +279,7 @@ func TestGetDisk(t *testing.T) {
 		}
 		mockEC2.EXPECT().DescribeVolumes(gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expErr)
 
-		disk, err := c.GetDisk(tc.volumeName, tc.volumeCapacity)
+		disk, err := c.GetDiskByName(tc.volumeName, tc.volumeCapacity)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
@@ -290,6 +290,57 @@ func TestGetDisk(t *testing.T) {
 			}
 			if disk.CapacityGiB != util.BytesToGiB(tc.volumeCapacity) {
 				t.Fatalf("GetDisk() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
+			}
+		}
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestGetDiskByID(t *testing.T) {
+	testCases := []struct {
+		name     string
+		volumeID string
+		expErr   error
+	}{
+		{
+			name:     "success: normal",
+			volumeID: "vol-test-1234",
+			expErr:   nil,
+		},
+		{
+			name:     "fail: DescribeVolumes returned generic error",
+			volumeID: "vol-test-1234",
+			expErr:   fmt.Errorf("DescribeVolumes generic error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		mockCtrl := gomock.NewController(t)
+		mockEC2 := mocks.NewMockEC2(mockCtrl)
+		c := newCloud(mockEC2)
+
+		mockEC2.EXPECT().DescribeVolumes(gomock.Any()).Return(
+			&ec2.DescribeVolumesOutput{
+				Volumes: []*ec2.Volume{
+					&ec2.Volume{VolumeId: aws.String(tc.volumeID)},
+				},
+			},
+			tc.expErr,
+		)
+
+		disk, err := c.GetDiskByID(tc.volumeID)
+		if err != nil {
+			if tc.expErr == nil {
+				t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
+			}
+		} else {
+			if tc.expErr != nil {
+				t.Fatal("GetDisk() failed: expected error, got nothing")
+			}
+			if disk.VolumeID != tc.volumeID {
+				t.Fatalf("GetDisk() failed: expected ID %q, got %q", tc.volumeID, disk.VolumeID)
 			}
 		}
 

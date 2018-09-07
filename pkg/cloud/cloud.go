@@ -71,8 +71,11 @@ var (
 	// name, but different size, is found.
 	ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
 
-	// ErrVolumeNotFound is returned when a volume with a given ID is not found.
-	ErrVolumeNotFound = errors.New("Volume was not found")
+	// ErrNotFound is returned when a resource is not found.
+	ErrNotFound = errors.New("Resource was not found")
+
+	// ErrAlreadyExists is returned when a resource is already existent.
+	ErrAlreadyExists = errors.New("Resource already exists")
 )
 
 type Disk struct {
@@ -99,11 +102,13 @@ type EC2 interface {
 
 type Cloud interface {
 	GetMetadata() MetadataService
-	CreateDisk(string, *DiskOptions) (*Disk, error)
-	DeleteDisk(string) (bool, error)
-	AttachDisk(string, string) (string, error)
-	DetachDisk(string, string) error
-	GetDisk(string, int64) (*Disk, error)
+	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
+	DeleteDisk(volumeID string) (success bool, err error)
+	AttachDisk(volumeID string, nodeID string) (devicePath string, err error)
+	DetachDisk(volumeID string, nodeID string) (err error)
+	GetDiskByName(name string, capacityBytes int64) (disk *Disk, err error)
+	GetDiskByID(volumeID string) (disk *Disk, err error)
+	IsExistInstance(nodeID string) (sucess bool)
 }
 
 type cloud struct {
@@ -216,7 +221,7 @@ func (c *cloud) DeleteDisk(volumeID string) (bool, error) {
 	if _, err := c.ec2.DeleteVolume(request); err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == "InvalidVolume.NotFound" {
-				return false, ErrVolumeNotFound
+				return false, ErrNotFound
 			}
 		}
 		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
@@ -227,7 +232,7 @@ func (c *cloud) DeleteDisk(volumeID string) (bool, error) {
 func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(nodeID)
 	if err != nil {
-		return "", fmt.Errorf("could not get instance %q", nodeID)
+		return "", err
 	}
 
 	device, err := c.dm.NewDevice(instance, volumeID)
@@ -245,9 +250,14 @@ func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 
 		resp, err := c.ec2.AttachVolume(request)
 		if err != nil {
+			if awsErr, ok := err.(awserr.Error); ok {
+				if awsErr.Code() == "VolumeInUse" {
+					return "", ErrAlreadyExists
+				}
+			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
-		glog.V(2).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
+		glog.V(5).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 	}
 
 	// TODO: wait attaching
@@ -284,7 +294,7 @@ func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 	instance, err := c.getInstance(nodeID)
 	if err != nil {
-		return fmt.Errorf("could not get instance %q", nodeID)
+		return err
 	}
 
 	// TODO: check if attached
@@ -311,8 +321,17 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *cloud) GetDisk(name string, capacityBytes int64) (*Disk, error) {
-	volume, err := c.getVolume(name)
+func (c *cloud) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
+	request := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name:   aws.String("tag:" + VolumeNameTagKey),
+				Values: []*string{aws.String(name)},
+			},
+		},
+	}
+
+	volume, err := c.getVolume(request)
 	if err != nil {
 		return nil, err
 	}
@@ -328,18 +347,36 @@ func (c *cloud) GetDisk(name string, capacityBytes int64) (*Disk, error) {
 	}, nil
 }
 
-func (c *cloud) getVolume(name string) (*ec2.Volume, error) {
+func (c *cloud) GetDiskByID(volumeID string) (*Disk, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+
+	volume, err := c.getVolume(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Disk{
+		VolumeID:    aws.StringValue(volume.VolumeId),
+		CapacityGiB: aws.Int64Value(volume.Size),
+	}, nil
+}
+
+func (c *cloud) IsExistInstance(nodeID string) bool {
+	instance, err := c.getInstance(nodeID)
+	if err != nil || instance == nil {
+		return false
+	}
+	return true
+}
+
+func (c *cloud) getVolume(request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
-	request := &ec2.DescribeVolumesInput{
-		Filters: []*ec2.Filter{
-			&ec2.Filter{
-				Name:   aws.String("tag:" + VolumeNameTagKey),
-				Values: []*string{aws.String(name)},
-			},
-		},
-	}
 	for {
 		response, err := c.ec2.DescribeVolumes(request)
 		if err != nil {
@@ -358,14 +395,14 @@ func (c *cloud) getVolume(name string) (*ec2.Volume, error) {
 	if l := len(volumes); l > 1 {
 		return nil, ErrMultiDisks
 	} else if l < 1 {
-		return nil, ErrVolumeNotFound
+		return nil, ErrNotFound
 	}
 
 	return volumes[0], nil
 }
 
 func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
-	results := []*ec2.Instance{}
+	instances := []*ec2.Instance{}
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&nodeID},
 	}
@@ -378,7 +415,7 @@ func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
 		}
 
 		for _, reservation := range response.Reservations {
-			results = append(results, reservation.Instances...)
+			instances = append(instances, reservation.Instances...)
 		}
 
 		nextToken = response.NextToken
@@ -388,10 +425,11 @@ func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
 		request.NextToken = nextToken
 	}
 
-	nInstances := len(results)
-	if nInstances != 1 {
-		return nil, fmt.Errorf("expected 1 instance with ID %q, got %d", nodeID, len(results))
+	if l := len(instances); l > 1 {
+		return nil, fmt.Errorf("found %d instances with ID %q", l, nodeID)
+	} else if l < 1 {
+		return nil, ErrNotFound
 	}
 
-	return results[0], nil
+	return instances[0], nil
 }
