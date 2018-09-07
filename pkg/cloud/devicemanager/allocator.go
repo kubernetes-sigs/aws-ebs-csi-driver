@@ -22,98 +22,98 @@ import (
 	"sync"
 )
 
-// ExistingDevices is a map of assigned devices. Presence of a key with a device
+// ExistingNames is a map of assigned device names. Presence of a key with a device
 // name in the map means that the device is allocated. Value is irrelevant and
-// can be used for anything that DeviceAllocator user wants.
-// Only the relevant part of device name should be in the map, e.g. "ba" for
-// "/dev/xvdba".
-type ExistingDevices map[string]string
+// can be used for anything that NameAllocator user wants.  Only the relevant
+// part of device name should be in the map, e.g. "ba" for "/dev/xvdba".
+type ExistingNames map[string]string
 
 // On AWS, we should assign new (not yet used) device names to attached volumes.
 // If we reuse a previously used name, we may get the volume "attaching" forever,
 // see https://aws.amazon.com/premiumsupport/knowledge-center/ebs-stuck-attaching/.
-// DeviceAllocator finds available device name, taking into account already
-// assigned device names from ExistingDevices map. It tries to find the next
-// device name to the previously assigned one (from previous DeviceAllocator
+// NameAllocator finds available device name, taking into account already
+// assigned device names from ExistingNames map. It tries to find the next
+// device name to the previously assigned one (from previous NameAllocator
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
 // All these allocations are in-memory, nothing is written to / read from
 // /dev directory.
-type DeviceAllocator interface {
+type NameAllocator interface {
 	// GetNext returns a free device name or error when there is no free device
-	// name. Only the device suffix is returned, e.g. "ba" for "/dev/xvdba".
+	// name. Only the device name is returned, e.g. "ba" for "/dev/xvdba".
 	// It's up to the called to add appropriate "/dev/sd" or "/dev/xvd" prefix.
-	GetNext(existingDevices ExistingDevices) (string, error)
+	GetNext(existingNames ExistingNames) (name string, err error)
 
-	// Deprioritize the device so as it can't be used immediately again
-	Deprioritize(string)
+	// Deprioritize the device name so as it can't be used immediately again
+	Deprioritize(choosen string)
 }
 
-type deviceAllocator struct {
-	possibleDevices map[string]int
-	counter         int
-	deviceLock      sync.Mutex
+type nameAllocator struct {
+	possibleNames map[string]int
+	counter       int
+	mux           sync.Mutex
 }
 
-var _ DeviceAllocator = &deviceAllocator{}
+var _ NameAllocator = &nameAllocator{}
 
-type devicePair struct {
-	deviceName  string
-	deviceIndex int
+type namePair struct {
+	name  string
+	index int
 }
 
-type devicePairList []devicePair
+type namePairList []namePair
 
-func (p devicePairList) Len() int           { return len(p) }
-func (p devicePairList) Less(i, j int) bool { return p[i].deviceIndex < p[j].deviceIndex }
-func (p devicePairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p namePairList) Len() int           { return len(p) }
+func (p namePairList) Less(i, j int) bool { return p[i].index < p[j].index }
+func (p namePairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // Allocates device names according to scheme ba..bz, ca..cz
 // it moves along the ring and always picks next device until
 // device list is exhausted.
-func NewDeviceAllocator() DeviceAllocator {
-	possibleDevices := make(map[string]int)
+func NewNameAllocator() NameAllocator {
+	possibleNames := make(map[string]int)
 	for _, firstChar := range []rune{'b', 'c'} {
 		for i := 'a'; i <= 'z'; i++ {
-			dev := string([]rune{firstChar, i})
-			possibleDevices[dev] = 0
+			name := string([]rune{firstChar, i})
+			possibleNames[name] = 0
 		}
 	}
-	return &deviceAllocator{
-		possibleDevices: possibleDevices,
-		counter:         0,
+	return &nameAllocator{
+		possibleNames: possibleNames,
+		counter:       0,
 	}
 }
 
 // GetNext gets next available device from the pool, this function assumes that caller
-// holds the necessary lock on deviceAllocator
-func (d *deviceAllocator) GetNext(existingDevices ExistingDevices) (string, error) {
-	d.deviceLock.Lock()
-	defer d.deviceLock.Unlock()
+// holds the necessary lock on nameAllocator
+func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
+	d.mux.Lock()
+	defer d.mux.Unlock()
 
-	for _, devicePair := range d.sortByCount() {
-		if _, found := existingDevices[devicePair.deviceName]; !found {
-			return devicePair.deviceName, nil
+	for _, namePair := range d.sortByCount() {
+		if _, found := existingNames[namePair.name]; !found {
+			return namePair.name, nil
 		}
 	}
-	return "", fmt.Errorf("no devices are available")
+	return "", fmt.Errorf("there are no names available")
 }
 
-// Deprioritize the device so as it can't be used immediately again
-func (d *deviceAllocator) Deprioritize(chosen string) {
-	d.deviceLock.Lock()
-	defer d.deviceLock.Unlock()
-	if _, ok := d.possibleDevices[chosen]; ok {
+// Deprioritize the name so as it can't be used immediately again
+func (d *nameAllocator) Deprioritize(chosen string) {
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	if _, ok := d.possibleNames[chosen]; ok {
 		d.counter++
-		d.possibleDevices[chosen] = d.counter
+		d.possibleNames[chosen] = d.counter
 	}
 }
 
-func (d *deviceAllocator) sortByCount() devicePairList {
-	dpl := make(devicePairList, 0)
-	for deviceName, deviceIndex := range d.possibleDevices {
-		dpl = append(dpl, devicePair{deviceName, deviceIndex})
+func (d *nameAllocator) sortByCount() namePairList {
+	npl := make(namePairList, 0)
+	for name, index := range d.possibleNames {
+		npl = append(npl, namePair{name, index})
 	}
-	sort.Sort(dpl)
-	return dpl
+	sort.Sort(npl)
+	return npl
 }

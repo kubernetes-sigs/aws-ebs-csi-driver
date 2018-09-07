@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func TestNewBlockDevice(t *testing.T) {
+func TestNewDevice(t *testing.T) {
 	testCases := []struct {
 		name               string
 		instanceID         string
@@ -53,8 +53,8 @@ func TestNewBlockDevice(t *testing.T) {
 			volumeID:           "vol-4",
 		},
 	}
-	// Use a shared BlockDeviceManager to make sure that there are no race conditions
-	dm := NewBlockDeviceManager()
+	// Use a shared DeviceManager to make sure that there are no race conditions
+	dm := NewDeviceManager()
 
 	for _, tc := range testCases {
 		tc := tc // capture tc
@@ -62,7 +62,7 @@ func TestNewBlockDevice(t *testing.T) {
 			t.Parallel()
 
 			// Should fail if instance is nil
-			dev1, err := dm.NewBlockDevice(nil, tc.volumeID)
+			dev1, err := dm.NewDevice(nil, tc.volumeID)
 			if err == nil {
 				t.Fatalf("Expected error when nil instance is passed in, got nothing")
 			}
@@ -72,21 +72,21 @@ func TestNewBlockDevice(t *testing.T) {
 
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
-			// Should create valid BlockDevice with valid path
-			dev1, err = dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev1, false, err)
+			// Should create valid Device with valid path
+			dev1, err = dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev1, false, err)
 
-			// BlockDevices with same instance and volume should have same paths
-			dev2, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
+			// Devices with same instance and volume should have same paths
+			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
 			if dev1.Path != dev2.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev2.Path)
 			}
 
-			// Should create new BlockDevice with a different path after releasing
+			// Should create new Device with a different path after releasing
 			dev2.Release(false)
-			dev3, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev3, false, err)
+			dev3, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev3, false, err)
 			if dev3.Path == dev1.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev2.Path)
 			}
@@ -95,7 +95,7 @@ func TestNewBlockDevice(t *testing.T) {
 	}
 }
 
-func TestGetBlockDevice(t *testing.T) {
+func TestGetDevice(t *testing.T) {
 	testCases := []struct {
 		name               string
 		instanceID         string
@@ -114,16 +114,16 @@ func TestGetBlockDevice(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dm := NewBlockDeviceManager()
+			dm := NewDeviceManager()
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
-			// Should create valid BlockDevice with valid path
-			dev1, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev1, false /*IsAlreadyAssigned*/, err)
+			// Should create valid Device with valid path
+			dev1, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev1, false /*IsAlreadyAssigned*/, err)
 
-			// BlockDevices with same instance and volume should have same paths
-			dev2, err := dm.GetBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
+			// Devices with same instance and volume should have same paths
+			dev2, err := dm.GetDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
 			if dev1.Path != dev2.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev2.Path)
 			}
@@ -131,7 +131,7 @@ func TestGetBlockDevice(t *testing.T) {
 	}
 }
 
-func TestReleaseBlockDevice(t *testing.T) {
+func TestReleaseDevice(t *testing.T) {
 	testCases := []struct {
 		name               string
 		instanceID         string
@@ -148,31 +148,31 @@ func TestReleaseBlockDevice(t *testing.T) {
 		},
 	}
 
-	dm := NewBlockDeviceManager()
+	dm := NewDeviceManager()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
-			// Should get assigned BlockDevice after releasing tainted device
-			dev, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev, false /*IsAlreadyAssigned*/, err)
+			// Should get assigned Device after releasing tainted device
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev, false /*IsAlreadyAssigned*/, err)
 			dev.Taint()
 			dev.Release(false)
-			dev2, err := dm.GetBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
+			dev2, err := dm.GetDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
 			if dev2.Path != dev2.Path {
 				t.Fatalf("Expected device to be already assigned, got unassigned")
 			}
 
 			// Should release tainted device if force=true is passed in
 			dev2.Release(true)
-			dev3, err := dm.GetBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev3, false /*IsAlreadyAssigned*/, err)
+			dev3, err := dm.GetDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev3, false /*IsAlreadyAssigned*/, err)
 		})
 	}
 }
 
-func TestExaustBlockDevices(t *testing.T) {
+func TestExaustDevices(t *testing.T) {
 	testCases := []struct {
 		name               string
 		instanceID         string
@@ -189,21 +189,21 @@ func TestExaustBlockDevices(t *testing.T) {
 		},
 	}
 
-	dm := NewBlockDeviceManager()
+	dm := NewDeviceManager()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Create one device and save it for later
-			dev, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev, false /*IsAlreadyAssigned*/, err)
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev, false /*IsAlreadyAssigned*/, err)
 			dev.Release(true)
 
 			// The maximum number of the ring is 52, so create enough devices
 			// to circle back to the first device gotten, i.e., dev
 			for i := 0; i < 51; i++ {
-				d, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-				assertBlockDevice(t, d, false, err)
+				d, err := dm.NewDevice(fakeInstance, tc.volumeID)
+				assertDevice(t, d, false, err)
 				// Make sure none of them have the same path as the first device created
 				if d.Path == dev.Path {
 					t.Fatalf("Expected different device paths, got equals %q", d.Path)
@@ -211,8 +211,8 @@ func TestExaustBlockDevices(t *testing.T) {
 				d.Release(true)
 			}
 
-			dev2, err := dm.NewBlockDevice(fakeInstance, tc.volumeID)
-			assertBlockDevice(t, dev2, false /*IsAlreadyAssigned*/, err)
+			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev2, false /*IsAlreadyAssigned*/, err)
 
 			//Should be equal to the first device created
 			if dev2.Path != dev.Path {
@@ -234,7 +234,7 @@ func newFakeInstance(instanceID, volumeID, devicePath string) *ec2.Instance {
 	}
 }
 
-func assertBlockDevice(t *testing.T, d *BlockDevice, assigned bool, err error) {
+func assertDevice(t *testing.T, d *Device, assigned bool, err error) {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

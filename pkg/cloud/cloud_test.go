@@ -304,7 +304,7 @@ func newCloud(mockEC2 EC2) Cloud {
 			region:           "test-region",
 			availabilityZone: "test-az",
 		},
-		dm:  dm.NewBlockDeviceManager(),
+		dm:  dm.NewDeviceManager(),
 		ec2: mockEC2,
 	}
 }

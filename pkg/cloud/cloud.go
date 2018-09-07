@@ -109,7 +109,7 @@ type Cloud interface {
 type cloud struct {
 	metadata MetadataService
 	ec2      EC2
-	dm       dm.BlockDeviceManager
+	dm       dm.DeviceManager
 }
 
 var _ Cloud = &cloud{}
@@ -141,7 +141,7 @@ func NewCloud() (Cloud, error) {
 
 	return &cloud{
 		metadata: metadata,
-		dm:       dm.NewBlockDeviceManager(),
+		dm:       dm.NewDeviceManager(),
 		ec2:      ec2.New(session.New(awsConfig)),
 	}, nil
 }
@@ -230,7 +230,7 @@ func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 		return "", fmt.Errorf("could not get instance %q", nodeID)
 	}
 
-	device, err := c.dm.NewBlockDevice(instance, volumeID)
+	device, err := c.dm.NewDevice(instance, volumeID)
 	if err != nil {
 		return "", err
 	}
@@ -288,14 +288,13 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 	}
 
 	// TODO: check if attached
-	device, err := c.dm.GetBlockDevice(instance, volumeID)
+	device, err := c.dm.GetDevice(instance, volumeID)
 	if err != nil {
 		return err
 	}
 	defer device.Release(true)
 
 	if !device.IsAlreadyAssigned {
-		// There is no device attached for this volume in this node
 		glog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
 	}
 

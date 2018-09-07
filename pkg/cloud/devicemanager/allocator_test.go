@@ -20,28 +20,28 @@ import (
 	"testing"
 )
 
-func TestDeviceAllocator(t *testing.T) {
+func TestNameAllocator(t *testing.T) {
 	tests := []struct {
-		name            string
-		existingDevices ExistingDevices
-		deviceMap       map[string]int
-		expectedOutput  string
+		name           string
+		existingNames  ExistingNames
+		deviceMap      map[string]int
+		expectedOutput string
 	}{
 		{
 			"empty device list with wrap",
-			ExistingDevices{},
-			generateUnsortedDeviceList(),
+			ExistingNames{},
+			generateUnsortedNameList(),
 			"bd", // next to 'cz' is the first one, 'ba'
 		},
 	}
 
 	for _, test := range tests {
-		allocator := NewDeviceAllocator().(*deviceAllocator)
+		allocator := NewNameAllocator().(*nameAllocator)
 		for k, v := range test.deviceMap {
-			allocator.possibleDevices[k] = v
+			allocator.possibleNames[k] = v
 		}
 
-		got, err := allocator.GetNext(test.existingDevices)
+		got, err := allocator.GetNext(test.existingNames)
 		if err != nil {
 			t.Errorf("text %q: unexpected error: %v", test.name, err)
 		}
@@ -51,32 +51,32 @@ func TestDeviceAllocator(t *testing.T) {
 	}
 }
 
-func generateUnsortedDeviceList() map[string]int {
-	possibleDevices := make(map[string]int)
+func generateUnsortedNameList() map[string]int {
+	possibleNames := make(map[string]int)
 	for _, firstChar := range []rune{'b', 'c'} {
 		for i := 'a'; i <= 'z'; i++ {
 			dev := string([]rune{firstChar, i})
-			possibleDevices[dev] = 3
+			possibleNames[dev] = 3
 		}
 	}
-	possibleDevices["bd"] = 0
-	return possibleDevices
+	possibleNames["bd"] = 0
+	return possibleNames
 }
 
-func TestDeviceAllocatorError(t *testing.T) {
-	allocator := NewDeviceAllocator().(*deviceAllocator)
-	existingDevices := ExistingDevices{}
+func TestNameAllocatorError(t *testing.T) {
+	allocator := NewNameAllocator().(*nameAllocator)
+	existingNames := ExistingNames{}
 
 	// make all devices used
 	var first, second byte
 	for first = 'b'; first <= 'c'; first++ {
 		for second = 'a'; second <= 'z'; second++ {
 			device := [2]byte{first, second}
-			existingDevices[string(device[:])] = "used"
+			existingNames[string(device[:])] = "used"
 		}
 	}
 
-	device, err := allocator.GetNext(existingDevices)
+	device, err := allocator.GetNext(existingNames)
 	if err == nil {
 		t.Errorf("expected error, got device  %q", device)
 	}

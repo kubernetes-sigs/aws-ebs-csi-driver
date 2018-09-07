@@ -26,9 +26,9 @@ import (
 	"github.com/golang/glog"
 )
 
-const devicePreffix = "/dev/xvd"
+const devPreffix = "/dev/xvd"
 
-type BlockDevice struct {
+type Device struct {
 	Instance          *ec2.Instance
 	Path              string
 	VolumeID          string
@@ -38,7 +38,7 @@ type BlockDevice struct {
 	releaseFunc func() error
 }
 
-func (d *BlockDevice) Release(force bool) {
+func (d *Device) Release(force bool) {
 	if !d.isTainted || force {
 		if err := d.releaseFunc(); err != nil {
 			glog.Errorf("Error releasing device: %v", err)
@@ -46,56 +46,66 @@ func (d *BlockDevice) Release(force bool) {
 	}
 }
 
-func (d *BlockDevice) Taint() {
+func (d *Device) Taint() {
 	d.isTainted = true
 }
 
-type BlockDeviceManager interface {
-	// NewBlockDevice gets the device already assigned to the volume, or assigns an unused device.
-	// If the volume is already assigned, this will return the existing device with alreadyAttached=true.
-	// Otherwise the device is assigned by finding the first available device, and it is returned with alreadyAttached=false.
-	NewBlockDevice(instance *ec2.Instance, volumeID string) (device *BlockDevice, err error)
+type DeviceManager interface {
+	// NewDevice gets the device already assigned to the volume, or assigns an unused device.
+	// If the volume is already assigned, this will return the existing device with IsAlreadyAssigned=true.
+	// Otherwise the device is assigned by finding the first available device, and it is returned with IsAlreadyAssigned=false.
+	NewDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
 
-	// GetBlockDevice returns device already assigned to the volume.
-	GetBlockDevice(instance *ec2.Instance, volumeID string) (device *BlockDevice, err error)
+	// GetDevice returns the device already assigned to the volume.
+	GetDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
 }
 
-type blockDeviceManager struct {
-	// deviceAllocators holds the state of a device allocator for each node.
-	deviceAllocators map[string]DeviceAllocator
+type deviceManager struct {
+	// nameAllocators holds the state of a device allocator for each node.
+	nameAllocators map[string]NameAllocator
 
 	// We keep an active list of devices we have assigned but not yet
 	// attached, to avoid a race condition where we assign a device mapping
 	// and then get a second request before we attach the volume.
-	mux       sync.Mutex
-	attaching map[string]map[string]string
+	mux      sync.Mutex
+	inFlight inFlightAttaching
 }
 
-var _ BlockDeviceManager = &blockDeviceManager{}
+var _ DeviceManager = &deviceManager{}
 
-func NewBlockDeviceManager() BlockDeviceManager {
-	return &blockDeviceManager{
-		deviceAllocators: make(map[string]DeviceAllocator),
-		attaching:        make(map[string]map[string]string),
+// inFlightAttaching represents the device names being currently attached to nodes.
+// A valid pseudo-representation of it would be {"nodeID": {"deviceName: "volumeID"}}.
+type inFlightAttaching map[string]map[string]string
+
+func (i inFlightAttaching) Add(nodeID, volumeID, name string) {
+	attaching := i[nodeID]
+	if attaching == nil {
+		attaching = make(map[string]string)
+		i[nodeID] = attaching
+	}
+	attaching[name] = volumeID
+}
+
+func (i inFlightAttaching) Del(nodeID, name string) {
+	delete(i[nodeID], name)
+}
+
+func (i inFlightAttaching) GetNames(nodeID string) map[string]string {
+	return i[nodeID]
+}
+
+func (i inFlightAttaching) GetVolume(nodeID, name string) string {
+	return i[nodeID][name]
+}
+
+func NewDeviceManager() DeviceManager {
+	return &deviceManager{
+		nameAllocators: make(map[string]NameAllocator),
+		inFlight:       make(inFlightAttaching),
 	}
 }
 
-func (d *blockDeviceManager) newBlockDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *BlockDevice {
-	device := &BlockDevice{
-		Instance:          instance,
-		Path:              path,
-		VolumeID:          volumeID,
-		IsAlreadyAssigned: isAlreadyAssigned,
-
-		isTainted: false,
-	}
-	device.releaseFunc = func() error {
-		return d.release(device)
-	}
-	return device
-}
-
-func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID string) (*BlockDevice, error) {
+func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
 	nodeID, err := getInstanceID(instance)
 	if err != nil {
 		return nil, err
@@ -104,8 +114,8 @@ func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID str
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	// Get device suffixes being attached and already attached to this instance
-	inUse, err := d.getSuffixesInUse(instance, nodeID)
+	// Get device names being attached and already attached to this instance
+	inUse, err := d.getDeviceNamesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
@@ -116,35 +126,27 @@ func (d *blockDeviceManager) NewBlockDevice(instance *ec2.Instance, volumeID str
 	}
 
 	// Find the next unused device name
-	deviceAllocator := d.deviceAllocators[nodeID]
-	if deviceAllocator == nil {
-		deviceAllocator = NewDeviceAllocator()
-		d.deviceAllocators[nodeID] = deviceAllocator
+	nameAllocator := d.nameAllocators[nodeID]
+	if nameAllocator == nil {
+		nameAllocator = NewNameAllocator()
+		d.nameAllocators[nodeID] = nameAllocator
 	}
 
-	//TODO rename device allocator to suffix allocator
-	suffix, err := deviceAllocator.GetNext(inUse)
+	name, err := nameAllocator.GetNext(inUse)
 	if err != nil {
-		glog.Warningf("Could not assign a mount device.  mappings=%v, error: %v", inUse, err)
-		return nil, fmt.Errorf("too many EBS volumes attached to node %s", nodeID)
+		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
 	}
 
 	// Add the chosen device and volume to the "attachments in progress" map
-	attaching := d.attaching[nodeID]
-	if attaching == nil {
-		attaching = make(map[string]string)
-		d.attaching[nodeID] = attaching
-	}
-	attaching[suffix] = volumeID
-	glog.V(5).Infof("Assigned device suffix %s to volume %s", suffix, volumeID)
+	d.inFlight.Add(nodeID, volumeID, name)
 
-	// Deprioritize this suffix so it's not picked again right away.
-	deviceAllocator.Deprioritize(suffix)
+	// Deprioritize this name so it's not picked again right away.
+	nameAllocator.Deprioritize(name)
 
-	return d.newBlockDevice(instance, volumeID, devicePreffix+suffix, false), nil
+	return d.newBlockDevice(instance, volumeID, devPreffix+name, false), nil
 }
 
-func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID string) (*BlockDevice, error) {
+func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
 	nodeID, err := getInstanceID(instance)
 	if err != nil {
 		return nil, err
@@ -153,7 +155,7 @@ func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID str
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse, err := d.getSuffixesInUse(instance, nodeID)
+	inUse, err := d.getDeviceNamesInUse(instance, nodeID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
@@ -169,7 +171,22 @@ func (d *blockDeviceManager) GetBlockDevice(instance *ec2.Instance, volumeID str
 	return device, nil
 }
 
-func (d *blockDeviceManager) release(device *BlockDevice) error {
+func (d *deviceManager) newBlockDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *Device {
+	device := &Device{
+		Instance:          instance,
+		Path:              path,
+		VolumeID:          volumeID,
+		IsAlreadyAssigned: isAlreadyAssigned,
+
+		isTainted: false,
+	}
+	device.releaseFunc = func() error {
+		return d.release(device)
+	}
+	return device
+}
+
+func (d *deviceManager) release(device *Device) error {
 	nodeID, err := getInstanceID(device.Instance)
 	if err != nil {
 		return err
@@ -178,32 +195,32 @@ func (d *blockDeviceManager) release(device *BlockDevice) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	var suffix string
+	var name string
 	if len(device.Path) > 2 {
-		suffix = device.Path[len(device.Path)-2:]
+		name = device.Path[len(device.Path)-2:]
 	}
 
-	existingVolumeID, found := d.attaching[nodeID][suffix]
-	if !found {
+	existingVolumeID := d.inFlight.GetVolume(nodeID, name)
+	if len(existingVolumeID) == 0 {
 		// Attaching is not in progress, so there's nothing to release
 		return nil
 	}
 
 	if device.VolumeID != existingVolumeID {
-		// This actually can happen, because getMountDevice combines the attaching map with the volumes
-		// attached to the instance (as reported by the EC2 API).  So if endAttaching comes after
-		// a 10 second poll delay, we might well have had a concurrent request to allocate a mountpoint,
-		// which because we allocate sequentially is _very_ likely to get the immediately freed volume
+		// This actually can happen, because GetNext combines the inFlightAttaching map with the volumes
+		// attached to the instance (as reported by the EC2 API).  So if release comes after
+		// a 10 second poll delay, we might as well have had a concurrent request to allocate a mountpoint,
+		// which because we allocate sequentially is very likely to get the immediately freed volume.
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
 	glog.V(5).Infof("Releasing in-process attachment entry: %s -> volume %s", device, device.VolumeID)
-	delete(d.attaching[nodeID], suffix)
+	d.inFlight.Del(nodeID, name)
 
 	return nil
 }
 
-func (d *blockDeviceManager) getSuffixesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
+func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
@@ -219,17 +236,17 @@ func (d *blockDeviceManager) getSuffixesInUse(instance *ec2.Instance, nodeID str
 		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}
 
-	for suffix, volumeID := range d.attaching[nodeID] {
-		inUse[suffix] = volumeID
+	for name, volumeID := range d.inFlight.GetNames(nodeID) {
+		inUse[name] = volumeID
 	}
 
 	return inUse, nil
 }
 
-func (d *blockDeviceManager) getPath(inUse map[string]string, volumeID string) string {
-	for suffix, volID := range inUse {
+func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string {
+	for name, volID := range inUse {
 		if volumeID == volID {
-			return devicePreffix + suffix
+			return devPreffix + name
 		}
 	}
 	return ""
