@@ -282,14 +282,14 @@ func TestGetDiskByName(t *testing.T) {
 		disk, err := c.GetDiskByName(tc.volumeName, tc.volumeCapacity)
 		if err != nil {
 			if tc.expErr == nil {
-				t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
+				t.Fatalf("GetDiskByName() failed: expected no error, got: %v", err)
 			}
 		} else {
 			if tc.expErr != nil {
-				t.Fatal("GetDisk() failed: expected error, got nothing")
+				t.Fatal("GetDiskByName() failed: expected error, got nothing")
 			}
 			if disk.CapacityGiB != util.BytesToGiB(tc.volumeCapacity) {
-				t.Fatalf("GetDisk() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
+				t.Fatalf("GetDiskByName() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
 			}
 		}
 
