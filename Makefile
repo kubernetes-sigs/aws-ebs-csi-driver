@@ -12,11 +12,11 @@ test:
 
 .PHONY: test-sanity
 test-sanity:
-	go test -timeout 30s github.com/bertinatto/ebs-csi-driver/tests -run ^TestSanity$
+	go test -v github.com/bertinatto/ebs-csi-driver/tests/sanity/...
 
 .PHONY: test-e2e
 test-e2e:
-	go test -v github.com/bertinatto/ebs-csi-driver/tests -run ^TestControllerE2E$
+	go test -v github.com/bertinatto/ebs-csi-driver/tests/e2e/...
 
 .PHONY: image
 image: ebs-csi-driver
