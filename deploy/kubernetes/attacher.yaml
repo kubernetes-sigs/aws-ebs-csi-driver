@@ -55,10 +55,7 @@ metadata:
 spec:
   selector:
     app: csi-attacher
-  ports:
-    - name: dummy
-      port: 12345
-
+  clusterIP: None
 ---
 
 kind: StatefulSet
