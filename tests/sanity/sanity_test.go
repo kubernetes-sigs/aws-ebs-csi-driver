@@ -20,12 +20,20 @@ import (
 	"os"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
 	"github.com/bertinatto/ebs-csi-driver/pkg/driver"
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
 )
 
 func TestSanity(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "AWS EBS CSI Driver Sanity Tests")
+}
+
+var _ = Describe("AWS EBS CSI Driver", func() {
 	const (
 		mountPath = "/tmp/csi/mount"
 		stagePath = "/tmp/csi/stage"
@@ -33,24 +41,31 @@ func TestSanity(t *testing.T) {
 		endpoint  = "unix://" + socket
 	)
 
-	if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
-		t.Fatalf("could not remove socket file %s: %v", socket, err)
-	}
-
-	ebsDriver := driver.NewDriver(cloud.NewFakeCloudProvider(), driver.NewFakeMounter(), endpoint)
-	defer ebsDriver.Stop()
-
-	go func() {
-		if err := ebsDriver.Run(); err != nil {
-			t.Fatalf("could not run CSI driver: %v", err)
-		}
-	}()
-
 	config := &sanity.Config{
 		Address:     endpoint,
 		TargetPath:  mountPath,
 		StagingPath: stagePath,
 	}
 
-	sanity.Test(t, config)
-}
+	var ebsDriver *driver.Driver
+
+	BeforeEach(func() {
+		ebsDriver = driver.NewDriver(cloud.NewFakeCloudProvider(), driver.NewFakeMounter(), endpoint)
+		go func() {
+			err := ebsDriver.Run()
+			Expect(err).To(BeNil())
+		}()
+	})
+
+	AfterEach(func() {
+		ebsDriver.Stop()
+		if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
+			Expect(err).To(BeNil())
+		}
+	})
+
+	Describe("Sanity Test", func() {
+		sanity.GinkgoTest(config)
+	})
+
+})
