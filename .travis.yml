@@ -1,6 +1,10 @@
 language: go
 go_import_path: github.com/bertinatto/ebs-csi-driver
 
+env:
+  global:
+    - GO111MODULE=on
+
 go:
   - "1.10.x"
   - "1.11.x"
