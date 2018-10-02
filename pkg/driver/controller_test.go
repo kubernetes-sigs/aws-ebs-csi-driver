@@ -148,7 +148,7 @@ func TestCreateVolume(t *testing.T) {
 				t.Fatalf("Could not get error status code from error: %v", srvErr)
 			}
 			if srvErr.Code() != tc.expErrCode {
-				t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+				t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
 			}
 			continue
 		}
@@ -234,4 +234,76 @@ func TestDeleteVolume(t *testing.T) {
 			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
 		}
 	}
+}
+
+func TestPickAvailabilityZone(t *testing.T) {
+	expZone := "us-west-2b"
+	testCases := []struct {
+		name        string
+		requirement *csi.TopologyRequirement
+		expZone     *string
+	}{
+		{
+			name: "Pick from preferred",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					&csi.Topology{
+						Segments: map[string]string{topologyKey: expZone},
+					},
+				},
+				Preferred: []*csi.Topology{
+					&csi.Topology{
+						Segments: map[string]string{topologyKey: expZone},
+					},
+				},
+			},
+			expZone: stringPtr(expZone),
+		},
+		{
+			name: "Pick from requisite",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					&csi.Topology{
+						Segments: map[string]string{topologyKey: expZone},
+					},
+				},
+			},
+			expZone: stringPtr(expZone),
+		},
+		{
+			name: "Pick from empty topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{&csi.Topology{}},
+				Requisite: []*csi.Topology{&csi.Topology{}},
+			},
+			expZone: nil,
+		},
+
+		{
+			name:        "Topology Requirement is nil",
+			requirement: nil,
+			expZone:     nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := pickAvailabilityZone(tc.requirement)
+			if tc.expZone == nil {
+				if actual != nil {
+					t.Fatalf("Expected zone to be nil, got %v", actual)
+				}
+			} else {
+				if *actual != *tc.expZone {
+					t.Fatalf("Expected zone %v, got zone: %v", tc.expZone, actual)
+
+				}
+			}
+		})
+	}
+
+}
+
+func stringPtr(str string) *string {
+	return &str
 }

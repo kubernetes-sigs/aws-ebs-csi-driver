@@ -190,8 +190,14 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	glog.V(4).Infof("NodeGetInfo: called with args %#v", req)
 	m := d.cloud.GetMetadata()
+
+	topology := &csi.Topology{
+		Segments: map[string]string{topologyKey: m.GetAvailabilityZone()},
+	}
+
 	return &csi.NodeGetInfoResponse{
-		NodeId: m.GetInstanceID(),
+		NodeId:             m.GetInstanceID(),
+		AccessibleTopology: topology,
 	}, nil
 }
 

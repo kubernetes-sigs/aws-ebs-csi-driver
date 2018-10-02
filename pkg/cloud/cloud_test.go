@@ -43,8 +43,23 @@ func TestCreateDisk(t *testing.T) {
 			name:       "success: normal",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: nil,
+			},
+			expDisk: &Disk{
+				VolumeID:    "vol-test",
+				CapacityGiB: 1,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: normal with provided zone",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: stringPtr("us-west-2"),
 			},
 			expDisk: &Disk{
 				VolumeID:    "vol-test",
@@ -56,8 +71,9 @@ func TestCreateDisk(t *testing.T) {
 			name:       "fail: CreateVolume returned an error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: nil,
 			},
 			expErr: fmt.Errorf("CreateVolume generic error"),
 		},
@@ -79,6 +95,24 @@ func TestCreateDisk(t *testing.T) {
 
 		ctx := context.Background()
 		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
+
+		if tc.diskOptions.AvailabilityZone == nil {
+			describeAvailabilityZonesResp := &ec2.DescribeAvailabilityZonesOutput{
+				AvailabilityZones: []*ec2.AvailabilityZone{
+					&ec2.AvailabilityZone{
+						ZoneName: aws.String("us-west-2a"),
+					},
+					&ec2.AvailabilityZone{
+						ZoneName: aws.String("us-west-2b"),
+					},
+					&ec2.AvailabilityZone{
+						ZoneName: aws.String("us-west-2c"),
+					},
+				},
+			}
+
+			mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).Return(describeAvailabilityZonesResp, nil)
+		}
 
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
@@ -376,4 +410,8 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 			},
 		}},
 	}
+}
+
+func stringPtr(str string) *string {
+	return &str
 }
