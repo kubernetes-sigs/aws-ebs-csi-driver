@@ -68,24 +68,23 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if disk == nil {
-		opts := &cloud.DiskOptions{
-			CapacityBytes: volSizeBytes,
-			Tags:          map[string]string{cloud.VolumeNameTagKey: volName},
-		}
-		newDisk, err := d.cloud.CreateDisk(ctx, volName, opts)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
-		}
-		disk = newDisk
+	// volume exists already
+	if disk != nil {
+		return newCreateVolumeResponse(disk), nil
 	}
 
-	return &csi.CreateVolumeResponse{
-		Volume: &csi.Volume{
-			Id:            disk.VolumeID,
-			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
-		},
-	}, nil
+	// create a new volume
+	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	opts := &cloud.DiskOptions{
+		CapacityBytes:    volSizeBytes,
+		AvailabilityZone: zone,
+		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
+	}
+	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
+	}
+	return newCreateVolumeResponse(disk), nil
 }
 
 func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
@@ -252,4 +251,38 @@ func (d *Driver) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequ
 
 func (d *Driver) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
+}
+
+// pickAvailabilityZone selects 1 zone given topology requirement.
+func pickAvailabilityZone(requirement *csi.TopologyRequirement) *string {
+	if requirement == nil {
+		return nil
+	}
+	for _, topology := range requirement.GetPreferred() {
+		zone, exists := topology.GetSegments()[topologyKey]
+		if exists {
+			return &zone
+		}
+	}
+	for _, topology := range requirement.GetRequisite() {
+		zone, exists := topology.GetSegments()[topologyKey]
+		if exists {
+			return &zone
+		}
+	}
+	return nil
+}
+
+func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			Id:            disk.VolumeID,
+			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
+			AccessibleTopology: []*csi.Topology{
+				&csi.Topology{
+					Segments: map[string]string{topologyKey: disk.AvailabilityZone},
+				},
+			},
+		},
+	}
 }

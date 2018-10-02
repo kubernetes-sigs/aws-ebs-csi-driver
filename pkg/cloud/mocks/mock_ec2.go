@@ -89,6 +89,19 @@ func (mr *MockEC2MockRecorder) DeleteVolumeWithContext(arg0, arg1 interface{}, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DeleteVolumeWithContext), varargs...)
 }
 
+// DescribeAvailabilityZones mocks base method
+func (m *MockEC2) DescribeAvailabilityZones(arg0 *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error) {
+	ret := m.ctrl.Call(m, "DescribeAvailabilityZones", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeAvailabilityZonesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeAvailabilityZones indicates an expected call of DescribeAvailabilityZones
+func (mr *MockEC2MockRecorder) DescribeAvailabilityZones(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAvailabilityZones", reflect.TypeOf((*MockEC2)(nil).DescribeAvailabilityZones), arg0)
+}
+
 // DescribeInstancesWithContext mocks base method
 func (m *MockEC2) DescribeInstancesWithContext(arg0 aws.Context, arg1 *ec2.DescribeInstancesInput, arg2 ...request.Option) (*ec2.DescribeInstancesOutput, error) {
 	varargs := []interface{}{arg0, arg1}
