@@ -324,7 +324,7 @@ func TestGetDiskByID(t *testing.T) {
 		mockEC2.EXPECT().DescribeVolumes(gomock.Any()).Return(
 			&ec2.DescribeVolumesOutput{
 				Volumes: []*ec2.Volume{
-					&ec2.Volume{VolumeId: aws.String(tc.volumeID)},
+					{VolumeId: aws.String(tc.volumeID)},
 				},
 			},
 			tc.expErr,
@@ -362,9 +362,9 @@ func newCloud(mockEC2 EC2) Cloud {
 
 func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 	return &ec2.DescribeInstancesOutput{
-		Reservations: []*ec2.Reservation{&ec2.Reservation{
+		Reservations: []*ec2.Reservation{{
 			Instances: []*ec2.Instance{
-				&ec2.Instance{InstanceId: aws.String(nodeID)},
+				{InstanceId: aws.String(nodeID)},
 			},
 		}},
 	}

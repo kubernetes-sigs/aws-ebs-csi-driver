@@ -324,7 +324,7 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 func (c *cloud) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name:   aws.String("tag:" + VolumeNameTagKey),
 				Values: []*string{aws.String(name)},
 			},
