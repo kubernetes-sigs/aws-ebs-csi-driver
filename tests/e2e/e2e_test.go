@@ -66,7 +66,7 @@ var _ = Describe("EBS CSI Driver", func() {
 		// Verifying that volume was created ans is valid
 		descParams := &ec2.DescribeVolumesInput{
 			Filters: []*ec2.Filter{
-				&ec2.Filter{
+				{
 					Name:   aws.String("tag:" + cloud.VolumeNameTagKey),
 					Values: []*string{aws.String(req.GetName())},
 				},
