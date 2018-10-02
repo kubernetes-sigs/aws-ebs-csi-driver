@@ -226,7 +226,7 @@ func newFakeInstance(instanceID, volumeID, devicePath string) *ec2.Instance {
 	return &ec2.Instance{
 		InstanceId: aws.String(instanceID),
 		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
-			&ec2.InstanceBlockDeviceMapping{
+			{
 				DeviceName: aws.String(devicePath),
 				Ebs:        &ec2.EbsInstanceBlockDevice{VolumeId: aws.String(volumeID)},
 			},

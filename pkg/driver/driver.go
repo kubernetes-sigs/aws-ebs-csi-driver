@@ -59,10 +59,10 @@ func NewDriver(cloud cloud.Cloud, mounter *mount.SafeFormatAndMount, endpoint st
 		cloud:    cloud,
 		mounter:  mounter,
 		volumeCaps: []csi.VolumeCapability_AccessMode{
-			csi.VolumeCapability_AccessMode{
+			{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
-			csi.VolumeCapability_AccessMode{
+			{
 				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
 			},
 		},
