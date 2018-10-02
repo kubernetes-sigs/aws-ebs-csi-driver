@@ -6,8 +6,13 @@ go:
   - "1.11.x"
   - master
 
+before_install:
+  - go get github.com/mattn/goveralls
+
 script:
   - make
   - make test
   - make test-sanity
+  - go test -covermode=count -coverprofile=profile.cov ./pkg/...
+  - $GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
 
