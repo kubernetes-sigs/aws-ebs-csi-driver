@@ -24,10 +24,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	dm "github.com/bertinatto/ebs-csi-driver/pkg/cloud/devicemanager"
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloud/mocks"
-	"github.com/bertinatto/ebs-csi-driver/pkg/util"
 	"github.com/golang/mock/gomock"
+	dm "github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud/devicemanager"
+	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud/mocks"
+	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/util"
 )
 
 func TestCreateDisk(t *testing.T) {
