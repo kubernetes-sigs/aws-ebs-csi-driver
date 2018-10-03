@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/util"
+	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/util"
 )
 
 type FakeCloudProvider struct {

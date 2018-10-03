@@ -23,9 +23,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
-	"github.com/bertinatto/ebs-csi-driver/pkg/driver"
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
+	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/driver"
 )
 
 func TestSanity(t *testing.T) {
