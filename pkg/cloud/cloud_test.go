@@ -25,9 +25,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/mock/gomock"
-	dm "github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud/devicemanager"
-	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud/mocks"
-	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/util"
+	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 )
 
 func TestCreateDisk(t *testing.T) {

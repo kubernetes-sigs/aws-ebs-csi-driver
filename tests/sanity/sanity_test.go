@@ -24,8 +24,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
-	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/cloud"
-	"github.com/kubernetes-sigs/ebs-csi-driver/pkg/driver"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
 func TestSanity(t *testing.T) {
