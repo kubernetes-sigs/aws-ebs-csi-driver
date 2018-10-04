@@ -19,9 +19,9 @@ package main
 import (
 	"flag"
 
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloud"
-	"github.com/bertinatto/ebs-csi-driver/pkg/driver"
 	"github.com/golang/glog"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
 func main() {

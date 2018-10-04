@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/bertinatto/ebs-csi-driver/pkg/cloud/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
 )
 
 var (
