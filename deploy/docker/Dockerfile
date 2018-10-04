@@ -1,7 +1,7 @@
 FROM fedora-minimal
 
-COPY ebs-csi-driver /bin/ebs-csi-driver
+COPY aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
 RUN microdnf install -y e2fsprogs && microdnf clean all
 
-ENTRYPOINT ["/bin/ebs-csi-driver", "-logtostderr", "-v", "5"]
+ENTRYPOINT ["/bin/aws-ebs-csi-driver", "-logtostderr", "-v", "5"]
