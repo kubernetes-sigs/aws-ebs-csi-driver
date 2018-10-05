@@ -55,7 +55,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
 	}
 
-	disk, err := d.cloud.GetDiskByName(volName, volSizeBytes)
+	disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
 	if err != nil {
 		switch err {
 		case cloud.ErrNotFound:
@@ -73,7 +73,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			CapacityBytes: volSizeBytes,
 			Tags:          map[string]string{cloud.VolumeNameTagKey: volName},
 		}
-		newDisk, err := d.cloud.CreateDisk(volName, opts)
+		newDisk, err := d.cloud.CreateDisk(ctx, volName, opts)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 		}
@@ -95,7 +95,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
+	if _, err := d.cloud.DeleteDisk(ctx, volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			glog.V(4).Info("DeleteVolume: volume not found, returning with success")
 			return &csi.DeleteVolumeResponse{}, nil
@@ -128,18 +128,18 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
-	if !d.cloud.IsExistInstance(nodeID) {
+	if !d.cloud.IsExistInstance(ctx, nodeID) {
 		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
 	}
 
-	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
+	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
-	devicePath, err := d.cloud.AttachDisk(volumeID, nodeID)
+	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
 		if err == cloud.ErrAlreadyExists {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
@@ -164,7 +164,7 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
 	}
 
-	if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
+	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 	glog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
@@ -210,7 +210,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
+	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
