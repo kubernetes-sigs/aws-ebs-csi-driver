@@ -1,4 +1,4 @@
-module github.com/bertinatto/ebs-csi-driver
+module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
 	github.com/aws/aws-sdk-go v1.15.27
