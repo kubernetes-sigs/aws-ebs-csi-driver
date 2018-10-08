@@ -17,6 +17,7 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -76,9 +77,10 @@ func TestCreateDisk(t *testing.T) {
 			}
 		}
 
-		mockEC2.EXPECT().CreateVolume(gomock.Any()).Return(vol, tc.expErr)
+		ctx := context.Background()
+		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
 
-		disk, err := c.CreateDisk(tc.volumeName, tc.diskOptions)
+		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
@@ -134,9 +136,10 @@ func TestDeleteDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
-		mockEC2.EXPECT().DeleteVolume(gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
+		ctx := context.Background()
+		mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
 
-		ok, err := c.DeleteDisk(tc.volumeID)
+		ok, err := c.DeleteDisk(ctx, tc.volumeID)
 		if err != nil && tc.expErr == nil {
 			t.Fatalf("DeleteDisk() failed: expected no error, got: %v", err)
 		}
@@ -180,10 +183,11 @@ func TestAttachDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
-		mockEC2.EXPECT().DescribeInstances(gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-		mockEC2.EXPECT().AttachVolume(gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+		ctx := context.Background()
+		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+		mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
 
-		devicePath, err := c.AttachDisk(tc.volumeID, tc.nodeID)
+		devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
@@ -228,10 +232,11 @@ func TestDetachDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
-		mockEC2.EXPECT().DescribeInstances(gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-		mockEC2.EXPECT().DetachVolume(gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+		ctx := context.Background()
+		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+		mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
 
-		err := c.DetachDisk(tc.volumeID, tc.nodeID)
+		err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
@@ -277,9 +282,11 @@ func TestGetDiskByName(t *testing.T) {
 			VolumeId: aws.String(tc.volumeName),
 			Size:     aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
 		}
-		mockEC2.EXPECT().DescribeVolumes(gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expErr)
 
-		disk, err := c.GetDiskByName(tc.volumeName, tc.volumeCapacity)
+		ctx := context.Background()
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expErr)
+
+		disk, err := c.GetDiskByName(ctx, tc.volumeName, tc.volumeCapacity)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("GetDiskByName() failed: expected no error, got: %v", err)
@@ -321,7 +328,8 @@ func TestGetDiskByID(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
-		mockEC2.EXPECT().DescribeVolumes(gomock.Any()).Return(
+		ctx := context.Background()
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
 			&ec2.DescribeVolumesOutput{
 				Volumes: []*ec2.Volume{
 					{VolumeId: aws.String(tc.volumeID)},
@@ -330,7 +338,7 @@ func TestGetDiskByID(t *testing.T) {
 			tc.expErr,
 		)
 
-		disk, err := c.GetDiskByID(tc.volumeID)
+		disk, err := c.GetDiskByID(ctx, tc.volumeID)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
