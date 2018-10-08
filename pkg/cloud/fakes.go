@@ -17,6 +17,7 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -47,7 +48,7 @@ func (c *FakeCloudProvider) GetMetadata() MetadataService {
 	return c.m
 }
 
-func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
+func (c *FakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := &fakeDisk{
 		Disk: &Disk{
@@ -60,7 +61,7 @@ func (c *FakeCloudProvider) CreateDisk(volumeName string, diskOptions *DiskOptio
 	return d.Disk, nil
 }
 
-func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
+func (c *FakeCloudProvider) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	for volName, f := range c.disks {
 		if f.Disk.VolumeID == volumeID {
 			delete(c.disks, volName)
@@ -69,7 +70,7 @@ func (c *FakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) (string, error) {
+func (c *FakeCloudProvider) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
 	if _, ok := c.pub[volumeID]; ok {
 		return "", ErrAlreadyExists
 	}
@@ -77,11 +78,11 @@ func (c *FakeCloudProvider) AttachDisk(volumeID, nodeID string) (string, error) 
 	return "/dev/xvdbc", nil
 }
 
-func (c *FakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
+func (c *FakeCloudProvider) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *FakeCloudProvider) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
+func (c *FakeCloudProvider) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
 		for key, value := range d.tags {
@@ -101,7 +102,7 @@ func (c *FakeCloudProvider) GetDiskByName(name string, capacityBytes int64) (*Di
 	return nil, nil
 }
 
-func (c *FakeCloudProvider) GetDiskByID(volumeID string) (*Disk, error) {
+func (c *FakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error) {
 	for _, f := range c.disks {
 		if f.Disk.VolumeID == volumeID {
 			return f.Disk, nil
@@ -110,7 +111,7 @@ func (c *FakeCloudProvider) GetDiskByID(volumeID string) (*Disk, error) {
 	return nil, ErrNotFound
 }
 
-func (c *FakeCloudProvider) IsExistInstance(nodeID string) bool {
+func (c *FakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
 	if nodeID != c.m.GetInstanceID() {
 		return false
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/glog"
@@ -92,23 +94,23 @@ type DiskOptions struct {
 
 // EC2 abstracts aws.EC2 to facilitate its mocking.
 type EC2 interface {
-	DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error)
-	CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error)
-	DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error)
-	DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error)
-	AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error)
-	DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+	DescribeVolumesWithContext(ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.Option) (*ec2.DescribeVolumesOutput, error)
+	CreateVolumeWithContext(ctx aws.Context, input *ec2.CreateVolumeInput, opts ...request.Option) (*ec2.Volume, error)
+	DeleteVolumeWithContext(ctx aws.Context, input *ec2.DeleteVolumeInput, opts ...request.Option) (*ec2.DeleteVolumeOutput, error)
+	DetachVolumeWithContext(ctx aws.Context, input *ec2.DetachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
+	AttachVolumeWithContext(ctx aws.Context, input *ec2.AttachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
+	DescribeInstancesWithContext(ctx aws.Context, input *ec2.DescribeInstancesInput, opts ...request.Option) (*ec2.DescribeInstancesOutput, error)
 }
 
 type Cloud interface {
 	GetMetadata() MetadataService
-	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
-	DeleteDisk(volumeID string) (success bool, err error)
-	AttachDisk(volumeID string, nodeID string) (devicePath string, err error)
-	DetachDisk(volumeID string, nodeID string) (err error)
-	GetDiskByName(name string, capacityBytes int64) (disk *Disk, err error)
-	GetDiskByID(volumeID string) (disk *Disk, err error)
-	IsExistInstance(nodeID string) (sucess bool)
+	CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
+	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
+	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
+	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
+	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
+	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
+	IsExistInstance(ctx context.Context, nodeID string) (sucess bool)
 }
 
 type cloud struct {
@@ -155,7 +157,7 @@ func (c *cloud) GetMetadata() MetadataService {
 	return c.metadata
 }
 
-func (c *cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, error) {
+func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var createType string
 	var iops int64
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -198,7 +200,7 @@ func (c *cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 		request.Iops = aws.Int64(iops)
 	}
 
-	response, err := c.ec2.CreateVolume(request)
+	response, err := c.ec2.CreateVolumeWithContext(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
 	}
@@ -216,9 +218,9 @@ func (c *cloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (*Disk, 
 	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
 }
 
-func (c *cloud) DeleteDisk(volumeID string) (bool, error) {
+func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
-	if _, err := c.ec2.DeleteVolume(request); err != nil {
+	if _, err := c.ec2.DeleteVolumeWithContext(ctx, request); err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == "InvalidVolume.NotFound" {
 				return false, ErrNotFound
@@ -229,8 +231,8 @@ func (c *cloud) DeleteDisk(volumeID string) (bool, error) {
 	return true, nil
 }
 
-func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
-	instance, err := c.getInstance(nodeID)
+func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
+	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
@@ -248,7 +250,7 @@ func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 			VolumeId:   aws.String(volumeID),
 		}
 
-		resp, err := c.ec2.AttachVolume(request)
+		resp, err := c.ec2.AttachVolumeWithContext(ctx, request)
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
 				if awsErr.Code() == "VolumeInUse" {
@@ -291,8 +293,8 @@ func (c *cloud) AttachDisk(volumeID, nodeID string) (string, error) {
 	return device.Path, nil
 }
 
-func (c *cloud) DetachDisk(volumeID, nodeID string) error {
-	instance, err := c.getInstance(nodeID)
+func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
+	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return err
 	}
@@ -313,7 +315,7 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err = c.ec2.DetachVolume(request)
+	_, err = c.ec2.DetachVolumeWithContext(ctx, request)
 	if err != nil {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
@@ -321,7 +323,7 @@ func (c *cloud) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *cloud) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
+func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
 	request := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -331,7 +333,7 @@ func (c *cloud) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
 		},
 	}
 
-	volume, err := c.getVolume(request)
+	volume, err := c.getVolume(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -347,14 +349,14 @@ func (c *cloud) GetDiskByName(name string, capacityBytes int64) (*Disk, error) {
 	}, nil
 }
 
-func (c *cloud) GetDiskByID(volumeID string) (*Disk, error) {
+func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error) {
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []*string{
 			aws.String(volumeID),
 		},
 	}
 
-	volume, err := c.getVolume(request)
+	volume, err := c.getVolume(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -365,20 +367,20 @@ func (c *cloud) GetDiskByID(volumeID string) (*Disk, error) {
 	}, nil
 }
 
-func (c *cloud) IsExistInstance(nodeID string) bool {
-	instance, err := c.getInstance(nodeID)
+func (c *cloud) IsExistInstance(ctx context.Context, nodeID string) bool {
+	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil || instance == nil {
 		return false
 	}
 	return true
 }
 
-func (c *cloud) getVolume(request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 
 	for {
-		response, err := c.ec2.DescribeVolumes(request)
+		response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -401,7 +403,7 @@ func (c *cloud) getVolume(request *ec2.DescribeVolumesInput) (*ec2.Volume, error
 	return volumes[0], nil
 }
 
-func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
+func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {
 	instances := []*ec2.Instance{}
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&nodeID},
@@ -409,7 +411,7 @@ func (c *cloud) getInstance(nodeID string) (*ec2.Instance, error) {
 
 	var nextToken *string
 	for {
-		response, err := c.ec2.DescribeInstances(request)
+		response, err := c.ec2.DescribeInstancesWithContext(ctx, request)
 		if err != nil {
 			return nil, fmt.Errorf("error listing AWS instances: %q", err)
 		}

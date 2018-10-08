@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	ec2metadata "github.com/aws/aws-sdk-go/aws/ec2metadata"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockEC2Metadata is a mock of EC2Metadata interface
