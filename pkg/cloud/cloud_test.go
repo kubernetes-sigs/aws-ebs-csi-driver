@@ -45,7 +45,7 @@ func TestCreateDisk(t *testing.T) {
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: nil,
+				AvailabilityZone: "",
 			},
 			expDisk: &Disk{
 				VolumeID:    "vol-test",
@@ -59,7 +59,7 @@ func TestCreateDisk(t *testing.T) {
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: stringPtr("us-west-2"),
+				AvailabilityZone: "us-west-2",
 			},
 			expDisk: &Disk{
 				VolumeID:    "vol-test",
@@ -73,7 +73,7 @@ func TestCreateDisk(t *testing.T) {
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: nil,
+				AvailabilityZone: "",
 			},
 			expErr: fmt.Errorf("CreateVolume generic error"),
 		},
@@ -96,7 +96,7 @@ func TestCreateDisk(t *testing.T) {
 		ctx := context.Background()
 		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
 
-		if tc.diskOptions.AvailabilityZone == nil {
+		if tc.diskOptions.AvailabilityZone == "" {
 			describeAvailabilityZonesResp := &ec2.DescribeAvailabilityZonesOutput{
 				AvailabilityZones: []*ec2.AvailabilityZone{
 					&ec2.AvailabilityZone{
@@ -111,7 +111,7 @@ func TestCreateDisk(t *testing.T) {
 				},
 			}
 
-			mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).Return(describeAvailabilityZonesResp, nil)
+			mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(describeAvailabilityZonesResp, nil)
 		}
 
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
@@ -410,8 +410,4 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 			},
 		}},
 	}
-}
-
-func stringPtr(str string) *string {
-	return &str
 }

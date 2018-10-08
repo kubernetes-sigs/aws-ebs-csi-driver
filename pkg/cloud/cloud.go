@@ -100,11 +100,12 @@ type DiskOptions struct {
 	VolumeType    string
 	IOPSPerGB     int64
 	// the availability zone to create volume in
-	// if nil a random zone will be used
-	AvailabilityZone *string
+	// if empty a random zone will be used
+	AvailabilityZone string
 }
 
 // EC2 abstracts aws.EC2 to facilitate its mocking.
+// See https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/ for details
 type EC2 interface {
 	DescribeVolumesWithContext(ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.Option) (*ec2.DescribeVolumesOutput, error)
 	CreateVolumeWithContext(ctx aws.Context, input *ec2.CreateVolumeInput, opts ...request.Option) (*ec2.Volume, error)
@@ -112,7 +113,7 @@ type EC2 interface {
 	DetachVolumeWithContext(ctx aws.Context, input *ec2.DetachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	AttachVolumeWithContext(ctx aws.Context, input *ec2.AttachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	DescribeInstancesWithContext(ctx aws.Context, input *ec2.DescribeInstancesInput, opts ...request.Option) (*ec2.DescribeInstancesOutput, error)
-	DescribeAvailabilityZones(input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error)
+	DescribeAvailabilityZonesWithContext(ctx aws.Context, input *ec2.DescribeAvailabilityZonesInput, opts ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 type Cloud interface {
@@ -208,13 +209,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		zone string
 		err  error
 	)
-	if diskOptions.AvailabilityZone == nil {
-		zone, err = c.pickRandomAvailabilityZone()
+	if diskOptions.AvailabilityZone == "" {
+		zone, err = c.pickRandomAvailabilityZone(ctx)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		zone = *diskOptions.AvailabilityZone
+		zone = diskOptions.AvailabilityZone
 	}
 
 	request := &ec2.CreateVolumeInput{
@@ -463,8 +464,8 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	return instances[0], nil
 }
 
-func (c *cloud) pickRandomAvailabilityZone() (string, error) {
-	output, err := c.ec2.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+func (c *cloud) pickRandomAvailabilityZone(ctx context.Context) (string, error) {
+	output, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
 	if err != nil {
 		return "", err
 	}

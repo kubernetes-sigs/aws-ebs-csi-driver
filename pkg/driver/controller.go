@@ -254,23 +254,24 @@ func (d *Driver) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsReques
 }
 
 // pickAvailabilityZone selects 1 zone given topology requirement.
-func pickAvailabilityZone(requirement *csi.TopologyRequirement) *string {
+// if not found, empty string is returned.
+func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 	if requirement == nil {
-		return nil
+		return ""
 	}
 	for _, topology := range requirement.GetPreferred() {
 		zone, exists := topology.GetSegments()[topologyKey]
 		if exists {
-			return &zone
+			return zone
 		}
 	}
 	for _, topology := range requirement.GetRequisite() {
 		zone, exists := topology.GetSegments()[topologyKey]
 		if exists {
-			return &zone
+			return zone
 		}
 	}
-	return nil
+	return ""
 }
 
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {

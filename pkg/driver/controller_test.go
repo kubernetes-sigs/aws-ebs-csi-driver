@@ -241,7 +241,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 	testCases := []struct {
 		name        string
 		requirement *csi.TopologyRequirement
-		expZone     *string
+		expZone     string
 	}{
 		{
 			name: "Pick from preferred",
@@ -257,7 +257,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 					},
 				},
 			},
-			expZone: stringPtr(expZone),
+			expZone: expZone,
 		},
 		{
 			name: "Pick from requisite",
@@ -268,7 +268,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 					},
 				},
 			},
-			expZone: stringPtr(expZone),
+			expZone: expZone,
 		},
 		{
 			name: "Pick from empty topology",
@@ -276,34 +276,22 @@ func TestPickAvailabilityZone(t *testing.T) {
 				Preferred: []*csi.Topology{&csi.Topology{}},
 				Requisite: []*csi.Topology{&csi.Topology{}},
 			},
-			expZone: nil,
+			expZone: "",
 		},
-
 		{
 			name:        "Topology Requirement is nil",
 			requirement: nil,
-			expZone:     nil,
+			expZone:     "",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := pickAvailabilityZone(tc.requirement)
-			if tc.expZone == nil {
-				if actual != nil {
-					t.Fatalf("Expected zone to be nil, got %v", actual)
-				}
-			} else {
-				if *actual != *tc.expZone {
-					t.Fatalf("Expected zone %v, got zone: %v", tc.expZone, actual)
-
-				}
+			if actual != tc.expZone {
+				t.Fatalf("Expected zone %v, got zone: %v", tc.expZone, actual)
 			}
 		})
 	}
 
-}
-
-func stringPtr(str string) *string {
-	return &str
 }
