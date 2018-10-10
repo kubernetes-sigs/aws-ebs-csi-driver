@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -80,19 +82,30 @@ var (
 	ErrAlreadyExists = errors.New("Resource already exists")
 )
 
-type Disk struct {
-	VolumeID    string
-	CapacityGiB int64
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
+// Disk represents a EBS volume
+type Disk struct {
+	VolumeID         string
+	CapacityGiB      int64
+	AvailabilityZone string
+}
+
+// DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
 	CapacityBytes int64
 	Tags          map[string]string
 	VolumeType    string
 	IOPSPerGB     int64
+	// the availability zone to create volume in
+	// if empty a random zone will be used
+	AvailabilityZone string
 }
 
 // EC2 abstracts aws.EC2 to facilitate its mocking.
+// See https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/ for details
 type EC2 interface {
 	DescribeVolumesWithContext(ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.Option) (*ec2.DescribeVolumesOutput, error)
 	CreateVolumeWithContext(ctx aws.Context, input *ec2.CreateVolumeInput, opts ...request.Option) (*ec2.Volume, error)
@@ -100,6 +113,7 @@ type EC2 interface {
 	DetachVolumeWithContext(ctx aws.Context, input *ec2.DetachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	AttachVolumeWithContext(ctx aws.Context, input *ec2.AttachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	DescribeInstancesWithContext(ctx aws.Context, input *ec2.DescribeInstancesInput, opts ...request.Option) (*ec2.DescribeInstancesOutput, error)
+	DescribeAvailabilityZonesWithContext(ctx aws.Context, input *ec2.DescribeAvailabilityZonesInput, opts ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 type Cloud interface {
@@ -158,8 +172,10 @@ func (c *cloud) GetMetadata() MetadataService {
 }
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
-	var createType string
-	var iops int64
+	var (
+		createType string
+		iops       int64
+	)
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
@@ -189,9 +205,22 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		Tags:         tags,
 	}
 
-	m := c.GetMetadata()
+	var (
+		zone string
+		err  error
+	)
+	if diskOptions.AvailabilityZone == "" {
+		zone, err = c.pickRandomAvailabilityZone(ctx)
+		if err != nil {
+			return nil, err
+		}
+		glog.V(5).Infof("AZ is not provided. Choose random AZ [%s]", zone)
+	} else {
+		zone = diskOptions.AvailabilityZone
+	}
+
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String(m.GetAvailabilityZone()),
+		AvailabilityZone:  aws.String(zone),
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
@@ -215,7 +244,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
 	}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID}, nil
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -434,4 +463,18 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	}
 
 	return instances[0], nil
+}
+
+func (c *cloud) pickRandomAvailabilityZone(ctx context.Context) (string, error) {
+	output, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
+	if err != nil {
+		return "", err
+	}
+
+	var zones []string
+	for _, zone := range output.AvailabilityZones {
+		zones = append(zones, *zone.ZoneName)
+	}
+
+	return zones[rand.Int()%len(zones)], nil
 }
