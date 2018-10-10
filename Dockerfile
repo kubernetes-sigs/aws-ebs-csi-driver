@@ -12,30 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IMAGE=quay.io/bertinatto/ebs-csi-driver
-VERSION=testing
+FROM golang:1.11.1-alpine3.8 as builder
+WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+ADD . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o bin/aws-ebs-csi-driver ./cmd/aws-ebs-csi-driver
 
-.PHONY: aws-ebs-csi-driver
-aws-ebs-csi-driver:
-	mkdir -p bin
-	go build -o bin/aws-ebs-csi-driver ./cmd/aws-ebs-csi-driver
+FROM registry.fedoraproject.org/fedora-minimal
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
+RUN microdnf install -y e2fsprogs && microdnf clean all
 
-.PHONY: test
-test:
-	go test -v -race ./pkg/...
-
-.PHONY: test-sanity
-test-sanity:
-	go test -v ./tests/sanity/...
-
-.PHONY: test-e2e
-test-e2e:
-	go test -v ./tests/e2e/...
-
-.PHONY: image
-image:
-	docker build -t $(IMAGE):$(VERSION) .
-
-.PHONY: push
-push:
-	docker push $(IMAGE):$(VERSION)
+ENTRYPOINT ["/bin/aws-ebs-csi-driver", "-logtostderr", "-v", "5"]
