@@ -214,6 +214,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if err != nil {
 			return nil, err
 		}
+		glog.V(5).Infof("AZ is not provided. Choose random AZ [%s]", zone)
 	} else {
 		zone = diskOptions.AvailabilityZone
 	}
