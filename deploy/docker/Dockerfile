@@ -1,4 +1,4 @@
-FROM fedora-minimal
+FROM registry.fedoraproject.org/fedora-minimal
 
 COPY aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
