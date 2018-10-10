@@ -18,11 +18,13 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -48,10 +50,11 @@ var (
 
 var _ = Describe("EBS CSI Driver", func() {
 
-	It("Should create->attach->stage->mount volume and check if it is writable, then unmount->unstage->detach->delete and check disk is deleted", func() {
+	It("Should create, attach, stage and mount volume, check if it's writable, unmount, unstage, detach, delete, and check if it's deleted", func() {
 
+		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 		req := &csi.CreateVolumeRequest{
-			Name:               "volume-name-e2e-test",
+			Name:               fmt.Sprintf("volume-name-e2e-test-%d", r1.Uint64()),
 			CapacityRange:      stdCapRange,
 			VolumeCapabilities: stdVolCap,
 			Parameters:         nil,
@@ -62,37 +65,20 @@ var _ = Describe("EBS CSI Driver", func() {
 
 		volume := resp.GetVolume()
 		Expect(volume).NotTo(BeNil(), "Expected valid volume, got nil")
-
-		// Verifying that volume was created ans is valid
-		descParams := &ec2.DescribeVolumesInput{
-			Filters: []*ec2.Filter{
-				{
-					Name:   aws.String("tag:" + cloud.VolumeNameTagKey),
-					Values: []*string{aws.String(req.GetName())},
-				},
-			},
-		}
-		waitForVolumes(descParams, 1 /* number of expected volumes */)
+		waitForVolumeState(volume.Id, "available")
 
 		// Delete volume
 		defer func() {
 			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
 			Expect(err).To(BeNil(), "Could not delete volume")
-			waitForVolumes(descParams, 0 /* number of expected volumes */)
+			waitForVolumes(volume.Id, 0 /* number of expected volumes */)
 
 			// Deleting volume twice
 			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
 			Expect(err).To(BeNil(), "Error when trying to delete volume twice")
-
-			// Trying to delete non-existent volume
-			nonexistentVolume := "vol-0f13f3ff21126cabf"
-			if nonexistentVolume != volume.Id {
-				_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: nonexistentVolume})
-				Expect(err).To(BeNil(), "Error deleting non-existing volume: %v", err)
-			}
 		}()
 
-		// TODO: attach, stage, publish, unpublish, unstage, detach
+		// Attach, stage, publish, unpublish, unstage, detach
 		nodeID := ebs.GetMetadata().GetInstanceID()
 		testAttachWriteReadDetach(volume.Id, req.GetName(), nodeID, false)
 
@@ -155,16 +141,6 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 		VolumeCapability:  stdVolCap[0],
 	})
 	Expect(err).To(BeNil(), "NodePublishVolume failed with error")
-	//err = testutils.ForceChmod(instance, filepath.Join("/tmp/", volName), "777")
-	//Expect(err).To(BeNil(), "Chmod failed with error")
-	testFileContents := "test"
-	if !readOnly {
-		// Write a file
-		testFile := filepath.Join(publishDir, "testfile")
-		//err = testutils.WriteFile(instance, testFile, testFileContents)
-		err := ioutil.WriteFile(testFile, []byte(testFileContents), 0644)
-		Expect(err).To(BeNil(), "Failed to write file")
-	}
 
 	// Unmount Disk
 	defer func() {
@@ -175,30 +151,24 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 		Expect(err).To(BeNil(), "NodeUnpublishVolume failed with error")
 	}()
 
-}
-
-func waitForVolumes(params *ec2.DescribeVolumesInput, nVolumes int) {
-	backoff := wait.Backoff{
-		Duration: 60 * time.Second,
-		Factor:   1.2,
-		Steps:    21,
+	if !readOnly {
+		// Write a file
+		testFileContents := []byte("sample content")
+		testFile := filepath.Join(publishDir, "testfile")
+		err := ioutil.WriteFile(testFile, testFileContents, 0644)
+		Expect(err).To(BeNil(), "Failed to write file")
+		// Read the file and check if content is correct
+		data, err := ioutil.ReadFile(testFile)
+		Expect(err).To(BeNil(), "Failed to read file")
+		Expect(data).To(Equal(testFileContents), "File content is incorrect")
 	}
-	verifyVolumeFunc := func() (bool, error) {
-		volumes, err := describeVolumes(params)
-		if err != nil {
-			return false, err
-		}
-		if len(volumes) != nVolumes {
-			return false, nil
-		}
-		return true, nil
-
-	}
-	waitErr := wait.ExponentialBackoff(backoff, verifyVolumeFunc)
-	Expect(waitErr).To(BeNil(), "Timeout error when looking for volume: %v", waitErr)
 }
 
 func waitForVolumeState(volumeID, state string) {
+	// Most attach/detach operations on AWS finish within 1-4 seconds.
+	// By using 1 second starting interval with a backoff of 1.8,
+	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
+	// In total we wait for 2601 seconds.
 	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.8,
@@ -208,23 +178,57 @@ func waitForVolumeState(volumeID, state string) {
 		params := &ec2.DescribeVolumesInput{
 			VolumeIds: []*string{aws.String(volumeID)},
 		}
-		// FIXME: for some reason this always returns the same state
 		volumes, err := describeVolumes(params)
 		if err != nil {
 			return false, err
 		}
-		if len(volumes) < 1 {
-			return false, fmt.Errorf("expected 1 valid volume, got nothing")
+		if len(volumes) != 1 {
+			return false, fmt.Errorf("expected 1 volume, got %d", len(volumes))
 		}
-		for _, attachment := range volumes[0].Attachments {
-			if aws.StringValue(attachment.State) == state {
-				return true, nil
+		if aws.StringValue(volumes[0].State) != state {
+			return false, nil
+		}
+		// We need to check the atachment state when the volume is "in-use",
+		// as it might still be "attaching" rather than "attached".
+		if state == "in-use" {
+			if aws.StringValue(volumes[0].Attachments[0].State) != "attached" {
+				return false, nil
 			}
 		}
-		return false, nil
+		return true, nil
 	}
 	waitErr := wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 	Expect(waitErr).To(BeNil(), "Timeout error waiting for volume state %q: %v", waitErr, state)
+}
+
+func waitForVolumes(volumeID string, nVolumes int) {
+	backoff := wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   1.8,
+		Steps:    13,
+	}
+	verifyVolumeFunc := func() (bool, error) {
+		params := &ec2.DescribeVolumesInput{
+			VolumeIds: []*string{aws.String(volumeID)},
+		}
+		volumes, err := describeVolumes(params)
+		if err != nil {
+			if nVolumes == 0 {
+				if awsErr, ok := err.(awserr.Error); ok {
+					if awsErr.Code() == "InvalidVolume.NotFound" {
+						return true, nil
+					}
+				}
+			}
+			return false, err
+		}
+		if len(volumes) != nVolumes {
+			return false, nil
+		}
+		return true, nil
+	}
+	waitErr := wait.ExponentialBackoff(backoff, verifyVolumeFunc)
+	Expect(waitErr).To(BeNil(), "Timeout error when looking for volume %q: %v", volumeID, waitErr)
 }
 
 func describeVolumes(params *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
