@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-node-sa
+  namespace: default
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-node
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-node
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: csi-node-sa
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: csi-node
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1beta2
+metadata:
+  name: csi-node
+spec:
+  selector:
+    matchLabels:
+      app: csi-node
+  template:
+    metadata:
+      labels:
+        app: csi-node
+    spec:
+      serviceAccount: csi-node-sa
+      hostNetwork: true
+      containers:
+        - name: csi-driver-registrar
+          securityContext:
+            privileged: true
+          imagePullPolicy: Always
+          image: quay.io/k8scsi/driver-registrar:v0.4.0
+          args:
+            - --v=5
+            - --csi-address=$(ADDRESS)
+            - --mode=node-register
+            - --driver-requires-attachment=true
+            - --pod-info-mount-version="v1"
+            - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/com.amazon.aws.csi.ebs/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+        - name: ebs-plugin
+          securityContext:
+            privileged: true
+          imagePullPolicy: Always
+          image: quay.io/bertinatto/ebs-csi-driver:testing
+          args:
+            - "--endpoint=$(CSI_ENDPOINT)"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:/csi/csi.sock
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: access_key
+          volumeMounts:
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+            - name: plugin-dir
+              mountPath: /csi
+            - name: device-dir
+              mountPath: /dev
+      volumes:
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/com.amazon.aws.csi.ebs/
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/
+            type: Directory
+        - name: device-dir
+          hostPath:
+            path: /dev
+            type: Directory
