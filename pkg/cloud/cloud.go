@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -32,6 +33,7 @@ import (
 	"github.com/golang/glog"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -272,35 +274,18 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		glog.V(5).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
+
 	}
 
-	// TODO: wait attaching
-	// TODO: this is the only situation where this method returns and the device is not released
-	//attachment, err := disk.waitForAttachmentStatus("attached")
-	//if err != nil {
-	// device.Taint()
-	//if err == wait.ErrWaitTimeout {
-	//c.applyUnSchedulableTaint(nodeName, "Volume stuck in attaching state - node needs reboot to fix impaired state.")
-	//}
-	//return "", err
-	//}
+	// This is the only situation where we taint the device
+	if err := c.waitForAttachmentState(ctx, volumeID, "attached"); err != nil {
+		device.Taint()
+		return "", err
+	}
 
-	// Manually release the device so it can be picked again.
-
-	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
+	// TODO: Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
 	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
 	// which could theoretically be against a different device (or even instance).
-	//if attachment == nil {
-	//// Impossible?
-	//return "", fmt.Errorf("unexpected state: attachment nil after attached %q to %q", diskName, nodeName)
-	//}
-	//if ec2Device != aws.StringValue(attachment.Device) {
-	//return "", fmt.Errorf("disk attachment of %q to %q failed: requested device %q but found %q", diskName, nodeName, ec2Device, aws.StringValue(attachment.Device))
-	//}
-	//if awsInstance.awsID != aws.StringValue(attachment.InstanceId) {
-	//return "", fmt.Errorf("disk attachment of %q to %q failed: requested instance %q but found %q", diskName, nodeName, awsInstance.awsID, aws.StringValue(attachment.InstanceId))
-	//}
-	//return hostDevice, nil
 
 	return device.Path, nil
 }
@@ -330,6 +315,10 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	_, err = c.ec2.DetachVolumeWithContext(ctx, request)
 	if err != nil {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
+	}
+
+	if err := c.waitForAttachmentState(ctx, volumeID, "detached"); err != nil {
+		return err
 	}
 
 	return nil
@@ -446,4 +435,47 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	}
 
 	return instances[0], nil
+}
+
+// waitForAttachmentStatus polls until the attachment status is the expected value.
+func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state string) error {
+	// Most attach/detach operations on AWS finish within 1-4 seconds.
+	// By using 1 second starting interval with a backoff of 1.8,
+	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
+	// In total we wait for 2601 seconds.
+	backoff := wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   1.8,
+		Steps:    13,
+	}
+
+	verifyVolumeFunc := func() (bool, error) {
+		request := &ec2.DescribeVolumesInput{
+			VolumeIds: []*string{
+				aws.String(volumeID),
+			},
+		}
+
+		volume, err := c.getVolume(ctx, request)
+		if err != nil {
+			return false, err
+		}
+
+		if len(volume.Attachments) > 1 {
+			glog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
+		}
+
+		for _, a := range volume.Attachments {
+			if a.State == nil {
+				glog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
+				continue
+			}
+			if *a.State == state {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
