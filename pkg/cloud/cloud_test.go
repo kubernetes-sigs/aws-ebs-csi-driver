@@ -96,24 +96,6 @@ func TestCreateDisk(t *testing.T) {
 		ctx := context.Background()
 		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
 
-		if tc.diskOptions.AvailabilityZone == "" {
-			describeAvailabilityZonesResp := &ec2.DescribeAvailabilityZonesOutput{
-				AvailabilityZones: []*ec2.AvailabilityZone{
-					&ec2.AvailabilityZone{
-						ZoneName: aws.String("us-west-2a"),
-					},
-					&ec2.AvailabilityZone{
-						ZoneName: aws.String("us-west-2b"),
-					},
-					&ec2.AvailabilityZone{
-						ZoneName: aws.String("us-west-2c"),
-					},
-				},
-			}
-
-			mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(describeAvailabilityZonesResp, nil)
-		}
-
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
 			if tc.expErr == nil {

@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -82,10 +80,6 @@ var (
 	ErrAlreadyExists = errors.New("Resource already exists")
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 // Disk represents a EBS volume
 type Disk struct {
 	VolumeID         string
@@ -95,12 +89,10 @@ type Disk struct {
 
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
-	CapacityBytes int64
-	Tags          map[string]string
-	VolumeType    string
-	IOPSPerGB     int64
-	// the availability zone to create volume in
-	// if empty a random zone will be used
+	CapacityBytes    int64
+	Tags             map[string]string
+	VolumeType       string
+	IOPSPerGB        int64
 	AvailabilityZone string
 }
 
@@ -113,7 +105,6 @@ type EC2 interface {
 	DetachVolumeWithContext(ctx aws.Context, input *ec2.DetachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	AttachVolumeWithContext(ctx aws.Context, input *ec2.AttachVolumeInput, opts ...request.Option) (*ec2.VolumeAttachment, error)
 	DescribeInstancesWithContext(ctx aws.Context, input *ec2.DescribeInstancesInput, opts ...request.Option) (*ec2.DescribeInstancesOutput, error)
-	DescribeAvailabilityZonesWithContext(ctx aws.Context, input *ec2.DescribeAvailabilityZonesInput, opts ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 type Cloud interface {
@@ -205,18 +196,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		Tags:         tags,
 	}
 
-	var (
-		zone string
-		err  error
-	)
-	if diskOptions.AvailabilityZone == "" {
-		zone, err = c.pickRandomAvailabilityZone(ctx)
-		if err != nil {
-			return nil, err
-		}
-		glog.V(5).Infof("AZ is not provided. Choose random AZ [%s]", zone)
-	} else {
-		zone = diskOptions.AvailabilityZone
+	zone := diskOptions.AvailabilityZone
+	if zone == "" {
+		zone = c.metadata.GetAvailabilityZone()
+		glog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 	}
 
 	request := &ec2.CreateVolumeInput{
@@ -463,18 +446,4 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	}
 
 	return instances[0], nil
-}
-
-func (c *cloud) pickRandomAvailabilityZone(ctx context.Context) (string, error) {
-	output, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
-	if err != nil {
-		return "", err
-	}
-
-	var zones []string
-	for _, zone := range output.AvailabilityZones {
-		zones = append(zones, *zone.ZoneName)
-	}
-
-	return zones[rand.Int()%len(zones)], nil
 }
