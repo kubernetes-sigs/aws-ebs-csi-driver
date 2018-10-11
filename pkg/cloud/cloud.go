@@ -461,8 +461,10 @@ func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state stri
 			return false, err
 		}
 
-		if len(volume.Attachments) > 1 {
-			glog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
+		if len(volume.Attachments) == 0 {
+			if state == "detached" {
+				return true, nil
+			}
 		}
 
 		for _, a := range volume.Attachments {
