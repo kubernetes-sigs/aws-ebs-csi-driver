@@ -68,8 +68,8 @@ spec:
           imagePullPolicy: Always
           image: quay.io/k8scsi/driver-registrar:v0.3.0
           args:
-            - "--v=5"
-            - "--csi-address=$(ADDRESS)"
+            - --v=5
+            - --csi-address=$(ADDRESS)
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -86,7 +86,9 @@ spec:
           imagePullPolicy: Always
           image: quay.io/bertinatto/ebs-csi-driver:testing
           args:
-            - "--endpoint=$(CSI_ENDPOINT)"
+            - --endpoint=$(CSI_ENDPOINT)
+            - --logtostderr
+            - --v=5
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
