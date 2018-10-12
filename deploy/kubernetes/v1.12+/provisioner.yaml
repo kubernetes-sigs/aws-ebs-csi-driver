@@ -89,9 +89,9 @@ spec:
             allowPrivilegeEscalation: true
           image: quay.io/k8scsi/csi-provisioner:v0.4.0
           args:
-            - "--provisioner=com.amazon.aws.csi.ebs"
-            - "--csi-address=$(ADDRESS)"
-            - "--v=5"
+            - --provisioner=com.amazon.aws.csi.ebs
+            - --csi-address=$(ADDRESS)
+            - --v=5
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -108,7 +108,9 @@ spec:
             allowPrivilegeEscalation: true
           image: quay.io/bertinatto/ebs-csi-driver:testing
           args :
-            - "--endpoint=$(CSI_ENDPOINT)"
+            - --endpoint=$(CSI_ENDPOINT)
+            - --logtostderr
+            - --v=5
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
