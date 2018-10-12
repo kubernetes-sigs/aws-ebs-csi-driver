@@ -94,7 +94,9 @@ spec:
           imagePullPolicy: Always
           image: quay.io/bertinatto/ebs-csi-driver:testing
           args:
-            - "--endpoint=$(CSI_ENDPOINT)"
+            - --endpoint=$(CSI_ENDPOINT)
+            - --logtostderr
+            - --v=5
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
