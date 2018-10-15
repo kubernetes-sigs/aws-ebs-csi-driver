@@ -27,7 +27,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -60,20 +59,21 @@ var _ = Describe("EBS CSI Driver", func() {
 			Parameters:         nil,
 		}
 
+		logf("Creating volume with name %q", req.GetName())
 		resp, err := csiClient.ctrl.CreateVolume(context.Background(), req)
 		Expect(err).To(BeNil(), "Could not create volume")
 
 		volume := resp.GetVolume()
 		Expect(volume).NotTo(BeNil(), "Expected valid volume, got nil")
-		waitForVolumeState(volume.Id, "available")
+		waitForVolume(volume.Id, 1 /* number of expected volumes */)
 
-		// Delete volume
 		defer func() {
+			logf("Deleting volume %q", volume.Id)
 			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
 			Expect(err).To(BeNil(), "Could not delete volume")
-			waitForVolumes(volume.Id, 0 /* number of expected volumes */)
+			waitForVolume(volume.Id, 0 /* number of expected volumes */)
 
-			// Deleting volume twice
+			logf("Deleting volume %q twice", volume.Id)
 			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
 			Expect(err).To(BeNil(), "Error when trying to delete volume twice")
 		}()
@@ -86,7 +86,7 @@ var _ = Describe("EBS CSI Driver", func() {
 })
 
 func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) {
-	// Attach volume
+	logf("Attaching volume %q to node %q", volumeID, nodeID)
 	respAttach, err := csiClient.ctrl.ControllerPublishVolume(
 		context.Background(),
 		&csi.ControllerPublishVolumeRequest{
@@ -96,10 +96,10 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 		},
 	)
 	Expect(err).To(BeNil(), "ControllerPublishVolume failed attaching volume %q to node %q", volumeID, nodeID)
-	waitForVolumeState(volumeID, "in-use")
+	assertAttachmentState(volumeID, "attached")
 
-	// Detach Volume
 	defer func() {
+		logf("Detaching volume %q from node %q", volumeID, nodeID)
 		_, err = csiClient.ctrl.ControllerUnpublishVolume(
 			context.Background(),
 			&csi.ControllerUnpublishVolumeRequest{
@@ -108,12 +108,12 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 			},
 		)
 		Expect(err).To(BeNil(), "ControllerUnpublishVolume failed with error")
-		waitForVolumeState(volumeID, "available")
+		assertAttachmentState(volumeID, "detached")
 	}()
 
-	// Stage Disk
 	volDir := filepath.Join("/tmp/", volName)
 	stageDir := filepath.Join(volDir, "stage")
+	logf("Staging volume %q to path %q", volumeID, stageDir)
 	_, err = csiClient.node.NodeStageVolume(
 		context.Background(),
 		&csi.NodeStageVolumeRequest{
@@ -125,15 +125,15 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 	Expect(err).To(BeNil(), "NodeStageVolume failed with error")
 
 	defer func() {
-		// Unstage Disk
+		logf("Unstaging volume %q from path %q", volumeID, stageDir)
 		_, err := csiClient.node.NodeUnstageVolume(context.Background(), &csi.NodeUnstageVolumeRequest{VolumeId: volumeID, StagingTargetPath: stageDir})
 		Expect(err).To(BeNil(), "NodeUnstageVolume failed with error")
 		err = os.RemoveAll(volDir)
 		Expect(err).To(BeNil(), "Failed to remove temp directory")
 	}()
 
-	// Mount Disk
 	publishDir := filepath.Join("/tmp/", volName, "mount")
+	logf("Publishing volume %q to path %q", volumeID, publishDir)
 	_, err = csiClient.node.NodePublishVolume(context.Background(), &csi.NodePublishVolumeRequest{
 		VolumeId:          volumeID,
 		StagingTargetPath: stageDir,
@@ -142,8 +142,8 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 	})
 	Expect(err).To(BeNil(), "NodePublishVolume failed with error")
 
-	// Unmount Disk
 	defer func() {
+		logf("Unpublishing volume %q from path %q", volumeID, publishDir)
 		_, err = csiClient.node.NodeUnpublishVolume(context.Background(), &csi.NodeUnpublishVolumeRequest{
 			VolumeId:   volumeID,
 			TargetPath: publishDir,
@@ -152,6 +152,7 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 	}()
 
 	if !readOnly {
+		logf("Writing and reading a file")
 		// Write a file
 		testFileContents := []byte("sample content")
 		testFile := filepath.Join(publishDir, "testfile")
@@ -164,50 +165,14 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 	}
 }
 
-func waitForVolumeState(volumeID, state string) {
-	// Most attach/detach operations on AWS finish within 1-4 seconds.
-	// By using 1 second starting interval with a backoff of 1.8,
-	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
-	// In total we wait for 2601 seconds.
+func waitForVolume(volumeID string, nVolumes int) {
 	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.8,
 		Steps:    13,
 	}
 	verifyVolumeFunc := func() (bool, error) {
-		params := &ec2.DescribeVolumesInput{
-			VolumeIds: []*string{aws.String(volumeID)},
-		}
-		volumes, err := describeVolumes(params)
-		if err != nil {
-			return false, err
-		}
-		if len(volumes) != 1 {
-			return false, fmt.Errorf("expected 1 volume, got %d", len(volumes))
-		}
-		if aws.StringValue(volumes[0].State) != state {
-			return false, nil
-		}
-		// We need to check the atachment state when the volume is "in-use",
-		// as it might still be "attaching" rather than "attached".
-		if state == "in-use" {
-			if aws.StringValue(volumes[0].Attachments[0].State) != "attached" {
-				return false, nil
-			}
-		}
-		return true, nil
-	}
-	waitErr := wait.ExponentialBackoff(backoff, verifyVolumeFunc)
-	Expect(waitErr).To(BeNil(), "Timeout error waiting for volume state %q: %v", waitErr, state)
-}
-
-func waitForVolumes(volumeID string, nVolumes int) {
-	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.8,
-		Steps:    13,
-	}
-	verifyVolumeFunc := func() (bool, error) {
+		logf("Waiting for %d volumes with ID %q", nVolumes, volumeID)
 		params := &ec2.DescribeVolumesInput{
 			VolumeIds: []*string{aws.String(volumeID)},
 		}
@@ -225,10 +190,36 @@ func waitForVolumes(volumeID string, nVolumes int) {
 		if len(volumes) != nVolumes {
 			return false, nil
 		}
+		if nVolumes == 1 {
+			if aws.StringValue(volumes[0].State) != "available" {
+				return false, nil
+			}
+		}
 		return true, nil
 	}
 	waitErr := wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 	Expect(waitErr).To(BeNil(), "Timeout error when looking for volume %q: %v", volumeID, waitErr)
+}
+
+func assertAttachmentState(volumeID, state string) {
+	logf("Checking if attachment state of volume %q is %q", volumeID, state)
+	volumes, err := describeVolumes(&ec2.DescribeVolumesInput{
+		VolumeIds: []*string{aws.String(volumeID)},
+	})
+	Expect(err).To(BeNil(), "Error describing volumes: %v", err)
+
+	nVolumes := len(volumes)
+	Expect(nVolumes).To(BeNumerically("==", 1), "Expected 1 volume, got %d", nVolumes)
+
+	// Detached volumes have 0 attachments
+	if state == "detached" {
+		nAttachments := len(volumes[0].Attachments)
+		Expect(nAttachments).To(BeNumerically("==", 0), "Expected 0 attachments, got %d", nAttachments)
+		return
+	}
+
+	aState := aws.StringValue(volumes[0].Attachments[0].State)
+	Expect(aState).To(Equal(state), "Expected state %s, got %s", state, aState)
 }
 
 func describeVolumes(params *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
