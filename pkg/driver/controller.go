@@ -84,6 +84,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 	}
+	fsType := req.GetParameters()["fsType"]
+	disk.FsType = fsType
 	return newCreateVolumeResponse(disk), nil
 }
 
@@ -279,6 +281,9 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 		Volume: &csi.Volume{
 			Id:            disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
+			Attributes: map[string]string{
+				"fsType": disk.FsType,
+			},
 			AccessibleTopology: []*csi.Topology{
 				&csi.Topology{
 					Segments: map[string]string{topologyKey: disk.AvailabilityZone},

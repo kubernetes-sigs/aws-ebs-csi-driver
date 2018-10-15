@@ -87,6 +87,7 @@ type Disk struct {
 	VolumeID         string
 	CapacityGiB      int64
 	AvailabilityZone string
+	FsType           string
 }
 
 // DiskOptions represents parameters to create an EBS volume
