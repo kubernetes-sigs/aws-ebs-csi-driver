@@ -59,7 +59,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				Id:            "vol-test",
-				Attributes:    nil,
+				Attributes:    map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -89,7 +89,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				Id:            "vol-test",
-				Attributes:    nil,
+				Attributes:    map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -118,7 +118,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: cloud.DefaultVolumeSize,
 				Id:            "vol-test",
-				Attributes:    nil,
+				Attributes:    map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -132,7 +132,21 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
 				Id:            "vol-test",
-				Attributes:    nil,
+				Attributes:    map[string]string{"fsType": ""},
+			},
+		},
+		{
+			name: "success with fstype parameter",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         map[string]string{"fsType": defaultFsType},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    map[string]string{"fsType": defaultFsType},
 			},
 		},
 	}
