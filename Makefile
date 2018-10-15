@@ -30,7 +30,8 @@ test-sanity:
 
 .PHONY: test-e2e
 test-e2e:
-	go test -v ./tests/e2e/...
+	go test -c ./tests/e2e/... -o bin/e2e.test && \
+	sudo -E bin/e2e.test -ginkgo.v
 
 .PHONY: image
 image:

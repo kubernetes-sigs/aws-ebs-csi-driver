@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"flag"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -105,4 +106,8 @@ func newEC2Client() *ec2.EC2 {
 		Region: aws.String(region),
 	}))
 	return ec2.New(sess)
+}
+
+func logf(format string, args ...interface{}) {
+	fmt.Fprintln(GinkgoWriter, fmt.Sprintf(format, args...))
 }

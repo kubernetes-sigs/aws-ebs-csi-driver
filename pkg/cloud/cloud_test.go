@@ -199,7 +199,13 @@ func TestAttachDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
+		vol := &ec2.Volume{
+			VolumeId:    aws.String(tc.volumeID),
+			Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+		}
+
 		ctx := context.Background()
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
 		mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
 
@@ -248,7 +254,13 @@ func TestDetachDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
+		vol := &ec2.Volume{
+			VolumeId:    aws.String(tc.volumeID),
+			Attachments: nil,
+		}
+
 		ctx := context.Background()
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
 		mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
 
