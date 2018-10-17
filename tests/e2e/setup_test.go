@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
@@ -65,7 +66,8 @@ var _ = BeforeSuite(func() {
 	Expect(csiClient).NotTo(BeNil())
 
 	// Create EC2 client
-	ec2Client = newEC2Client()
+	ec2Client, err = newEC2Client()
+	Expect(err).To(BeNil(), "Set up EC2 client failed with error")
 	Expect(ec2Client).NotTo(BeNil())
 })
 
@@ -101,11 +103,26 @@ func newCSIClient() (*CSIClient, error) {
 	}, nil
 }
 
-func newEC2Client() *ec2.EC2 {
+func newMetadata() (cloud.MetadataService, error) {
+	s, err := session.NewSession(&aws.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	return cloud.NewMetadataService(ec2metadata.New(s))
+}
+
+func newEC2Client() (*ec2.EC2, error) {
+	m, err := newMetadata()
+	if err != nil {
+		return nil, err
+	}
+
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
+		Region: aws.String(m.GetRegion()),
 	}))
-	return ec2.New(sess)
+
+	return ec2.New(sess), nil
 }
 
 func logf(format string, args ...interface{}) {
