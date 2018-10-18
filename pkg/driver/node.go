@@ -27,6 +27,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	// default file system type to be used when it is not provided
+	defaultFsType = "ext4"
+)
+
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	glog.V(4).Infof("NodeStageVolume: called with args %#v", req)
 	volumeID := req.GetVolumeId()
@@ -72,10 +77,16 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		msg := fmt.Sprintf("target %q is not a valid mount point", target)
 		return nil, status.Error(codes.InvalidArgument, msg)
 	}
+	// Get fs type that the volume will be formatted with
+	attributes := req.GetVolumeAttributes()
+	fsType, exists := attributes["fsType"]
+	if !exists || fsType == "" {
+		fsType = defaultFsType
+	}
 
 	// FormatAndMount will format only if needed
 	glog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s", source, target)
-	err = d.mounter.FormatAndMount(source, target, "ext4", nil)
+	err = d.mounter.FormatAndMount(source, target, fsType, nil)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
 		return nil, status.Error(codes.Internal, msg)
