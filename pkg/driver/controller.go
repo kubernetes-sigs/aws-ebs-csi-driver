@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"strconv"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
@@ -75,16 +76,28 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	volumeParams := req.GetParameters()
+	volumeType := volumeParams["type"]
+	iopsPerGB := 0
+	if volumeType == cloud.VolumeTypeIO1 {
+		iopsPerGB, err = strconv.Atoi(volumeParams["iopsPerGB"])
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
+		}
+	}
+
 	opts := &cloud.DiskOptions{
 		CapacityBytes:    volSizeBytes,
-		AvailabilityZone: zone,
 		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
+		VolumeType:       volumeType,
+		IOPSPerGB:        iopsPerGB,
+		AvailabilityZone: zone,
 	}
 	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 	}
-	fsType := req.GetParameters()["fsType"]
+	fsType := volumeParams["fsType"]
 	disk.FsType = fsType
 	return newCreateVolumeResponse(disk), nil
 }
