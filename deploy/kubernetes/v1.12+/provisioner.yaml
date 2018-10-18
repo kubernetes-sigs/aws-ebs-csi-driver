@@ -93,11 +93,12 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/k8scsi/csi-provisioner:v0.4.0
+          image: quay.io/k8scsi/csi-provisioner:v0.4.1
           args:
             - --provisioner=com.amazon.aws.csi.ebs
             - --csi-address=$(ADDRESS)
             - --v=5
+            - --feature-gates=Topology=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
