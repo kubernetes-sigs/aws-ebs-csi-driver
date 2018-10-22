@@ -20,13 +20,34 @@ This driver has been under heavy development, however, basic volume operations l
 To check our current development efforts, visit our [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones).
 
 ## Requirements
-
-* Kubernetes 1.11+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
+### Kubernetes
+* Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
 
 * API server and Kubelet should run with the flag`--allow-privileged` set.
 
-## Installation
+## Features
+### Capabilities
+* Identity Service
+  - CONTROLLER_SERVICE
+  - ACCESSIBILITY_CONSTRAINTS
+* Controller Service
+  - CREATE_DELETE_VOLUME
+  - PUBLISH_UNPUBLISH_VOLUME
+* Node Service
+  - STAGE_UNSTAGE_VOLUME
 
+### CreateVolume Parameters
+| Parameters      | Values           | Default  | Description         |
+|-----------------|------------------|----------|---------------------|
+| type            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
+| iopsPerGB       |                  |          | Only for io1. I/O operations per second per GiB. |
+| fsType          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume createion |
+
+### Topology
+Topology key is `com.amazon.aws.csi.ebs/zone` that represents the search key of availability zone of which a volume is accessible.
+
+## Installation
+### Kubernetes
 User the directory `deploy/kubernetes` you will find a few manifest files that can be used to deploy the CSI driver. If you are using Kubernetes v1.12 onwards, use the manifest files under `deploy/kubernetes/v1.12+`; for Kubernetes v1.10 and v1.11, use the files under `deploy/kubernetes/v1.[10,11]`.
 
 In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12+/secrets.yaml` file and add your AWS credentials. The file will look like this:
