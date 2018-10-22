@@ -36,34 +36,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// AWS volume types
 const (
-	// DefaultVolumeSize represents the default volume size.
-	// TODO: what should be the default size?
-	DefaultVolumeSize int64 = 1 * 1024 * 1024 * 1024
-
-	// VolumeNameTagKey is the key value that refers to the volume's name.
-	VolumeNameTagKey = "com.amazon.aws.csi.volume"
-
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
-
 	// VolumeTypeGP2 represents a general purpose SSD type of volume.
 	VolumeTypeGP2 = "gp2"
-
 	// VolumeTypeSC1 represents a cold HDD (sc1) type of volume.
 	VolumeTypeSC1 = "sc1"
-
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
 	VolumeTypeST1 = "st1"
+)
 
+// AWS provisioning limits.
+// Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+const (
 	// MinTotalIOPS represents the minimum Input Output per second.
-	MinTotalIOPS int64 = 100
-
+	MinTotalIOPS = 100
 	// MaxTotalIOPS represents the maximum Input Output per second.
-	MaxTotalIOPS int64 = 20000
+	MaxTotalIOPS = 20000
+)
 
+// Defaults
+const (
+	// DefaultVolumeSize represents the default volume size.
+	DefaultVolumeSize int64 = 100 * 1024 * 1024 * 1024
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.
 	DefaultVolumeType = VolumeTypeGP2
+)
+
+// Tags
+const (
+	// VolumeNameTagKey is the key value that refers to the volume's name.
+	VolumeNameTagKey = "com.amazon.aws.csi.volume"
 )
 
 var (
@@ -95,7 +100,7 @@ type DiskOptions struct {
 	CapacityBytes    int64
 	Tags             map[string]string
 	VolumeType       string
-	IOPSPerGB        int64
+	IOPSPerGB        int
 	AvailabilityZone string
 }
 
@@ -177,7 +182,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = capacityGiB * diskOptions.IOPSPerGB
+		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
 		if iops < MinTotalIOPS {
 			iops = MinTotalIOPS
 		}

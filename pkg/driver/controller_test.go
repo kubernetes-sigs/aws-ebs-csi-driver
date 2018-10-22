@@ -149,6 +149,39 @@ func TestCreateVolume(t *testing.T) {
 				Attributes:    map[string]string{"fsType": defaultFsType},
 			},
 		},
+		{
+			name: "success with volume type io1",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"type":      cloud.VolumeTypeIO1,
+					"iopsPerGB": "5",
+				},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    map[string]string{"fsType": ""},
+			},
+		},
+		{
+			name: "success with volume type sc1",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"type": cloud.VolumeTypeSC1,
+				},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    map[string]string{"fsType": ""},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
