@@ -327,6 +327,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 
 	if !device.IsAlreadyAssigned {
 		glog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
+		return nil
 	}
 
 	request := &ec2.DetachVolumeInput{

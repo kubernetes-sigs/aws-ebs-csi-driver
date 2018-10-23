@@ -47,7 +47,7 @@ func (m *metadata) GetInstanceID() string {
 	return m.instanceID
 }
 
-// GetRegion returns the region Zone which the instance is in.
+// GetRegion returns the region which the instance is in.
 func (m *metadata) GetRegion() string {
 	return m.region
 }
