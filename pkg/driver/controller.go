@@ -298,7 +298,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 				"fsType": disk.FsType,
 			},
 			AccessibleTopology: []*csi.Topology{
-				&csi.Topology{
+				{
 					Segments: map[string]string{topologyKey: disk.AvailabilityZone},
 				},
 			},
