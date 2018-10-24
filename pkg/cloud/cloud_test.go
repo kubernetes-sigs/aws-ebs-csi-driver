@@ -77,6 +77,22 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: fmt.Errorf("CreateVolume generic error"),
 		},
+		{
+			name:       "success: normal with encrypted volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: "us-west-2",
+				Encrypted:        true,
+				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+			},
+			expDisk: &Disk{
+				VolumeID:    "vol-test",
+				CapacityGiB: 1,
+			},
+			expErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -90,11 +106,16 @@ func TestCreateDisk(t *testing.T) {
 			vol = &ec2.Volume{
 				VolumeId: aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
 				Size:     aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+				State:    aws.String("available"),
 			}
 		}
 
 		ctx := context.Background()
 		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
+
+		if tc.diskOptions.Encrypted {
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil)
+		}
 
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
