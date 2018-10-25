@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package integration
 
 import (
 	"flag"
@@ -46,10 +46,10 @@ var (
 	ebs       cloud.Cloud
 )
 
-func TestE2E(t *testing.T) {
+func TestIntegration(t *testing.T) {
 	flag.Parse()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AWS EBS CSI Driver Tests")
+	RunSpecs(t, "AWS EBS CSI Driver Integration Tests")
 }
 
 var _ = BeforeSuite(func() {
