@@ -294,12 +294,12 @@ func TestPickAvailabilityZone(t *testing.T) {
 			name: "Pick from preferred",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
-					&csi.Topology{
+					{
 						Segments: map[string]string{topologyKey: expZone},
 					},
 				},
 				Preferred: []*csi.Topology{
-					&csi.Topology{
+					{
 						Segments: map[string]string{topologyKey: expZone},
 					},
 				},
@@ -310,7 +310,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 			name: "Pick from requisite",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
-					&csi.Topology{
+					{
 						Segments: map[string]string{topologyKey: expZone},
 					},
 				},
@@ -320,8 +320,8 @@ func TestPickAvailabilityZone(t *testing.T) {
 		{
 			name: "Pick from empty topology",
 			requirement: &csi.TopologyRequirement{
-				Preferred: []*csi.Topology{&csi.Topology{}},
-				Requisite: []*csi.Topology{&csi.Topology{}},
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{{}},
 			},
 			expZone: "",
 		},

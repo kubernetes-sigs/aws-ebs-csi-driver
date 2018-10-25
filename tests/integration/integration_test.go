@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package e2e
+package integration
 
 import (
 	"context"
@@ -53,7 +53,7 @@ var _ = Describe("EBS CSI Driver", func() {
 
 		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 		req := &csi.CreateVolumeRequest{
-			Name:               fmt.Sprintf("volume-name-e2e-test-%d", r1.Uint64()),
+			Name:               fmt.Sprintf("volume-name-integration-test-%d", r1.Uint64()),
 			CapacityRange:      stdCapRange,
 			VolumeCapabilities: stdVolCap,
 			Parameters:         nil,
