@@ -86,12 +86,23 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
+	var (
+		isEncrypted bool
+		kmsKeyId    string
+	)
+	if volumeParams["encrypted"] == "true" {
+		isEncrypted = true
+		kmsKeyId = volumeParams["kmsKeyId"]
+	}
+
 	opts := &cloud.DiskOptions{
 		CapacityBytes:    volSizeBytes,
 		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,
+		Encrypted:        isEncrypted,
+		KmsKeyID:         kmsKeyId,
 	}
 	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
 	if err != nil {

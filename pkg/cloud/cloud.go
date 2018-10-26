@@ -102,6 +102,10 @@ type DiskOptions struct {
 	VolumeType       string
 	IOPSPerGB        int
 	AvailabilityZone string
+	Encrypted        bool
+	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
+	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+	KmsKeyID string
 }
 
 // EC2 abstracts aws.EC2 to facilitate its mocking.
@@ -215,6 +219,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
+		Encrypted:         aws.Bool(diskOptions.Encrypted),
+	}
+	if len(diskOptions.KmsKeyID) > 0 {
+		request.KmsKeyId = aws.String(diskOptions.KmsKeyID)
+		request.Encrypted = aws.Bool(true)
 	}
 	if iops > 0 {
 		request.Iops = aws.Int64(iops)
@@ -235,16 +244,23 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
 	}
 
+	if len(diskOptions.KmsKeyID) > 0 {
+		err := c.waitForCreate(ctx, volumeID)
+		if err != nil {
+			if isAWSErrorVolumeNotFound(err) {
+				return nil, fmt.Errorf("failed to create encrypted volume: the volume disappeared after creation, most likely due to inaccessible KMS encryption key")
+			}
+		}
+	}
+
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
 	if _, err := c.ec2.DeleteVolumeWithContext(ctx, request); err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "InvalidVolume.NotFound" {
-				return false, ErrNotFound
-			}
+		if isAWSErrorVolumeNotFound(err) {
+			return false, ErrNotFound
 		}
 		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
 	}
@@ -486,4 +502,54 @@ func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state stri
 	}
 
 	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
+}
+
+// waitForCreate waits for volume to be created for encrypted volume only
+// it polls for created volume to check it has not been silently removed by AWS.
+// On a random AWS account (shared among several developers) it took 4s on average.
+func (c *cloud) waitForCreate(ctx context.Context, volumeID string) error {
+	var (
+		checkInterval = 1 * time.Second
+		checkTimeout  = 30 * time.Second
+	)
+
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+
+	err := wait.Poll(checkInterval, checkTimeout, func() (done bool, err error) {
+		vol, err := c.getVolume(ctx, request)
+		if err != nil {
+			return true, err
+		}
+		if vol.State != nil {
+			switch *vol.State {
+			case "available":
+				// The volume is Available, it won't be deleted now.
+				return true, nil
+			case "creating":
+				return false, nil
+			default:
+				return true, fmt.Errorf("unexpected State of newly created AWS EBS volume %s: %q", volumeID, *vol.State)
+			}
+		}
+		return false, nil
+	})
+
+	return err
+}
+
+// Helper function for describeVolume callers. Tries to retype given error to AWS error
+// and returns true in case the AWS error is "InvalidVolume.NotFound", false otherwise
+func isAWSErrorVolumeNotFound(err error) bool {
+	if awsError, ok := err.(awserr.Error); ok {
+		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
+		if awsError.Code() == "InvalidVolume.NotFound" {
+			return true
+		}
+	}
+
+	return false
 }
