@@ -182,6 +182,39 @@ func TestCreateVolume(t *testing.T) {
 				Attributes:    map[string]string{"fsType": ""},
 			},
 		},
+		{
+			name: "success with volume encrpytion",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"encrypted": "true",
+				},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    map[string]string{"fsType": ""},
+			},
+		},
+		{
+			name: "success with volume encrpytion with KMS key",
+			req: &csi.CreateVolumeRequest{
+				Name:               "vol-test",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"encrypted": "true",
+					"kmsKeyId":  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				Id:            "vol-test",
+				Attributes:    map[string]string{"fsType": ""},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
