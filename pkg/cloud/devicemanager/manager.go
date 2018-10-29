@@ -51,9 +51,9 @@ func (d *Device) Taint() {
 }
 
 type DeviceManager interface {
-	// NewDevice gets the device already assigned to the volume, or assigns an unused device.
-	// If the volume is already assigned, this will return the existing device with IsAlreadyAssigned=true.
-	// Otherwise the device is assigned by finding the first available device, and it is returned with IsAlreadyAssigned=false.
+	// NewDevice retrieves the device if the device is already assigned.
+	// Otherwise it creates a new device with next available device name
+	// and mark it as unassigned device.
 	NewDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
 
 	// GetDevice returns the device already assigned to the volume.
@@ -160,15 +160,11 @@ func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Dev
 		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
 	}
 
-	path := d.getPath(inUse, volumeID)
-	device := d.newBlockDevice(instance, volumeID, path, false)
-
-	if path != "" {
-		device.IsAlreadyAssigned = true
-		device.releaseFunc = func() error { return d.release(device) }
+	if path := d.getPath(inUse, volumeID); path != "" {
+		return d.newBlockDevice(instance, volumeID, path, true), nil
 	}
 
-	return device, nil
+	return d.newBlockDevice(instance, volumeID, "", false), nil
 }
 
 func (d *deviceManager) newBlockDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *Device {
