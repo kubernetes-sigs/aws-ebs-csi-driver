@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IMAGE=quay.io/bertinatto/ebs-csi-driver
+IMAGE=amazon/aws-ebs-csi-driver
 VERSION=testing
 
 .PHONY: aws-ebs-csi-driver
