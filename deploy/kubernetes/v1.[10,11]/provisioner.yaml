@@ -97,7 +97,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/bertinatto/ebs-csi-driver:testing
+          image: amazon/aws-ebs-csi-driver:testing
           args :
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr

@@ -84,7 +84,7 @@ spec:
           securityContext:
             privileged: true
           imagePullPolicy: Always
-          image: quay.io/bertinatto/ebs-csi-driver:testing
+          image: amazon/aws-ebs-csi-driver:testing
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
