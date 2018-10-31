@@ -13,12 +13,12 @@
 # limitations under the License.
 
 IMAGE=amazon/aws-ebs-csi-driver
-VERSION=testing
+VERSION=0.1.0-alpha
 
 .PHONY: aws-ebs-csi-driver
 aws-ebs-csi-driver:
 	mkdir -p bin
-	go build -o bin/aws-ebs-csi-driver ./cmd/aws-ebs-csi-driver
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.vendorVersion=${VERSION}" -o bin/aws-ebs-csi-driver ./cmd/
 
 .PHONY: test
 test:
