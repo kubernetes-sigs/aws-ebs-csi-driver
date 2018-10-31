@@ -51,9 +51,9 @@ func (d *Device) Taint() {
 }
 
 type DeviceManager interface {
-	// NewDevice gets the device already assigned to the volume, or assigns an unused device.
-	// If the volume is already assigned, this will return the existing device with IsAlreadyAssigned=true.
-	// Otherwise the device is assigned by finding the first available device, and it is returned with IsAlreadyAssigned=false.
+	// NewDevice retrieves the device if the device is already assigned.
+	// Otherwise it creates a new device with next available device name
+	// and mark it as unassigned device.
 	NewDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
 
 	// GetDevice returns the device already assigned to the volume.
@@ -115,10 +115,7 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 	defer d.mux.Unlock()
 
 	// Get device names being attached and already attached to this instance
-	inUse, err := d.getDeviceNamesInUse(instance, nodeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
-	}
+	inUse := d.getDeviceNamesInUse(instance, nodeID)
 
 	// Check if this volume is already assigned a device on this machine
 	if path := d.getPath(inUse, volumeID); path != "" {
@@ -155,20 +152,13 @@ func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Dev
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse, err := d.getDeviceNamesInUse(instance, nodeID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get devices used in instance %q", nodeID)
+	inUse := d.getDeviceNamesInUse(instance, nodeID)
+
+	if path := d.getPath(inUse, volumeID); path != "" {
+		return d.newBlockDevice(instance, volumeID, path, true), nil
 	}
 
-	path := d.getPath(inUse, volumeID)
-	device := d.newBlockDevice(instance, volumeID, path, false)
-
-	if path != "" {
-		device.IsAlreadyAssigned = true
-		device.releaseFunc = func() error { return d.release(device) }
-	}
-
-	return device, nil
+	return d.newBlockDevice(instance, volumeID, "", false), nil
 }
 
 func (d *deviceManager) newBlockDevice(instance *ec2.Instance, volumeID string, path string, isAlreadyAssigned bool) *Device {
@@ -220,7 +210,7 @@ func (d *deviceManager) release(device *Device) error {
 	return nil
 }
 
-func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID string) (map[string]string, error) {
+func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID string) map[string]string {
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
@@ -240,7 +230,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID strin
 		inUse[name] = volumeID
 	}
 
-	return inUse, nil
+	return inUse
 }
 
 func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string {
