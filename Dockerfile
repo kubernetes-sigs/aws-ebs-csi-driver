@@ -17,8 +17,8 @@ WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 ADD . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o bin/aws-ebs-csi-driver ./cmd/aws-ebs-csi-driver
 
-FROM alpine:3.8
-RUN apk add --no-cache ca-certificates e2fsprogs
+FROM amazonlinux:2
+RUN yum install ca-certificates e2fsprogs -y
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
