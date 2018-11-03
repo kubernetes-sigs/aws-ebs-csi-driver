@@ -29,9 +29,13 @@ import (
 )
 
 const (
-	driverName    = "com.amazon.aws.csi.ebs"
-	vendorVersion = "0.0.1" // FIXME
-	topologyKey   = driverName + "/zone"
+	driverName  = "com.amazon.aws.csi.ebs"
+	topologyKey = driverName + "/zone"
+)
+
+var (
+	// vendorVersion is the version driver and is set during build
+	vendorVersion string
 )
 
 type Driver struct {
