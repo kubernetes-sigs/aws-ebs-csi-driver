@@ -112,8 +112,5 @@ func (c *FakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*
 }
 
 func (c *FakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
-	if nodeID != c.m.GetInstanceID() {
-		return false
-	}
-	return true
+	return nodeID == c.m.GetInstanceID()
 }

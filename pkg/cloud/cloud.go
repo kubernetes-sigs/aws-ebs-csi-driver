@@ -156,15 +156,15 @@ func NewCloud() (Cloud, error) {
 	}
 
 	awsConfig := &aws.Config{
-		Region:      aws.String(metadata.GetRegion()),
-		Credentials: credentials.NewChainCredentials(provider),
+		Region:                        aws.String(metadata.GetRegion()),
+		Credentials:                   credentials.NewChainCredentials(provider),
+		CredentialsChainVerboseErrors: aws.Bool(true),
 	}
-	awsConfig = awsConfig.WithCredentialsChainVerboseErrors(true)
 
 	return &cloud{
 		metadata: metadata,
 		dm:       dm.NewDeviceManager(),
-		ec2:      ec2.New(session.New(awsConfig)),
+		ec2:      ec2.New(session.Must(session.NewSession(awsConfig))),
 	}, nil
 }
 
@@ -405,9 +405,7 @@ func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput
 		if err != nil {
 			return nil, err
 		}
-		for _, volume := range response.Volumes {
-			volumes = append(volumes, volume)
-		}
+		volumes = append(volumes, response.Volumes...)
 		nextToken = response.NextToken
 		if aws.StringValue(nextToken) == "" {
 			break
