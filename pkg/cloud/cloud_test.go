@@ -250,22 +250,31 @@ func TestAttachDisk(t *testing.T) {
 
 func TestDetachDisk(t *testing.T) {
 	testCases := []struct {
-		name     string
-		volumeID string
-		nodeID   string
-		expErr   error
+		name             string
+		volumeID         string
+		volumeIDToDetach string
+		nodeID           string
+		expErr           error
 	}{
 		{
-			name:     "success: normal",
-			volumeID: "vol-test-1234",
-			nodeID:   "node-1234",
-			expErr:   nil,
+			name:             "success: normal",
+			volumeID:         "vol-test-1234",
+			volumeIDToDetach: "vol-test-1234",
+			nodeID:           "node-1234",
+			expErr:           nil,
 		},
 		{
-			name:     "fail: DetachVolume returned generic error",
-			volumeID: "vol-test-1234",
-			nodeID:   "node-1234",
-			expErr:   fmt.Errorf("DetachVolume generic error"),
+			name:             "success: return early for unknown volume ID",
+			volumeID:         "vol-test-1234",
+			volumeIDToDetach: "vol-unknown",
+			expErr:           nil,
+		},
+		{
+			name:             "fail: DetachVolume returned generic error",
+			volumeID:         "vol-test-1234",
+			volumeIDToDetach: "vol-test-1234",
+			nodeID:           "node-1234",
+			expErr:           fmt.Errorf("DetachVolume generic error"),
 		},
 	}
 
@@ -273,7 +282,15 @@ func TestDetachDisk(t *testing.T) {
 		t.Logf("Test case: %s", tc.name)
 		mockCtrl := gomock.NewController(t)
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		dm := dm.NewDeviceManager()
+		c := &cloud{
+			metadata: &metadata{},
+			dm:       dm,
+			ec2:      mockEC2,
+		}
+
+		instance := &ec2.Instance{InstanceId: aws.String(tc.nodeID)}
+		dm.NewDevice(instance, tc.volumeID)
 
 		vol := &ec2.Volume{
 			VolumeId:    aws.String(tc.volumeID),
@@ -283,9 +300,11 @@ func TestDetachDisk(t *testing.T) {
 		ctx := context.Background()
 		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-		mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+		if tc.volumeIDToDetach == tc.volumeID {
+			mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+		}
 
-		err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
+		err := c.DetachDisk(ctx, tc.volumeIDToDetach, tc.nodeID)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
