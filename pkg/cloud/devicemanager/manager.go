@@ -46,6 +46,7 @@ func (d *Device) Release(force bool) {
 	}
 }
 
+// Taint marks the device as no longer reusable
 func (d *Device) Taint() {
 	d.isTainted = true
 }
@@ -214,12 +215,10 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID strin
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
-		if strings.HasPrefix(name, "/dev/sd") {
-			name = name[7:]
-		}
-		if strings.HasPrefix(name, "/dev/xvd") {
-			name = name[8:]
-		}
+		// trims /dev/sd or /dev/xvd from device name
+		name = strings.TrimPrefix(name, "/dev/sd")
+		name = strings.TrimPrefix(name, "/dev/xvd")
+
 		if len(name) < 1 || len(name) > 2 {
 			glog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
 		}
