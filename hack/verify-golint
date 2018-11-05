@@ -16,8 +16,12 @@
 
 set -euo pipefail
 
-PKG_ROOT=$(git rev-parse --show-toplevel)
+if ! which golangci-lint > /dev/null; then
+    echo 'Cannot find golangci-lint. Installing golangci-lint...'
+    go get -v github.com/golangci/golangci-lint/cmd/golangci-lint
+fi
 
-${PKG_ROOT}/hack/verify-gofmt
-${PKG_ROOT}/hack/verify-govet
-${PKG_ROOT}/hack/verify-golint
+golangci-lint run --deadline=10m 
+
+echo "Congratulations! All Go source files have been linted.'
+
