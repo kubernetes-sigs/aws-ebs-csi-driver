@@ -138,12 +138,10 @@ type cloud struct {
 
 var _ Cloud = &cloud{}
 
+// NewCloud returns a new instance of AWS cloud
+// It panics if session is invalid
 func NewCloud() (Cloud, error) {
-	sess, err := session.NewSession(&aws.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize AWS session: %v", err)
-	}
-
+	sess := session.Must(session.NewSession(&aws.Config{}))
 	svc := ec2metadata.New(sess)
 
 	metadata, err := NewMetadataService(svc)
