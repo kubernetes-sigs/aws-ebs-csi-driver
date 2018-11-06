@@ -45,7 +45,7 @@ type NameAllocator interface {
 	GetNext(existingNames ExistingNames) (name string, err error)
 
 	// Deprioritize the device name so as it can't be used immediately again
-	Deprioritize(choosen string)
+	Deprioritize(chosen string)
 }
 
 type nameAllocator struct {

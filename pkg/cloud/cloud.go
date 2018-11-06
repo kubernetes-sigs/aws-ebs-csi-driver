@@ -127,7 +127,7 @@ type Cloud interface {
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
-	IsExistInstance(ctx context.Context, nodeID string) (sucess bool)
+	IsExistInstance(ctx context.Context, nodeID string) (success bool)
 }
 
 type cloud struct {

@@ -240,7 +240,7 @@ func TestAttachDisk(t *testing.T) {
 				t.Fatal("AttachDisk() failed: expected error, got nothing")
 			}
 			if !strings.HasPrefix(devicePath, "/dev/") {
-				t.Fatal("AttachDisk() failed: expected valid device path, got emtpy string")
+				t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
 			}
 		}
 
