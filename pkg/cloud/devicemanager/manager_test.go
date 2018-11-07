@@ -160,7 +160,7 @@ func TestReleaseDevice(t *testing.T) {
 			dev.Release(false)
 			dev2, err := dm.GetDevice(fakeInstance, tc.volumeID)
 			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
-			if dev2.Path != dev2.Path {
+			if dev.Path != dev2.Path {
 				t.Fatalf("Expected device to be already assigned, got unassigned")
 			}
 

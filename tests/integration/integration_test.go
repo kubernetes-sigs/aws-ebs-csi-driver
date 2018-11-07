@@ -230,9 +230,7 @@ func describeVolumes(params *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, volume := range response.Volumes {
-			volumes = append(volumes, volume)
-		}
+		volumes = append(volumes, response.Volumes...)
 		nextToken = response.NextToken
 		if aws.StringValue(nextToken) == "" {
 			break

@@ -48,7 +48,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volCaps := req.GetVolumeCapabilities()
-	if volCaps == nil || len(volCaps) == 0 {
+	if len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
@@ -231,7 +231,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}
 
 	volCaps := req.GetVolumeCapabilities()
-	if volCaps == nil || len(volCaps) == 0 {
+	if len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 

@@ -36,7 +36,6 @@ import (
 
 const (
 	endpoint = "tcp://127.0.0.1:10000"
-	region   = "us-east-1"
 )
 
 var (
@@ -58,7 +57,10 @@ var _ = BeforeSuite(func() {
 	ebs, err = cloud.NewCloud()
 	Expect(err).To(BeNil(), "Set up Cloud client failed with error")
 	drv = driver.NewDriver(ebs, nil, endpoint)
-	go drv.Run()
+	go func() {
+		err := drv.Run()
+		Expect(err).To(BeNil())
+	}()
 
 	// Create CSI Controller client
 	csiClient, err = newCSIClient()
