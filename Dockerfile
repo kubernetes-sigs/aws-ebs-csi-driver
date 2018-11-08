@@ -18,7 +18,7 @@ ADD . .
 RUN make 
 
 FROM amazonlinux:2
-RUN yum install ca-certificates e2fsprogs -y
+RUN yum install ca-certificates e2fsprogs util-linux -y
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
