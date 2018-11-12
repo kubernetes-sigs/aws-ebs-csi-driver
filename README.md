@@ -15,7 +15,11 @@
 
 The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) CSI Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of EBS volumes.
 
-This driver has been under heavy development, however, basic volume operations like creation, deletion, attaching and detaching are already working.
+This driver is in alpha stage and basic volume operations are already working including CreateVolume/DeleteVolume, ControllerPublishVolume/ControllerUnpublishVolume, NodeStageVolume/NodeUnstageVolume,  NodePublishVolume/NodeUnpublishVolume and [Volume Scheduling](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
+
+This driver is compatiable with CSI version [v0.3.0](https://github.com/container-storage-interface/spec/blob/v0.3.0/spec.md).
+
+Stable alpha image: [amazon/aws-ebs-csi-driver:0.1.0-alpha](https://hub.docker.com/r/amazon/aws-ebs-csi-driver/)
 
 To check our current development efforts, visit our [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones).
 
@@ -23,32 +27,40 @@ To check our current development efforts, visit our [Milestones page](https://gi
 ### Kubernetes
 * Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
 
-* API server and Kubelet should run with the flag`--allow-privileged` set.
+* Kube-apiserver and kubelet should run with the flag`--allow-privileged` set.
+
+* For general CSI driver setup on kubernetes, please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html).
 
 ## Features
 ### Capabilities
-* Identity Service
-  - CONTROLLER_SERVICE
-  - ACCESSIBILITY_CONSTRAINTS
-* Controller Service
-  - CREATE_DELETE_VOLUME
-  - PUBLISH_UNPUBLISH_VOLUME
-* Node Service
-  - STAGE_UNSTAGE_VOLUME
+The list of supported driver capabilities:
+* Identity Service: **CONTROLLER_SERVICE** and **ACCESSIBILITY_CONSTRAINTS**
+* Controller Service: **CREATE_DELETE_VOLUME** and **PUBLISH_UNPUBLISH_VOLUME**
+* Node Service: **STAGE_UNSTAGE_VOLUME**
 
 ### CreateVolume Parameters
-| Parameters      | Values           | Default  | Description         |
-|-----------------|------------------|----------|---------------------|
-| type            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
-| iopsPerGB       |                  |          | Only for io1. I/O operations per second per GiB. |
-| fsType          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume createion |
+There are optional parameters that could be passed into driver during volume creation:
+
+| Parameters        | Values           | Default  | Description         |
+|-------------------|------------------|----------|---------------------|
+| "type"            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
+| "iopsPerGB"       |                  |          | I/O operations per second per GiB. Required when io1 volume type is specified. |
+| "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
 
 ### Topology
-Topology key is `com.amazon.aws.csi.ebs/zone` that represents the search key of availability zone of which a volume is accessible.
+`com.amazon.aws.csi.ebs/zone` is the only topology key that represents the availability zone of which a volume is accessible.
+
+To enable topology support on kuberetes, make sure `CSINodeInfo` and `CSIDriverRegistry` feature flags are enabled on both kubelet and kube-apiserver and `CSINodeInfo` CRD is installed on the cluster using:
+
+```
+kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/master/pkg/crd/testdata/csinodeinfo.yaml --validate=false
+```
+
+And *external-provisioner* must have the togology feature gate enabled with `--feature-gates=CSINodeInfo=true`
 
 ## Installation
 ### Kubernetes
-User the directory `deploy/kubernetes` you will find a few manifest files that can be used to deploy the CSI driver. If you are using Kubernetes v1.12 onwards, use the manifest files under `deploy/kubernetes/v1.12+`; for Kubernetes v1.10 and v1.11, use the files under `deploy/kubernetes/v1.[10,11]`.
+Under the directory [deploy/kubernetes](./deploy/kubernetes), there are a few manifest files that are needed to deploy the CSI driver along with sidecar containers. If you are using Kubernetes v1.12+, use the manifest files under [deploy/kubernetes/v1.12+](deploy/kubernetes/v1.12+); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](deploy/kubernetes/v1.[10,11]).
 
 In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12+/secrets.yaml` file and add your AWS credentials. The file will look like this:
 
@@ -65,22 +77,22 @@ stringData:
 Now, with one command we will create the secret and deploy the sidecar containers and the CSI driver:
 
 ```
-$ kubectl create -f deploy/kubernetes/v.12+
+kubectl create -f deploy/kubernetes/v.12+
 ```
 
 From now on we can start creating EBS volumes using the CSI driver. Under `deploy/kubernetes/v1.12+/sample_app` you will find a sample app deployment that uses the recently deployed driver:
 
 ```
-$ kubectl create -f deploy/kubernetes/v.12+/sample_app
+kubectl create -f deploy/kubernetes/v.12+/sample_app
 ```
 
 ## Development
+Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-
-* golang 1.11+
-* [ginkgo](https://github.com/onsi/ginkgo) for end-to-end testing
-* docker 17.05+ for releasing
+* Golang 1.11.1+
+* [Ginkgo](https://github.com/onsi/ginkgo) for integration and end-to-end testing
+* Docker 17.05+ for releasing
 
 ### Testing
 
@@ -96,22 +108,18 @@ To execute all unit tests, run:
 make test
 ```
 
-End-to-end tests are run through the command:
+To execute integration tests, run:
 
 ```
-make test-e2e
+make test-integration
 ```
 
-### Releasing
+**Note**: EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
 
-Releasing a new driver version is as simple as building the image with the command:
+### Build and Publish Container Image
 
-```
-make image
-```
-
-And then pushing it to the container registry:
+Build and publish container image of the driver is as simple as building the image and pushing it to the container registry with the command:
 
 ```
-make push
+make image && make push
 ```
