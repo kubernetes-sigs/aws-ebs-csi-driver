@@ -113,7 +113,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: amazon/aws-ebs-csi-driver:testing
+          image: amazon/aws-ebs-csi-driver:0.1.0-alpha
           args :
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
