@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	driverName  = "com.amazon.aws.csi.ebs"
-	topologyKey = driverName + "/zone"
+	driverName  = "ebs.csi.aws.com"
+	topologyKey = "topology." + driverName + "/zone"
 )
 
 var (
