@@ -80,7 +80,7 @@ spec:
             allowPrivilegeEscalation: true
           image: quay.io/k8scsi/csi-provisioner:v0.4.1
           args:
-            - --provisioner=com.amazon.aws.csi.ebs
+            - --provisioner=ebs.csi.aws.com
             - --csi-address=$(ADDRESS)
             - --v=5
           env:
