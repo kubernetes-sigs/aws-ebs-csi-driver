@@ -4,11 +4,13 @@ about: Create a report to help us improve EBS CSI Driver
 
 ---
 
-**What happened**
+/kind bug
 
-**What you expected to happen**
+**What happened?**
 
-**How to reproduce it (as minimally and precisely as possible)**
+**What you expected to happen?**
+
+**How to reproduce it (as minimally and precisely as possible)?**
 
 **Anything else we need to know?**:
 
