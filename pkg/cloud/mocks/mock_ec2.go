@@ -126,3 +126,51 @@ func (_mr *_MockEC2Recorder) DetachVolumeWithContext(arg0, arg1 interface{}, arg
 	_s := append([]interface{}{arg0, arg1}, arg2...)
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "DetachVolumeWithContext", _s...)
 }
+
+func (_m *MockEC2) CreateSnapshotWithContext(arg0 aws.Context, arg1 *ec2.CreateSnapshotInput, arg2 ...request.Option) (*ec2.Snapshot, error) {
+	_s := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		_s = append(_s, a)
+	}
+	ret := _m.ctrl.Call(_m, "CreateSnapshotWithContext", _s...)
+	ret0, _ := ret[0].(*ec2.Snapshot)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockEC2Recorder) CreateSnapshotWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	_s := append([]interface{}{arg0, arg1}, arg2...)
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateSnapshotWithContext", _s...)
+}
+
+func (_m *MockEC2) DeleteSnapshotWithContext(arg0 aws.Context, arg1 *ec2.DeleteSnapshotInput, arg2 ...request.Option) (*ec2.DeleteSnapshotOutput, error) {
+	_s := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		_s = append(_s, a)
+	}
+	ret := _m.ctrl.Call(_m, "DeleteSnapshotWithContext", _s...)
+	ret0, _ := ret[0].(*ec2.DeleteSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockEC2Recorder) DeleteSnapshotWithContext(arg0, arg1 interface{}) *gomock.Call {
+	_s := []interface{}{arg0, arg1}
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DeleteSnapshotWithContext", _s...)
+}
+
+func (_m *MockEC2) DescribeSnapshotsWithContext(arg0 aws.Context, arg1 *ec2.DescribeSnapshotsInput, arg2 ...request.Option) (*ec2.DescribeSnapshotsOutput, error) {
+	_s := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		_s = append(_s, a)
+	}
+	ret := _m.ctrl.Call(_m, "DescribeSnapshotsWithContext", _s...)
+	ret0, _ := ret[0].(*ec2.DescribeSnapshotsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockEC2Recorder) DescribeSnapshotsWithContext(arg0, arg1 interface{}) *gomock.Call {
+	_s := []interface{}{arg0, arg1}
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DescribeSnapshotsWithContext", _s...)
+}
