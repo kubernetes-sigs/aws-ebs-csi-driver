@@ -39,13 +39,15 @@ The list of supported driver capabilities:
 * Node Service: **STAGE_UNSTAGE_VOLUME**
 
 ### CreateVolume Parameters
-There are optional parameters that could be passed into driver during volume creation:
+There are several optional parameters that could be passed into `CreateVolumeRequest.parameters` map:
 
 | Parameters        | Values           | Default  | Description         |
 |-------------------|------------------|----------|---------------------|
 | "type"            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
-| "iopsPerGB"       |                  |          | I/O operations per second per GiB. Required when io1 volume type is specified. |
+| "iopsPerGB"       |                  |          | I/O operations per second per GiB. Required when io1 volume type is specified |
 | "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
+| "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
+| "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
 ### Topology
 `com.amazon.aws.csi.ebs/zone` is the only topology key that represents the availability zone of which a volume is accessible.
