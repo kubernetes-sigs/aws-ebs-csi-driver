@@ -117,7 +117,7 @@ spec:
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/com.amazon.aws.csi.ebs/
+            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
             type: DirectoryOrCreate
         - name: device-dir
           hostPath:
