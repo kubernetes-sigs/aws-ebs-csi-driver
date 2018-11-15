@@ -50,7 +50,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
 ### Topology
-`com.amazon.aws.csi.ebs/zone` is the only topology key that represents the availability zone of which a volume is accessible.
+`topology.ebs.csi.aws.com/zone` is the only topology key that represents the availability zone of which a volume is accessible.
 
 To enable topology support on kuberetes, make sure `CSINodeInfo` and `CSIDriverRegistry` feature flags are enabled on both kubelet and kube-apiserver and `CSINodeInfo` CRD is installed on the cluster using:
 

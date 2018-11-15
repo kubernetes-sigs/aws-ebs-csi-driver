@@ -4,4 +4,4 @@ metadata:
   name: slow
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: com.amazon.aws.csi.ebs
+provisioner: ebs.csi.aws.com
