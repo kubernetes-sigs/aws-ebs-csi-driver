@@ -20,7 +20,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	. "github.com/onsi/ginkgo"
 )
@@ -61,8 +61,8 @@ func (cl *Cleanup) RegisterVolume(name string, info VolumeInfo) {
 // MaybeRegisterVolume adds or updates an entry for the volume with
 // the given name if CreateVolume was successful.
 func (cl *Cleanup) MaybeRegisterVolume(name string, vol *csi.CreateVolumeResponse, err error) {
-	if err == nil && vol.GetVolume().GetId() != "" {
-		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
+	if err == nil && vol.GetVolume().GetVolumeId() != "" {
+		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 	}
 }
 
@@ -112,7 +112,7 @@ func (cl *Cleanup) DeleteVolumes() {
 				&csi.ControllerUnpublishVolumeRequest{
 					VolumeId: info.VolumeID,
 					NodeId:   info.NodeID,
-					ControllerUnpublishSecrets: cl.Context.Secrets.ControllerUnpublishVolumeSecret,
+					Secrets:  cl.Context.Secrets.ControllerUnpublishVolumeSecret,
 				},
 			); err != nil {
 				logger.Printf("warning: ControllerUnpublishVolume: %s", err)
@@ -122,8 +122,8 @@ func (cl *Cleanup) DeleteVolumes() {
 		if _, err := cl.ControllerClient.DeleteVolume(
 			ctx,
 			&csi.DeleteVolumeRequest{
-				VolumeId:                info.VolumeID,
-				ControllerDeleteSecrets: cl.Context.Secrets.DeleteVolumeSecret,
+				VolumeId: info.VolumeID,
+				Secrets:  cl.Context.Secrets.DeleteVolumeSecret,
 			},
 		); err != nil {
 			logger.Printf("error: DeleteVolume: %s", err)
