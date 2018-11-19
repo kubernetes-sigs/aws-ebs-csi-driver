@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -51,7 +51,7 @@ var _ = DescribeSanity("Identity Service", func(sc *SanityContext) {
 			for _, cap := range res.GetCapabilities() {
 				switch cap.GetService().GetType() {
 				case csi.PluginCapability_Service_CONTROLLER_SERVICE:
-				case csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS:
+				case csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetService().GetType()))
 				}
