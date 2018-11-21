@@ -93,7 +93,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: quay.io/k8scsi/csi-provisioner:v0.4.1
+          image: quay.io/k8scsi/csi-provisioner:v1.0.0
           args:
             - --provisioner=ebs.csi.aws.com
             - --csi-address=$(ADDRESS)
