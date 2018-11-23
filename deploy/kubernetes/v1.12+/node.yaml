@@ -69,7 +69,7 @@ spec:
           securityContext:
             privileged: true
           imagePullPolicy: Always
-          image: quay.io/k8scsi/driver-registrar:v1.0.0
+          image: quay.io/k8scsi/driver-registrar:v1.0-canary
           args:
             - --v=5
             - --csi-address=$(ADDRESS)
