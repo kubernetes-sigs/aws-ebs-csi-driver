@@ -19,7 +19,7 @@ This driver is in alpha stage and basic volume operations are already working in
 
 This driver is compatiable with CSI version [v0.3.0](https://github.com/container-storage-interface/spec/blob/v0.3.0/spec.md).
 
-Stable alpha image: [amazon/aws-ebs-csi-driver:0.1.0](https://hub.docker.com/r/amazon/aws-ebs-csi-driver/)
+Stable alpha image: [amazon/aws-ebs-csi-driver:0.1.0-alpha](https://hub.docker.com/r/amazon/aws-ebs-csi-driver/)
 
 To check our current development efforts, visit our [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones).
 
