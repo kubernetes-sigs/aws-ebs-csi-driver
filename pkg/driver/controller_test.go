@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -58,8 +58,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -88,8 +88,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -117,8 +117,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: cloud.DefaultVolumeSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -131,8 +131,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -145,8 +145,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": defaultFsType},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": defaultFsType},
 			},
 		},
 		{
@@ -162,8 +162,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -178,8 +178,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -194,8 +194,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 		{
@@ -211,8 +211,8 @@ func TestCreateVolume(t *testing.T) {
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
-				Id:            "vol-test",
-				Attributes:    map[string]string{"fsType": ""},
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
 	}
@@ -261,14 +261,14 @@ func TestCreateVolume(t *testing.T) {
 			t.Fatalf("Expected volume capacity bytes: %v, got: %v", tc.expVol.GetCapacityBytes(), vol.GetCapacityBytes())
 		}
 
-		for expKey, expVal := range tc.expVol.GetAttributes() {
-			attrs := vol.GetAttributes()
-			if gotVal, ok := attrs[expKey]; !ok || gotVal != expVal {
-				t.Fatalf("Expected volume attribute for key %v: %v, got: %v", expKey, expVal, gotVal)
+		for expKey, expVal := range tc.expVol.GetVolumeContext() {
+			ctx := vol.GetVolumeContext()
+			if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
+				t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
 			}
 		}
-		if tc.expVol.GetAttributes() == nil && vol.GetAttributes() != nil {
-			t.Fatalf("Expected volume attributes to be nil, got: %#v", vol.GetAttributes())
+		if tc.expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
+			t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 		}
 	}
 }

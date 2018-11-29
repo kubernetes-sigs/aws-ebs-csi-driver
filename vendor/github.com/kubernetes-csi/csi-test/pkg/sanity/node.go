@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -119,22 +119,11 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				switch cap.GetRpc().GetType() {
 				case csi.NodeServiceCapability_RPC_UNKNOWN:
 				case csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME:
+				case csi.NodeServiceCapability_RPC_GET_VOLUME_STATS:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
 			}
-		})
-	})
-
-	Describe("NodeGetId", func() {
-		It("should return appropriate values", func() {
-			nid, err := c.NodeGetId(
-				context.Background(),
-				&csi.NodeGetIdRequest{})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(nid).NotTo(BeNil())
-			Expect(nid.GetNodeId()).NotTo(BeEmpty())
 		})
 	})
 
@@ -146,7 +135,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 
 		BeforeEach(func() {
 			i = csi.NewIdentityClient(sc.Conn)
-			accessibilityConstraintSupported = isPluginCapabilitySupported(i, csi.PluginCapability_Service_ACCESSIBILITY_CONSTRAINTS)
+			accessibilityConstraintSupported = isPluginCapabilitySupported(i, csi.PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS)
 		})
 
 		It("should return approproate values", func() {
@@ -170,7 +159,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			_, err := c.NodePublishVolume(
 				context.Background(),
 				&csi.NodePublishVolumeRequest{
-					NodePublishSecrets: sc.Secrets.NodePublishVolumeSecret,
+					Secrets: sc.Secrets.NodePublishVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -184,8 +173,8 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			_, err := c.NodePublishVolume(
 				context.Background(),
 				&csi.NodePublishVolumeRequest{
-					VolumeId:           "id",
-					NodePublishSecrets: sc.Secrets.NodePublishVolumeSecret,
+					VolumeId: "id",
+					Secrets:  sc.Secrets.NodePublishVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -199,9 +188,9 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			_, err := c.NodePublishVolume(
 				context.Background(),
 				&csi.NodePublishVolumeRequest{
-					VolumeId:           "id",
-					TargetPath:         sc.Config.TargetPath,
-					NodePublishSecrets: sc.Secrets.NodePublishVolumeSecret,
+					VolumeId:   "id",
+					TargetPath: sc.Config.TargetPath,
+					Secrets:    sc.Secrets.NodePublishVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -266,10 +255,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					PublishInfo: map[string]string{
+					PublishContext: map[string]string{
 						"device": device,
 					},
-					NodeStageSecrets: sc.Secrets.NodeStageVolumeSecret,
+					Secrets: sc.Secrets.NodeStageVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -292,10 +281,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					PublishInfo: map[string]string{
+					PublishContext: map[string]string{
 						"device": device,
 					},
-					NodeStageSecrets: sc.Secrets.NodeStageVolumeSecret,
+					Secrets: sc.Secrets.NodeStageVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -311,10 +300,10 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 				&csi.NodeStageVolumeRequest{
 					VolumeId:          "id",
 					StagingTargetPath: sc.Config.StagingPath,
-					PublishInfo: map[string]string{
+					PublishContext: map[string]string{
 						"device": device,
 					},
-					NodeStageSecrets: sc.Secrets.NodeStageVolumeSecret,
+					Secrets: sc.Secrets.NodeStageVolumeSecret,
 				},
 			)
 			Expect(err).To(HaveOccurred())
@@ -380,19 +369,19 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 						},
 					},
 				},
-				ControllerCreateSecrets: sc.Secrets.CreateVolumeSecret,
+				Secrets: sc.Secrets.CreateVolumeSecret,
 			},
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(vol).NotTo(BeNil())
 		Expect(vol.GetVolume()).NotTo(BeNil())
-		Expect(vol.GetVolume().GetId()).NotTo(BeEmpty())
-		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId()})
+		Expect(vol.GetVolume().GetVolumeId()).NotTo(BeEmpty())
+		cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId()})
 
 		By("getting a node id")
-		nid, err := c.NodeGetId(
+		nid, err := c.NodeGetInfo(
 			context.Background(),
-			&csi.NodeGetIdRequest{})
+			&csi.NodeGetInfoRequest{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(nid).NotTo(BeNil())
 		Expect(nid.GetNodeId()).NotTo(BeEmpty())
@@ -404,7 +393,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			conpubvol, err = s.ControllerPublishVolume(
 				context.Background(),
 				&csi.ControllerPublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetId(),
+					VolumeId: vol.GetVolume().GetVolumeId(),
 					NodeId:   nid.GetNodeId(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
@@ -414,13 +403,13 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeAttributes:         vol.GetVolume().GetAttributes(),
-					Readonly:                 false,
-					ControllerPublishSecrets: sc.Secrets.ControllerPublishVolumeSecret,
+					VolumeContext: vol.GetVolume().GetVolumeContext(),
+					Readonly:      false,
+					Secrets:       sc.Secrets.ControllerPublishVolumeSecret,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetId(), NodeID: nid.GetNodeId()})
+			cl.RegisterVolume(name, VolumeInfo{VolumeID: vol.GetVolume().GetVolumeId(), NodeID: nid.GetNodeId()})
 			Expect(conpubvol).NotTo(BeNil())
 		}
 		// NodeStageVolume
@@ -429,7 +418,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			nodestagevol, err := c.NodeStageVolume(
 				context.Background(),
 				&csi.NodeStageVolumeRequest{
-					VolumeId: vol.GetVolume().GetId(),
+					VolumeId: vol.GetVolume().GetVolumeId(),
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{},
@@ -439,9 +428,9 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 						},
 					},
 					StagingTargetPath: sc.Config.StagingPath,
-					VolumeAttributes:  vol.GetVolume().GetAttributes(),
-					PublishInfo:       conpubvol.GetPublishInfo(),
-					NodeStageSecrets:  sc.Secrets.NodeStageVolumeSecret,
+					VolumeContext:     vol.GetVolume().GetVolumeContext(),
+					PublishContext:    conpubvol.GetPublishContext(),
+					Secrets:           sc.Secrets.NodeStageVolumeSecret,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -456,7 +445,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		nodepubvol, err := c.NodePublishVolume(
 			context.Background(),
 			&csi.NodePublishVolumeRequest{
-				VolumeId:          vol.GetVolume().GetId(),
+				VolumeId:          vol.GetVolume().GetVolumeId(),
 				TargetPath:        sc.Config.TargetPath,
 				StagingTargetPath: stagingPath,
 				VolumeCapability: &csi.VolumeCapability{
@@ -467,9 +456,9 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				VolumeAttributes:   vol.GetVolume().GetAttributes(),
-				PublishInfo:        conpubvol.GetPublishInfo(),
-				NodePublishSecrets: sc.Secrets.NodePublishVolumeSecret,
+				VolumeContext:  vol.GetVolume().GetVolumeContext(),
+				PublishContext: conpubvol.GetPublishContext(),
+				Secrets:        sc.Secrets.NodePublishVolumeSecret,
 			},
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -480,7 +469,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		nodeunpubvol, err := c.NodeUnpublishVolume(
 			context.Background(),
 			&csi.NodeUnpublishVolumeRequest{
-				VolumeId:   vol.GetVolume().GetId(),
+				VolumeId:   vol.GetVolume().GetVolumeId(),
 				TargetPath: sc.Config.TargetPath,
 			})
 		Expect(err).NotTo(HaveOccurred())
@@ -491,7 +480,7 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			nodeunstagevol, err := c.NodeUnstageVolume(
 				context.Background(),
 				&csi.NodeUnstageVolumeRequest{
-					VolumeId:          vol.GetVolume().GetId(),
+					VolumeId:          vol.GetVolume().GetVolumeId(),
 					StagingTargetPath: sc.Config.StagingPath,
 				},
 			)
@@ -505,9 +494,9 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 			controllerunpubvol, err := s.ControllerUnpublishVolume(
 				context.Background(),
 				&csi.ControllerUnpublishVolumeRequest{
-					VolumeId: vol.GetVolume().GetId(),
+					VolumeId: vol.GetVolume().GetVolumeId(),
 					NodeId:   nid.GetNodeId(),
-					ControllerUnpublishSecrets: sc.Secrets.ControllerUnpublishVolumeSecret,
+					Secrets:  sc.Secrets.ControllerUnpublishVolumeSecret,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -519,8 +508,8 @@ var _ = DescribeSanity("Node Service", func(sc *SanityContext) {
 		_, err = s.DeleteVolume(
 			context.Background(),
 			&csi.DeleteVolumeRequest{
-				VolumeId:                vol.GetVolume().GetId(),
-				ControllerDeleteSecrets: sc.Secrets.DeleteVolumeSecret,
+				VolumeId: vol.GetVolume().GetVolumeId(),
+				Secrets:  sc.Secrets.DeleteVolumeSecret,
 			},
 		)
 		Expect(err).NotTo(HaveOccurred())

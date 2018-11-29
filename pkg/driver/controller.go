@@ -20,7 +20,7 @@ import (
 	"context"
 	"strconv"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -174,7 +174,7 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 	glog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
 	pvInfo := map[string]string{"devicePath": devicePath}
-	return &csi.ControllerPublishVolumeResponse{PublishInfo: pvInfo}, nil
+	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 }
 
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
@@ -242,9 +242,12 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
-	found := d.isValidVolumeCapabilities(volCaps)
+	var confirmed *csi.ValidateVolumeCapabilitiesResponse_Confirmed
+	if d.isValidVolumeCapabilities(volCaps) {
+		confirmed = &csi.ValidateVolumeCapabilitiesResponse_Confirmed{VolumeCapabilities: volCaps}
+	}
 	return &csi.ValidateVolumeCapabilitiesResponse{
-		Supported: found,
+		Confirmed: confirmed,
 	}, nil
 }
 
@@ -303,9 +306,9 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			Id:            disk.VolumeID,
+			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
-			Attributes: map[string]string{
+			VolumeContext: map[string]string{
 				"fsType": disk.FsType,
 			},
 			AccessibleTopology: []*csi.Topology{

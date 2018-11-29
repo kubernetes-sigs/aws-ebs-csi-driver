@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -65,22 +65,22 @@ var _ = Describe("EBS CSI Driver", func() {
 
 		volume := resp.GetVolume()
 		Expect(volume).NotTo(BeNil(), "Expected valid volume, got nil")
-		waitForVolume(volume.Id, 1 /* number of expected volumes */)
+		waitForVolume(volume.VolumeId, 1 /* number of expected volumes */)
 
 		defer func() {
-			logf("Deleting volume %q", volume.Id)
-			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
+			logf("Deleting volume %q", volume.VolumeId)
+			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.VolumeId})
 			Expect(err).To(BeNil(), "Could not delete volume")
-			waitForVolume(volume.Id, 0 /* number of expected volumes */)
+			waitForVolume(volume.VolumeId, 0 /* number of expected volumes */)
 
-			logf("Deleting volume %q twice", volume.Id)
-			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.Id})
+			logf("Deleting volume %q twice", volume.VolumeId)
+			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.VolumeId})
 			Expect(err).To(BeNil(), "Error when trying to delete volume twice")
 		}()
 
 		// Attach, stage, publish, unpublish, unstage, detach
 		nodeID := ebs.GetMetadata().GetInstanceID()
-		testAttachWriteReadDetach(volume.Id, req.GetName(), nodeID, false)
+		testAttachWriteReadDetach(volume.VolumeId, req.GetName(), nodeID, false)
 
 	})
 })
@@ -120,7 +120,7 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 			VolumeId:          volumeID,
 			StagingTargetPath: stageDir,
 			VolumeCapability:  stdVolCap[0],
-			PublishInfo:       map[string]string{"devicePath": respAttach.PublishInfo["devicePath"]},
+			PublishContext:    map[string]string{"devicePath": respAttach.PublishContext["devicePath"]},
 		})
 	Expect(err).To(BeNil(), "NodeStageVolume failed with error")
 
