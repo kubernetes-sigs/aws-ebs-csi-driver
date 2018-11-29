@@ -142,9 +142,25 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
-	options := []string{"bind"}
+	mountOptions := []string{"bind"}
 	if req.GetReadonly() {
-		options = append(options, "ro")
+		mountOptions = append(mountOptions, "ro")
+	}
+
+	if m := volCap.GetMount(); m != nil {
+		hasOption := func(options []string, opt string) bool {
+			for _, o := range options {
+				if o == opt {
+					return true
+				}
+			}
+			return false
+		}
+		for _, f := range m.MountFlags {
+			if !hasOption(mountOptions, f) {
+				mountOptions = append(mountOptions, f)
+			}
+		}
 	}
 
 	glog.V(5).Infof("NodePublishVolume: creating dir %s", target)
@@ -153,7 +169,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 
 	glog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
-	if err := d.mounter.Interface.Mount(source, target, "ext4", options); err != nil {
+	if err := d.mounter.Interface.Mount(source, target, "ext4", mountOptions); err != nil {
 		os.Remove(target)
 		return nil, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
