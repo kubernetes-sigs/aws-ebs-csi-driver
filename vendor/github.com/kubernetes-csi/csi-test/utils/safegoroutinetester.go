@@ -29,7 +29,7 @@ type SafeGoroutineTester struct{}
 
 // Errorf prints the error to the screen then panics
 func (s *SafeGoroutineTester) Errorf(format string, args ...interface{}) {
-	fmt.Printf(format, args)
+	fmt.Printf(format, args...)
 	panic("MOCK TEST ERROR")
 }
 
