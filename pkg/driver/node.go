@@ -33,7 +33,7 @@ const (
 )
 
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	glog.V(4).Infof("NodeStageVolume: called with args %#v", req)
+	glog.V(4).Infof("NodeStageVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -96,7 +96,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 }
 
 func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	glog.V(4).Infof("NodeUnstageVolume: called with args %#v", req)
+	glog.V(4).Infof("NodeUnstageVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -117,7 +117,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 }
 
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	glog.V(4).Infof("NodePublishVolume: called with args %#v", req)
+	glog.V(4).Infof("NodePublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -162,7 +162,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	glog.V(4).Infof("NodeUnpublishVolume: called with args %#v", req)
+	glog.V(4).Infof("NodeUnpublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -187,7 +187,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 }
 
 func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	glog.V(4).Infof("NodeGetCapabilities: called with args %#v", req)
+	glog.V(4).Infof("NodeGetCapabilities: called with args %+v", *req)
 	var caps []*csi.NodeServiceCapability
 	for _, cap := range d.nodeCaps {
 		c := &csi.NodeServiceCapability{
@@ -203,7 +203,7 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 }
 
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	glog.V(4).Infof("NodeGetInfo: called with args %#v", req)
+	glog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 	m := d.cloud.GetMetadata()
 
 	topology := &csi.Topology{
