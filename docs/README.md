@@ -60,7 +60,7 @@ And *external-provisioner* must have the togology feature gate enabled with `--f
 ### Kubernetes
 Under the directory [deploy/kubernetes](./deploy/kubernetes), there are a few manifest files that are needed to deploy the CSI driver along with sidecar containers. If you are using Kubernetes v1.12+, use the manifest files under [deploy/kubernetes/v1.12+](deploy/kubernetes/v1.12+); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](deploy/kubernetes/v1.[10,11]).
 
-In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12+/secrets.yaml` file and add AWS credentials of the IAM user. It's a best practice to only grant required permission to the driver.
+In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12+/secrets.yaml` file and add AWS credentials of the IAM user. It's a best practice to only grant required permission to the driver. A sample IAM policy can be found in [example-iam-policy.json](example-iam-policy.json).
 
 The file will look like this:
 
