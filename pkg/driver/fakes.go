@@ -16,7 +16,10 @@ limitations under the License.
 
 package driver
 
-import "k8s.io/kubernetes/pkg/util/mount"
+import (
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"k8s.io/kubernetes/pkg/util/mount"
+)
 
 func NewFakeMounter() *mount.SafeFormatAndMount {
 	return &mount.SafeFormatAndMount{
@@ -27,4 +30,15 @@ func NewFakeMounter() *mount.SafeFormatAndMount {
 		Exec: mount.NewFakeExec(nil),
 	}
 
+}
+
+// NewFakeDriver creates a new mock driver used for testing
+func NewFakeDriver(endpoint string) *Driver {
+	cloud := cloud.NewFakeCloudProvider()
+	return &Driver{
+		endpoint: endpoint,
+		nodeID:   cloud.GetMetadata().GetInstanceID(),
+		cloud:    cloud,
+		mounter:  NewFakeMounter(),
+	}
 }

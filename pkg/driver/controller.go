@@ -28,6 +28,23 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	// volumeCaps represents how the volume could be accessed.
+	// It is SINGLE_NODE_WRITER since EBS volume could only be
+	// attached to a single node at any given time.
+	volumeCaps = []csi.VolumeCapability_AccessMode{
+		{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+	}
+
+	// controllerCaps represents the capability of controller service
+	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+	}
+)
+
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	glog.V(4).Infof("CreateVolume: called with args %+v", *req)
 	volName := req.GetName()
@@ -200,7 +217,7 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
 	glog.V(4).Infof("ControllerGetCapabilities: called with args %+v", *req)
 	var caps []*csi.ControllerServiceCapability
-	for _, cap := range d.controllerCaps {
+	for _, cap := range controllerCaps {
 		c := &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
@@ -253,7 +270,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 
 func (d *Driver) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	hasSupport := func(cap *csi.VolumeCapability) bool {
-		for _, c := range d.volumeCaps {
+		for _, c := range volumeCaps {
 			if c.GetMode() == cap.AccessMode.GetMode() {
 				return true
 			}
