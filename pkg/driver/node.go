@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi/v0"
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +53,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
-	source, ok := req.PublishInfo["devicePath"]
+	source, ok := req.PublishContext["devicePath"]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
@@ -78,7 +78,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, msg)
 	}
 	// Get fs type that the volume will be formatted with
-	attributes := req.GetVolumeAttributes()
+	attributes := req.GetVolumeContext()
 	fsType, exists := attributes["fsType"]
 	if !exists || fsType == "" {
 		fsType = defaultFsType
@@ -182,6 +182,10 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
+func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "NodeGetVolumeStats is not implemented yet")
+}
+
 func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	glog.V(4).Infof("NodeGetCapabilities: called with args %#v", req)
 	var caps []*csi.NodeServiceCapability
@@ -209,13 +213,5 @@ func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (
 	return &csi.NodeGetInfoResponse{
 		NodeId:             m.GetInstanceID(),
 		AccessibleTopology: topology,
-	}, nil
-}
-
-func (d *Driver) NodeGetId(ctx context.Context, req *csi.NodeGetIdRequest) (*csi.NodeGetIdResponse, error) {
-	glog.V(4).Infof("NodeGetId: called with args %#v", req)
-	m := d.cloud.GetMetadata()
-	return &csi.NodeGetIdResponse{
-		NodeId: m.GetInstanceID(),
 	}, nil
 }
