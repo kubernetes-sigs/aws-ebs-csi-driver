@@ -67,9 +67,6 @@ func NewDriver(cloud cloud.Cloud, mounter *mount.SafeFormatAndMount, endpoint st
 			{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
-			{
-				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
-			},
 		},
 		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
 			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
