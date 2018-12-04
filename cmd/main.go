@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/golang/glog"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -25,8 +27,20 @@ import (
 )
 
 func main() {
-	var endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
+	var (
+		endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
+		version  = flag.Bool("version", false, "Print the version and exit.")
+	)
 	flag.Parse()
+
+	if *version {
+		info, err := driver.GetVersionJSON()
+		if err != nil {
+			glog.Fatalln(err)
+		}
+		fmt.Println(info)
+		os.Exit(0)
+	}
 
 	cloud, err := cloud.NewCloud()
 	if err != nil {
