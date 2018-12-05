@@ -33,11 +33,6 @@ const (
 	topologyKey = "topology." + driverName + "/zone"
 )
 
-var (
-	// vendorVersion is the version driver and is set during build
-	vendorVersion string
-)
-
 type Driver struct {
 	endpoint string
 	nodeID   string
