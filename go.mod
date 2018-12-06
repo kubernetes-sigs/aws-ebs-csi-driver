@@ -15,6 +15,6 @@ require (
 	google.golang.org/grpc v1.16.0
 	k8s.io/apimachinery v0.0.0-20181121071008-d4f83ca2e260
 	k8s.io/klog v0.1.0 // indirect
-	k8s.io/kubernetes v1.12.2
+	k8s.io/kubernetes v1.12.3
 	k8s.io/utils v0.0.0-20181115163542-0d26856f57b3 // indirect
 )
