@@ -90,7 +90,7 @@ kubectl create -f deploy/kubernetes/v1.12+/sample_app
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.11.1+
+* Golang 1.11.2+
 * [Ginkgo](https://github.com/onsi/ginkgo) for integration and end-to-end testing
 * Docker 17.05+ for releasing
 
