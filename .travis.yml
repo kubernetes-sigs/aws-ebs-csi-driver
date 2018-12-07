@@ -3,11 +3,11 @@ go_import_path: github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 env:
   global:
-    - GO111MODULE=on
+    - GO111MODULE=off
 
 go:
   - "1.10.x"
-  - "1.11.2"
+  - "1.11.4"
 
 before_install:
   - go get github.com/mattn/goveralls

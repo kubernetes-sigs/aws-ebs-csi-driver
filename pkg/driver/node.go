@@ -28,8 +28,19 @@ import (
 )
 
 const (
+	// FSTypeExt2 represents the ext2 filesystem type
+	FSTypeExt2 = "ext2"
+	// FSTypeExt3 represents the ext3 filesystem type
+	FSTypeExt3 = "ext3"
+	// FSTypeExt4 represents the ext4 filesystem type
+	FSTypeExt4 = "ext4"
+
 	// default file system type to be used when it is not provided
-	defaultFsType = "ext4"
+	defaultFsType = FSTypeExt4
+)
+
+var (
+	ValidFSTypes = []string{FSTypeExt2, FSTypeExt3, FSTypeExt4}
 )
 
 var (
