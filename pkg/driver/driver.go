@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	driverName  = "ebs.csi.aws.com"
-	topologyKey = "topology." + driverName + "/zone"
+	DriverName  = "ebs.csi.aws.com"
+	topologyKey = "topology." + DriverName + "/zone"
 )
 
 type Driver struct {
@@ -44,7 +44,7 @@ type Driver struct {
 }
 
 func NewDriver(endpoint string) (*Driver, error) {
-	glog.Infof("Driver: %v Version: %v", driverName, driverVersion)
+	glog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
 	cloud, err := cloud.NewCloud()
 	if err != nil {

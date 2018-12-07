@@ -26,7 +26,7 @@ import (
 func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	glog.V(4).Infof("GetPluginInfo: called with args %+v", *req)
 	resp := &csi.GetPluginInfoResponse{
-		Name:          driverName,
+		Name:          DriverName,
 		VendorVersion: driverVersion,
 	}
 

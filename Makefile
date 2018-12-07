@@ -37,6 +37,10 @@ test-integration:
 	go test -c ./tests/integration/... -o bin/integration.test && \
 	sudo -E bin/integration.test -ginkgo.v
 
+.PHONY: test-e2e
+test-e2e:
+	./hack/run-e2e-test
+
 .PHONY: image-release
 image-release:
 	docker build -t $(IMAGE):$(VERSION) .
