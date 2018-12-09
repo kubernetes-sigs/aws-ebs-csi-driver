@@ -22,7 +22,6 @@ import (
 	"os"
 
 	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
@@ -42,12 +41,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	cloud, err := cloud.NewCloud()
+	drv, err := driver.NewDriver(*endpoint)
 	if err != nil {
 		glog.Fatalln(err)
 	}
-
-	drv := driver.NewDriver(cloud, nil, *endpoint)
 	if err := drv.Run(); err != nil {
 		glog.Fatalln(err)
 	}

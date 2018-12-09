@@ -41,36 +41,23 @@ type Driver struct {
 	srv   *grpc.Server
 
 	mounter *mount.SafeFormatAndMount
-
-	volumeCaps     []csi.VolumeCapability_AccessMode
-	controllerCaps []csi.ControllerServiceCapability_RPC_Type
-	nodeCaps       []csi.NodeServiceCapability_RPC_Type
 }
 
-func NewDriver(cloud cloud.Cloud, mounter *mount.SafeFormatAndMount, endpoint string) *Driver {
-	glog.Infof("Driver: %v", driverName)
-	if mounter == nil {
-		mounter = newSafeMounter()
+func NewDriver(endpoint string) (*Driver, error) {
+	glog.Infof("Driver: %v Version: %v", driverName, driverVersion)
+
+	cloud, err := cloud.NewCloud()
+	if err != nil {
+		return nil, err
 	}
+
 	m := cloud.GetMetadata()
 	return &Driver{
 		endpoint: endpoint,
 		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
-		mounter:  mounter,
-		volumeCaps: []csi.VolumeCapability_AccessMode{
-			{
-				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-			},
-		},
-		controllerCaps: []csi.ControllerServiceCapability_RPC_Type{
-			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-			csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-		},
-		nodeCaps: []csi.NodeServiceCapability_RPC_Type{
-			csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
-		},
-	}
+		mounter:  newSafeMounter(),
+	}, nil
 }
 
 func (d *Driver) Run() error {

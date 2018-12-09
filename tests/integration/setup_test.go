@@ -54,9 +54,8 @@ func TestIntegration(t *testing.T) {
 var _ = BeforeSuite(func() {
 	// Run CSI Driver in its own goroutine
 	var err error
-	ebs, err = cloud.NewCloud()
-	Expect(err).To(BeNil(), "Set up Cloud client failed with error")
-	drv = driver.NewDriver(ebs, nil, endpoint)
+	drv, err = driver.NewDriver(endpoint)
+	Expect(err).To(BeNil())
 	go func() {
 		err := drv.Run()
 		Expect(err).To(BeNil())

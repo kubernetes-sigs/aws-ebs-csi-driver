@@ -219,7 +219,7 @@ func TestCreateVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewDriver(cloud.NewFakeCloudProvider(), NewFakeMounter(), "")
+		awsDriver := NewFakeDriver("")
 
 		resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 		if err != nil {
@@ -298,7 +298,7 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewDriver(cloud.NewFakeCloudProvider(), NewFakeMounter(), "")
+		awsDriver := NewFakeDriver("")
 		_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
 		if err != nil {
 			srvErr, ok := status.FromError(err)
