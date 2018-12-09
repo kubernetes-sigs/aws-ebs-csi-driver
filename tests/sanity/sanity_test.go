@@ -25,7 +25,6 @@ import (
 
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
@@ -44,7 +43,7 @@ func TestSanity(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ebsDriver = driver.NewDriver(cloud.NewFakeCloudProvider(), driver.NewFakeMounter(), endpoint)
+	ebsDriver = driver.NewFakeDriver(endpoint)
 	go func() {
 		Expect(ebsDriver.Run()).NotTo(HaveOccurred())
 	}()
