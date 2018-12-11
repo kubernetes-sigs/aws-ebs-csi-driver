@@ -1,0 +1,7 @@
+[
+    "--oidc-issuer-url=https://dex.radkube.com",
+    "--oidc-client-id=radkube-auth",
+    "--oidc-ca-file=/etc/dexidp/tls/ca.pem",
+    "--oidc-username-claim=email",
+    "--oidc-groups-claim=groups"
+]

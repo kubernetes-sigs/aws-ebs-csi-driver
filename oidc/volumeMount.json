@@ -1,0 +1,5 @@
+{
+    "mountPath": "/etc/dexidp/secrets",
+    "name": "dex-ca",
+    "readOnly": true
+  }

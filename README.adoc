@@ -1,0 +1,62 @@
+= Radkube
+Documentation for the shared development sandbox of Radiant
+Charlottesville, powered by Kubernetes.
+
+== Environment Creation
+The Kubernetes infrastructure is structured using the modules
+and toolsets exposed by the https://typhoon.psdn.io[Typhoon] project.
+
+Instructions followed for the initial AWS cluster can be found 
+https://typhoon.psdn.io/cl/aws/[here]. The configuration for this
+environment, with the exception of TLS configuration and other
+secrets, are housed in this repository, primarily in the
+link:./cluster.tf[Cluster configuration file].
+
+== Further Configuration
+The first step for making the cluster useful and useable is enabling
+developer access and usage. https://github.com/dexidp/dex[Dex IDP] is
+used to provide a simple Single Sign On experience for developers, as
+well as cluster admins.
+
+=== Dex IDP Configuration
+Generalized instructions for using Dex IDP as an OIDC identity provider
+for Kubernetes can be found 
+https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md[here].
+Managing this configuration for Radkube is simultaneously more and less complex
+than in a typical cluster. The major factor in this complexity is the usage of
+bootkube.
+
+==== Bootkube
+====
+Bootkube is a simple cluster bootstrapping tool which can be used to establish a
+self-hosted Kubernetes cluster. This means that all of the components (with the
+exception of node Kubelets) are managed as Kubernetes objects, by the cluster
+itself.
+====
+For instance, the Kubernetes API server that needs command changes to support
+OIDC authentication / authorization, is managed as a Daemonset, and can have
+its command specification edited in the Daemonset configuration. Addtionally,
+the necessary TLS assets which are needed by the API server to trust Dex IDP
+(and needed by Dex IDP for secure TLS configuration) can be managed as Kubernetes
+secrets, and thus do not need to be distributed onto host machines for use
+by the API server.
+
+==== API Server Configuration
+====
+Deploying Dex IDP as an auth provider requires the addition of several flags
+to the Kubernetes API server, as well as additional TLS assets (the CA which
+serves to identify Dex IDP must be mounted to the API server. TODO: This dependency
+could be avoided in the future by issuing certificates for Dex off of the
+CA used for token issuance within the cluster.)
+
+The process to add this configuration is as follows (assuming that kubectl is
+installed and configured per Typhhon creation instructions):
+
+1. `kubectl create --namespace kube-system configmap dex-ca  --from-file=/home/user/go/src/github.com/dexidp/dex/examples/k8s/ssl/ca.pem`
+2. `cd /path/to/radkube/oidc`
+3. `./makepatch.sh`
+4. `kubectl patch ds kube-apiserver --namespace kube-system --patch "$(cat ./patch.json)"`
+. Be sure to review the generated patch file. Patching system components can cause
+major cluster downtime.
+5. Wait for API server Daemonset to fully roll out new command.
+

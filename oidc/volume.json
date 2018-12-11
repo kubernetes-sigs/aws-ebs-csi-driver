@@ -1,0 +1,6 @@
+{
+    "name": "dex-ca",
+    "configMap": {
+        "name": "dex-ca"
+    }
+}
