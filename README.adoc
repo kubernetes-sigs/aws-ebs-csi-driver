@@ -18,7 +18,7 @@ developer access and usage. https://github.com/dexidp/dex[Dex IDP] is
 used to provide a simple Single Sign On experience for developers, as
 well as cluster admins.
 
-=== Dex IDP Configuration
+=== Dex IDP Cluster Auth
 Generalized instructions for using Dex IDP as an OIDC identity provider
 for Kubernetes can be found 
 https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md[here].
@@ -26,7 +26,7 @@ Managing this configuration for Radkube is simultaneously more and less complex
 than in a typical cluster. The major factor in this complexity is the usage of
 bootkube.
 
-==== Bootkube
+===== Bootkube
 ====
 Bootkube is a simple cluster bootstrapping tool which can be used to establish a
 self-hosted Kubernetes cluster. This means that all of the components (with the
@@ -52,11 +52,46 @@ CA used for token issuance within the cluster.)
 The process to add this configuration is as follows (assuming that kubectl is
 installed and configured per Typhhon creation instructions):
 
-1. `kubectl create --namespace kube-system configmap dex-ca  --from-file=/home/user/go/src/github.com/dexidp/dex/examples/k8s/ssl/ca.pem`
-2. `cd /path/to/radkube/oidc`
-3. `./makepatch.sh`
-4. `kubectl patch ds kube-apiserver --namespace kube-system --patch "$(cat ./patch.json)"`
+1. Generate TLS assets per dex-idp instructions
+https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md#generate-tls-assets[here].
+2. Create a configmap with the new Dex ca.pem:
+`kubectl create --namespace kube-system configmap dex-ca  --from-file=/home/user/go/src/github.com/dexidp/dex/examples/k8s/ssl/ca.pem`
+3. `cd /path/to/radkube/oidc`
+4. `./makepatch.sh`
+5. `kubectl patch ds kube-apiserver --namespace kube-system --patch "$(cat ./patch.json)"`
 . Be sure to review the generated patch file. Patching system components can cause
 major cluster downtime.
-5. Wait for API server Daemonset to fully roll out new command.
+6. Wait for API server Daemonset to fully roll out new command.
+====
 
+==== Dex IDP Configuration
+====
+Next up is deploying the Dex IDP OIDC provider, configured against apropriate
+provider backend auth providers (currently the GitHub connector).
+
+This process should be cleaned up a bit moving forward, to use a public trusted
+root CA like Let's Encrypt via some mechanism like 
+https://github.com/jetstack/kube-lego[kube-lego]. TODO: Confirm this can actually
+work as expected.
+
+1. Create cluster secrets:
+https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md#create-cluster-secrets
+2. Deploy the Dex server:
+https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md#deploy-the-dex-server
+. NOTE: In the current Radkube configuration, an ingress resource should be added and configured
+for the Dex server. This ingress resource should pass through TLS to Dex, as it terminates
+SSL with the configured assets. See the section on NGINX Ingress for further instructions.
+
+As long as all cluster level assets (configmaps, secrets, etc.) have been properly configured
+and referenced, all system components should be chugging along happily, although token
+auth. will not work until an Ingress resource is created for the Dex server.
+====
+
+==== NGINX Configuration
+====
+NGINX is deployed using the NGINX ingress Typhoon addon scripts 
+https://typhoon.psdn.io/addons/ingress/[here]. In the future, this should likely be
+deployed using Helm. The only difference to the addon deployment is that the flag
+`--enable-ssl-passthrough` must be added to the commands list to support TLS
+termination on the Dex server.
+====

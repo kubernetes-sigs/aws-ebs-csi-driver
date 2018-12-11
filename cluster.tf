@@ -15,6 +15,7 @@ module "aws-tempest" {
   dns_zone_id  = "Z2B1JDBLG6KBOS"
 
   # configuration
+  ## This is a PUBLIC key
   ssh_authorized_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCNyIj3pgpE5uI0/eXQwUZJlXlLxF57ovqrIExwdHWjtMYGlOqegvX7bskijxEsYSsy3sxDuiAR6QHiLlzoS0QfeWTaAX+KsAWpL6Xu/STTKa6t7ExSD8xq/6xqmbONRHiwUzfg1F8+nPa7OgAcdf3bTFp3V1iMHLAZBRVGYt9nKgb7s+jId7BxCRYLhTZVj86DZVovNFGaLiyo41KH/FMus33rvcKudNSbGHznL5m8AzdwG0H4OlPu4RRvYwq/Ob65JREnba/Vbdp98oayeQZIVjYRIElZ4b48dk9hy43NqZucCWlY6z5d8ywiFkGiOY5dKySxFncECq76eGfXsHTx"
   asset_dir          = "/home/shane/.secrets/clusters/tempest"
 
