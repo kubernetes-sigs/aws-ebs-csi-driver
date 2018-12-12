@@ -5,8 +5,6 @@
 
 **WARNING**: This driver is in ALPHA currently. This means that there may be potentially backwards compatibility breaking changes moving forward. Do NOT use this driver in a production environment in its current state.
 
-**WARNING**: The ALPHA driver is NOT compatible with Kubernetes versions <1.12.
-
 **DISCLAIMER**: This is not an officially supported Amazon product
 
 # Amazon Elastic Block Store CSI driver
@@ -17,11 +15,25 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) CSI Driver provide
 
 This driver is in alpha stage and basic volume operations are already working including CreateVolume/DeleteVolume, ControllerPublishVolume/ControllerUnpublishVolume, NodeStageVolume/NodeUnstageVolume,  NodePublishVolume/NodeUnpublishVolume and [Volume Scheduling](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
 
-This driver is compatiable with CSI version [v0.3.0](https://github.com/container-storage-interface/spec/blob/v0.3.0/spec.md).
+## Container Images:
 
-Stable alpha image: [amazon/aws-ebs-csi-driver:0.1.0-alpha](https://hub.docker.com/r/amazon/aws-ebs-csi-driver/)
+|AWS EBS CSI Driver Version | Image                               |
+|---------------------------|-------------------------------------|
+|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
+|master branch              |amazon/aws-ebs-csi-driver:latest     |
 
-To check our current development efforts, visit our [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones).
+
+## CSI Specification Compability
+| AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
+|----------------------------------------|-------|--------|
+| v0.1.0                                 | yes   | no     |
+| master branch                          | no    | yes    |
+
+## Kubernetes Compability
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | 
+|----------------------------------------|-------|-------|
+| v0.1.0                                 | yes   | no    |
+| master branch                          | no    | yes   |
 
 ## Requirements
 ### Kubernetes
@@ -58,9 +70,9 @@ And *external-provisioner* must have the togology feature gate enabled with `--f
 
 ## Installation
 ### Kubernetes
-Under the directory [deploy/kubernetes](./deploy/kubernetes), there are a few manifest files that are needed to deploy the CSI driver along with sidecar containers. If you are using Kubernetes v1.12+, use the manifest files under [deploy/kubernetes/v1.12+](deploy/kubernetes/v1.12+); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](deploy/kubernetes/v1.[10,11]).
+Under the directory [deploy/kubernetes](../deploy/kubernetes), there are a few manifest files that are needed to deploy the CSI driver along with sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](deploy/kubernetes/v1.[10,11]).
 
-In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12+/secrets.yaml` file and add AWS credentials of the IAM user. It's a best practice to only grant required permission to the driver. A sample IAM policy can be found in [example-iam-policy.json](example-iam-policy.json).
+In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12/secrets.yaml` file and add AWS credentials of the IAM user. It's a best practice to only grant required permission to the driver. A sample IAM policy can be found in [example-iam-policy.json](example-iam-policy.json).
 
 The file will look like this:
 
@@ -70,20 +82,20 @@ kind: Secret
 metadata:
   name: aws-secret
 stringData:
-  key_id: my_key_id
-  access_key: my_access_key
+  key_id: [aws_access_key_id]
+  access_key: [aws_secret_access_key]
 ```
 
 Now, with one command we will create the secret and deploy the sidecar containers and the CSI driver:
 
 ```
-kubectl create -f deploy/kubernetes/v1.12+
+kubectl apply -f deploy/kubernetes/v1.12
 ```
 
-From now on we can start creating EBS volumes using the CSI driver. Under `deploy/kubernetes/v1.12+/sample_app` you will find a sample app deployment that uses the recently deployed driver:
+From now on we can start creating EBS volumes using the CSI driver. Under `deploy/kubernetes/v1.12/sample_app` you will find a sample app deployment that uses the recently deployed driver:
 
 ```
-kubectl create -f deploy/kubernetes/v1.12+/sample_app
+kubectl apply -f deploy/kubernetes/v1.12/sample_app
 ```
 
 ## Development
@@ -123,3 +135,6 @@ Build and publish container image of the driver is as simple as building the ima
 ```
 make image && make push
 ```
+
+## Milestone
+[Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones)
