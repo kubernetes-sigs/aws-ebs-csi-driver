@@ -242,13 +242,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
 	}
 
-	if len(diskOptions.KmsKeyID) > 0 {
-		err := c.waitForCreate(ctx, volumeID)
-		if err != nil {
-			if isAWSErrorVolumeNotFound(err) {
-				return nil, fmt.Errorf("failed to create encrypted volume: the volume disappeared after creation, most likely due to inaccessible KMS encryption key")
-			}
-		}
+	if err := c.waitForVolume(ctx, volumeID); err != nil {
+		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone}, nil
@@ -500,13 +495,14 @@ func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state stri
 	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
 
-// waitForCreate waits for volume to be created for encrypted volume only
-// it polls for created volume to check it has not been silently removed by AWS.
+// waitForVolume waits for volume to be in the "available" state.
 // On a random AWS account (shared among several developers) it took 4s on average.
-func (c *cloud) waitForCreate(ctx context.Context, volumeID string) error {
+func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	var (
-		checkInterval = 1 * time.Second
-		checkTimeout  = 30 * time.Second
+		checkInterval = 3 * time.Second
+		// This timeout can be "ovewritten" if the value returned by ctx.Deadline()
+		// comes sooner. That value comes from the external provisioner controller.
+		checkTimeout = 1 * time.Minute
 	)
 
 	request := &ec2.DescribeVolumesInput{
@@ -523,12 +519,11 @@ func (c *cloud) waitForCreate(ctx context.Context, volumeID string) error {
 		if vol.State != nil {
 			switch *vol.State {
 			case "available":
-				// The volume is Available, it won't be deleted now.
 				return true, nil
 			case "creating":
-				return false, nil
+				return false, fmt.Errorf("volume %s is still being created", volumeID)
 			default:
-				return true, fmt.Errorf("unexpected State of newly created AWS EBS volume %s: %q", volumeID, *vol.State)
+				return true, fmt.Errorf("unexpected state for volume %s: %q", volumeID, *vol.State)
 			}
 		}
 		return false, nil
@@ -546,6 +541,5 @@ func isAWSErrorVolumeNotFound(err error) bool {
 			return true
 		}
 	}
-
 	return false
 }

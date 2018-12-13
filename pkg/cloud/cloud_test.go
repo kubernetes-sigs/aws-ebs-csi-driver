@@ -33,11 +33,13 @@ import (
 
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name        string
-		volumeName  string
-		diskOptions *DiskOptions
-		expDisk     *Disk
-		expErr      error
+		name          string
+		volumeName    string
+		volState      string
+		diskOptions   *DiskOptions
+		expDisk       *Disk
+		expErr        error
+		expDescVolErr error
 	}{
 		{
 			name:       "success: normal",
@@ -68,16 +70,6 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:       "fail: CreateVolume returned an error",
-			volumeName: "vol-test-name-error",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "",
-			},
-			expErr: fmt.Errorf("CreateVolume generic error"),
-		},
-		{
 			name:       "success: normal with encrypted volume",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -93,6 +85,28 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: nil,
 		},
+		{
+			name:       "fail: CreateVolume returned an error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: "",
+			},
+			expErr: fmt.Errorf("CreateVolume generic error"),
+		},
+		{
+			name:       "fail: CreateVolume returned a volume with wrong state",
+			volumeName: "vol-test-name-error",
+			volState:   "creating",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: "",
+			},
+			expErr:        nil,
+			expDescVolErr: fmt.Errorf("DescribeVolumes generic error"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -101,25 +115,24 @@ func TestCreateDisk(t *testing.T) {
 		mockEC2 := mocks.NewMockEC2(mockCtrl)
 		c := newCloud(mockEC2)
 
-		vol := &ec2.Volume{}
-		if tc.expErr == nil {
-			vol = &ec2.Volume{
-				VolumeId: aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-				Size:     aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-				State:    aws.String("available"),
-			}
+		volState := tc.volState
+		if volState == "" {
+			volState = "available"
+		}
+
+		vol := &ec2.Volume{
+			VolumeId: aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+			Size:     aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+			State:    aws.String(volState),
 		}
 
 		ctx := context.Background()
 		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
-
-		if tc.diskOptions.Encrypted {
-			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil)
-		}
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
-			if tc.expErr == nil {
+			if tc.expErr == nil && tc.expDescVolErr == nil {
 				t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
 			}
 		} else {
