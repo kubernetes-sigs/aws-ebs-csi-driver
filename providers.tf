@@ -6,6 +6,14 @@ provider "aws" {
   shared_credentials_file = "/home/shane/.config/aws/credentials"
 }
 
+provider "aws" {
+  version = "~> 1.13.0"
+  alias   = "utap"
+
+  region                  = "us-east-1"
+  shared_credentials_file = "/home/shane/.config/aws/utap/credentials"
+}
+
 provider "ct" {
   version = "0.2.1"
 }

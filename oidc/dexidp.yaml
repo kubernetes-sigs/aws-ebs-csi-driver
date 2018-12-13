@@ -1,0 +1,113 @@
+# Default values for dex
+
+# Deploy environment label, e.g. dev, test, prod
+global:
+  deployEnv: auth
+
+replicaCount: 1
+
+image:
+  repository: quay.io/coreos/dex
+  tag: v2.10.0
+  pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+  path: /
+  hosts:
+    - dex.radkube.com
+  tls:
+  - secretName: dex.radkube.com.tls
+    hosts:
+      - dex.radkube.com
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+config: |-
+  issuer: https://dex.radkube.com
+
+  storage:
+    type: kubernetes
+    config:
+      inCluster: true
+
+  web:
+    http: 0.0.0.0:5556
+
+    # If enabled, be sure to configure tls settings above, or use a tool
+    # such as let-encrypt to manage the certs.
+    # Currently this chart does not support both http and https, and the port
+    # is fixed to 5556
+    #
+    # https: 0.0.0.0:5556
+    # tlsCert: /etc/dex/tls/tls.crt
+    # tlsKey: /etc/dex/tls/tls.key
+
+  frontend:
+    theme: "coreos"
+    issuer: "Radkube"
+    issuerUrl: "https://dex.radkube.com"
+
+  expiry:
+    signingKeys: "6h"
+    idTokens: "24h"
+  
+  logger:
+    level: debug
+    format: json
+
+  oauth2:
+    responseTypes: ["code", "token", "id_token"]
+    skipApprovalScreen: true
+
+  # Remember you can have multiple connectors of the same 'type' (with different 'id's)
+  # If you need e.g. logins with groups for two different Microsoft 'tenants'
+  connectors:
+
+  # GitHub configure 'OAuth Apps' -> 'New OAuth App', add callback URL
+  # https://github.com/settings/developers
+  - type: github
+    id: github
+    name: GitHub
+    config:
+      clientID: $GITHUB_CLIENT_ID
+      clientSecret: $GITHUB_CLIENT_SECRET
+      redirectURI: https://dex.radkube.com/callback
+      # 'orgs' can be used to map groups from Github
+      # https://github.com/coreos/dex/blob/master/Documentation/connectors/github.md
+      orgs:
+      - name: AlphaTangoIndia
+        teams:
+        - 5c
+
+  # The 'name' must match the k8s API server's 'oidc-client-id'
+  staticClients:
+  - id: radkube-auth
+    name: "radkube-auth"
+    secret: "14071306-afbf-4494-b084-3cc1a4c66fb6"
+    redirectURIs:
+    - https://login.example.com/callback/my-cluster
+  
+  enablePasswordDB: True
+  staticPasswords:
+  - email: "travis.pinney@RadiantSolutions.com"
+    # bcrypt hash of the string "password"
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"  
+

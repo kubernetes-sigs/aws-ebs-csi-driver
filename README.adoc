@@ -1,4 +1,7 @@
 = Radkube
+Shane Siebken <shane.siebken@RadiantSolutions.com>
+:source-highlighter: rouge
+
 Documentation for the shared development sandbox of Radiant
 Charlottesville, powered by Kubernetes.
 
@@ -26,13 +29,14 @@ Managing this configuration for Radkube is simultaneously more and less complex
 than in a typical cluster. The major factor in this complexity is the usage of
 bootkube.
 
-===== Bootkube
-====
+.Bootkube
+****
 Bootkube is a simple cluster bootstrapping tool which can be used to establish a
 self-hosted Kubernetes cluster. This means that all of the components (with the
 exception of node Kubelets) are managed as Kubernetes objects, by the cluster
 itself.
-====
+****
+
 For instance, the Kubernetes API server that needs command changes to support
 OIDC authentication / authorization, is managed as a Daemonset, and can have
 its command specification edited in the Daemonset configuration. Addtionally,
@@ -41,7 +45,8 @@ the necessary TLS assets which are needed by the API server to trust Dex IDP
 secrets, and thus do not need to be distributed onto host machines for use
 by the API server.
 
-==== API Server Configuration
+.API Server Configuration
+[#apiserver]
 ====
 Deploying Dex IDP as an auth provider requires the addition of several flags
 to the Kubernetes API server, as well as additional TLS assets (the CA which
@@ -55,16 +60,33 @@ installed and configured per Typhhon creation instructions):
 1. Generate TLS assets per dex-idp instructions
 https://github.com/dexidp/dex/blob/master/Documentation/kubernetes.md#generate-tls-assets[here].
 2. Create a configmap with the new Dex ca.pem:
-`kubectl create --namespace kube-system configmap dex-ca  --from-file=/home/user/go/src/github.com/dexidp/dex/examples/k8s/ssl/ca.pem`
-3. `cd /path/to/radkube/oidc`
-4. `./makepatch.sh`
-5. `kubectl patch ds kube-apiserver --namespace kube-system --patch "$(cat ./patch.json)"`
-. Be sure to review the generated patch file. Patching system components can cause
++
+[source, bash]
+----
+kubectl create --namespace kube-system configmap dex-ca  --from-file=/home/user/go/src/github.com/dexidp/dex/examples/k8s/ssl/ca.pem`
+----
++
+3. Patch the existing apiserver deployment with the updated command:
++
+[source, bash]
+----
+cd /path/to/radkube/oidc
+./makepatch.sh
+kubectl patch ds kube-apiserver --namespace kube-system \
+  --patch "$(cat ./patch.json)"
+----
++
+[NOTE]
+======
+Be sure to review the generated patch file. Patching system components can cause
 major cluster downtime.
-6. Wait for API server Daemonset to fully roll out new command.
+======
++
+4. Wait for API server Daemonset to fully roll out new command.
 ====
 
-==== Dex IDP Configuration
+.Dex IDP Configuration
+[#dexidp]
 ====
 Next up is deploying the Dex IDP OIDC provider, configured against apropriate
 provider backend auth providers (currently the GitHub connector).
@@ -87,11 +109,55 @@ and referenced, all system components should be chugging along happily, although
 auth. will not work until an Ingress resource is created for the Dex server.
 ====
 
-==== NGINX Configuration
+.NGINX Configuration
+[#nginx]
 ====
-NGINX is deployed using the NGINX ingress Typhoon addon scripts 
-https://typhoon.psdn.io/addons/ingress/[here]. In the future, this should likely be
-deployed using Helm. The only difference to the addon deployment is that the flag
-`--enable-ssl-passthrough` must be added to the commands list to support TLS
-termination on the Dex server.
+This component is installed with Helm. The values file can be fonud in the
+`ingress` directory. Installation is as follows:
+[source, bash]
+----
+helm install stable/nginx-ingress --name nginx-ingress --namespace nginx-ingress --values ./ingress/values.yaml
+----
+[NOTE]
+======
+Ensure that an appropriate namespace exists before attempting this installation, or create
+one.
+======
+The NGINX Ingress is installed as a Daemonset to allow low-maintainance (but flexible)
+deployment on all workers, allowing for externally managed load-balancers to
+effectively route traffic to worker pools. This configuration is particularly geared
+towards future plans of cross-account cluster expansion.
 ====
+
+.Cert Manager
+[#certManager]
+====
+https://github.com/jetstack/cert-manager[Cert Manager] is a project which automatically creates and manages
+various TLS certificates as native Kubernetes objects. Cert Manager leans on Let's Encrypt,
+a widely trusted, free Certificate Authority. Cert Manager can be configured to automatically
+issue certificates for ingress resources, which will then be used to secure TLS traffic for that
+resource. This configuration will be used in Radkube to protect any resources which do not need
+unique TLS configurations (like gov't projects needing SSL passthrough to test 2-way SSL, and others).
+
+1. Install Cert Manager with the recommended Helm chart:
++
+[source, bash]
+----
+helm install \
+    --name cert-manager \
+    --namespace kube-system \
+    stable/cert-manager
+----
++
+2. Create an issuer to get credentials issued:
+. Follow the instructions
+https://cert-manager.readthedocs.io/en/latest/reference/issuers/acme/dns01.html#supported-dns01-providers[here]
+to configure a user with correct policies to create and edit Route53 DNS records.
+. Create a Kubernetes secret in the kube-system namespace with the user's secret access key.:
+[source, bash]
+----
+kubectl create secret generic \
+--from-literal=secret-access-key=<secret_access_key> \
+<secret-name>
+----
+riot-route53-credentials-secret

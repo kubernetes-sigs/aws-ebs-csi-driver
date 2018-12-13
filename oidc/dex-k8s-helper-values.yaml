@@ -1,0 +1,57 @@
+
+
+# Default values for dex-k8s-authenticator.
+
+# Deploy environment label, e.g. dev, test, prod
+global:
+  deployEnv: dev
+
+replicaCount: 1
+
+image:
+  repository: mintel/dex-k8s-authenticator
+  tag: latest
+  pullPolicy: Always
+
+dexK8sAuthenticator:
+  port: 5555
+  debug: false
+  web_path_prefix: /
+  #logoUrl: http://<path-to-your-logo.png>
+  #kubectl_version: v1.11.2
+  #tlsCert: /path/to/dex-client.crt
+  #tlsKey: /path/to/dex-client.key
+  clusters:
+  - name: radkube
+    short_description: "Radkube API Auth"
+    description: "Login and token mechanism for Radkube Cluster API"
+    client_secret: 14071306-afbf-4494-b084-3cc1a4c66fb6
+    issuer: https://dex.radkube.com
+    k8s_master_uri: https://radkube.radkube.com
+    client_id: radkube-auth
+    redirect_uri: https://login.radkube.com/callback
+    k8s_ca_uri: https://url-to-your-ca.crt
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+  path: /
+  hosts:
+    - login.radkube.com
+  tls:
+  - secretName: dex-k8s-helper.radkube.com.tls
+    hosts:
+    - login.radkube.com
+
+resources: {}
+
+caCerts: 
+  enabled: false
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

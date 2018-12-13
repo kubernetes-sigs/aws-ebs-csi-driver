@@ -1,0 +1,6 @@
+controller:
+  extraArgs:
+    enable-ssl-passthrough: true
+  nodeSelector: 
+    node-role.kubernetes.io/node: ""
+  type: DaemonSet
