@@ -32,14 +32,14 @@ This driver is in alpha stage and basic volume operations are already working in
 ## Kubernetes Compability
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | 
 |----------------------------------------|-------|-------|
-| v0.1.0                                 | yes   | no    |
+| v0.1.0                                 | yes   | yes   |
 | master branch                          | no    | yes   |
 
 ## Requirements
 ### Kubernetes
 * Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
 
-* Kube-apiserver and kubelet should run with the flag`--allow-privileged` set.
+* Kube-apiserver and kubelet should run with the flag`--allow-privileged=true` set.
 
 * For general CSI driver setup on kubernetes, please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html).
 
