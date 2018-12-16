@@ -54,23 +54,23 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 ## Prerequisites
 ### Kubernetes
-* Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
+1. Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
 
-* Enable the flag `--allow-privileged=true` in the manifest entries of kubelet and kube-apiserver.
+2. Enable the flag `--allow-privileged=true` in the manifest entries of kubelet and kube-apiserver.
 
-* Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes.
+3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes.
 
-* Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/Setup.html#enabling-csinodeinfo).
+4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/Setup.html#enabling-csinodeinfo).
 
-* Ensure that the feature gate is enabled as `--feature-gates=CSINodeInfo=true` when using *external-provisioner*
+5. Ensure that the feature gate is enabled as `--feature-gates=Topology=true` when using *external-provisioner*
 
-* Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html) for general CSI driver setup instructions on kubernetes.
+6. Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html) for general CSI driver setup instructions on kubernetes.
 
 ## Setup
 ### Kubernetes
-* Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](../deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](../deploy/kubernetes/v1.[10,11]).
+1. Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](../deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](../deploy/kubernetes/v1.[10,11]).
 
-* Add AWS credentials of the IAM user to the [deploy/kubernetes/v1.12/secrets.yaml](../deploy/kubernetes/v1.12/secrets.yaml) file.
+2. Add AWS credentials of the IAM user to the [deploy/kubernetes/v1.12/secrets.yaml](../deploy/kubernetes/v1.12/secrets.yaml) file.
 
 ```
 apiVersion: v1
@@ -82,11 +82,11 @@ stringData:
   access_key: [aws_secret_access_key] #aws_secret_access_key
 ```
 
-* Apply the secret using `kubectl apply -f ../deploy/kubernetes/v1.12/secrets.yaml`
+3. Apply the secret using `kubectl apply -f ../deploy/kubernetes/v1.12/secrets.yaml`
 
-* Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
+4. Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
 
-* Deploy the csi-provisioner, csi-attacher and csi-node manifests to the cluster in one step:
+5. Deploy the csi-provisioner, csi-attacher and csi-node manifests to the cluster in one step:
 
 ```
 kubectl apply -f deploy/kubernetes/v1.12
@@ -94,7 +94,7 @@ kubectl apply -f deploy/kubernetes/v1.12
 
 Now any user can start creating and using EBS volumes with the CSI driver. 
 
-* Apply `deploy/kubernetes/v1.12/sample_app` that uses the recently deployed driver:
+6. Apply `deploy/kubernetes/v1.12/sample_app` that uses the recently deployed driver:
 
 ```
 kubectl apply -f deploy/kubernetes/v1.12/sample_app
