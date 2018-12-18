@@ -18,3 +18,5 @@ Vagrantfile
 
 # vim
 *.swp
+
+vendor/
