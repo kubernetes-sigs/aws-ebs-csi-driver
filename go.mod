@@ -22,6 +22,6 @@ require (
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	k8s.io/apimachinery v0.0.0-20181211025822-57dc7e687b54
 	k8s.io/klog v0.1.0 // indirect
-	k8s.io/kubernetes v1.13.0
+	k8s.io/kubernetes v1.13.1
 	k8s.io/utils v0.0.0-20181115163542-0d26856f57b3 // indirect
 )
