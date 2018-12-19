@@ -19,6 +19,11 @@ GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE}"
 
+AWS_K8S_TESTER_VERSION?=0.1.9
+AWS_K8S_TESTER_OS_ARCH?=$(shell go env GOOS)-amd64
+AWS_K8S_TESTER_DOWNLOAD_URL?=https://github.com/aws/aws-k8s-tester/releases/download/${AWS_K8S_TESTER_VERSION}/aws-k8s-tester-${AWS_K8S_TESTER_VERSION}-${AWS_K8S_TESTER_OS_ARCH}
+AWS_K8S_TESTER_PATH?=/tmp/aws-k8s-tester
+
 .PHONY: aws-ebs-csi-driver
 aws-ebs-csi-driver:
 	mkdir -p bin
@@ -34,8 +39,9 @@ test-sanity:
 
 .PHONY: test-integration
 test-integration:
-	go test -c ./tests/integration/... -o bin/integration.test && \
-	sudo -E bin/integration.test -ginkgo.v
+	curl -L ${AWS_K8S_TESTER_DOWNLOAD_URL} -o ${AWS_K8S_TESTER_PATH}
+	chmod +x ${AWS_K8S_TESTER_PATH}
+	aws-k8s-tester csi test integration --terminate-on-exit=true --csi=master --timeout=20m
 
 .PHONY: test-e2e
 test-e2e:
