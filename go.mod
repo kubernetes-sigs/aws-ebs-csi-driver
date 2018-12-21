@@ -29,7 +29,6 @@ require (
 	github.com/go-openapi/strfmt v0.17.2 // indirect
 	github.com/go-openapi/validate v0.17.2 // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
 	github.com/golang/mock v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
@@ -90,7 +89,7 @@ require (
 	k8s.io/cloud-provider v0.0.0-20181121074215-9b77dc1c3846 // indirect
 	k8s.io/cluster-bootstrap v0.0.0-20181110194056-c71be3de9a2f // indirect
 	k8s.io/csi-api v0.0.0-20181130072956-61a1735c3f50 // indirect
-	k8s.io/klog v0.1.0 // indirect
+	k8s.io/klog v0.1.0
 	k8s.io/kube-aggregator v0.0.0-20181206110645-d02c483df5c3 // indirect
 	k8s.io/kube-openapi v0.0.0-20181114233023-0317810137be // indirect
 	k8s.io/kubernetes v1.13.1

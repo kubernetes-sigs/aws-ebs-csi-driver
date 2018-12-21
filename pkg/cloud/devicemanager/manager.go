@@ -23,7 +23,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/golang/glog"
+	"k8s.io/klog"
 )
 
 const devPreffix = "/dev/xvd"
@@ -41,7 +41,7 @@ type Device struct {
 func (d *Device) Release(force bool) {
 	if !d.isTainted || force {
 		if err := d.releaseFunc(); err != nil {
-			glog.Errorf("Error releasing device: %v", err)
+			klog.Errorf("Error releasing device: %v", err)
 		}
 	}
 }
@@ -205,7 +205,7 @@ func (d *deviceManager) release(device *Device) error {
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
-	glog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device, device.VolumeID)
+	klog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device, device.VolumeID)
 	d.inFlight.Del(nodeID, name)
 
 	return nil
@@ -220,7 +220,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID strin
 		name = strings.TrimPrefix(name, "/dev/xvd")
 
 		if len(name) < 1 || len(name) > 2 {
-			glog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
+			klog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
 		}
 		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}
