@@ -132,10 +132,16 @@ make test-integration
 
 ### Build and Publish Container Image
 
-Build and publish container image of the driver is as simple as building the image and pushing it to the container registry with the command:
+Build image and push it with latest tag:
 
 ```
 make image && make push
+```
+
+Build image and push it with release tag:
+
+```
+make image-release && make push-release
 ```
 
 ## Milestone
