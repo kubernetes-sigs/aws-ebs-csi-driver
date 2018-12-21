@@ -95,7 +95,7 @@ spec:
           securityContext:
             privileged: true
           imagePullPolicy: Always
-          image: amazon/aws-ebs-csi-driver:0.1.0-alpha
+          image: amazon/aws-ebs-csi-driver:latest
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr

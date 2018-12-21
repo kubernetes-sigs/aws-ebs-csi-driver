@@ -14,7 +14,7 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE=amazon/aws-ebs-csi-driver
-VERSION=0.1.0-alpha
+VERSION=0.2.0
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE}"
@@ -37,10 +37,18 @@ test-integration:
 	go test -c ./tests/integration/... -o bin/integration.test && \
 	sudo -E bin/integration.test -ginkgo.v
 
+.PHONY: image-release
+image-release:
+	docker build -t $(IMAGE):$(VERSION) .
+
 .PHONY: image
 image:
-	docker build -t $(IMAGE):$(VERSION) .
+	docker build -t $(IMAGE):latest .
+
+.PHONY: push-release
+push-release:
+	docker push $(IMAGE):$(VERSION)
 
 .PHONY: push
 push:
-	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE):latest
