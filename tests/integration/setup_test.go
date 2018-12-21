@@ -42,7 +42,6 @@ var (
 	drv       *driver.Driver
 	csiClient *CSIClient
 	ec2Client *ec2.EC2
-	ebs       cloud.Cloud
 )
 
 func TestIntegration(t *testing.T) {

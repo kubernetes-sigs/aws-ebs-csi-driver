@@ -521,7 +521,7 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 			case "available":
 				return true, nil
 			case "creating":
-				return false, fmt.Errorf("volume %s is still being created", volumeID)
+				return false, nil
 			default:
 				return true, fmt.Errorf("unexpected state for volume %s: %q", volumeID, *vol.State)
 			}
