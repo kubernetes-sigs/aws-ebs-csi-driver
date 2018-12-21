@@ -21,10 +21,10 @@ import (
 	"net"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
+	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
@@ -44,7 +44,7 @@ type Driver struct {
 }
 
 func NewDriver(endpoint string) (*Driver, error) {
-	glog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
+	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
 	cloud, err := cloud.NewCloud()
 	if err != nil {
@@ -74,7 +74,7 @@ func (d *Driver) Run() error {
 	logErr := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		resp, err := handler(ctx, req)
 		if err != nil {
-			glog.Errorf("GRPC error: %v", err)
+			klog.Errorf("GRPC error: %v", err)
 		}
 		return resp, err
 	}
@@ -87,12 +87,12 @@ func (d *Driver) Run() error {
 	csi.RegisterControllerServer(d.srv, d)
 	csi.RegisterNodeServer(d.srv, d)
 
-	glog.Infof("Listening for connections on address: %#v", listener.Addr())
+	klog.Infof("Listening for connections on address: %#v", listener.Addr())
 	return d.srv.Serve(listener)
 }
 
 func (d *Driver) Stop() {
-	glog.Infof("Stopping server")
+	klog.Infof("Stopping server")
 	d.srv.Stop()
 }
 

@@ -109,8 +109,6 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-github.com/golang/glog
 # github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff
 github.com/golang/groupcache/lru
 # github.com/golang/mock v1.2.0

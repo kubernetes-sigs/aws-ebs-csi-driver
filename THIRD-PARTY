@@ -1,7 +1,7 @@
 ** github.com/aws/aws-sdk-go/; version v1.15.27 -- https://github.com/aws/aws-sdk-go/
 ** github.com/container-storage-interface/spec; version v0.3.0 -- https://github.com/container-storage-interface/spec/
 ** github.com/go-ini/ini; version v1.38.2 -- https://github.com/go-ini/ini
-** github.com/golang/glog; version 1.0 -- https://github.com/golang/glog/
+** github.com/kubernetes/klog; version v0.1.0 -- https://github.com/kubernetes/klog
 ** github.com/golang/mock; version v1.1.1 -- https://github.com/golang/mock
 ** github.com/kubernetes-csi/csi-test; version v0.3.0-2 -- https://github.com/kubernetes-csi/csi-test
 ** github.com/spf13/afero; version v1.1.2 -- https://github.com/spf13/afero
@@ -206,7 +206,7 @@ NOTICE:
 Copyright {yyyy} {name of copyright owner}
 * For github.com/go-ini/ini see also this required NOTICE:
 Copyright 2014 Unknwon
-* For github.com/golang/glog see also this required NOTICE:
+* For github.com/kubernetes/klog see also this required NOTICE:
 Copyright 2013 Google Inc. All Rights Reserved.
 * For github.com/golang/mock see also this required NOTICE:
 Copyright 2010 Google Inc.

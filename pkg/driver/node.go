@@ -22,9 +22,9 @@ import (
 	"os"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog"
 )
 
 const (
@@ -51,7 +51,7 @@ var (
 )
 
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	glog.V(4).Infof("NodeStageVolume: called with args %+v", *req)
+	klog.V(4).Infof("NodeStageVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -103,7 +103,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	// FormatAndMount will format only if needed
-	glog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s", source, target)
+	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s", source, target)
 	err = d.mounter.FormatAndMount(source, target, fsType, nil)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
@@ -114,7 +114,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 }
 
 func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	glog.V(4).Infof("NodeUnstageVolume: called with args %+v", *req)
+	klog.V(4).Infof("NodeUnstageVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -125,7 +125,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
-	glog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
+	klog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
 	err := d.mounter.Interface.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
@@ -135,7 +135,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 }
 
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	glog.V(4).Infof("NodePublishVolume: called with args %+v", *req)
+	klog.V(4).Infof("NodePublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -181,12 +181,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	glog.V(5).Infof("NodePublishVolume: creating dir %s", target)
+	klog.V(5).Infof("NodePublishVolume: creating dir %s", target)
 	if err := d.mounter.Interface.MakeDir(target); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
 	}
 
-	glog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
+	klog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
 	if err := d.mounter.Interface.Mount(source, target, "ext4", mountOptions); err != nil {
 		os.Remove(target)
 		return nil, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
@@ -196,7 +196,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	glog.V(4).Infof("NodeUnpublishVolume: called with args %+v", *req)
+	klog.V(4).Infof("NodeUnpublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -207,7 +207,7 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
-	glog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
+	klog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
 	err := d.mounter.Interface.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
@@ -221,7 +221,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 }
 
 func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	glog.V(4).Infof("NodeGetCapabilities: called with args %+v", *req)
+	klog.V(4).Infof("NodeGetCapabilities: called with args %+v", *req)
 	var caps []*csi.NodeServiceCapability
 	for _, cap := range nodeCaps {
 		c := &csi.NodeServiceCapability{
@@ -237,7 +237,7 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 }
 
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	glog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
+	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 	m := d.cloud.GetMetadata()
 
 	topology := &csi.Topology{
