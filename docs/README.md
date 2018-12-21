@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-sigs/aws-ebs-csi-driver)](https://goreportcard.com/report/github.com/kubernetes-sigs/aws-ebs-csi-driver)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fd-nishi%2Faws-ebs-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fd-nishi%2Faws-ebs-csi-driver?ref=badge_shield)
 
-**WARNING**: This driver is in ALPHA currently. This means that there may be potentially backwards compatibility breaking changes moving forward. Do NOT use this driver in a production environment in its current state.
+**WARNING**: This driver is in ALPHA currently. This means that there may potentially be backwards compatible breaking changes moving forward. Do NOT use this driver in a production environment in its current state.
 
 **DISCLAIMER**: This is not an officially supported Amazon product
 
@@ -11,9 +11,9 @@
 
 ## Overview
 
-The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) CSI Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of EBS volumes.
+The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage Interface (CSI) Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes.
 
-This driver is in alpha stage and basic volume operations are already working including CreateVolume/DeleteVolume, ControllerPublishVolume/ControllerUnpublishVolume, NodeStageVolume/NodeUnstageVolume,  NodePublishVolume/NodeUnpublishVolume and [Volume Scheduling](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
+This driver is in alpha stage. Basic volume operations that are functional include CreateVolume/DeleteVolume, ControllerPublishVolume/ControllerUnpublishVolume, NodeStageVolume/NodeUnstageVolume, NodePublishVolume/NodeUnpublishVolume and [Volume Scheduling](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
 
 ## Container Images:
 
@@ -22,26 +22,17 @@ This driver is in alpha stage and basic volume operations are already working in
 |v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
 
-
-## CSI Specification Compability
+## CSI Specification Compability Matrix
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
 |----------------------------------------|-------|--------|
 | v0.1.0                                 | yes   | no     |
 | master branch                          | no    | yes    |
 
-## Kubernetes Compability
+## Kubernetes Version Compability Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | 
 |----------------------------------------|-------|-------|
 | v0.1.0                                 | yes   | yes   |
 | master branch                          | no    | yes   |
-
-## Requirements
-### Kubernetes
-* Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
-
-* Kube-apiserver and kubelet should run with the flag`--allow-privileged=true` set.
-
-* For general CSI driver setup on kubernetes, please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html).
 
 ## Features
 ### Capabilities
@@ -61,20 +52,25 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
 | "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
-### Topology
-`topology.ebs.csi.aws.com/zone` is the only topology key that represents the availability zone of which a volume is accessible.
-
-To enable topology support on kuberetes, make sure `CSINodeInfo` and `CSIDriverRegistry` feature flags are enabled on both kubelet and kube-apiserver and `CSINodeInfo` CRD is installed on the cluster following [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/Setup.html#enabling-csinodeinfo).
-
-And *external-provisioner* must have the togology feature gate enabled with `--feature-gates=CSINodeInfo=true`
-
-## Installation
+## Prerequisites
 ### Kubernetes
-Under the directory [deploy/kubernetes](../deploy/kubernetes), there are a few manifest files that are needed to deploy the CSI driver along with sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](../deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](../deploy/kubernetes/v1.[10,11]).
+1. Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
 
-In this example we'll use Kubernetes v1.12. First of all, edit the `deploy/kubernetes/v1.12/secrets.yaml` file and add AWS credentials of the IAM user. It's a best practice to only grant required permission to the driver. A sample IAM policy can be found in [example-iam-policy.json](example-iam-policy.json).
+2. Enable the flag `--allow-privileged=true` in the manifest entries of kubelet and kube-apiserver.
 
-The file will look like this:
+3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes.
+
+4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/Setup.html#enabling-csinodeinfo).
+
+5. Ensure that the feature gate is enabled as `--feature-gates=Topology=true` when using *external-provisioner*
+
+6. Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html) for general CSI driver setup instructions on kubernetes.
+
+## Setup
+### Kubernetes
+1. Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](../deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](../deploy/kubernetes/v1.[10,11]).
+
+2. Add AWS credentials of the IAM user to the [deploy/kubernetes/v1.12/secrets.yaml](../deploy/kubernetes/v1.12/secrets.yaml) file.
 
 ```
 apiVersion: v1
@@ -82,17 +78,23 @@ kind: Secret
 metadata:
   name: aws-secret
 stringData:
-  key_id: [aws_access_key_id]
-  access_key: [aws_secret_access_key]
+  key_id: [aws_access_key_id] #aws_access_key_id
+  access_key: [aws_secret_access_key] #aws_secret_access_key
 ```
 
-Now, with one command we will create the secret and deploy the sidecar containers and the CSI driver:
+3. Apply the secret using `kubectl apply -f ../deploy/kubernetes/v1.12/secrets.yaml`
+
+4. Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
+
+5. Deploy the csi-provisioner, csi-attacher and csi-node manifests to the cluster in one step:
 
 ```
 kubectl apply -f deploy/kubernetes/v1.12
 ```
 
-From now on we can start creating EBS volumes using the CSI driver. Under `deploy/kubernetes/v1.12/sample_app` you will find a sample app deployment that uses the recently deployed driver:
+Now any user can start creating and using EBS volumes with the CSI driver. 
+
+6. Apply `deploy/kubernetes/v1.12/sample_app` that uses the recently deployed driver:
 
 ```
 kubectl apply -f deploy/kubernetes/v1.12/sample_app
