@@ -23,6 +23,7 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
 	"k8s.io/kubernetes/pkg/util/mount"
@@ -40,7 +41,8 @@ type Driver struct {
 	cloud cloud.Cloud
 	srv   *grpc.Server
 
-	mounter *mount.SafeFormatAndMount
+	mounter  *mount.SafeFormatAndMount
+	inFlight *internal.InFlight
 }
 
 func NewDriver(endpoint string) (*Driver, error) {
@@ -57,6 +59,7 @@ func NewDriver(endpoint string) (*Driver, error) {
 		nodeID:   m.GetInstanceID(),
 		cloud:    cloud,
 		mounter:  newSafeMounter(),
+		inFlight: internal.NewInFlight(),
 	}, nil
 }
 
