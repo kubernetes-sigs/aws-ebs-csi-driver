@@ -41,6 +41,17 @@ var (
 
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	glog.V(4).Infof("NodeStageVolume: called with args %+v", *req)
+
+	// This operation MUST be idempotent. If the volume
+	// corresponding to the volume_id is already staged to the
+	// staging_target_path, and is identical to the specified
+	// volume_capability the Plugin MUST reply 0 OK.
+	ok := d.inFlight.Upsert(req)
+	if !ok {
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+	defer d.inFlight.Delete(req)
+
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
