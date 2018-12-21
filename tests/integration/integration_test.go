@@ -79,7 +79,9 @@ var _ = Describe("EBS CSI Driver", func() {
 		}()
 
 		// Attach, stage, publish, unpublish, unstage, detach
-		nodeID := ebs.GetMetadata().GetInstanceID()
+		metadata, err := newMetadata()
+		Expect(err).To(BeNil())
+		nodeID := metadata.GetInstanceID()
 		testAttachWriteReadDetach(volume.VolumeId, req.GetName(), nodeID, false)
 
 	})
