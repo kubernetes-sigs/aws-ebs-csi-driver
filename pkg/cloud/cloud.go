@@ -364,8 +364,9 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 	}
 
 	return &Disk{
-		VolumeID:    aws.StringValue(volume.VolumeId),
-		CapacityGiB: volSizeBytes,
+		VolumeID:         aws.StringValue(volume.VolumeId),
+		CapacityGiB:      volSizeBytes,
+		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 	}, nil
 }
 
@@ -382,8 +383,9 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}
 
 	return &Disk{
-		VolumeID:    aws.StringValue(volume.VolumeId),
-		CapacityGiB: aws.Int64Value(volume.Size),
+		VolumeID:         aws.StringValue(volume.VolumeId),
+		CapacityGiB:      aws.Int64Value(volume.Size),
+		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 	}, nil
 }
 
