@@ -31,27 +31,33 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 )
 
+const (
+	defaultZone = "test-az"
+	expZone     = "us-west-2b"
+)
+
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name          string
-		volumeName    string
-		volState      string
-		diskOptions   *DiskOptions
-		expDisk       *Disk
-		expErr        error
-		expDescVolErr error
+		name               string
+		volumeName         string
+		volState           string
+		diskOptions        *DiskOptions
+		expDisk            *Disk
+		expErr             error
+		expCreateVolumeErr error
+		expDescVolumeErr   error
 	}{
 		{
 			name:       "success: normal",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "",
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
 			},
 			expDisk: &Disk{
-				VolumeID:    "vol-test",
-				CapacityGiB: 1,
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
 			},
 			expErr: nil,
 		},
@@ -61,11 +67,12 @@ func TestCreateDisk(t *testing.T) {
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "us-west-2",
+				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
-				VolumeID:    "vol-test",
-				CapacityGiB: 1,
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
 			},
 			expErr: nil,
 		},
@@ -75,25 +82,39 @@ func TestCreateDisk(t *testing.T) {
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "us-west-2",
+				AvailabilityZone: expZone,
 				Encrypted:        true,
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 			},
 			expDisk: &Disk{
-				VolumeID:    "vol-test",
-				CapacityGiB: 1,
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
 			},
 			expErr: nil,
 		},
 		{
-			name:       "fail: CreateVolume returned an error",
+			name:       "fail: CreateVolume returned CreateVolume error",
 			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+			},
+			expErr:             fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
+			expCreateVolumeErr: fmt.Errorf("CreateVolume generic error"),
+		},
+		{
+			name:       "fail: CreateVolume returned a DescribeVolumes error",
+			volumeName: "vol-test-name-error",
+			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			expErr: fmt.Errorf("CreateVolume generic error"),
+			expErr:             fmt.Errorf("could not create volume in EC2: DescribeVolumes generic error"),
+			expCreateVolumeErr: fmt.Errorf("DescribeVolumes generic error"),
 		},
 		{
 			name:       "fail: CreateVolume returned a volume with wrong state",
@@ -104,8 +125,7 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			expErr:        nil,
-			expDescVolErr: fmt.Errorf("DescribeVolumes generic error"),
+			expErr: fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
 		},
 	}
 
@@ -121,30 +141,35 @@ func TestCreateDisk(t *testing.T) {
 		}
 
 		vol := &ec2.Volume{
-			VolumeId: aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-			Size:     aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-			State:    aws.String(volState),
+			VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+			Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+			State:            aws.String(volState),
+			AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
 		}
 
 		ctx := context.Background()
-		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expErr)
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
+		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
 
 		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 		if err != nil {
-			if tc.expErr == nil && tc.expDescVolErr == nil {
+			if tc.expErr == nil {
 				t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+			} else if tc.expErr.Error() != err.Error() {
+				t.Fatalf("CreateDisk() failed: expected error %q, got: %q", tc.expErr, err)
 			}
 		} else {
 			if tc.expErr != nil {
 				t.Fatal("CreateDisk() failed: expected error, got nothing")
 			} else {
 				if tc.expDisk.CapacityGiB != disk.CapacityGiB {
-					t.Fatalf("CreateDisk() failed: expected capacity %d, got %v", tc.expDisk.CapacityGiB, disk.CapacityGiB)
+					t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", tc.expDisk.CapacityGiB, disk.CapacityGiB)
 				}
-
 				if tc.expDisk.VolumeID != disk.VolumeID {
-					t.Fatalf("CreateDisk() failed: expected capacity %d, got %v", tc.expDisk.CapacityGiB, disk.CapacityGiB)
+					t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", tc.expDisk.VolumeID, disk.VolumeID)
+				}
+				if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
+					t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
 				}
 			}
 		}
@@ -315,16 +340,18 @@ func TestDetachDisk(t *testing.T) {
 
 func TestGetDiskByName(t *testing.T) {
 	testCases := []struct {
-		name           string
-		volumeName     string
-		volumeCapacity int64
-		expErr         error
+		name             string
+		volumeName       string
+		volumeCapacity   int64
+		availabilityZone string
+		expErr           error
 	}{
 		{
-			name:           "success: normal",
-			volumeName:     "vol-test-1234",
-			volumeCapacity: util.GiBToBytes(1),
-			expErr:         nil,
+			name:             "success: normal",
+			volumeName:       "vol-test-1234",
+			volumeCapacity:   util.GiBToBytes(1),
+			availabilityZone: expZone,
+			expErr:           nil,
 		},
 		{
 			name:           "fail: DescribeVolumes returned generic error",
@@ -341,8 +368,9 @@ func TestGetDiskByName(t *testing.T) {
 		c := newCloud(mockEC2)
 
 		vol := &ec2.Volume{
-			VolumeId: aws.String(tc.volumeName),
-			Size:     aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
+			VolumeId:         aws.String(tc.volumeName),
+			Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
+			AvailabilityZone: aws.String(tc.availabilityZone),
 		}
 
 		ctx := context.Background()
@@ -360,6 +388,9 @@ func TestGetDiskByName(t *testing.T) {
 			if disk.CapacityGiB != util.BytesToGiB(tc.volumeCapacity) {
 				t.Fatalf("GetDiskByName() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
 			}
+			if tc.availabilityZone != disk.AvailabilityZone {
+				t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+			}
 		}
 
 		mockCtrl.Finish()
@@ -368,14 +399,16 @@ func TestGetDiskByName(t *testing.T) {
 
 func TestGetDiskByID(t *testing.T) {
 	testCases := []struct {
-		name     string
-		volumeID string
-		expErr   error
+		name             string
+		volumeID         string
+		availabilityZone string
+		expErr           error
 	}{
 		{
-			name:     "success: normal",
-			volumeID: "vol-test-1234",
-			expErr:   nil,
+			name:             "success: normal",
+			volumeID:         "vol-test-1234",
+			availabilityZone: expZone,
+			expErr:           nil,
 		},
 		{
 			name:     "fail: DescribeVolumes returned generic error",
@@ -394,7 +427,10 @@ func TestGetDiskByID(t *testing.T) {
 		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
 			&ec2.DescribeVolumesOutput{
 				Volumes: []*ec2.Volume{
-					{VolumeId: aws.String(tc.volumeID)},
+					{
+						VolumeId:         aws.String(tc.volumeID),
+						AvailabilityZone: aws.String(tc.availabilityZone),
+					},
 				},
 			},
 			tc.expErr,
@@ -412,6 +448,9 @@ func TestGetDiskByID(t *testing.T) {
 			if disk.VolumeID != tc.volumeID {
 				t.Fatalf("GetDisk() failed: expected ID %q, got %q", tc.volumeID, disk.VolumeID)
 			}
+			if tc.availabilityZone != disk.AvailabilityZone {
+				t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+			}
 		}
 
 		mockCtrl.Finish()
@@ -423,7 +462,7 @@ func newCloud(mockEC2 EC2) Cloud {
 		metadata: &metadata{
 			instanceID:       "test-instance",
 			region:           "test-region",
-			availabilityZone: "test-az",
+			availabilityZone: defaultZone,
 		},
 		dm:  dm.NewDeviceManager(),
 		ec2: mockEC2,

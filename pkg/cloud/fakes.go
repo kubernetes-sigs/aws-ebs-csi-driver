@@ -52,8 +52,9 @@ func (c *FakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := &fakeDisk{
 		Disk: &Disk{
-			VolumeID:    fmt.Sprintf("vol-%d", r1.Uint64()),
-			CapacityGiB: util.BytesToGiB(diskOptions.CapacityBytes),
+			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
+			CapacityGiB:      util.BytesToGiB(diskOptions.CapacityBytes),
+			AvailabilityZone: diskOptions.AvailabilityZone,
 		},
 		tags: diskOptions.Tags,
 	}
