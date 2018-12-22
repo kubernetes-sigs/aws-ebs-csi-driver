@@ -68,9 +68,9 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 ## Setup
 ### Kubernetes
-1. Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers. If you are using Kubernetes v1.12, use the manifest files under [deploy/kubernetes/v1.12](../deploy/kubernetes/v1.12); for kubernetes v1.10 and v1.11, use the files under [deploy/kubernetes/v1.[10,11]](../deploy/kubernetes/v1.[10,11]).
+1. Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers.
 
-2. Add AWS credentials of the IAM user to the [deploy/kubernetes/v1.12/secrets.yaml](../deploy/kubernetes/v1.12/secrets.yaml) file.
+2. The driver can use the EC2 instance roles, otherwise add AWS credentials of the IAM user to the [deploy/kubernetes/secret.yaml](../deploy/kubernetes/secret.yaml) file.
 
 ```
 apiVersion: v1
@@ -82,22 +82,22 @@ stringData:
   access_key: [aws_secret_access_key] #aws_secret_access_key
 ```
 
-3. Apply the secret using `kubectl apply -f ../deploy/kubernetes/v1.12/secrets.yaml`
+3. Apply the secret using `kubectl apply -f ../deploy/kubernetes/secret.yaml` if required.
 
 4. Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
 
 5. Deploy the csi-provisioner, csi-attacher and csi-node manifests to the cluster in one step:
 
 ```
-kubectl apply -f deploy/kubernetes/v1.12
+kubectl apply -f deploy/kubernetes
 ```
 
 Now any user can start creating and using EBS volumes with the CSI driver. 
 
-6. Apply `deploy/kubernetes/v1.12/sample_app` that uses the recently deployed driver:
+6. Apply `deploy/kubernetes/sample_app` that uses the recently deployed driver:
 
 ```
-kubectl apply -f deploy/kubernetes/v1.12/sample_app
+kubectl apply -f deploy/kubernetes/sample_app
 ```
 
 ## Development
