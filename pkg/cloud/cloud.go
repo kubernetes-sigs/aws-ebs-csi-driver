@@ -30,10 +30,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/golang/glog"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 )
 
 // AWS volume types
@@ -46,6 +46,10 @@ const (
 	VolumeTypeSC1 = "sc1"
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
 	VolumeTypeST1 = "st1"
+)
+
+var (
+	ValidVolumeTypes = []string{VolumeTypeIO1, VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1}
 )
 
 // AWS provisioning limits.
@@ -209,7 +213,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
 		zone = c.metadata.GetAvailabilityZone()
-		glog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
+		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 	}
 
 	request := &ec2.CreateVolumeInput{
@@ -288,7 +292,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
-		glog.V(5).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
+		klog.V(5).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 
 	}
 
@@ -319,7 +323,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	defer device.Release(true)
 
 	if !device.IsAlreadyAssigned {
-		glog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
+		klog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
 	}
 
 	request := &ec2.DetachVolumeInput{
@@ -482,7 +486,7 @@ func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state stri
 
 		for _, a := range volume.Attachments {
 			if a.State == nil {
-				glog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
+				klog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
 				continue
 			}
 			if *a.State == state {

@@ -20,13 +20,13 @@ import (
 	"context"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
+	"k8s.io/klog"
 )
 
 func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
-	glog.V(4).Infof("GetPluginInfo: called with args %+v", *req)
+	klog.V(4).Infof("GetPluginInfo: called with args %+v", *req)
 	resp := &csi.GetPluginInfoResponse{
-		Name:          driverName,
+		Name:          DriverName,
 		VendorVersion: driverVersion,
 	}
 
@@ -34,7 +34,7 @@ func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoReques
 }
 
 func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	glog.V(4).Infof("GetPluginCapabilities: called with args %+v", *req)
+	klog.V(4).Infof("GetPluginCapabilities: called with args %+v", *req)
 	resp := &csi.GetPluginCapabilitiesResponse{
 		Capabilities: []*csi.PluginCapability{
 			{
@@ -58,6 +58,6 @@ func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCa
 }
 
 func (d *Driver) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	glog.V(4).Infof("Probe: called with args %+v", *req)
+	klog.V(4).Infof("Probe: called with args %+v", *req)
 	return &csi.ProbeResponse{}, nil
 }
