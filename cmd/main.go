@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"k8s.io/klog"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 	if *version {
 		info, err := driver.GetVersionJSON()
 		if err != nil {
-			glog.Fatalln(err)
+			klog.Fatalln(err)
 		}
 		fmt.Println(info)
 		os.Exit(0)
@@ -43,9 +43,9 @@ func main() {
 
 	drv, err := driver.NewDriver(*endpoint)
 	if err != nil {
-		glog.Fatalln(err)
+		klog.Fatalln(err)
 	}
 	if err := drv.Run(); err != nil {
-		glog.Fatalln(err)
+		klog.Fatalln(err)
 	}
 }
