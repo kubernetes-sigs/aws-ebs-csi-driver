@@ -112,7 +112,7 @@ auth. will not work until an Ingress resource is created for the Dex server.
 .NGINX Configuration
 [#nginx]
 ====
-This component is installed with Helm. The values file can be fonud in the
+This component is installed with Helm. The values file can be found in the
 `ingress` directory. Installation is as follows:
 [source, bash]
 ----
@@ -161,3 +161,9 @@ kubectl create secret generic \
 <secret-name>
 ----
 riot-route53-credentials-secret
+====
+
+.Helm & Tiller
+[#helmTiller]
+
+TODO: Work out specifics of secure installation and record here

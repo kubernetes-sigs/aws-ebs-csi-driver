@@ -1,8 +1,7 @@
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Issuer
 metadata:
-  name: letsencrypt-prod
-  namespace: kube-system
+  name: letsencrypt-prod-dex
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
@@ -15,7 +14,7 @@ spec:
     # ACME DNS-01 provider configurations
     dns01:
       providers:
-        - name: riot-aws-dns
+        - name: dex-aws-dns
           route53:
             region: us-east-1
             hostedZoneID:  Z2B1JDBLG6KBOS

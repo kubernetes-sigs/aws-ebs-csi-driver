@@ -15,7 +15,9 @@ ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: nginx
-    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    certmanager.k8s.io/issuer: letsencrypt-prod-dex
+    certmanager.k8s.io/acme-challenge-type: dns01
+    certmanager.k8s.io/acme-dns01-provider: dex-aws-dns
   path: /
   hosts:
     - dex.radkube.com
@@ -93,7 +95,7 @@ config: |-
       orgs:
       - name: AlphaTangoIndia
         teams:
-        - 5c
+        - 5C
 
   # The 'name' must match the k8s API server's 'oidc-client-id'
   staticClients:
@@ -101,13 +103,12 @@ config: |-
     name: "radkube-auth"
     secret: "14071306-afbf-4494-b084-3cc1a4c66fb6"
     redirectURIs:
-    - https://login.example.com/callback/my-cluster
+    - https://login.radkube.com/callback
   
   enablePasswordDB: True
   staticPasswords:
   - email: "travis.pinney@RadiantSolutions.com"
-    # bcrypt hash of the string "password"
-    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
-    username: "admin"
+    hash: "$2a$10$reoM/sDa0K8D5zWkFzmS7ev3znwmM9a8t/zQV5bc1cy5Ssh9AZM/O"
+    username: "tpinney"
     userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"  
 

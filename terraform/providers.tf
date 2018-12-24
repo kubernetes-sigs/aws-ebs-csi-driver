@@ -1,21 +1,21 @@
 provider "aws" {
-  version = "~> 1.13.0"
+  version = "~> 1.52.0"
   alias   = "default"
 
   region                  = "us-east-1"
-  shared_credentials_file = "/home/shane/.config/aws/credentials"
+  profile = "riot"
 }
 
 provider "aws" {
-  version = "~> 1.13.0"
+  version = "~> 1.52.0"
   alias   = "utap"
 
-  region                  = "us-east-1"
-  shared_credentials_file = "/home/shane/.config/aws/utap/credentials"
+  region = "us-east-1"
+  profile = "default"
 }
 
 provider "ct" {
-  version = "0.2.1"
+  version = "0.3.0"
 }
 
 provider "local" {

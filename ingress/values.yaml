@@ -3,4 +3,6 @@ controller:
     enable-ssl-passthrough: true
   nodeSelector: 
     node-role.kubernetes.io/node: ""
-  type: DaemonSet
+  kind: DaemonSet
+  daemonset:
+    useHostPort: true

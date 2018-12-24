@@ -27,16 +27,18 @@ dexK8sAuthenticator:
     description: "Login and token mechanism for Radkube Cluster API"
     client_secret: 14071306-afbf-4494-b084-3cc1a4c66fb6
     issuer: https://dex.radkube.com
-    k8s_master_uri: https://radkube.radkube.com
+    k8s_master_uri: https://radkube.radkube.com:6443
     client_id: radkube-auth
     redirect_uri: https://login.radkube.com/callback
-    k8s_ca_uri: https://url-to-your-ca.crt
+    k8s_ca_uri: https://s3.amazonaws.com/radkube-assets/radkube-ca.pem
 
 ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: nginx
-    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    certmanager.k8s.io/issuer: letsencrypt-prod-dex
+    certmanager.k8s.io/acme-challenge-type: dns01
+    certmanager.k8s.io/acme-dns01-provider: dex-aws-dns
   path: /
   hosts:
     - login.radkube.com

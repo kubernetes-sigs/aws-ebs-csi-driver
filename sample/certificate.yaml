@@ -1,18 +1,18 @@
 apiVersion: certmanager.k8s.io/v1alpha1
 kind: Certificate
 metadata:
-  name: eatme-certificate
+  name: sample-certificate
   namespace: riot
 spec:
   secretName: dex-tls
   issuerRef:
     name: riot-letsencrypt-staging
-  commonName: eatme.radkube.com
+  commonName: sample.radkube.com
   dnsNames:
-  - eatme.radkube.com
+  - sample.radkube.com
   acme:
     config:
     - dns01:
         provider: riot-aws-dns
       domains:
-      - 'eatme.radkube.com'
+      - 'sample.radkube.com'
