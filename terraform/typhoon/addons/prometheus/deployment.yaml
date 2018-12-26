@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: prometheus
+      phase: prod
+  template:
+    metadata:
+      labels:
+        name: prometheus
+        phase: prod
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: quay.io/prometheus/prometheus:v2.5.0
+          args:
+            - --web.listen-address=0.0.0.0:9090
+            - --config.file=/etc/prometheus/prometheus.yaml
+            - --storage.tsdb.path=/var/lib/prometheus
+          ports:
+            - name: web
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: rules
+              mountPath: /etc/prometheus/rules
+            - name: data
+              mountPath: /var/lib/prometheus
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: rules
+          configMap:
+            name: prometheus-rules
+        - name: data
+          emptyDir: {}

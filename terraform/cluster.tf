@@ -1,5 +1,5 @@
 module "aws-riot-radkube" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes?ref=v1.13.0"
+  source = "typhoon/aws/container-linux/kubernetes"
 
   providers = {
     aws = "aws.default"
@@ -55,7 +55,7 @@ module "utap-cross-account-network" {
 }
 
 module "utap-cross-account-workers" {
-  source = "git::https://github.com/poseidon/typhoon//aws/container-linux/kubernetes/workers?ref=v1.13.1"
+  source = "typhoon/aws/container-linux/kubernetes/workers"
 
   providers = {
     aws = "aws.utap"

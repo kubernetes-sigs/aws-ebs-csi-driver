@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      name: node-exporter
+      phase: prod
+  template:
+    metadata:
+      labels:
+        name: node-exporter
+        phase: prod
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+    spec:
+      serviceAccountName: node-exporter
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: node-exporter
+        image: quay.io/prometheus/node-exporter:v0.15.2
+        args:
+          - "--path.procfs=/host/proc"
+          - "--path.sysfs=/host/sys"
+        ports:
+          - name: metrics
+            containerPort: 9100
+            hostPort: 9100
+        resources:
+          requests:
+            memory: 30Mi
+            cpu: 100m
+          limits:
+            memory: 50Mi
+            cpu: 200m
+        volumeMounts:
+          - name: proc
+            mountPath: /host/proc
+            readOnly:  true
+          - name: sys
+            mountPath: /host/sys
+            readOnly: true
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
