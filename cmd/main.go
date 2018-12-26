@@ -30,6 +30,7 @@ func main() {
 		endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
 		version  = flag.Bool("version", false, "Print the version and exit.")
 	)
+	klog.InitFlags(nil)
 	flag.Parse()
 
 	if *version {
