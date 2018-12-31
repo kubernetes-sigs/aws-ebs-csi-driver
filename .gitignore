@@ -1,2 +1,5 @@
 .terraform
 .secrets
+*.tfstate
+*.tfstate.backup
+*.pem
