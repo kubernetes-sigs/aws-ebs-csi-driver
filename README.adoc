@@ -15,6 +15,15 @@ environment, with the exception of TLS configuration and other
 secrets, are housed in this repository, primarily in the
 link:./cluster.tf[Cluster configuration file].
 
+== Container Storage Interface
+This cluster is sensitive to deployment topology due to being spread across multiple
+AWS accounts. The new GA feature, CSI, allows for custom storage agents to be
+deployed as services for topology-aware storage to be provisioned and attached properly
+to nodes (and maintaining proper mounts / attachments when containers are recreated).
+
+TODO: Write more about this. Explanation of how it works, why it works, what it enables,
+and how to deploy / configure.
+
 == Further Configuration
 The first step for making the cluster useful and useable is enabling
 developer access and usage. https://github.com/dexidp/dex[Dex IDP] is

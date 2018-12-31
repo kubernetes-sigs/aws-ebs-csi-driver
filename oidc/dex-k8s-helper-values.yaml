@@ -1,10 +1,6 @@
-
-
-# Default values for dex-k8s-authenticator.
-
 # Deploy environment label, e.g. dev, test, prod
 global:
-  deployEnv: dev
+  deployEnv: RIOT
 
 replicaCount: 1
 

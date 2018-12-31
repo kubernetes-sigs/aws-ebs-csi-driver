@@ -1,8 +1,6 @@
-# Default values for dex
-
 # Deploy environment label, e.g. dev, test, prod
 global:
-  deployEnv: auth
+  deployEnv: RIOT
 
 replicaCount: 1
 
