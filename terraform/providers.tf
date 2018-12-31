@@ -2,16 +2,24 @@ provider "aws" {
   version = "~> 1.52.0"
   alias   = "default"
 
-  region                  = "us-east-1"
-  profile = "riot"
+  region  = "us-east-1"
+  profile = "default"
 }
 
 provider "aws" {
   version = "~> 1.52.0"
-  alias   = "utap"
+  alias   = "atcis"
 
-  region = "us-east-1"
-  profile = "default"
+  region  = "us-east-1"
+  profile = "atcis"
+}
+
+provider "aws" {
+  version = "~> 1.52.0"
+  alias   = "asdns"
+
+  region  = "us-east-1"
+  profile = "asdns"
 }
 
 provider "ct" {
@@ -20,20 +28,20 @@ provider "ct" {
 
 provider "local" {
   version = "~> 1.0"
-  alias = "default"
+  alias   = "default"
 }
 
 provider "null" {
   version = "~> 1.0"
-  alias = "default"
+  alias   = "default"
 }
 
 provider "template" {
   version = "~> 1.0"
-  alias = "default"
+  alias   = "default"
 }
 
 provider "tls" {
   version = "~> 1.0"
-  alias = "default"
+  alias   = "default"
 }
