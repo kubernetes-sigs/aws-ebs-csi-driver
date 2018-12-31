@@ -25,7 +25,9 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
 }
 
 resource "aws_vpc_peering_connection_options" "requester" {
-  provider = "aws.dst"
+  provider   = "aws.src"
+  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
+
   # As options can't be set until the connection has been accepted
   # create an explicit dependency on the accepter.
   vpc_peering_connection_id = "${aws_vpc_peering_connection_accepter.peer.id}"
@@ -36,8 +38,8 @@ resource "aws_vpc_peering_connection_options" "requester" {
 }
 
 resource "aws_vpc_peering_connection_options" "accepter" {
-  provider = "aws.dst"
-
+  provider                  = "aws.dst"
+  depends_on                = ["aws_vpc_peering_connection_accepter.peer"]
   vpc_peering_connection_id = "${aws_vpc_peering_connection_accepter.peer.id}"
 
   accepter {

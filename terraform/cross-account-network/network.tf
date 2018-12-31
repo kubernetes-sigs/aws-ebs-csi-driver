@@ -41,6 +41,19 @@ resource "aws_route_table" "default" {
   tags = "${map("Name", "${var.cluster_name}")}"
 }
 
+resource "aws_route" "peer_ipv4" {
+  provider = "aws.src"
+  route_table_id            = "${var.route_table_id}"
+  destination_cidr_block    = "${aws_vpc.network.cidr_block}"
+  vpc_peering_connection_id = "${aws_vpc_peering_connection.peer.id}"
+}
+
+resource "aws_route" "peer_ipv6" {
+  provider = "aws.src"
+  route_table_id            = "${var.route_table_id}"
+  destination_cidr_block    = "${aws_vpc.network.ipv6_cidr_block}"
+  vpc_peering_connection_id = "${aws_vpc_peering_connection.peer.id}"
+}
 # Subnets (one per availability zone)
 
 resource "aws_subnet" "public" {

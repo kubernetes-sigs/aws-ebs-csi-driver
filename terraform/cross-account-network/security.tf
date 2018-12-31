@@ -5,21 +5,23 @@
 # Allow Prometheus to scrape etcd metrics
 resource "aws_security_group_rule" "controller-etcd-metrics" {
   depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  provider   = "aws.src"
 
   security_group_id = "${var.controller_security_group}"
 
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 2381
-  to_port                  = 2381
+  type      = "ingress"
+  protocol  = "tcp"
+  from_port = 2381
+  to_port   = 2381
+
   # including peered VPC account ID because it's necessary for using security groups from a peered VPC
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "controller-flannel" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -27,12 +29,13 @@ resource "aws_security_group_rule" "controller-flannel" {
   from_port                = 8472
   to_port                  = 8472
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 # Allow Prometheus to scrape node-exporter daemonset
 resource "aws_security_group_rule" "controller-node-exporter" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -40,12 +43,13 @@ resource "aws_security_group_rule" "controller-node-exporter" {
   from_port                = 9100
   to_port                  = 9100
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 # Allow apiserver to access kubelets for exec, log, port-forward
 resource "aws_security_group_rule" "controller-kubelet" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -53,11 +57,12 @@ resource "aws_security_group_rule" "controller-kubelet" {
   from_port                = 10250
   to_port                  = 10250
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "controller-bgp" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -65,11 +70,12 @@ resource "aws_security_group_rule" "controller-bgp" {
   from_port                = 179
   to_port                  = 179
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "controller-ipip" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -77,11 +83,12 @@ resource "aws_security_group_rule" "controller-ipip" {
   from_port                = 0
   to_port                  = 0
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "controller-ipip-legacy" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.src"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.src"
   security_group_id = "${var.controller_security_group}"
 
   type                     = "ingress"
@@ -89,12 +96,13 @@ resource "aws_security_group_rule" "controller-ipip-legacy" {
   from_port                = 0
   to_port                  = 0
   source_security_group_id = "${data.aws_caller_identity.peer.account_id}/${aws_security_group.worker.id}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 # Worker security group
 
 resource "aws_security_group" "worker" {
-  provider = "aws.dst"
+  provider    = "aws.dst"
   name        = "${var.cluster_name}-worker"
   description = "${var.cluster_name} worker security group"
 
@@ -104,7 +112,7 @@ resource "aws_security_group" "worker" {
 }
 
 resource "aws_security_group_rule" "worker-ssh" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type        = "ingress"
@@ -115,7 +123,7 @@ resource "aws_security_group_rule" "worker-ssh" {
 }
 
 resource "aws_security_group_rule" "worker-http" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type        = "ingress"
@@ -126,7 +134,7 @@ resource "aws_security_group_rule" "worker-http" {
 }
 
 resource "aws_security_group_rule" "worker-https" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type        = "ingress"
@@ -137,8 +145,8 @@ resource "aws_security_group_rule" "worker-https" {
 }
 
 resource "aws_security_group_rule" "worker-flannel" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.dst"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type                     = "ingress"
@@ -146,10 +154,11 @@ resource "aws_security_group_rule" "worker-flannel" {
   from_port                = 8472
   to_port                  = 8472
   source_security_group_id = "${data.aws_caller_identity.master.account_id}/${var.controller_security_group}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "worker-flannel-self" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -161,7 +170,7 @@ resource "aws_security_group_rule" "worker-flannel-self" {
 
 # Allow Prometheus to scrape node-exporter daemonset
 resource "aws_security_group_rule" "worker-node-exporter" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -172,7 +181,7 @@ resource "aws_security_group_rule" "worker-node-exporter" {
 }
 
 resource "aws_security_group_rule" "ingress-health" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type        = "ingress"
@@ -184,8 +193,8 @@ resource "aws_security_group_rule" "ingress-health" {
 
 # Allow apiserver to access kubelets for exec, log, port-forward
 resource "aws_security_group_rule" "worker-kubelet" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.dst"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type                     = "ingress"
@@ -193,11 +202,12 @@ resource "aws_security_group_rule" "worker-kubelet" {
   from_port                = 10250
   to_port                  = 10250
   source_security_group_id = "${data.aws_caller_identity.master.account_id}/${var.controller_security_group}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 # Allow Prometheus to scrape kubelet metrics
 resource "aws_security_group_rule" "worker-kubelet-self" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -208,8 +218,8 @@ resource "aws_security_group_rule" "worker-kubelet-self" {
 }
 
 resource "aws_security_group_rule" "worker-bgp" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.dst"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type                     = "ingress"
@@ -217,10 +227,11 @@ resource "aws_security_group_rule" "worker-bgp" {
   from_port                = 179
   to_port                  = 179
   source_security_group_id = "${data.aws_caller_identity.master.account_id}/${var.controller_security_group}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "worker-bgp-self" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -231,8 +242,8 @@ resource "aws_security_group_rule" "worker-bgp-self" {
 }
 
 resource "aws_security_group_rule" "worker-ipip" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.dst"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type                     = "ingress"
@@ -240,10 +251,11 @@ resource "aws_security_group_rule" "worker-ipip" {
   from_port                = 0
   to_port                  = 0
   source_security_group_id = "${data.aws_caller_identity.master.account_id}/${var.controller_security_group}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "worker-ipip-self" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -254,8 +266,8 @@ resource "aws_security_group_rule" "worker-ipip-self" {
 }
 
 resource "aws_security_group_rule" "worker-ipip-legacy" {
-  depends_on = ["aws_vpc_peering_connection_accepter.peer"]
-  provider = "aws.dst"
+  depends_on        = ["aws_vpc_peering_connection_accepter.peer"]
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type                     = "ingress"
@@ -263,10 +275,11 @@ resource "aws_security_group_rule" "worker-ipip-legacy" {
   from_port                = 0
   to_port                  = 0
   source_security_group_id = "${data.aws_caller_identity.master.account_id}/${var.controller_security_group}"
+  depends_on               = ["aws_vpc_peering_connection_accepter.peer"]
 }
 
 resource "aws_security_group_rule" "worker-ipip-legacy-self" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type      = "ingress"
@@ -277,7 +290,7 @@ resource "aws_security_group_rule" "worker-ipip-legacy-self" {
 }
 
 resource "aws_security_group_rule" "worker-egress" {
-  provider = "aws.dst"
+  provider          = "aws.dst"
   security_group_id = "${aws_security_group.worker.id}"
 
   type             = "egress"

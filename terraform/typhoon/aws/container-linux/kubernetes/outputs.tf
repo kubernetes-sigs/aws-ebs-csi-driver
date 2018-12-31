@@ -9,6 +9,17 @@ output "ingress_dns_name" {
   description = "DNS name of the network load balancer for distributing traffic to Ingress controllers"
 }
 
+# Outputs for cross-account networking
+
+output "controller_security_group" {
+  value = "${aws_security_group.controller.id}"
+  description = "Controller security group ID"
+}
+
+output "route_table_id" {
+  value = "${aws_route_table.default.id}"
+  description = "VPC object of master vpc"
+}
 # Outputs for worker pools
 
 output "vpc_id" {
