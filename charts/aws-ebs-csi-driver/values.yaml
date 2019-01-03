@@ -1,0 +1,95 @@
+nameOverride: ""
+fullnameOverride: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+# NOTE: DO NOT PUT THESE KEYS IN A SHARED VALUES FILE
+## Best practices suggest a secondary values file,
+## out of source control, for secret values, included on
+## the command line explicitly.
+awsAccessKeyID: access-key-id
+awsSecretAccessKey: secret-access-id
+
+affinity: {}
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: key
+  #         operator: In
+  #         values:
+  #         - value
+
+node:
+  image:
+    repository: quay.io/k8scsi/driver-registrar
+    tag: v1.0-canary
+    pullPolicy: IfNotPresent
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+attacher:
+  image:
+    repository: quay.io/k8scsi/csi-attacher
+    tag: v1.0-canary
+    pullPolicy: Always
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+provisioner:
+  image:
+    repository: quay.io/k8scsi/csi-provisioner
+    tag: v1.0-canary
+    pullPolicy: Always
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
+
+plugin:
+  image:
+    repository: amazon/aws-ebs-csi-driver
+    tag: latest
+    pullPolicy: Always
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #  cpu: 100m
+    #  memory: 128Mi
+    # requests:
+    #  cpu: 100m
+    #  memory: 128Mi
