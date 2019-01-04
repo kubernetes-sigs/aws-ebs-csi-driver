@@ -32,9 +32,9 @@ ifdef AWS_K8S_TESTER_VPC_ID
 	VPC_ID_FLAG=--vpc-id=${AWS_K8S_TESTER_VPC_ID}
 endif
 
-CSI_FLAG=--csi=master
+PR_NUM_FLAG=
 ifdef PULL_NUMBER
-	CSI_FLAG=--csi=${PULL_NUMBER}
+	PR_NUM_FLAG=--pr-num=${PULL_NUMBER}
 endif
 
 .PHONY: aws-ebs-csi-driver
@@ -54,7 +54,7 @@ test-sanity:
 test-integration:
 	curl -L ${AWS_K8S_TESTER_DOWNLOAD_URL} -o ${AWS_K8S_TESTER_PATH}
 	chmod +x ${AWS_K8S_TESTER_PATH}
-	${AWS_K8S_TESTER_PATH} csi test integration --terminate-on-exit=true --timeout=20m ${CSI_FLAG} ${VPC_ID_FLAG}
+	${AWS_K8S_TESTER_PATH} csi test integration --terminate-on-exit=true --timeout=20m ${PR_NUM_FLAG} ${VPC_ID_FLAG}
 
 .PHONY: test-e2e
 test-e2e:
