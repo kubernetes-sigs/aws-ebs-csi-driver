@@ -22,7 +22,7 @@ LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.git
 # Hard-coded version is needed in case GitHub API rate limit is exceeded.
 # TODO: When aws-k8s-tester becomes a full release (https://developer.github.com/v3/repos/releases/#get-the-latest-release), use:
 # $(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/releases/latest | jq -r '.tag_name? // "<current version number>"')
-AWS_K8S_TESTER_VERSION?=$(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/tags | jq -r '.[0]?.name // "0.1.9"')
+AWS_K8S_TESTER_VERSION?=$(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/tags | jq -r '.[0]?.name // "0.2.0"')
 AWS_K8S_TESTER_OS_ARCH?=$(shell go env GOOS)-amd64
 AWS_K8S_TESTER_DOWNLOAD_URL?=https://github.com/aws/aws-k8s-tester/releases/download/${AWS_K8S_TESTER_VERSION}/aws-k8s-tester-${AWS_K8S_TESTER_VERSION}-${AWS_K8S_TESTER_OS_ARCH}
 AWS_K8S_TESTER_PATH?=/tmp/aws-k8s-tester
