@@ -72,7 +72,7 @@ const (
 // Tags
 const (
 	// VolumeNameTagKey is the key value that refers to the volume's name.
-	VolumeNameTagKey = "com.amazon.aws.csi.volume"
+	VolumeNameTagKey = "CSIVolumeName"
 )
 
 var (
