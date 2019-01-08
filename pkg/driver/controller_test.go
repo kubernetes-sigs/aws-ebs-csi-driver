@@ -18,12 +18,18 @@ package driver
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	expZone   = "us-west-2b"
+	expFsType = "ext2"
 )
 
 func TestCreateVolume(t *testing.T) {
@@ -215,6 +221,49 @@ func TestCreateVolume(t *testing.T) {
 				VolumeContext: map[string]string{"fsType": ""},
 			},
 		},
+		{
+			name: "success when volume exists and contains VolumeContext and AccessibleTopology",
+			req: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"fsType": expFsType,
+				},
+				AccessibilityRequirements: &csi.TopologyRequirement{
+					Requisite: []*csi.Topology{
+						{
+							Segments: map[string]string{topologyKey: expZone},
+						},
+					},
+				},
+			},
+			extraReq: &csi.CreateVolumeRequest{
+				Name:               "test-vol",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters: map[string]string{
+					"fsType": expFsType,
+				},
+				AccessibilityRequirements: &csi.TopologyRequirement{
+					Requisite: []*csi.Topology{
+						{
+							Segments: map[string]string{topologyKey: expZone},
+						},
+					},
+				},
+			},
+			expVol: &csi.Volume{
+				CapacityBytes: stdVolSize,
+				VolumeId:      "vol-test",
+				VolumeContext: map[string]string{"fsType": expFsType},
+				AccessibleTopology: []*csi.Topology{
+					{
+						Segments: map[string]string{topologyKey: expZone},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -270,6 +319,12 @@ func TestCreateVolume(t *testing.T) {
 		if tc.expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
 			t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 		}
+		if tc.expVol.GetAccessibleTopology() != nil {
+			if !reflect.DeepEqual(tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
+				t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
+			}
+		}
+
 	}
 }
 
@@ -317,7 +372,6 @@ func TestDeleteVolume(t *testing.T) {
 }
 
 func TestPickAvailabilityZone(t *testing.T) {
-	expZone := "us-west-2b"
 	testCases := []struct {
 		name        string
 		requirement *csi.TopologyRequirement

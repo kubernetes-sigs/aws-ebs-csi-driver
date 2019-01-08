@@ -86,14 +86,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
+	volumeParams := req.GetParameters()
+	fsType := volumeParams["fsType"]
+
 	// volume exists already
 	if disk != nil {
+		disk.FsType = fsType
 		return newCreateVolumeResponse(disk), nil
 	}
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
-	volumeParams := req.GetParameters()
 	volumeType := volumeParams["type"]
 	iopsPerGB := 0
 	if volumeType == cloud.VolumeTypeIO1 {
@@ -125,7 +128,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 	}
-	fsType := volumeParams["fsType"]
 	disk.FsType = fsType
 	return newCreateVolumeResponse(disk), nil
 }
