@@ -18,6 +18,7 @@ package driver
 
 import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
@@ -40,5 +41,6 @@ func NewFakeDriver(endpoint string) *Driver {
 		nodeID:   cloud.GetMetadata().GetInstanceID(),
 		cloud:    cloud,
 		mounter:  NewFakeMounter(),
+		inFlight: internal.NewInFlight(),
 	}
 }

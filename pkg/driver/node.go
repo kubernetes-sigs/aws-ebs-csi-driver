@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
+	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 const (
@@ -52,6 +53,7 @@ var (
 
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	klog.V(4).Infof("NodeStageVolume: called with args %+v", *req)
+
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -71,30 +73,52 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
+	if ok := d.inFlight.Insert(req); !ok {
+		klog.Infof("NodeStageVolume: volume=%q operation is already in progress", volumeID)
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+	defer func() {
+		klog.Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
+		d.inFlight.Delete(req)
+	}()
+
 	source, ok := req.PublishContext["devicePath"]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
 
-	// TODO: consider replacing IsLikelyNotMountPoint by IsNotMountPoint
-	notMnt, err := d.mounter.Interface.IsLikelyNotMountPoint(target)
+	exists, err := d.mounter.Interface.ExistsPath(target)
 	if err != nil {
-		if os.IsNotExist(err) {
-			if errMkDir := d.mounter.Interface.MakeDir(target); errMkDir != nil {
-				msg := fmt.Sprintf("could not create target dir %q: %v", target, errMkDir)
-				return nil, status.Error(codes.Internal, msg)
-			}
-			notMnt = true
-		} else {
-			msg := fmt.Sprintf("could not determine if %q is valid mount point: %v", target, err)
+		msg := fmt.Sprintf("failed to check if target %q exists: %v", target, err)
+		return nil, status.Error(codes.Internal, msg)
+	}
+	// When exists is true it means target path was created but device isn't mounted.
+	// We don't want to do anything in that case and let the operation proceed.
+	// Otherwise we need to create the target directory.
+	if !exists {
+		// If target path does not exist we need to create the directory where volume will be staged
+		klog.Infof("NodeStageVolume: creating target dir %q", target)
+		if err = d.mounter.Interface.MakeDir(target); err != nil {
+			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
 			return nil, status.Error(codes.Internal, msg)
 		}
 	}
 
-	if !notMnt {
-		msg := fmt.Sprintf("target %q is not a valid mount point", target)
-		return nil, status.Error(codes.InvalidArgument, msg)
+	// Check if a device is mounted in target directory
+	device, _, err := mount.GetDeviceNameFromMount(d.mounter, target)
+	if err != nil {
+		msg := fmt.Sprintf("failed to check if volume is already mounted: %v", err)
+		return nil, status.Error(codes.Internal, msg)
 	}
+
+	// This operation (NodeStageVolume) MUST be idempotent.
+	// If the volume corresponding to the volume_id is already staged to the staging_target_path,
+	// and is identical to the specified volume_capability the Plugin MUST reply 0 OK.
+	if device == source {
+		klog.Infof("NodeStageVolume: volume=%q already staged", volumeID)
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
 	// Get fs type that the volume will be formatted with
 	attributes := req.GetVolumeContext()
 	fsType, exists := attributes["fsType"]
