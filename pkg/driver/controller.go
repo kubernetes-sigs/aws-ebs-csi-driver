@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
@@ -117,9 +118,28 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		kmsKeyId = volumeParams[KmsKeyIdKey]
 	}
 
+	tags := map[string]string{}
+	if additionalTags := strings.Split(volumeParams["additionalTags"], ","); len(additionalTags) > 0 {
+		for _, tag := range additionalTags {
+			if tag == "" {
+				continue
+			}
+			splitTag := strings.Split(tag, "=")
+			if len(splitTag) > 2 {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid format for additionalTags, must be key= or key=value")
+			}
+			key, value := splitTag[0], splitTag[1]
+			if key == cloud.VolumeNameTagKey {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid additionalTags provided, cannot contain key %q", cloud.VolumeNameTagKey)
+			}
+			tags[key] = value
+			klog.V(4).Infof("DEBUG: tags[]: %+v", tags)
+		}
+	}
+
 	opts := &cloud.DiskOptions{
 		CapacityBytes:    volSizeBytes,
-		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
+		AdditionalTags:   tags,
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,

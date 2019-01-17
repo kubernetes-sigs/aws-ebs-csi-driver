@@ -92,7 +92,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			CapacityBytes:    defaultDiskSizeBytes,
 			VolumeType:       defaultVoluemType,
 			AvailabilityZone: availabilityZone,
-			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
 		}
 		metadata := e2eMetdataService{availabilityZone: availabilityZone}
 		var err error
@@ -100,7 +99,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
-		disk, err := cloud.CreateDisk(context.Background(), "", diskOptions)
+		disk, err := cloud.CreateDisk(context.Background(), dummyVolumeName, diskOptions)
 		if err != nil {
 			Fail(fmt.Sprintf("could not provision a volume: %v", err))
 		}

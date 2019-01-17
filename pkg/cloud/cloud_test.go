@@ -19,8 +19,10 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -52,10 +54,8 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
 			},
 			expDisk: &Disk{
-				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: defaultZone,
 			},
@@ -66,11 +66,9 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
-				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
 			},
@@ -81,13 +79,27 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: expZone,
 				Encrypted:        true,
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 			},
 			expDisk: &Disk{
-				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: normal with additionalTags",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				AdditionalTags:   map[string]string{VolumeNameTagKey: "vol-test", "foo": "bar", "bar": "foo"},
+				AvailabilityZone: expZone,
+				Encrypted:        true,
+				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+			},
+			expDisk: &Disk{
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
 			},
@@ -98,7 +110,6 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: expZone,
 			},
 			expErr:             fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
@@ -110,7 +121,6 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
 			expErr:             fmt.Errorf("could not create volume in EC2: DescribeVolumes generic error"),
@@ -122,7 +132,6 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
 			expErr: fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
@@ -132,7 +141,6 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: expZone,
 				SnapshotID:       "snapshot-test",
 			},
@@ -155,9 +163,10 @@ func TestCreateDisk(t *testing.T) {
 			if volState == "" {
 				volState = "available"
 			}
-
+			r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+			volumeID := fmt.Sprintf("vol-%d", r1.Uint64())
 			vol := &ec2.Volume{
-				VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+				VolumeId:         &volumeID,
 				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
 				State:            aws.String(volState),
 				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
@@ -187,9 +196,6 @@ func TestCreateDisk(t *testing.T) {
 				} else {
 					if tc.expDisk.CapacityGiB != disk.CapacityGiB {
 						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", tc.expDisk.CapacityGiB, disk.CapacityGiB)
-					}
-					if tc.expDisk.VolumeID != disk.VolumeID {
-						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", tc.expDisk.VolumeID, disk.VolumeID)
 					}
 					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
 						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)

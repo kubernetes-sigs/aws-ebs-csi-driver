@@ -54,6 +54,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
 | "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
 | "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
+| "additionalTags"  |                  |          | Comma separated key=value list of tags to set on the EBS volume |
 
 ## Prerequisites
 ### Kubernetes

@@ -57,13 +57,17 @@ func (c *FakeCloudProvider) GetMetadata() MetadataService {
 
 func (c *FakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	tags := map[string]string{VolumeNameTagKey: volumeName}
+	for k, v := range diskOptions.AdditionalTags {
+		tags[k] = v
+	}
 	d := &fakeDisk{
 		Disk: &Disk{
 			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
 			CapacityGiB:      util.BytesToGiB(diskOptions.CapacityBytes),
 			AvailabilityZone: diskOptions.AvailabilityZone,
 		},
-		tags: diskOptions.Tags,
+		tags: tags,
 	}
 	c.disks[volumeName] = d
 	return d.Disk, nil

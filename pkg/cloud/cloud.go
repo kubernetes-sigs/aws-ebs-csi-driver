@@ -50,6 +50,8 @@ const (
 
 var (
 	ValidVolumeTypes = []string{VolumeTypeIO1, VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1}
+	// VolumeNameTagKey is the key value that refers to the volume's name.
+	VolumeNameTagKey = "CSIVolumeName"
 )
 
 // AWS provisioning limits.
@@ -71,8 +73,6 @@ const (
 
 // Tags
 const (
-	// VolumeNameTagKey is the key value that refers to the volume's name.
-	VolumeNameTagKey = "CSIVolumeName"
 	// SnapshotNameTagKey is the key value that refers to the snapshot's name.
 	SnapshotNameTagKey = "CSIVolumeSnapshotName"
 )
@@ -104,7 +104,7 @@ type Disk struct {
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
 	CapacityBytes    int64
-	Tags             map[string]string
+	AdditionalTags   map[string]string
 	VolumeType       string
 	IOPSPerGB        int
 	AvailabilityZone string
@@ -240,8 +240,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	var tags []*ec2.Tag
-	for key, value := range diskOptions.Tags {
-		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
+	tags = append(tags, &ec2.Tag{Key: &VolumeNameTagKey, Value: &volumeName})
+	for key, value := range diskOptions.AdditionalTags {
+		k, v := key, value
+		tags = append(tags, &ec2.Tag{Key: &k, Value: &v})
 	}
 	tagSpec := ec2.TagSpecification{
 		ResourceType: aws.String("volume"),
