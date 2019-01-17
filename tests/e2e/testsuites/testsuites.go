@@ -15,18 +15,31 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
+	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	imageutils "k8s.io/kubernetes/test/utils/image"
+)
+
+const (
+	execTimeout = 10 * time.Second
+	// Some pods can take much longer to get ready due to volume attach/detach latency.
+	slowPodStartTimeout = 15 * time.Minute
+	// Description that will printed during tests
+	failedConditionDescription = "Error status code"
 )
 
 type TestStorageClass struct {
@@ -58,6 +71,27 @@ func (t *TestStorageClass) Cleanup() {
 	framework.ExpectNoError(err)
 }
 
+type TestPreProvisionedPersistentVolume struct {
+	client                    clientset.Interface
+	persistentVolume          *v1.PersistentVolume
+	requestedPersistentVolume *v1.PersistentVolume
+}
+
+func NewTestPreProvisionedPersistentVolume(c clientset.Interface, pv *v1.PersistentVolume) *TestPreProvisionedPersistentVolume {
+	return &TestPreProvisionedPersistentVolume{
+		client:                    c,
+		requestedPersistentVolume: pv,
+	}
+}
+
+func (pv *TestPreProvisionedPersistentVolume) Create() v1.PersistentVolume {
+	var err error
+	By("creating a PV")
+	pv.persistentVolume, err = pv.client.CoreV1().PersistentVolumes().Create(pv.requestedPersistentVolume)
+	framework.ExpectNoError(err)
+	return *pv.persistentVolume
+}
+
 type TestPersistentVolumeClaim struct {
 	client                         clientset.Interface
 	claimSize                      string
@@ -77,14 +111,23 @@ func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claim
 	}
 }
 
-func (t *TestPersistentVolumeClaim) Create() v1.PersistentVolumeClaim {
+func (t *TestPersistentVolumeClaim) Create() {
 	var err error
 
 	By("creating a PVC")
-	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, t.storageClass.Name, t.claimSize)
+	storageClassName := ""
+	if t.storageClass != nil {
+		storageClassName = t.storageClass.Name
+	}
+	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize)
 	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Create(t.requestedPersistentVolumeClaim)
 	framework.ExpectNoError(err)
+}
 
+func (t *TestPersistentVolumeClaim) WaitForBound() v1.PersistentVolumeClaim {
+	var err error
+
+	By(fmt.Sprintf("waiting for PVC to be in phase %q", v1.ClaimBound))
 	err = framework.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, t.client, t.namespace.Name, t.persistentVolumeClaim.Name, framework.Poll, framework.ClaimProvisionTimeout)
 	framework.ExpectNoError(err)
 
@@ -138,8 +181,23 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 	Expect(t.persistentVolume.Spec.AccessModes).To(Equal(expectedAccessModes))
 	Expect(t.persistentVolume.Spec.ClaimRef.Name).To(Equal(t.persistentVolumeClaim.ObjectMeta.Name))
 	Expect(t.persistentVolume.Spec.ClaimRef.Namespace).To(Equal(t.persistentVolumeClaim.ObjectMeta.Namespace))
-	Expect(t.persistentVolume.Spec.PersistentVolumeReclaimPolicy).To(Equal(*t.storageClass.ReclaimPolicy))
-	Expect(t.persistentVolume.Spec.MountOptions).To(Equal(t.storageClass.MountOptions))
+	// If storageClass is nil, PV was pre-provisioned with these values already set
+	if t.storageClass != nil {
+		Expect(t.persistentVolume.Spec.PersistentVolumeReclaimPolicy).To(Equal(*t.storageClass.ReclaimPolicy))
+		Expect(t.persistentVolume.Spec.MountOptions).To(Equal(t.storageClass.MountOptions))
+		if *t.storageClass.VolumeBindingMode == storagev1.VolumeBindingWaitForFirstConsumer {
+			Expect(t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values).
+				To(HaveLen(1))
+		}
+		if len(t.storageClass.AllowedTopologies) > 0 {
+			Expect(t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Key).
+				To(Equal(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key))
+			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values {
+				Expect(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values).To(ContainElement(v))
+			}
+
+		}
+	}
 }
 
 func (t *TestPersistentVolumeClaim) Cleanup() {
@@ -153,10 +211,155 @@ func (t *TestPersistentVolumeClaim) Cleanup() {
 	// kubelet is slowly cleaning up the previous pod, however it should succeed
 	// in a couple of minutes.
 	if t.persistentVolume.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete {
-		By(fmt.Sprintf("deleting the claim's PV %q", t.persistentVolume.Name))
-		err = framework.WaitForPersistentVolumeDeleted(t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
+		By(fmt.Sprintf("waiting for claim's PV %q to be deleted", t.persistentVolume.Name))
+		err := framework.WaitForPersistentVolumeDeleted(t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
 		framework.ExpectNoError(err)
 	}
+	// Wait for the PVC to be deleted
+	err = framework.WaitForPersistentVolumeClaimDeleted(t.client, t.persistentVolumeClaim.Name, t.namespace.Name, 5*time.Second, 5*time.Minute)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestPersistentVolumeClaim) ReclaimPolicy() v1.PersistentVolumeReclaimPolicy {
+	return t.persistentVolume.Spec.PersistentVolumeReclaimPolicy
+}
+
+func (t *TestPersistentVolumeClaim) WaitForPersistentVolumePhase(phase v1.PersistentVolumePhase) {
+	err := framework.WaitForPersistentVolumePhase(phase, t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestPersistentVolumeClaim) DeleteBoundPersistentVolume() {
+	By(fmt.Sprintf("deleting PV %q", t.persistentVolume.Name))
+	err := framework.DeletePersistentVolume(t.client, t.persistentVolume.Name)
+	framework.ExpectNoError(err)
+	By(fmt.Sprintf("waiting for claim's PV %q to be deleted", t.persistentVolume.Name))
+	err = framework.WaitForPersistentVolumeDeleted(t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestPersistentVolumeClaim) DeleteBackingVolume(cloud awscloud.Cloud) {
+	volumeID := t.persistentVolume.Spec.CSI.VolumeHandle
+	By(fmt.Sprintf("deleting EBS volume %q", volumeID))
+	ok, err := cloud.DeleteDisk(context.Background(), volumeID)
+	if err != nil || !ok {
+		Fail(fmt.Sprintf("could not delete volume %q: %v", volumeID, err))
+	}
+}
+
+type TestDeployment struct {
+	client     clientset.Interface
+	deployment *apps.Deployment
+	namespace  *v1.Namespace
+	podName    string
+}
+
+func NewTestDeployment(c clientset.Interface, ns *v1.Namespace, command string, pvc *v1.PersistentVolumeClaim, volumeName, mountPath string, readOnly bool) *TestDeployment {
+	generateName := "ebs-volume-tester-"
+	selectorValue := fmt.Sprintf("%s%d", generateName, rand.Int())
+	replicas := int32(1)
+	return &TestDeployment{
+		client:    c,
+		namespace: ns,
+		deployment: &apps.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: generateName,
+			},
+			Spec: apps.DeploymentSpec{
+				Replicas: &replicas,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": selectorValue},
+				},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"app": selectorValue},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{
+							{
+								Name:    "volume-tester",
+								Image:   imageutils.GetE2EImage(imageutils.BusyBox),
+								Command: []string{"/bin/sh"},
+								Args:    []string{"-c", command},
+								VolumeMounts: []v1.VolumeMount{
+									{
+										Name:      volumeName,
+										MountPath: mountPath,
+										ReadOnly:  readOnly,
+									},
+								},
+							},
+						},
+						RestartPolicy: v1.RestartPolicyAlways,
+						Volumes: []v1.Volume{
+							{
+								Name: volumeName,
+								VolumeSource: v1.VolumeSource{
+									PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+										ClaimName: pvc.Name,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *TestDeployment) Create() {
+	var err error
+	t.deployment, err = t.client.AppsV1().Deployments(t.namespace.Name).Create(t.deployment)
+	framework.ExpectNoError(err)
+	err = framework.WaitForDeploymentComplete(t.client, t.deployment)
+	framework.ExpectNoError(err)
+	pods, err := framework.GetPodsForDeployment(t.client, t.deployment)
+	framework.ExpectNoError(err)
+	// always get first pod as there should only be one
+	t.podName = pods.Items[0].Name
+}
+
+func (t *TestDeployment) WaitForPodReady() {
+	pods, err := framework.GetPodsForDeployment(t.client, t.deployment)
+	framework.ExpectNoError(err)
+	// always get first pod as there should only be one
+	pod := pods.Items[0]
+	t.podName = pod.Name
+	err = framework.WaitForPodRunningInNamespace(t.client, &pod)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestDeployment) Exec(command []string, expectedString string) {
+	_, err := framework.LookForStringInPodExec(t.namespace.Name, t.podName, command, expectedString, execTimeout)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestDeployment) DeletePodAndWait() {
+	framework.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
+	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(t.podName, nil)
+	if err != nil {
+		if !apierrs.IsNotFound(err) {
+			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %v", t.podName, err))
+		}
+		return
+	}
+}
+
+func (t *TestDeployment) Cleanup() {
+	framework.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
+	body, err := t.Logs()
+	if err != nil {
+		framework.Logf("Error getting logs for pod %s: %v", t.podName, err)
+	} else {
+		framework.Logf("Pod %s has the following logs: %s", t.podName, body)
+	}
+	err = t.client.AppsV1().Deployments(t.namespace.Name).Delete(t.deployment.Name, nil)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestDeployment) Logs() ([]byte, error) {
+	return podLogs(t.client, t.podName, t.namespace.Name)
 }
 
 type TestPod struct {
@@ -171,7 +374,7 @@ func NewTestPod(c clientset.Interface, ns *v1.Namespace, command string) *TestPo
 		namespace: ns,
 		pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "pvc-volume-tester-",
+				GenerateName: "ebs-volume-tester-",
 			},
 			Spec: v1.PodSpec{
 				Containers: []v1.Container{
@@ -195,14 +398,42 @@ func (t *TestPod) Create() {
 
 	t.pod, err = t.client.CoreV1().Pods(t.namespace.Name).Create(t.pod)
 	framework.ExpectNoError(err)
-	err = framework.WaitForPodSuccessInNamespaceSlow(t.client, t.pod.Name, t.namespace.Name)
+}
+
+func (t *TestPod) WaitForSuccess() {
+	err := framework.WaitForPodSuccessInNamespaceSlow(t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 }
 
-func (t *TestPod) SetupVolume(pvc *v1.PersistentVolumeClaim, name, mountPath string) {
+func (t *TestPod) WaitForRunning() {
+	err := framework.WaitForPodRunningInNamespace(t.client, t.pod)
+	framework.ExpectNoError(err)
+}
+
+// Ideally this would be in "k8s.io/kubernetes/test/e2e/framework"
+// Similar to framework.WaitForPodSuccessInNamespaceSlow
+var podFailedCondition = func(pod *v1.Pod) (bool, error) {
+	switch pod.Status.Phase {
+	case v1.PodFailed:
+		By("Saw pod failure")
+		return true, nil
+	case v1.PodSucceeded:
+		return true, fmt.Errorf("pod %q successed with reason: %q, message: %q", pod.Name, pod.Status.Reason, pod.Status.Message)
+	default:
+		return false, nil
+	}
+}
+
+func (t *TestPod) WaitForFailure() {
+	err := framework.WaitForPodCondition(t.client, t.namespace.Name, t.pod.Name, failedConditionDescription, slowPodStartTimeout, podFailedCondition)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestPod) SetupVolume(pvc *v1.PersistentVolumeClaim, name, mountPath string, readOnly bool) {
 	volumeMount := v1.VolumeMount{
 		Name:      name,
 		MountPath: mountPath,
+		ReadOnly:  readOnly,
 	}
 	t.pod.Spec.Containers[0].VolumeMounts = append(t.pod.Spec.Containers[0].VolumeMounts, volumeMount)
 
@@ -211,20 +442,35 @@ func (t *TestPod) SetupVolume(pvc *v1.PersistentVolumeClaim, name, mountPath str
 		VolumeSource: v1.VolumeSource{
 			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 				ClaimName: pvc.Name,
-				ReadOnly:  false,
 			},
 		},
 	}
 	t.pod.Spec.Volumes = append(t.pod.Spec.Volumes, volume)
 }
 
-func (p *TestPod) Cleanup() {
-	framework.Logf("deleting Pod %q/%q", p.namespace.Name, p.pod.Name)
-	body, err := p.client.CoreV1().Pods(p.namespace.Name).GetLogs(p.pod.Name, &v1.PodLogOptions{}).Do().Raw()
+func (t *TestPod) SetNodeSelector(nodeSelector map[string]string) {
+	t.pod.Spec.NodeSelector = nodeSelector
+}
+
+func (t *TestPod) Cleanup() {
+	cleanupPodOrFail(t.client, t.pod.Name, t.namespace.Name)
+}
+
+func (t *TestPod) Logs() ([]byte, error) {
+	return podLogs(t.client, t.pod.Name, t.namespace.Name)
+}
+
+func cleanupPodOrFail(client clientset.Interface, name, namespace string) {
+	framework.Logf("deleting Pod %q/%q", namespace, name)
+	body, err := podLogs(client, name, namespace)
 	if err != nil {
-		framework.Logf("Error getting logs for pod %s: %v", p.pod.Name, err)
+		framework.Logf("Error getting logs for pod %s: %v", name, err)
 	} else {
-		framework.Logf("Pod %s has the following logs: %s", p.pod.Name, body)
+		framework.Logf("Pod %s has the following logs: %s", name, body)
 	}
-	framework.DeletePodOrFail(p.client, p.namespace.Name, p.pod.Name)
+	framework.DeletePodOrFail(client, namespace, name)
+}
+
+func podLogs(client clientset.Interface, name, namespace string) ([]byte, error) {
+	return client.CoreV1().Pods(namespace).GetLogs(name, &v1.PodLogOptions{}).Do().Raw()
 }

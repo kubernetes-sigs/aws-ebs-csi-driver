@@ -16,4 +16,6 @@
 
 set -euo pipefail
 
-ginkgo -p -v --focus ebs-csi-e2e tests/e2e
+NODES=${GINKGO_NODES:-32}
+
+ginkgo -p -nodes=$NODES -v --focus ebs-csi-e2e tests/e2e

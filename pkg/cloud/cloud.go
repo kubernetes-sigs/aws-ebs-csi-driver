@@ -129,6 +129,7 @@ type Cloud interface {
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
+	WaitForAttachmentState(ctx context.Context, volumeID, state string) error
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
 	IsExistInstance(ctx context.Context, nodeID string) (success bool)
@@ -143,16 +144,30 @@ type cloud struct {
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
+// Pass in nil metadata to use an auto created EC2Metadata service
 // It panics if session is invalid
 func NewCloud() (Cloud, error) {
-	sess := session.Must(session.NewSession(&aws.Config{}))
-	svc := ec2metadata.New(sess)
+	svc := newEC2MetadataSvc()
 
+	var err error
 	metadata, err := NewMetadataService(svc)
 	if err != nil {
 		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
 	}
 
+	return newEC2Cloud(metadata, svc)
+}
+
+func NewCloudWithMetadata(metadata MetadataService) (Cloud, error) {
+	return newEC2Cloud(metadata, newEC2MetadataSvc())
+}
+
+func newEC2MetadataSvc() *ec2metadata.EC2Metadata {
+	sess := session.Must(session.NewSession(&aws.Config{}))
+	return ec2metadata.New(sess)
+}
+
+func newEC2Cloud(metadata MetadataService, svc *ec2metadata.EC2Metadata) (Cloud, error) {
 	provider := []credentials.Provider{
 		&credentials.EnvProvider{},
 		&ec2rolecreds.EC2RoleProvider{Client: svc},
@@ -297,7 +312,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	}
 
 	// This is the only situation where we taint the device
-	if err := c.waitForAttachmentState(ctx, volumeID, "attached"); err != nil {
+	if err := c.WaitForAttachmentState(ctx, volumeID, "attached"); err != nil {
 		device.Taint()
 		return "", err
 	}
@@ -336,11 +351,56 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
-	if err := c.waitForAttachmentState(ctx, volumeID, "detached"); err != nil {
+	if err := c.WaitForAttachmentState(ctx, volumeID, "detached"); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// WaitForAttachmentState polls until the attachment status is the expected value.
+func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
+	// Most attach/detach operations on AWS finish within 1-4 seconds.
+	// By using 1 second starting interval with a backoff of 1.8,
+	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
+	// In total we wait for 2601 seconds.
+	backoff := wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   1.8,
+		Steps:    13,
+	}
+
+	verifyVolumeFunc := func() (bool, error) {
+		request := &ec2.DescribeVolumesInput{
+			VolumeIds: []*string{
+				aws.String(volumeID),
+			},
+		}
+
+		volume, err := c.getVolume(ctx, request)
+		if err != nil {
+			return false, err
+		}
+
+		if len(volume.Attachments) == 0 {
+			if state == "detached" {
+				return true, nil
+			}
+		}
+
+		for _, a := range volume.Attachments {
+			if a.State == nil {
+				klog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
+				continue
+			}
+			if *a.State == state {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
@@ -454,51 +514,6 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	}
 
 	return instances[0], nil
-}
-
-// waitForAttachmentStatus polls until the attachment status is the expected value.
-func (c *cloud) waitForAttachmentState(ctx context.Context, volumeID, state string) error {
-	// Most attach/detach operations on AWS finish within 1-4 seconds.
-	// By using 1 second starting interval with a backoff of 1.8,
-	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
-	// In total we wait for 2601 seconds.
-	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.8,
-		Steps:    13,
-	}
-
-	verifyVolumeFunc := func() (bool, error) {
-		request := &ec2.DescribeVolumesInput{
-			VolumeIds: []*string{
-				aws.String(volumeID),
-			},
-		}
-
-		volume, err := c.getVolume(ctx, request)
-		if err != nil {
-			return false, err
-		}
-
-		if len(volume.Attachments) == 0 {
-			if state == "detached" {
-				return true, nil
-			}
-		}
-
-		for _, a := range volume.Attachments {
-			if a.State == nil {
-				klog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
-				continue
-			}
-			if *a.State == state {
-				return true, nil
-			}
-		}
-		return false, nil
-	}
-
-	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
 
 // waitForVolume waits for volume to be in the "available" state.

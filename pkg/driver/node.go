@@ -265,7 +265,7 @@ func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (
 	m := d.cloud.GetMetadata()
 
 	topology := &csi.Topology{
-		Segments: map[string]string{topologyKey: m.GetAvailabilityZone()},
+		Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
 	}
 
 	return &csi.NodeGetInfoResponse{

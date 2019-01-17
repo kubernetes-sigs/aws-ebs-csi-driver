@@ -83,6 +83,10 @@ func (c *FakeCloudProvider) DetachDisk(ctx context.Context, volumeID, nodeID str
 	return nil
 }
 
+func (c *FakeCloudProvider) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
+	return nil
+}
+
 func (c *FakeCloudProvider) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
