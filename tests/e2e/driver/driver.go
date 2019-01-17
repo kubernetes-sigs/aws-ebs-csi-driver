@@ -20,18 +20,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type PVTestDriver interface {
+	DynamicPVTestDriver
+	PreProvisionedVolumeTestDriver
+}
+
 // DynamicPVTestDriver represents an interface for a CSI driver that supports DynamicPV
 type DynamicPVTestDriver interface {
-	// GetDynamicProvisionStorageClass returns a StorageClass dynamic provision Persistent Volume.
-	GetDynamicProvisionStorageClass(parameters map[string]string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, namespace string) *storagev1.StorageClass
+	// GetDynamicProvisionStorageClass returns a StorageClass dynamic provision Persistent Volume
+	GetDynamicProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass
+}
+
+// PreProvisionedVolumeTestDriver represents an interface for a CSI driver that supports pre-provisioned volume
+type PreProvisionedVolumeTestDriver interface {
+	// GetPersistentVolume returns a PersistentVolume with pre-provisioned volumeHandle
+	GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume
 }
 
 func getStorageClass(
 	generateName string,
 	provisioner string,
 	parameters map[string]string,
+	mountOptions []string,
 	reclaimPolicy *v1.PersistentVolumeReclaimPolicy,
 	bindingMode *storagev1.VolumeBindingMode,
+	allowedTopologies []v1.TopologySelectorTerm,
 ) *storagev1.StorageClass {
 	if reclaimPolicy == nil {
 		defaultReclaimPolicy := v1.PersistentVolumeReclaimDelete
@@ -47,7 +60,9 @@ func getStorageClass(
 		},
 		Provisioner:       provisioner,
 		Parameters:        parameters,
+		MountOptions:      mountOptions,
 		ReclaimPolicy:     reclaimPolicy,
 		VolumeBindingMode: bindingMode,
+		AllowedTopologies: allowedTopologies,
 	}
 }

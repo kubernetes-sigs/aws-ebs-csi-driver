@@ -233,7 +233,7 @@ func TestCreateVolume(t *testing.T) {
 				AccessibilityRequirements: &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{
 						{
-							Segments: map[string]string{topologyKey: expZone},
+							Segments: map[string]string{TopologyKey: expZone},
 						},
 					},
 				},
@@ -248,7 +248,7 @@ func TestCreateVolume(t *testing.T) {
 				AccessibilityRequirements: &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{
 						{
-							Segments: map[string]string{topologyKey: expZone},
+							Segments: map[string]string{TopologyKey: expZone},
 						},
 					},
 				},
@@ -259,7 +259,7 @@ func TestCreateVolume(t *testing.T) {
 				VolumeContext: map[string]string{"fsType": expFsType},
 				AccessibleTopology: []*csi.Topology{
 					{
-						Segments: map[string]string{topologyKey: expZone},
+						Segments: map[string]string{TopologyKey: expZone},
 					},
 				},
 			},
@@ -382,12 +382,12 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{topologyKey: expZone},
+						Segments: map[string]string{TopologyKey: expZone},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
-						Segments: map[string]string{topologyKey: expZone},
+						Segments: map[string]string{TopologyKey: expZone},
 					},
 				},
 			},
@@ -398,7 +398,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{topologyKey: expZone},
+						Segments: map[string]string{TopologyKey: expZone},
 					},
 				},
 			},
