@@ -1,16 +1,16 @@
 kind: DaemonSet
 apiVersion: apps/v1beta2
 metadata:
-  name: csi-node
+  name: ebs-csi-node
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: csi-node
+      app: ebs-csi-node
   template:
     metadata:
       labels:
-        app: csi-node
+        app: ebs-csi-node
     spec:
       hostNetwork: true
       priorityClassName: system-node-critical
@@ -30,16 +30,6 @@ spec:
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: key_id
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: access_key
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
