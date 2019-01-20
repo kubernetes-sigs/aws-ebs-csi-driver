@@ -108,15 +108,15 @@ roleRef:
 kind: StatefulSet
 apiVersion: apps/v1beta1
 metadata:
-  name: csi-controller
+  name: ebs-csi-controller
   namespace: kube-system
 spec:
-  serviceName: csi-controller
+  serviceName: ebs-csi-controller
   replicas: 1
   template:
     metadata:
       labels:
-        app: csi-controller
+        app: ebs-csi-controller
     spec:
       serviceAccount: csi-controller-sa
       priorityClassName: system-cluster-critical
