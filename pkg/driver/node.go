@@ -74,8 +74,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if ok := d.inFlight.Insert(req); !ok {
-		klog.Infof("NodeStageVolume: volume=%q operation is already in progress", volumeID)
-		return &csi.NodeStageVolumeResponse{}, nil
+		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
+		return nil, status.Error(codes.Internal, msg)
 	}
 	defer func() {
 		klog.Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
