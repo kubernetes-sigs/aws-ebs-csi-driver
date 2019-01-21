@@ -14,8 +14,93 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -euo pipefail
+set -uo pipefail
 
+OS_ARCH=$(go env GOOS)-amd64
+TEST_ID=$RANDOM
+CLUSTER_NAME=test-cluster-$TEST_ID
+TEST_DIR=/tmp/ebs-e2e-test
+BASE_DIR=$(dirname $0)
+REGION=${AWS_REGION-us-east-1}
+ZONES=${AWS_AVAILABILITY_ZONES-us-east-1a,us-east-1b,us-east-1c}
+FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
 
-ginkgo -p -nodes=$NODES -v --focus ebs-csi-e2e tests/e2e
+echo "Testing in region: $REGION and zones: $ZONES"
+
+KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.11.0/kops-$OS_ARCH
+KOPS_PATH=$TEST_DIR/kops
+KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
+
+# Download kops if not yet
+if [[ ! -e $KOPS_PATH ]]; then
+    mkdir -p $TEST_DIR 
+    echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
+    curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
+fi
+
+chmod +x $KOPS_PATH
+
+echo "Creating cluster $CLUSTER_NAME"
+CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
+$KOPS_PATH create cluster --state $KOPS_STATE_FILE \
+    --zones $ZONES \
+    --node-count=3 \
+    --kubernetes-version=1.13.0 \
+        $CLUSTER_NAME.k8s.local
+$KOPS_PATH get cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local -o yaml > $CLUSTER_YAML_PATH
+cat $BASE_DIR/feature-gates.yaml >> $CLUSTER_YAML_PATH
+cat $BASE_DIR/additional-policies.yaml >> $CLUSTER_YAML_PATH
+$KOPS_PATH replace --state $KOPS_STATE_FILE -f $CLUSTER_YAML_PATH
+$KOPS_PATH update cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local --yes
+
+# Wait for cluster creation
+while [[ 1 ]]; do
+    $KOPS_PATH validate cluster --state $KOPS_STATE_FILE
+    ret=$?
+    if [[ $ret -eq 0 ]]; then
+        break
+    else
+        echo "Waiting cluster to be created"
+        sleep 30
+    fi
+done;
+
+# Push test driver image
+eval $(aws ecr get-login --region $REGION --no-include-email)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+IMAGE_TAG=$TEST_ID
+IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver:$IMAGE_TAG
+docker build -t $IMAGE_NAME .
+docker push $IMAGE_NAME
+
+# Update manifest files
+cp deploy/kubernetes/*.yaml $TEST_DIR
+sed -i '' "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" $TEST_DIR/controller.yaml
+sed -i '' "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" $TEST_DIR/node.yaml
+
+echo "Deploying driver"
+kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
+kubectl apply -f $TEST_DIR/controller.yaml 
+kubectl apply -f $TEST_DIR/node.yaml 
+kubectl apply -f $TEST_DIR/secret.yaml
+
+# Run the test
+go install -v github.com/onsi/ginkgo/ginkgo
+export KUBECONFIG=$HOME/.kube/config
+ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
+TEST_PASS=$?
+
+echo "Removing driver"
+kubectl delete -f $TEST_DIR/controller.yaml
+kubectl delete -f $TEST_DIR/node.yaml
+kubectl delete -f $TEST_DIR/secret.yaml
+
+echo "Deleting cluster $CLUSTER_NAME"
+$KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes
+
+rm -rf $TEST_DIR
+
+if [[ $TEST_PASS -ne 0 ]]; then
+    exit 1
+fi
