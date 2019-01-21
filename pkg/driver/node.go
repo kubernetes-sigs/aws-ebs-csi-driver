@@ -149,8 +149,29 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
+	// Check if target directory is a mount point. GetDeviceNameFromMount
+	// given a mnt point, finds the device from /proc/mounts
+	// returns the device name, reference count, and error code
+	dev, refCount, err := mount.GetDeviceNameFromMount(d.mounter, target)
+	if err != nil {
+		msg := fmt.Sprintf("failed to check if volume is mounted: %v", err)
+		return nil, status.Error(codes.Internal, msg)
+	}
+
+	// From the spec: If the volume corresponding to the volume_id
+	// is not staged to the staging_target_path, the Plugin MUST
+	// reply 0 OK.
+	if refCount == 0 {
+		klog.V(5).Infof("NodeUnstageVolume: %s target not mounted", target)
+		return &csi.NodeUnstageVolumeResponse{}, nil
+	}
+
+	if refCount > 1 {
+		klog.Warningf("NodeUnstageVolume: found %d references to device %s mounted at target path %s", refCount, dev, target)
+	}
+
 	klog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
-	err := d.mounter.Interface.Unmount(target)
+	err = d.mounter.Interface.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
