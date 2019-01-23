@@ -43,7 +43,7 @@ func TestSanity(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ebsDriver = driver.NewFakeDriver(endpoint)
+	ebsDriver = driver.NewFakeDriver(endpoint, driver.NewFakeMounter())
 	go func() {
 		Expect(ebsDriver.Run()).NotTo(HaveOccurred())
 	}()
