@@ -122,7 +122,7 @@ In order to make sure that the driver complies with the CSI specification, run:
 make test-sanity
 ```
 
-To execute integration tests, run:
+See [Ingetration Testing](../tests/integration/README.md) for more details. To execute integration tests, run:
 
 ```
 make test-integration
@@ -130,25 +130,12 @@ make test-integration
 
 **Note**: EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
 
-To execute e2e tests:
-
-Some tests marked with `[env]` require specific environmental variables to be set, if not set these tests will be skipped.
+See [E2E Testing](../tests/e2e/README.md) for more details. To execute e2e tests, run:
 
 ```
-export AWS_AVAILABILITY_ZONES="us-west-2a,us-west-2b"
+make test-e2e-single-az // executes single az test suite
+make test-e2e-multi-az // executes multi az test suite
 ```
- 
-Replacing `us-west-2a,us-west-2b` with the AZ(s) where your Kubernetes worker nodes are located.
-
-These tests also rely on having proper [AWS credentials](https://docs.aws.amazon.com/amazonswf/latest/awsrbflowguide/set-up-creds.html) set either via environmental variables or a credentials file.
-
-Finally run:
-```
-export KUBECONFIG=~/.kube/config
-make test-e2e
-```
-
-**Note**: By default `make test-e2e` will run 32 tests concurrently, set `GINKGO_NODES` to change the parallelism.
 
 ### Build and Publish Container Image
 
