@@ -603,7 +603,7 @@ func TestNodeGetInfo(t *testing.T) {
 	expResp := &csi.NodeGetInfoResponse{
 		NodeId: "instanceID",
 		AccessibleTopology: &csi.Topology{
-			Segments: map[string]string{topologyKey: m.GetAvailabilityZone()},
+			Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
 		},
 	}
 

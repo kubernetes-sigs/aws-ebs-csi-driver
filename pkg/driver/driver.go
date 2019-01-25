@@ -31,7 +31,7 @@ import (
 
 const (
 	DriverName  = "ebs.csi.aws.com"
-	topologyKey = "topology." + DriverName + "/zone"
+	TopologyKey = "topology." + DriverName + "/zone"
 )
 
 type Driver struct {
