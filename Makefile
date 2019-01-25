@@ -56,9 +56,13 @@ test-integration:
 	chmod +x ${AWS_K8S_TESTER_PATH}
 	${AWS_K8S_TESTER_PATH} csi test integration --terminate-on-exit=true --timeout=20m ${PR_NUM_FLAG} ${VPC_ID_FLAG}
 
-.PHONY: test-e2e
-test-e2e:
-	./hack/run-e2e-test
+.PHONY: test-e2e-single-az
+test-e2e-single-az:
+	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" ./hack/run-e2e-test
+
+.PHONY: test-e2e-multi-az
+test-e2e-multi-az:
+	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" ./hack/run-e2e-test
 
 .PHONY: image-release
 image-release:

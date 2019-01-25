@@ -1,0 +1,8 @@
+  kubeAPIServer:
+    featureGates:
+      CSIDriverRegistry: "true"
+      CSINodeInfo: "true"
+  kubelet:
+    featureGates:
+      CSIDriverRegistry: "true"
+      CSINodeInfo: "true"
