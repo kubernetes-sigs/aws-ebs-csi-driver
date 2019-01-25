@@ -128,12 +128,27 @@ To execute integration tests, run:
 make test-integration
 ```
 
-To execute e2e tests, run:
+**Note**: EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
+
+To execute e2e tests:
+
+Some tests marked with `[env]` require specific environmental variables to be set, if not set these tests will be skipped.
+
 ```
+export AWS_AVAILABILITY_ZONES="us-west-2a,us-west-2b"
+```
+ 
+Replacing `us-west-2a,us-west-2b` with the AZ(s) where your Kubernetes worker nodes are located.
+
+These tests also rely on having proper [AWS credentials](https://docs.aws.amazon.com/amazonswf/latest/awsrbflowguide/set-up-creds.html) set either via environmental variables or a credentials file.
+
+Finally run:
+```
+export KUBECONFIG=~/.kube/config
 make test-e2e
 ```
 
-**Note**: EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
+**Note**: By default `make test-e2e` will run 32 tests concurrently, set `GINKGO_NODES` to change the parallelism.
 
 ### Build and Publish Container Image
 
