@@ -43,10 +43,14 @@ chmod +x $KOPS_PATH
 
 echo "Creating cluster $CLUSTER_NAME"
 CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
+SSH_KEY_PATH=$TEST_DIR/id_rsa
+ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
+
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
     --kubernetes-version=1.13.0 \
+    --ssh-public-key=$SSH_KEY_PATH.pub \
         $CLUSTER_NAME.k8s.local
 $KOPS_PATH get cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local -o yaml > $CLUSTER_YAML_PATH
 cat $BASE_DIR/feature-gates.yaml >> $CLUSTER_YAML_PATH
@@ -76,8 +80,8 @@ docker push $IMAGE_NAME
 
 # Update manifest files
 cp deploy/kubernetes/*.yaml $TEST_DIR
-sed -i '' "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" $TEST_DIR/controller.yaml
-sed -i '' "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" $TEST_DIR/node.yaml
+sed "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/controller.yaml
+sed "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/node.yaml
 
 echo "Deploying driver"
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
@@ -86,7 +90,7 @@ kubectl apply -f $TEST_DIR/node.yaml
 kubectl apply -f $TEST_DIR/secret.yaml
 
 # Run the test
-go install -v github.com/onsi/ginkgo/ginkgo
+go get -u github.com/onsi/ginkgo/ginkgo
 export KUBECONFIG=$HOME/.kube/config
 ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
 TEST_PASS=$?
