@@ -80,8 +80,8 @@ docker push $IMAGE_NAME
 
 # Update manifest files
 cp deploy/kubernetes/*.yaml $TEST_DIR
-sed "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/controller.yaml
-sed "s/image: amazon\/aws-ebs-csi-driver:latest/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/node.yaml
+sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/controller.yaml
+sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/node.yaml
 
 echo "Deploying driver"
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false

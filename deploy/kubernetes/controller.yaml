@@ -125,7 +125,7 @@ spec:
           operator: Exists
       containers:
         - name: ebs-plugin
-          image: amazon/aws-ebs-csi-driver:latest
+          image: amazon/aws-ebs-csi-driver:0.2.0
           imagePullPolicy: Always
           args :
             - --endpoint=$(CSI_ENDPOINT)
