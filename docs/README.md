@@ -20,18 +20,21 @@ This driver is in alpha stage. Basic volume operations that are functional inclu
 |AWS EBS CSI Driver Version | Image                               |
 |---------------------------|-------------------------------------|
 |v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
+|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
 
 ## CSI Specification Compability Matrix
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
 |----------------------------------------|-------|--------|
 | v0.1.0                                 | yes   | no     |
+| v0.2.0                                 | no    | yes    |
 | master branch                          | no    | yes    |
 
 ## Kubernetes Version Compability Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | 
 |----------------------------------------|-------|-------|
 | v0.1.0                                 | yes   | yes   |
+| v0.2.0                                 | no    | yes   |
 | master branch                          | no    | yes   |
 
 ## Features
@@ -78,11 +81,11 @@ kind: Secret
 metadata:
   name: aws-secret
 stringData:
-  key_id: [aws_access_key_id] #aws_access_key_id
-  access_key: [aws_secret_access_key] #aws_secret_access_key
+  key_id: [aws_access_key_id]
+  access_key: [aws_secret_access_key]
 ```
 
-3. Apply the secret using `kubectl apply -f ../deploy/kubernetes/secret.yaml` if required.
+3. Apply the secret using `kubectl apply -f deploy/kubernetes/secret.yaml` if required.
 
 4. Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
 
@@ -94,10 +97,10 @@ kubectl apply -f deploy/kubernetes
 
 Now any user can start creating and using EBS volumes with the CSI driver. 
 
-6. Apply `deploy/kubernetes/sample_app` that uses the recently deployed driver:
+6. Apply `examples/kubernetes/volume_scheduling` that uses the recently deployed driver:
 
 ```
-kubectl apply -f deploy/kubernetes/sample_app
+kubectl apply -f examples/kubernetes/volume_scheduling
 ```
 
 ## Development
