@@ -21,6 +21,40 @@ import (
 	"testing"
 )
 
+func TestRoundUpBytes(t *testing.T) {
+	var sizeInBytes int64 = 1024
+	actual := RoundUpBytes(sizeInBytes)
+	if actual != 1*GiB {
+		t.Fatalf("Wrong result for RoundUpBytes. Got: %d", actual)
+	}
+}
+
+func TestRoundUpGiB(t *testing.T) {
+	var sizeInBytes int64 = 1
+	actual := RoundUpGiB(sizeInBytes)
+	if actual != 1 {
+		t.Fatalf("Wrong result for RoundUpGiB. Got: %d", actual)
+	}
+}
+
+func TestBytesToGiB(t *testing.T) {
+	var sizeInBytes int64 = 5 * GiB
+
+	actual := BytesToGiB(sizeInBytes)
+	if actual != 5 {
+		t.Fatalf("Wrong result for BytesToGiB. Got: %d", actual)
+	}
+}
+
+func TestGiBToBytes(t *testing.T) {
+	var sizeInGiB int64 = 3
+
+	actual := GiBToBytes(sizeInGiB)
+	if actual != 3*GiB {
+		t.Fatalf("Wrong result for GiBToBytes. Got: %d", actual)
+	}
+}
+
 func TestParseEndpoint(t *testing.T) {
 	testCases := []struct {
 		name      string
