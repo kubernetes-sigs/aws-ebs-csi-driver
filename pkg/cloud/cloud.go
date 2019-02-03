@@ -64,7 +64,7 @@ const (
 // Defaults
 const (
 	// DefaultVolumeSize represents the default volume size.
-	DefaultVolumeSize int64 = 100 * 1024 * 1024 * 1024
+	DefaultVolumeSize int64 = 100 * util.GiB
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.
 	DefaultVolumeType = VolumeTypeGP2
 )
