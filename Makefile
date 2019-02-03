@@ -42,6 +42,10 @@ aws-ebs-csi-driver:
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
+.PHONY: verify
+verify:
+	./hack/verify-all.sh
+
 .PHONY: test
 test:
 	go test -v -race ./pkg/...
