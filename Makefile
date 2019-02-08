@@ -44,7 +44,7 @@ aws-ebs-csi-driver:
 
 .PHONY: verify
 verify:
-	./hack/verify-all.sh
+	./hack/verify-all
 
 .PHONY: test
 test:
