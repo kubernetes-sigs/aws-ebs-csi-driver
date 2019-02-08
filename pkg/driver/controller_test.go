@@ -429,3 +429,163 @@ func TestPickAvailabilityZone(t *testing.T) {
 	}
 
 }
+
+func TestCreateSnapshot(t *testing.T) {
+	testCases := []struct {
+		name            string
+		req             *csi.CreateSnapshotRequest
+		extraReq        *csi.CreateSnapshotRequest
+		expSnapshot     *csi.Snapshot
+		expErrCode      codes.Code
+		extraExpErrCode codes.Code
+	}{
+		{
+			name: "success normal",
+			req: &csi.CreateSnapshotRequest{
+				Name:           "test-snapshot",
+				Parameters:     nil,
+				SourceVolumeId: "vol-test",
+			},
+			expSnapshot: &csi.Snapshot{
+				ReadyToUse: true,
+			},
+			expErrCode: codes.OK,
+		},
+		{
+			name: "fail no name",
+			req: &csi.CreateSnapshotRequest{
+				Parameters:     nil,
+				SourceVolumeId: "vol-test",
+			},
+			expSnapshot: nil,
+			expErrCode:  codes.InvalidArgument,
+		},
+		{
+			name: "fail same name different volume ID",
+			req: &csi.CreateSnapshotRequest{
+				Name:           "test-snapshot",
+				Parameters:     nil,
+				SourceVolumeId: "vol-test",
+			},
+			extraReq: &csi.CreateSnapshotRequest{
+				Name:           "test-snapshot",
+				Parameters:     nil,
+				SourceVolumeId: "vol-xxx",
+			},
+			expSnapshot: &csi.Snapshot{
+				ReadyToUse: true,
+			},
+			expErrCode:      codes.OK,
+			extraExpErrCode: codes.AlreadyExists,
+		},
+		{
+			name: "success same name same volume ID",
+			req: &csi.CreateSnapshotRequest{
+				Name:           "test-snapshot",
+				Parameters:     nil,
+				SourceVolumeId: "vol-test",
+			},
+			extraReq: &csi.CreateSnapshotRequest{
+				Name:           "test-snapshot",
+				Parameters:     nil,
+				SourceVolumeId: "vol-test",
+			},
+			expSnapshot: &csi.Snapshot{
+				ReadyToUse: true,
+			},
+			expErrCode:      codes.OK,
+			extraExpErrCode: codes.OK,
+		},
+	}
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		awsDriver := NewFakeDriver("", NewFakeMounter())
+		resp, err := awsDriver.CreateSnapshot(context.TODO(), tc.req)
+		if err != nil {
+			srvErr, ok := status.FromError(err)
+			if !ok {
+				t.Fatalf("Could not get error status code from error: %v", srvErr)
+			}
+			if srvErr.Code() != tc.expErrCode {
+				t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
+			}
+			continue
+		}
+		if tc.expErrCode != codes.OK {
+			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
+		}
+		snap := resp.GetSnapshot()
+		if snap == nil && tc.expSnapshot != nil {
+			t.Fatalf("Expected snapshot %v, got nil", tc.expSnapshot)
+		}
+		if tc.extraReq != nil {
+			// extraReq is never used in a situation when a new snapshot
+			// should be really created: checking the return code is enough
+			_, err = awsDriver.CreateSnapshot(context.TODO(), tc.extraReq)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != tc.extraExpErrCode {
+					t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
+				}
+				continue
+			}
+			if tc.extraExpErrCode != codes.OK {
+				t.Fatalf("Expected error %v, got no error", tc.extraExpErrCode)
+			}
+		}
+	}
+}
+
+func TestDeleteSnapshot(t *testing.T) {
+	snapReq := &csi.CreateSnapshotRequest{
+		Name:           "test-snapshot",
+		Parameters:     nil,
+		SourceVolumeId: "vol-test",
+	}
+	testCases := []struct {
+		name       string
+		req        *csi.DeleteSnapshotRequest
+		expErrCode codes.Code
+	}{
+		{
+			name:       "success normal",
+			req:        &csi.DeleteSnapshotRequest{},
+			expErrCode: codes.OK,
+		},
+		{
+			name: "success not found",
+			req: &csi.DeleteSnapshotRequest{
+				SnapshotId: "xxx",
+			},
+			expErrCode: codes.OK,
+		},
+	}
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		awsDriver := NewFakeDriver("", NewFakeMounter())
+		snapResp, err := awsDriver.CreateSnapshot(context.TODO(), snapReq)
+		if err != nil {
+			t.Fatalf("Error creating testing snapshot: %v", err)
+		}
+		if len(tc.req.SnapshotId) == 0 {
+			tc.req.SnapshotId = snapResp.Snapshot.SnapshotId
+		}
+		_, err = awsDriver.DeleteSnapshot(context.TODO(), tc.req)
+		if err != nil {
+			srvErr, ok := status.FromError(err)
+			if !ok {
+				t.Fatalf("Could not get error status code from error: %v", srvErr)
+			}
+			if srvErr.Code() != tc.expErrCode {
+				t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
+			}
+			continue
+		}
+		if tc.expErrCode != codes.OK {
+			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
+		}
+	}
+}
