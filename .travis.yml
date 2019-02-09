@@ -1,12 +1,11 @@
 language: go
 go_import_path: github.com/kubernetes-sigs/aws-ebs-csi-driver
-
+dist: xenial
 env:
   global:
-    - GO111MODULE=off
+    - GO111MODULE=on
 
 go:
-  - "1.10.x"
   - "1.11.4"
 
 before_install:
