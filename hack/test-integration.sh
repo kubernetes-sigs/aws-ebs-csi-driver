@@ -21,5 +21,6 @@ if ! [[ "$0" =~ hack/test-integration.sh ]]; then
   exit 127
 fi
 
+export GO111MODULE=on
 go test -c ./tests/integration/... -o bin/integration.test && \
   sudo -E bin/integration.test -test.v -ginkgo.v
