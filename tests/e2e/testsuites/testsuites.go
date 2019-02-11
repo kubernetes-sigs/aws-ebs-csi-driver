@@ -344,6 +344,13 @@ func (t *TestDeployment) DeletePodAndWait() {
 		}
 		return
 	}
+	framework.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
+	err = framework.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
+	if err != nil {
+		if !apierrs.IsNotFound(err) {
+			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
+		}
+	}
 }
 
 func (t *TestDeployment) Cleanup() {
