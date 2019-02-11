@@ -105,38 +105,39 @@ func TestNewMetadataService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2Metadata := mocks.NewMockEC2Metadata(mockCtrl)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2Metadata := mocks.NewMockEC2Metadata(mockCtrl)
 
-		mockEC2Metadata.EXPECT().Available().Return(tc.isAvailable)
-		if tc.isAvailable {
-			mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.identityDocument, tc.err)
-		}
-
-		m, err := NewMetadataService(mockEC2Metadata)
-		if tc.isAvailable && tc.err == nil && !tc.isPartial {
-			if err != nil {
-				t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
+			mockEC2Metadata.EXPECT().Available().Return(tc.isAvailable)
+			if tc.isAvailable {
+				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.identityDocument, tc.err)
 			}
 
-			if m.GetInstanceID() != tc.identityDocument.InstanceID {
-				t.Fatalf("GetInstanceID() failed: expected %v, got %v", tc.identityDocument.InstanceID, m.GetInstanceID())
+			m, err := NewMetadataService(mockEC2Metadata)
+			if tc.isAvailable && tc.err == nil && !tc.isPartial {
+				if err != nil {
+					t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
+				}
+
+				if m.GetInstanceID() != tc.identityDocument.InstanceID {
+					t.Fatalf("GetInstanceID() failed: expected %v, got %v", tc.identityDocument.InstanceID, m.GetInstanceID())
+				}
+
+				if m.GetRegion() != tc.identityDocument.Region {
+					t.Fatalf("GetRegion() failed: expected %v, got %v", tc.identityDocument.Region, m.GetRegion())
+				}
+
+				if m.GetAvailabilityZone() != tc.identityDocument.AvailabilityZone {
+					t.Fatalf("GetAvailabilityZone() failed: expected %v, got %v", tc.identityDocument.AvailabilityZone, m.GetAvailabilityZone())
+				}
+			} else {
+				if err == nil {
+					t.Fatal("NewMetadataService() failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
+				}
 			}
 
-			if m.GetRegion() != tc.identityDocument.Region {
-				t.Fatalf("GetRegion() failed: expected %v, got %v", tc.identityDocument.Region, m.GetRegion())
-			}
-
-			if m.GetAvailabilityZone() != tc.identityDocument.AvailabilityZone {
-				t.Fatalf("GetAvailabilityZone() failed: expected %v, got %v", tc.identityDocument.AvailabilityZone, m.GetAvailabilityZone())
-			}
-		} else {
-			if err == nil {
-				t.Fatal("NewMetadataService() failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
-			}
-		}
-
-		mockCtrl.Finish()
+			mockCtrl.Finish()
+		})
 	}
 }
