@@ -36,18 +36,20 @@ func TestNameAllocator(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		allocator := NewNameAllocator().(*nameAllocator)
-		for k, v := range test.deviceMap {
-			allocator.possibleNames[k] = v
-		}
+		t.Run(test.name, func(t *testing.T) {
+			allocator := NewNameAllocator().(*nameAllocator)
+			for k, v := range test.deviceMap {
+				allocator.possibleNames[k] = v
+			}
 
-		got, err := allocator.GetNext(test.existingNames)
-		if err != nil {
-			t.Errorf("text %q: unexpected error: %v", test.name, err)
-		}
-		if got != test.expectedOutput {
-			t.Errorf("text %q: expected %q, got %q", test.name, test.expectedOutput, got)
-		}
+			got, err := allocator.GetNext(test.existingNames)
+			if err != nil {
+				t.Errorf("text %q: unexpected error: %v", test.name, err)
+			}
+			if got != test.expectedOutput {
+				t.Errorf("text %q: expected %q, got %q", test.name, test.expectedOutput, got)
+			}
+		})
 	}
 }
 

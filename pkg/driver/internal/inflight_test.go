@@ -190,10 +190,10 @@ func TestInFlight(t *testing.T) {
 		},
 	}
 
-	for n := range testCases {
-		t.Run(testCases[n].name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			db := NewInFlight()
-			for _, r := range testCases[n].requests {
+			for _, r := range tc.requests {
 				var resp bool
 				if r.delete {
 					db.Delete(r.request)

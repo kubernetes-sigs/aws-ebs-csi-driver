@@ -130,51 +130,52 @@ func TestCreateDisk(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		volState := tc.volState
-		if volState == "" {
-			volState = "available"
-		}
-
-		vol := &ec2.Volume{
-			VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-			Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-			State:            aws.String(volState),
-			AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
-		}
-
-		ctx := context.Background()
-		mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
-
-		disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
-		if err != nil {
-			if tc.expErr == nil {
-				t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
-			} else if tc.expErr.Error() != err.Error() {
-				t.Fatalf("CreateDisk() failed: expected error %q, got: %q", tc.expErr, err)
+			volState := tc.volState
+			if volState == "" {
+				volState = "available"
 			}
-		} else {
-			if tc.expErr != nil {
-				t.Fatal("CreateDisk() failed: expected error, got nothing")
+
+			vol := &ec2.Volume{
+				VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+				State:            aws.String(volState),
+				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+			}
+
+			ctx := context.Background()
+			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
+
+			disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+				} else if tc.expErr.Error() != err.Error() {
+					t.Fatalf("CreateDisk() failed: expected error %q, got: %q", tc.expErr, err)
+				}
 			} else {
-				if tc.expDisk.CapacityGiB != disk.CapacityGiB {
-					t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", tc.expDisk.CapacityGiB, disk.CapacityGiB)
-				}
-				if tc.expDisk.VolumeID != disk.VolumeID {
-					t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", tc.expDisk.VolumeID, disk.VolumeID)
-				}
-				if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
-					t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
+				if tc.expErr != nil {
+					t.Fatal("CreateDisk() failed: expected error, got nothing")
+				} else {
+					if tc.expDisk.CapacityGiB != disk.CapacityGiB {
+						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", tc.expDisk.CapacityGiB, disk.CapacityGiB)
+					}
+					if tc.expDisk.VolumeID != disk.VolumeID {
+						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", tc.expDisk.VolumeID, disk.VolumeID)
+					}
+					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
+						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
 				}
 			}
-		}
 
-		mockCtrl.Finish()
+			mockCtrl.Finish()
+		})
 	}
 }
 
@@ -206,28 +207,29 @@ func TestDeleteDisk(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		ctx := context.Background()
-		mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
+			ctx := context.Background()
+			mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
 
-		ok, err := c.DeleteDisk(ctx, tc.volumeID)
-		if err != nil && tc.expErr == nil {
-			t.Fatalf("DeleteDisk() failed: expected no error, got: %v", err)
-		}
+			ok, err := c.DeleteDisk(ctx, tc.volumeID)
+			if err != nil && tc.expErr == nil {
+				t.Fatalf("DeleteDisk() failed: expected no error, got: %v", err)
+			}
 
-		if err == nil && tc.expErr != nil {
-			t.Fatal("DeleteDisk() failed: expected error, got nothing")
-		}
+			if err == nil && tc.expErr != nil {
+				t.Fatal("DeleteDisk() failed: expected error, got nothing")
+			}
 
-		if tc.expResp != ok {
-			t.Fatalf("DeleteDisk() failed: expected return %v, got %v", tc.expResp, ok)
-		}
+			if tc.expResp != ok {
+				t.Fatalf("DeleteDisk() failed: expected return %v, got %v", tc.expResp, ok)
+			}
 
-		mockCtrl.Finish()
+			mockCtrl.Finish()
+		})
 	}
 }
 
@@ -253,36 +255,37 @@ func TestAttachDisk(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		vol := &ec2.Volume{
-			VolumeId:    aws.String(tc.volumeID),
-			Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
-		}
-
-		ctx := context.Background()
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
-		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-		mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
-
-		devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
-		if err != nil {
-			if tc.expErr == nil {
-				t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
+			vol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
 			}
-		} else {
-			if tc.expErr != nil {
-				t.Fatal("AttachDisk() failed: expected error, got nothing")
-			}
-			if !strings.HasPrefix(devicePath, "/dev/") {
-				t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
-			}
-		}
 
-		mockCtrl.Finish()
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+			mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+
+			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("AttachDisk() failed: expected error, got nothing")
+				}
+				if !strings.HasPrefix(devicePath, "/dev/") {
+					t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
 	}
 }
 
@@ -308,33 +311,34 @@ func TestDetachDisk(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		vol := &ec2.Volume{
-			VolumeId:    aws.String(tc.volumeID),
-			Attachments: nil,
-		}
-
-		ctx := context.Background()
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
-		mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-		mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
-
-		err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
-		if err != nil {
-			if tc.expErr == nil {
-				t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
+			vol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: nil,
 			}
-		} else {
-			if tc.expErr != nil {
-				t.Fatal("DetachDisk() failed: expected error, got nothing")
-			}
-		}
 
-		mockCtrl.Finish()
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+			mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+
+			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("DetachDisk() failed: expected error, got nothing")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
 	}
 }
 
@@ -362,38 +366,39 @@ func TestGetDiskByName(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		vol := &ec2.Volume{
-			VolumeId:         aws.String(tc.volumeName),
-			Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
-			AvailabilityZone: aws.String(tc.availabilityZone),
-		}
+			vol := &ec2.Volume{
+				VolumeId:         aws.String(tc.volumeName),
+				Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
+				AvailabilityZone: aws.String(tc.availabilityZone),
+			}
 
-		ctx := context.Background()
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expErr)
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expErr)
 
-		disk, err := c.GetDiskByName(ctx, tc.volumeName, tc.volumeCapacity)
-		if err != nil {
-			if tc.expErr == nil {
-				t.Fatalf("GetDiskByName() failed: expected no error, got: %v", err)
+			disk, err := c.GetDiskByName(ctx, tc.volumeName, tc.volumeCapacity)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("GetDiskByName() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("GetDiskByName() failed: expected error, got nothing")
+				}
+				if disk.CapacityGiB != util.BytesToGiB(tc.volumeCapacity) {
+					t.Fatalf("GetDiskByName() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
+				}
+				if tc.availabilityZone != disk.AvailabilityZone {
+					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+				}
 			}
-		} else {
-			if tc.expErr != nil {
-				t.Fatal("GetDiskByName() failed: expected error, got nothing")
-			}
-			if disk.CapacityGiB != util.BytesToGiB(tc.volumeCapacity) {
-				t.Fatalf("GetDiskByName() failed: expected capacity %d, got %d", util.BytesToGiB(tc.volumeCapacity), disk.CapacityGiB)
-			}
-			if tc.availabilityZone != disk.AvailabilityZone {
-				t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
-			}
-		}
 
-		mockCtrl.Finish()
+			mockCtrl.Finish()
+		})
 	}
 }
 
@@ -418,42 +423,43 @@ func TestGetDiskByID(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		mockCtrl := gomock.NewController(t)
-		mockEC2 := mocks.NewMockEC2(mockCtrl)
-		c := newCloud(mockEC2)
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
 
-		ctx := context.Background()
-		mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
-			&ec2.DescribeVolumesOutput{
-				Volumes: []*ec2.Volume{
-					{
-						VolumeId:         aws.String(tc.volumeID),
-						AvailabilityZone: aws.String(tc.availabilityZone),
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+				&ec2.DescribeVolumesOutput{
+					Volumes: []*ec2.Volume{
+						{
+							VolumeId:         aws.String(tc.volumeID),
+							AvailabilityZone: aws.String(tc.availabilityZone),
+						},
 					},
 				},
-			},
-			tc.expErr,
-		)
+				tc.expErr,
+			)
 
-		disk, err := c.GetDiskByID(ctx, tc.volumeID)
-		if err != nil {
-			if tc.expErr == nil {
-				t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
+			disk, err := c.GetDiskByID(ctx, tc.volumeID)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("GetDisk() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("GetDisk() failed: expected error, got nothing")
+				}
+				if disk.VolumeID != tc.volumeID {
+					t.Fatalf("GetDisk() failed: expected ID %q, got %q", tc.volumeID, disk.VolumeID)
+				}
+				if tc.availabilityZone != disk.AvailabilityZone {
+					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+				}
 			}
-		} else {
-			if tc.expErr != nil {
-				t.Fatal("GetDisk() failed: expected error, got nothing")
-			}
-			if disk.VolumeID != tc.volumeID {
-				t.Fatalf("GetDisk() failed: expected ID %q, got %q", tc.volumeID, disk.VolumeID)
-			}
-			if tc.availabilityZone != disk.AvailabilityZone {
-				t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
-			}
-		}
 
-		mockCtrl.Finish()
+			mockCtrl.Finish()
+		})
 	}
 }
 

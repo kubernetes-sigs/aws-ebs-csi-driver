@@ -267,64 +267,64 @@ func TestCreateVolume(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
+		t.Run(tc.name, func(t *testing.T) {
+			awsDriver := NewFakeDriver("", NewFakeMounter())
 
-		resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
-		if err != nil {
-			srvErr, ok := status.FromError(err)
-			if !ok {
-				t.Fatalf("Could not get error status code from error: %v", srvErr)
-			}
-			if srvErr.Code() != tc.expErrCode {
-				t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
-			}
-			continue
-		}
-
-		// Repeat the same request and check they results of the second call
-		if tc.extraReq != nil {
-			resp, err = awsDriver.CreateVolume(context.TODO(), tc.extraReq)
+			resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
 				if !ok {
 					t.Fatalf("Could not get error status code from error: %v", srvErr)
 				}
 				if srvErr.Code() != tc.expErrCode {
-					t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+					t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
 				}
-				continue
+				return
 			}
-		}
 
-		if tc.expErrCode != codes.OK {
-			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
-		}
-
-		vol := resp.GetVolume()
-		if vol == nil && tc.expVol != nil {
-			t.Fatalf("Expected volume %v, got nil", tc.expVol)
-		}
-
-		if vol.GetCapacityBytes() != tc.expVol.GetCapacityBytes() {
-			t.Fatalf("Expected volume capacity bytes: %v, got: %v", tc.expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-		}
-
-		for expKey, expVal := range tc.expVol.GetVolumeContext() {
-			ctx := vol.GetVolumeContext()
-			if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-				t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
+			// Repeat the same request and check they results of the second call
+			if tc.extraReq != nil {
+				resp, err = awsDriver.CreateVolume(context.TODO(), tc.extraReq)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != tc.expErrCode {
+						t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+					}
+					return
+				}
 			}
-		}
-		if tc.expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-			t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
-		}
-		if tc.expVol.GetAccessibleTopology() != nil {
-			if !reflect.DeepEqual(tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
-				t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
-			}
-		}
 
+			if tc.expErrCode != codes.OK {
+				t.Fatalf("Expected error %v, got no error", tc.expErrCode)
+			}
+
+			vol := resp.GetVolume()
+			if vol == nil && tc.expVol != nil {
+				t.Fatalf("Expected volume %v, got nil", tc.expVol)
+			}
+
+			if vol.GetCapacityBytes() != tc.expVol.GetCapacityBytes() {
+				t.Fatalf("Expected volume capacity bytes: %v, got: %v", tc.expVol.GetCapacityBytes(), vol.GetCapacityBytes())
+			}
+
+			for expKey, expVal := range tc.expVol.GetVolumeContext() {
+				ctx := vol.GetVolumeContext()
+				if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
+					t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
+				}
+			}
+			if tc.expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
+				t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
+			}
+			if tc.expVol.GetAccessibleTopology() != nil {
+				if !reflect.DeepEqual(tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
+					t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
+				}
+			}
+		})
 	}
 }
 
@@ -352,22 +352,23 @@ func TestDeleteVolume(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
-		_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
-		if err != nil {
-			srvErr, ok := status.FromError(err)
-			if !ok {
-				t.Fatalf("Could not get error status code from error: %v", srvErr)
+		t.Run(tc.name, func(t *testing.T) {
+			awsDriver := NewFakeDriver("", NewFakeMounter())
+			_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != tc.expErrCode {
+					t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+				}
+				return
 			}
-			if srvErr.Code() != tc.expErrCode {
-				t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
+			if tc.expErrCode != codes.OK {
+				t.Fatalf("Expected error %v, got no error", tc.expErrCode)
 			}
-			continue
-		}
-		if tc.expErrCode != codes.OK {
-			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
-		}
+		})
 	}
 }
 
@@ -427,5 +428,4 @@ func TestPickAvailabilityZone(t *testing.T) {
 			}
 		})
 	}
-
 }
