@@ -63,11 +63,9 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes.
 
-4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/Setup.html#enabling-csinodeinfo).
+4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/csi-node-info-object.html#enabling-csinodeinfo).
 
-5. Ensure that the feature gate is enabled as `--feature-gates=Topology=true` when using *external-provisioner*
-
-6. Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/Home.html) for general CSI driver setup instructions on kubernetes.
+5. Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/) for general CSI driver setup instructions on kubernetes.
 
 ## Setup
 ### Kubernetes
@@ -108,37 +106,33 @@ Please go through [CSI Spec](https://github.com/container-storage-interface/spec
 
 ### Requirements
 * Golang 1.11.4+
-* [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for end-to-end testing
+* [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
 ### Testing
 
-To execute all unit tests, run:
+To execute all unit tests, run: `make test`
 
-```
-make test
-```
+To execute sanity test run: `make test-sanity`
 
-In order to make sure that the driver complies with the CSI specification, run:
+**Notes**:
+* Sanity tests make sure that the driver complies with the CSI specification
 
-```
-make test-sanity
-```
+To execute integration tests, run: `make test-integration`
 
-See [Ingetration Testing](../tests/integration/README.md) for more details. To execute integration tests, run:
+**Notes**:
+* EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
+* See [Ingetration Testing](../tests/integration/README.md) for more details.
 
-```
-make test-integration
-```
-
-**Note**: EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
-
-See [E2E Testing](../tests/e2e/README.md) for more details. To execute e2e tests, run:
+To execute e2e tests, run:
 
 ```
 make test-e2e-single-az // executes single az test suite
 make test-e2e-multi-az // executes multi az test suite
 ```
+
+**Notes**:
+* See [E2E Testing](../tests/e2e/README.md) for more details.
 
 ### Build and Publish Container Image
 
