@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
@@ -73,6 +74,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
+	// If the access type is block, do nothing for stage
+	switch volCap.GetAccessType().(type) {
+	case *csi.VolumeCapability_Block:
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
 	if ok := d.inFlight.Insert(req); !ok {
 		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
 		return nil, status.Error(codes.Internal, msg)
@@ -87,7 +94,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
 
-	exists, err := d.mounter.Interface.ExistsPath(target)
+	exists, err := d.mounter.ExistsPath(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if target %q exists: %v", target, err)
 		return nil, status.Error(codes.Internal, msg)
@@ -98,7 +105,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if !exists {
 		// If target path does not exist we need to create the directory where volume will be staged
 		klog.Infof("NodeStageVolume: creating target dir %q", target)
-		if err = d.mounter.Interface.MakeDir(target); err != nil {
+		if err = d.mounter.MakeDir(target); err != nil {
 			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
 			return nil, status.Error(codes.Internal, msg)
 		}
@@ -171,7 +178,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 	}
 
 	klog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
-	err = d.mounter.Interface.Unmount(target)
+	err = d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
@@ -210,31 +217,15 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		mountOptions = append(mountOptions, "ro")
 	}
 
-	if m := volCap.GetMount(); m != nil {
-		hasOption := func(options []string, opt string) bool {
-			for _, o := range options {
-				if o == opt {
-					return true
-				}
-			}
-			return false
+	switch mode := volCap.GetAccessType().(type) {
+	case *csi.VolumeCapability_Block:
+		if err := d.nodePublishVolumeForBlock(req, mountOptions); err != nil {
+			return nil, err
 		}
-		for _, f := range m.MountFlags {
-			if !hasOption(mountOptions, f) {
-				mountOptions = append(mountOptions, f)
-			}
+	case *csi.VolumeCapability_Mount:
+		if err := d.nodePublishVolumeForFileSystem(req, mountOptions, mode); err != nil {
+			return nil, err
 		}
-	}
-
-	klog.V(5).Infof("NodePublishVolume: creating dir %s", target)
-	if err := d.mounter.Interface.MakeDir(target); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
-	}
-
-	klog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
-	if err := d.mounter.Interface.Mount(source, target, "ext4", mountOptions); err != nil {
-		os.Remove(target)
-		return nil, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
@@ -253,7 +244,7 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 	}
 
 	klog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
-	err := d.mounter.Interface.Unmount(target)
+	err := d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
 	}
@@ -293,4 +284,78 @@ func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (
 		NodeId:             m.GetInstanceID(),
 		AccessibleTopology: topology,
 	}, nil
+}
+
+func (d *Driver) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
+	target := req.GetTargetPath()
+	source := req.PublishContext[DevicePathKey]
+	podVolumePath := filepath.Dir(target)
+
+	// create the pod volume path if it is missing
+	// Path in the form of /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/{volumeName}
+	exists, err := d.mounter.ExistsPath(podVolumePath)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not check if path exists %q: %v", podVolumePath, err)
+	}
+
+	if !exists {
+		if err := d.mounter.MakeDir(podVolumePath); err != nil {
+			return status.Errorf(codes.Internal, "Could not create dir %q: %v", podVolumePath, err)
+		}
+	}
+
+	// Create the mount point as a file since bind mount device node requires it to be a file
+	klog.V(5).Infof("NodePublishVolume [block]: making target file %s", target)
+	err = d.mounter.MakeFile(target)
+	if err != nil {
+		if removeErr := os.Remove(target); removeErr != nil {
+			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+		}
+		return status.Errorf(codes.Internal, "Could not create file %q: %v", target, err)
+	}
+
+	klog.V(5).Infof("NodePublishVolume [block]: mounting %s at %s", source, target)
+	if err := d.mounter.Mount(source, target, "ext4", mountOptions); err != nil {
+		if removeErr := os.Remove(target); removeErr != nil {
+			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+		}
+		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
+	}
+
+	return nil
+}
+
+func (d *Driver) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeRequest, mountOptions []string, mode *csi.VolumeCapability_Mount) error {
+	target := req.GetTargetPath()
+	source := req.GetStagingTargetPath()
+	if m := mode.Mount; m != nil {
+		hasOption := func(options []string, opt string) bool {
+			for _, o := range options {
+				if o == opt {
+					return true
+				}
+			}
+			return false
+		}
+		for _, f := range m.MountFlags {
+			if !hasOption(mountOptions, f) {
+				mountOptions = append(mountOptions, f)
+			}
+		}
+	}
+
+	klog.V(5).Infof("NodePublishVolume: creating dir %s", target)
+	if err := d.mounter.MakeDir(target); err != nil {
+		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
+	}
+
+	klog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
+	if err := d.mounter.Mount(source, target, "ext4", mountOptions); err != nil {
+		if removeErr := os.Remove(target); removeErr != nil {
+			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+		}
+		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
+	}
+
+	return nil
 }
