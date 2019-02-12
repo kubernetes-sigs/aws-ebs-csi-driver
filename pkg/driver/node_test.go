@@ -74,6 +74,24 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success normal [raw block]",
+			req: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+				StagingTargetPath: "/test/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId: "vol-test",
+			},
+			expActions:     []mount.FakeAction{},
+			expMountPoints: []mount.MountPoint{},
+		},
+		{
 			name: "success mount options fsType ext3",
 			req: &csi.NodeStageVolumeRequest{
 				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -419,6 +437,39 @@ func TestNodePublishVolume(t *testing.T) {
 				{
 					Device: "/test/staging/path",
 					Opts:   []string{"bind", "test-flag"},
+					Path:   "/test/target/path",
+					Type:   defaultFsType,
+				},
+			},
+		},
+		{
+			name: "success normal [raw block]",
+			req: &csi.NodePublishVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+				StagingTargetPath: "/test/staging/path",
+				TargetPath:        "/test/target/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId: "vol-test",
+			},
+			expActions: []mount.FakeAction{
+				{
+					Action: "mount",
+					FSType: defaultFsType,
+					Source: "/dev/fake",
+					Target: "/test/target/path",
+				},
+			},
+			expMountPoints: []mount.MountPoint{
+				{
+					Device: "/dev/fake",
+					Opts:   []string{"bind"},
 					Path:   "/test/target/path",
 					Type:   defaultFsType,
 				},
