@@ -51,7 +51,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "success normal",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
@@ -76,10 +76,10 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "success mount options fsType ext3",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
-				VolumeContext:     map[string]string{"fsType": FSTypeExt3},
+				VolumeContext:     map[string]string{FsTypeKey: FSTypeExt3},
 				VolumeId:          "vol-test",
 			},
 			expActions: []mount.FakeAction{
@@ -102,7 +102,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no VolumeId",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
 			},
@@ -111,7 +111,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no StagingTargetPath",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:   map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:   map[string]string{DevicePathKey: "/dev/fake"},
 				VolumeCapability: stdVolCap,
 				VolumeId:         "vol-test",
 			},
@@ -120,7 +120,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no VolumeCapability",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeId:          "vol-test",
 			},
@@ -129,7 +129,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail invalid VolumeCapability",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeCapability: &csi.VolumeCapability{
 					AccessMode: &csi.VolumeCapability_AccessMode{
@@ -158,7 +158,7 @@ func TestNodeStageVolume(t *testing.T) {
 			// that /dev/fake is mounted at /test/path.
 			name: "success device already mounted at target",
 			req: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
@@ -335,7 +335,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "success normal",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
 				VolumeCapability:  stdVolCap,
@@ -361,7 +361,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "success readonly",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				Readonly:          true,
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
@@ -388,7 +388,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "success mount options",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
 				VolumeCapability: &csi.VolumeCapability{
@@ -427,7 +427,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "fail no VolumeId",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
 				VolumeCapability:  stdVolCap,
@@ -437,7 +437,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "fail no StagingTargetPath",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:   map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:   map[string]string{DevicePathKey: "/dev/fake"},
 				TargetPath:       "/test/target/path",
 				VolumeCapability: stdVolCap,
 				VolumeId:         "vol-test",
@@ -447,7 +447,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "fail no TargetPath",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
@@ -457,7 +457,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "fail no VolumeCapability",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
 				VolumeId:          "vol-test",
@@ -467,7 +467,7 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			name: "fail invalid VolumeCapability",
 			req: &csi.NodePublishVolumeRequest{
-				PublishContext:    map[string]string{"devicePath": "/dev/fake"},
+				PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 				StagingTargetPath: "/test/staging/path",
 				TargetPath:        "/test/target/path",
 				VolumeId:          "vol-test",
