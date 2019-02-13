@@ -410,7 +410,7 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) (*csi.CreateSnapshotRes
 			SourceVolumeId: snapshot.SourceVolumeID,
 			SizeBytes:      snapshot.Size,
 			CreationTime:   ts,
-			ReadyToUse:     true, // In AWS it's eiter this or error
+			ReadyToUse:     snapshot.ReadyToUse,
 		},
 	}, nil
 }

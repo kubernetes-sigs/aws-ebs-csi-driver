@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -122,6 +121,7 @@ type Snapshot struct {
 	SourceVolumeID string
 	Size           int64
 	CreationTime   time.Time
+	ReadyToUse     bool
 }
 
 // SnapshotOptions represents parameters to create an EBS volume
@@ -509,10 +509,6 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 	if res == nil {
 		return nil, fmt.Errorf("nil CreateSnapshotResponse")
 	}
-	err = c.waitForSnapshotCreate(ctx, res.SnapshotId)
-	if err != nil {
-		return nil, err
-	}
 
 	return c.ec2SnapshotResponseToStruct(res), nil
 }
@@ -554,12 +550,19 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 		return nil
 	}
 	snapshotSize := util.GiBToBytes(aws.Int64Value(ec2Snapshot.VolumeSize))
-	return &Snapshot{
+	snapshot := &Snapshot{
 		SnapshotID:     aws.StringValue(ec2Snapshot.SnapshotId),
 		SourceVolumeID: aws.StringValue(ec2Snapshot.VolumeId),
 		Size:           snapshotSize,
 		CreationTime:   aws.TimeValue(ec2Snapshot.StartTime),
 	}
+	if aws.StringValue(ec2Snapshot.State) == "completed" {
+		snapshot.ReadyToUse = true
+	} else {
+		snapshot.ReadyToUse = false
+	}
+
+	return snapshot
 }
 
 func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
@@ -669,14 +672,7 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 			return true, err
 		}
 		if vol.State != nil {
-			switch *vol.State {
-			case "available":
-				return true, nil
-			case "creating":
-				return false, nil
-			default:
-				return true, fmt.Errorf("unexpected state for volume %s: %q", volumeID, *vol.State)
-			}
+			return *vol.State == "available", nil
 		}
 		return false, nil
 	})
@@ -707,44 +703,4 @@ func isAWSErrorSnapshotNotFound(err error) bool {
 	}
 
 	return false
-}
-
-func (c *cloud) waitForSnapshotCreate(ctx context.Context, snapshotID *string) error {
-	// This should give about 1 minute maximal interval
-	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.5,
-		Steps:    10,
-	}
-	request := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{
-			snapshotID,
-		},
-	}
-
-	conditionFunc := func() (done bool, err error) {
-		snapshot, err := c.getSnapshot(ctx, request)
-		if err != nil {
-			return true, err
-		}
-		if snapshot.State != nil {
-			switch *snapshot.State {
-			case "completed":
-				return true, nil
-			case "pending":
-				return false, nil
-			default:
-				return true, fmt.Errorf("unexpected State of newly created AWS EBS snapshot %v: %q", snapshotID, *snapshot.State)
-			}
-		}
-		return false, nil
-	}
-
-	// Truncated exponential backoff: if the exponential backoff times-out, just keep polling using the longest interval
-	err := wait.ExponentialBackoff(backoff, conditionFunc)
-	if err == wait.ErrWaitTimeout {
-		timeout := time.Duration(backoff.Duration.Seconds() * math.Pow(backoff.Factor, float64(backoff.Steps)))
-		err = wait.PollInfinite(timeout*time.Second, conditionFunc)
-	}
-	return err
 }
