@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 )
 
 type testRequest struct {
@@ -38,12 +39,15 @@ var stdVolCap = []*csi.VolumeCapability{
 		},
 	},
 }
-var stdVolSize = int64(5 * 1024 * 1024 * 1024)
-var stdCapRange = &csi.CapacityRange{RequiredBytes: stdVolSize}
-var stdParams = map[string]string{
-	"fsType":     "ext3",
-	"volumeType": "gp2",
-}
+
+var (
+	stdVolSize  = int64(5 * util.GiB)
+	stdCapRange = &csi.CapacityRange{RequiredBytes: stdVolSize}
+	stdParams   = map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+)
 
 func TestInFlight(t *testing.T) {
 	testCases := []struct {

@@ -82,7 +82,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		d.inFlight.Delete(req)
 	}()
 
-	source, ok := req.PublishContext["devicePath"]
+	source, ok := req.PublishContext[DevicePathKey]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
@@ -121,7 +121,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// Get fs type that the volume will be formatted with
 	attributes := req.GetVolumeContext()
-	fsType, exists := attributes["fsType"]
+	fsType, exists := attributes[FsTypeKey]
 	if !exists || fsType == "" {
 		fsType = defaultFsType
 	}
