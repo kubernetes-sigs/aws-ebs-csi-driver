@@ -65,7 +65,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -95,7 +95,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -124,7 +124,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: cloud.DefaultVolumeSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -138,7 +138,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -147,12 +147,12 @@ func TestCreateVolume(t *testing.T) {
 				Name:               "vol-test",
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
-				Parameters:         map[string]string{"fsType": defaultFsType},
+				Parameters:         map[string]string{FsTypeKey: defaultFsType},
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": defaultFsType},
+				VolumeContext: map[string]string{FsTypeKey: defaultFsType},
 			},
 		},
 		{
@@ -162,14 +162,14 @@ func TestCreateVolume(t *testing.T) {
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"type":      cloud.VolumeTypeIO1,
-					"iopsPerGB": "5",
+					VolumeTypeKey: cloud.VolumeTypeIO1,
+					IopsPerGBKey:  "5",
 				},
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -179,46 +179,46 @@ func TestCreateVolume(t *testing.T) {
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"type": cloud.VolumeTypeSC1,
+					VolumeTypeKey: cloud.VolumeTypeSC1,
 				},
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
-			name: "success with volume encrpytion",
+			name: "success with volume encryption",
 			req: &csi.CreateVolumeRequest{
 				Name:               "vol-test",
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"encrypted": "true",
+					EncryptedKey: "true",
 				},
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
-			name: "success with volume encrpytion with KMS key",
+			name: "success with volume encryption with KMS key",
 			req: &csi.CreateVolumeRequest{
 				Name:               "vol-test",
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"encrypted": "true",
-					"kmsKeyId":  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+					EncryptedKey: "true",
+					KmsKeyIdKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 				},
 			},
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": ""},
+				VolumeContext: map[string]string{FsTypeKey: ""},
 			},
 		},
 		{
@@ -228,7 +228,7 @@ func TestCreateVolume(t *testing.T) {
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"fsType": expFsType,
+					FsTypeKey: expFsType,
 				},
 				AccessibilityRequirements: &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{
@@ -243,7 +243,7 @@ func TestCreateVolume(t *testing.T) {
 				CapacityRange:      stdCapRange,
 				VolumeCapabilities: stdVolCap,
 				Parameters: map[string]string{
-					"fsType": expFsType,
+					FsTypeKey: expFsType,
 				},
 				AccessibilityRequirements: &csi.TopologyRequirement{
 					Requisite: []*csi.Topology{
@@ -256,7 +256,7 @@ func TestCreateVolume(t *testing.T) {
 			expVol: &csi.Volume{
 				CapacityBytes: stdVolSize,
 				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{"fsType": expFsType},
+				VolumeContext: map[string]string{FsTypeKey: expFsType},
 				AccessibleTopology: []*csi.Topology{
 					{
 						Segments: map[string]string{TopologyKey: expZone},

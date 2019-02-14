@@ -87,7 +87,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volumeParams := req.GetParameters()
-	fsType := volumeParams["fsType"]
+	fsType := volumeParams[FsTypeKey]
 
 	// volume exists already
 	if disk != nil {
@@ -97,10 +97,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
-	volumeType := volumeParams["type"]
+	volumeType := volumeParams[VolumeTypeKey]
 	iopsPerGB := 0
 	if volumeType == cloud.VolumeTypeIO1 {
-		iopsPerGB, err = strconv.Atoi(volumeParams["iopsPerGB"])
+		iopsPerGB, err = strconv.Atoi(volumeParams[IopsPerGBKey])
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
 		}
@@ -110,9 +110,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		isEncrypted bool
 		kmsKeyId    string
 	)
-	if volumeParams["encrypted"] == "true" {
+	if volumeParams[EncryptedKey] == "true" {
 		isEncrypted = true
-		kmsKeyId = volumeParams["kmsKeyId"]
+		kmsKeyId = volumeParams[KmsKeyIdKey]
 	}
 
 	opts := &cloud.DiskOptions{
@@ -192,7 +192,7 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 	}
 	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
-	pvInfo := map[string]string{"devicePath": devicePath}
+	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 }
 
@@ -328,7 +328,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
 			VolumeContext: map[string]string{
-				"fsType": disk.FsType,
+				FsTypeKey: disk.FsType,
 			},
 			AccessibleTopology: []*csi.Topology{
 				{
