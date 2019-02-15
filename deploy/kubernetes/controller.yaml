@@ -158,7 +158,7 @@ spec:
             - name: ADDRESS
               value: /csi/csi.sock
           volumeMounts:
-            - name: plugin-dir
+            - name: socket-dir
               mountPath: /csi
         - name: csi-provisioner
           image: quay.io/k8scsi/csi-provisioner:v1.0.1
@@ -189,11 +189,3 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir: {}
-        - name: plugin-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
-            type: DirectoryOrCreate
-        - name: registration-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins_registry/
-            type: Directory
