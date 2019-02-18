@@ -127,6 +127,22 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
 		},
+		{
+			name:       "success: normal from snapshot",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+				SnapshotID:       "snapshot-test",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+			},
+			expErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -146,10 +162,17 @@ func TestCreateDisk(t *testing.T) {
 				State:            aws.String(volState),
 				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
 			}
-
+			snapshot := &ec2.Snapshot{
+				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
+				VolumeId:   aws.String("snap-test-volume"),
+				State:      aws.String("completed"),
+			}
 			ctx := context.Background()
 			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
 			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
+			if len(tc.diskOptions.SnapshotID) > 0 {
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
+			}
 
 			disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
 			if err != nil {
@@ -460,6 +483,164 @@ func TestGetDiskByID(t *testing.T) {
 
 			mockCtrl.Finish()
 		})
+	}
+}
+
+func TestCreateSnapshot(t *testing.T) {
+	testCases := []struct {
+		name            string
+		snapshotName    string
+		snapshotOptions *SnapshotOptions
+		expSnapshot     *Snapshot
+		expErr          error
+	}{
+		{
+			name:         "success: normal",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+				},
+			},
+			expSnapshot: &Snapshot{
+				SourceVolumeID: "snap-test-volume",
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		mockCtrl := gomock.NewController(t)
+		mockEC2 := mocks.NewMockEC2(mockCtrl)
+		c := newCloud(mockEC2)
+
+		ec2snapshot := &ec2.Snapshot{
+			SnapshotId: aws.String(tc.snapshotOptions.Tags[SnapshotNameTagKey]),
+			VolumeId:   aws.String("snap-test-volume"),
+			State:      aws.String("completed"),
+		}
+
+		ctx := context.Background()
+		mockEC2.EXPECT().CreateSnapshotWithContext(gomock.Eq(ctx), gomock.Any()).Return(ec2snapshot, tc.expErr)
+		mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil).AnyTimes()
+
+		snapshot, err := c.CreateSnapshot(ctx, tc.expSnapshot.SourceVolumeID, tc.snapshotOptions)
+		if err != nil {
+			if tc.expErr == nil {
+				t.Fatalf("CreateSnapshot() failed: expected no error, got: %v", err)
+			}
+		} else {
+			if tc.expErr != nil {
+				t.Fatal("CreateSnapshot() failed: expected error, got nothing")
+			} else {
+				if snapshot.SourceVolumeID != tc.expSnapshot.SourceVolumeID {
+					t.Fatalf("CreateSnapshot() failed: expected source volume ID %s, got %v", tc.expSnapshot.SourceVolumeID, snapshot.SourceVolumeID)
+				}
+			}
+		}
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestDeleteSnapshot(t *testing.T) {
+	testCases := []struct {
+		name            string
+		snapshotName    string
+		snapshotOptions *SnapshotOptions
+		expSnapshot     *Snapshot
+		expErr          error
+	}{
+		{
+			name:         "success: normal",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+				},
+			},
+			expSnapshot: &Snapshot{
+				SourceVolumeID: "snap-test-volume",
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		mockCtrl := gomock.NewController(t)
+		mockEC2 := mocks.NewMockEC2(mockCtrl)
+		c := newCloud(mockEC2)
+
+		ctx := context.Background()
+		mockEC2.EXPECT().DeleteSnapshotWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteSnapshotOutput{}, tc.expErr)
+
+		_, err := c.DeleteSnapshot(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
+		if err != nil {
+			if tc.expErr == nil {
+				t.Fatalf("DeleteSnapshot() failed: expected no error, got: %v", err)
+			}
+		} else {
+			if tc.expErr != nil {
+				t.Fatal("DeleteSnapshot() failed: expected error, got nothing")
+			}
+		}
+
+		mockCtrl.Finish()
+	}
+}
+
+func TestGetSnapshotByName(t *testing.T) {
+	testCases := []struct {
+		name            string
+		snapshotName    string
+		snapshotOptions *SnapshotOptions
+		expSnapshot     *Snapshot
+		expErr          error
+	}{
+		{
+			name:         "success: normal",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+				},
+			},
+			expSnapshot: &Snapshot{
+				SourceVolumeID: "snap-test-volume",
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Logf("Test case: %s", tc.name)
+		mockCtrl := gomock.NewController(t)
+		mockEC2 := mocks.NewMockEC2(mockCtrl)
+		c := newCloud(mockEC2)
+
+		ec2snapshot := &ec2.Snapshot{
+			SnapshotId: aws.String(tc.snapshotOptions.Tags[SnapshotNameTagKey]),
+			VolumeId:   aws.String("snap-test-volume"),
+			State:      aws.String("completed"),
+		}
+
+		ctx := context.Background()
+		mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil)
+
+		_, err := c.GetSnapshotByName(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
+		if err != nil {
+			if tc.expErr == nil {
+				t.Fatalf("GetSnapshotByName() failed: expected no error, got: %v", err)
+			}
+		} else {
+			if tc.expErr != nil {
+				t.Fatal("GetSnapshotByName() failed: expected error, got nothing")
+			}
+		}
+
+		mockCtrl.Finish()
 	}
 }
 
