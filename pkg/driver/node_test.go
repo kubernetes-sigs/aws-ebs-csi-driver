@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
@@ -205,7 +206,7 @@ func TestNodeStageVolume(t *testing.T) {
 			if tc.fakeMountPoint != nil {
 				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
 			}
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -305,7 +306,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 			if len(tc.fakeMountPoints) > 0 {
 				fakeMounter.MountPoints = tc.fakeMountPoints
 			}
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
 
 			_, err := awsDriver.NodeUnstageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -535,7 +536,7 @@ func TestNodePublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeMounter := NewFakeMounter()
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
 
 			_, err := awsDriver.NodePublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -612,7 +613,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 			if tc.fakeMountPoint != nil {
 				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
 			}
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
 
 			_, err := awsDriver.NodeUnpublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -638,7 +639,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 func TestNodeGetVolumeStats(t *testing.T) {
 	req := &csi.NodeGetVolumeStatsRequest{}
-	awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 	expErrCode := codes.Unimplemented
 
 	_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -656,7 +657,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 func TestNodeGetCapabilities(t *testing.T) {
 	req := &csi.NodeGetCapabilitiesRequest{}
-	awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 	caps := []*csi.NodeServiceCapability{
 		{
 			Type: &csi.NodeServiceCapability_Rpc{
@@ -683,7 +684,7 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 func TestNodeGetInfo(t *testing.T) {
 	req := &csi.NodeGetInfoRequest{}
-	awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 	m := awsDriver.cloud.GetMetadata()
 	expResp := &csi.NodeGetInfoResponse{
 		NodeId: "instanceID",

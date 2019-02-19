@@ -106,7 +106,7 @@ func (c *FakeCloudProvider) GetDiskByName(ctx context.Context, name string, capa
 	if len(disks) > 1 {
 		return nil, ErrMultiDisks
 	} else if len(disks) == 1 {
-		if capacityBytes != disks[0].Disk.CapacityGiB*1024*1024*1024 {
+		if capacityBytes != disks[0].Disk.CapacityGiB*util.GiB {
 			return nil, ErrDiskExistsDiffSize
 		}
 		return disks[0].Disk, nil
