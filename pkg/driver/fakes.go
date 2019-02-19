@@ -22,10 +22,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
-func NewFakeCloudProvider() *cloud.FakeCloudProvider {
-	return cloud.NewFakeCloudProvider()
-}
-
 func NewFakeMounter() *mount.FakeMounter {
 	return &mount.FakeMounter{
 		MountPoints: []mount.MountPoint{},

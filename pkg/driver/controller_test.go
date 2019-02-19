@@ -268,7 +268,7 @@ func TestCreateVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 
 			resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -353,7 +353,7 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 			_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
@@ -499,7 +499,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+		awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 		resp, err := awsDriver.CreateSnapshot(context.TODO(), tc.req)
 		if err != nil {
 			srvErr, ok := status.FromError(err)
@@ -565,7 +565,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
+		awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
 		snapResp, err := awsDriver.CreateSnapshot(context.TODO(), snapReq)
 		if err != nil {
 			t.Fatalf("Error creating testing snapshot: %v", err)
@@ -591,7 +591,7 @@ func TestDeleteSnapshot(t *testing.T) {
 }
 
 func TestControllerPublishVolume(t *testing.T) {
-	fakeCloud := NewFakeCloudProvider()
+	fakeCloud := cloud.NewFakeCloudProvider()
 	stdVolCap := &csi.VolumeCapability{
 		AccessType: &csi.VolumeCapability_Mount{
 			Mount: &csi.VolumeCapability_MountVolume{},
@@ -727,7 +727,7 @@ func TestControllerPublishVolume(t *testing.T) {
 }
 
 func TestControllerUnpublishVolume(t *testing.T) {
-	fakeCloud := NewFakeCloudProvider()
+	fakeCloud := cloud.NewFakeCloudProvider()
 	testCases := []struct {
 		name       string
 		req        *csi.ControllerUnpublishVolumeRequest
