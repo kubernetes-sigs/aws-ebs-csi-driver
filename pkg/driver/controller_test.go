@@ -268,7 +268,7 @@ func TestCreateVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeMounter())
+			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 
 			resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -353,7 +353,7 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeMounter())
+			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 			_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
@@ -499,7 +499,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
+		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 		resp, err := awsDriver.CreateSnapshot(context.TODO(), tc.req)
 		if err != nil {
 			srvErr, ok := status.FromError(err)
@@ -565,7 +565,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
+		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 		snapResp, err := awsDriver.CreateSnapshot(context.TODO(), snapReq)
 		if err != nil {
 			t.Fatalf("Error creating testing snapshot: %v", err)
