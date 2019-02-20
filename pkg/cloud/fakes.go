@@ -26,9 +26,10 @@ import (
 )
 
 type FakeCloudProvider struct {
-	disks map[string]*fakeDisk
-	m     *metadata
-	pub   map[string]string
+	disks     map[string]*fakeDisk
+	snapshots map[string]*fakeSnapshot
+	m         *metadata
+	pub       map[string]string
 }
 
 type fakeDisk struct {
@@ -36,11 +37,17 @@ type fakeDisk struct {
 	tags map[string]string
 }
 
+type fakeSnapshot struct {
+	*Snapshot
+	tags map[string]string
+}
+
 func NewFakeCloudProvider() *FakeCloudProvider {
 	return &FakeCloudProvider{
-		disks: make(map[string]*fakeDisk),
-		pub:   make(map[string]string),
-		m:     &metadata{"instanceID", "region", "az"},
+		disks:     make(map[string]*fakeDisk),
+		snapshots: make(map[string]*fakeSnapshot),
+		pub:       make(map[string]string),
+		m:         &metadata{"instanceID", "region", "az"},
 	}
 }
 
@@ -118,4 +125,46 @@ func (c *FakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*
 
 func (c *FakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
 	return nodeID == c.m.GetInstanceID()
+}
+
+func (c *FakeCloudProvider) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
+	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	snapshotID := fmt.Sprintf("snapshot-%d", r1.Uint64())
+	if len(snapshotOptions.Tags[SnapshotNameTagKey]) == 0 {
+		// for simplicity: let's have the Name and ID identical
+		snapshotOptions.Tags[SnapshotNameTagKey] = snapshotID
+	}
+	s := &fakeSnapshot{
+		Snapshot: &Snapshot{
+			SnapshotID:     snapshotID,
+			SourceVolumeID: volumeID,
+			Size:           1,
+			CreationTime:   time.Now(),
+		},
+		tags: snapshotOptions.Tags,
+	}
+	c.snapshots[snapshotID] = s
+	return s.Snapshot, nil
+
+}
+
+func (c *FakeCloudProvider) DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error) {
+	delete(c.snapshots, snapshotID)
+	return true, nil
+
+}
+
+func (c *FakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error) {
+	var snapshots []*fakeSnapshot
+	for _, s := range c.snapshots {
+		for key, value := range s.tags {
+			if key == SnapshotNameTagKey && value == name {
+				snapshots = append(snapshots, s)
+			}
+		}
+	}
+	if len(snapshots) == 0 {
+		return nil, nil
+	}
+	return snapshots[0].Snapshot, nil
 }
