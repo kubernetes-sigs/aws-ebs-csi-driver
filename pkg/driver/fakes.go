@@ -22,6 +22,10 @@ import (
 	"k8s.io/kubernetes/pkg/util/mount"
 )
 
+func NewFakeCloudProvider() *cloud.FakeCloudProvider {
+	return cloud.NewFakeCloudProvider()
+}
+
 func NewFakeMounter() *mount.FakeMounter {
 	return &mount.FakeMounter{
 		MountPoints: []mount.MountPoint{},
@@ -38,12 +42,11 @@ func NewFakeSafeFormatAndMounter(fakeMounter *mount.FakeMounter) *mount.SafeForm
 }
 
 // NewFakeDriver creates a new mock driver used for testing
-func NewFakeDriver(endpoint string, fakeMounter *mount.FakeMounter) *Driver {
-	cloud := cloud.NewFakeCloudProvider()
+func NewFakeDriver(endpoint string, fakeCloud *cloud.FakeCloudProvider, fakeMounter *mount.FakeMounter) *Driver {
 	return &Driver{
 		endpoint: endpoint,
-		nodeID:   cloud.GetMetadata().GetInstanceID(),
-		cloud:    cloud,
+		nodeID:   fakeCloud.GetMetadata().GetInstanceID(),
+		cloud:    fakeCloud,
 		mounter:  NewFakeSafeFormatAndMounter(fakeMounter),
 		inFlight: internal.NewInFlight(),
 	}

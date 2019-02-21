@@ -268,7 +268,7 @@ func TestCreateVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeMounter())
+			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 
 			resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -353,7 +353,7 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", NewFakeMounter())
+			awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 			_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
@@ -499,7 +499,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
+		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 		resp, err := awsDriver.CreateSnapshot(context.TODO(), tc.req)
 		if err != nil {
 			srvErr, ok := status.FromError(err)
@@ -565,7 +565,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", NewFakeMounter())
+		awsDriver := NewFakeDriver("", NewFakeCloudProvider(), NewFakeMounter())
 		snapResp, err := awsDriver.CreateSnapshot(context.TODO(), snapReq)
 		if err != nil {
 			t.Fatalf("Error creating testing snapshot: %v", err)
@@ -587,5 +587,206 @@ func TestDeleteSnapshot(t *testing.T) {
 		if tc.expErrCode != codes.OK {
 			t.Fatalf("Expected error %v, got no error", tc.expErrCode)
 		}
+	}
+}
+
+func TestControllerPublishVolume(t *testing.T) {
+	fakeCloud := NewFakeCloudProvider()
+	stdVolCap := &csi.VolumeCapability{
+		AccessType: &csi.VolumeCapability_Mount{
+			Mount: &csi.VolumeCapability_MountVolume{},
+		},
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+	}
+	testCases := []struct {
+		name       string
+		req        *csi.ControllerPublishVolumeRequest
+		expResp    *csi.ControllerPublishVolumeResponse
+		expErrCode codes.Code
+		setup      func(req *csi.ControllerPublishVolumeRequest)
+	}{
+		{
+			name:    "success normal",
+			expResp: &csi.ControllerPublishVolumeResponse{},
+			req: &csi.ControllerPublishVolumeRequest{
+				NodeId:           fakeCloud.GetMetadata().GetInstanceID(),
+				VolumeCapability: stdVolCap,
+			},
+			// create a fake disk and setup the request
+			// parameters appropriately
+			setup: func(req *csi.ControllerPublishVolumeRequest) {
+				fakeDiskOpts := &cloud.DiskOptions{
+					CapacityBytes:    1,
+					AvailabilityZone: "az",
+				}
+				fakeDisk, _ := fakeCloud.CreateDisk(context.TODO(), "vol-test", fakeDiskOpts)
+				req.VolumeId = fakeDisk.VolumeID
+			},
+		},
+		{
+			name:       "fail no VolumeId",
+			req:        &csi.ControllerPublishVolumeRequest{},
+			expErrCode: codes.InvalidArgument,
+			setup:      func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail no NodeId",
+			expErrCode: codes.InvalidArgument,
+			req: &csi.ControllerPublishVolumeRequest{
+				VolumeId: "vol-test",
+			},
+			setup: func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail no VolumeCapability",
+			expErrCode: codes.InvalidArgument,
+			req: &csi.ControllerPublishVolumeRequest{
+				NodeId:   fakeCloud.GetMetadata().GetInstanceID(),
+				VolumeId: "vol-test",
+			},
+			setup: func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail invalid VolumeCapability",
+			expErrCode: codes.InvalidArgument,
+			req: &csi.ControllerPublishVolumeRequest{
+				NodeId: fakeCloud.GetMetadata().GetInstanceID(),
+				VolumeCapability: &csi.VolumeCapability{
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
+					},
+				},
+				VolumeId: "vol-test",
+			},
+			setup: func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail instance not found",
+			expErrCode: codes.NotFound,
+			req: &csi.ControllerPublishVolumeRequest{
+				NodeId:           "does-not-exist",
+				VolumeId:         "vol-test",
+				VolumeCapability: stdVolCap,
+			},
+			setup: func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail volume not found",
+			expErrCode: codes.NotFound,
+			req: &csi.ControllerPublishVolumeRequest{
+				VolumeId:         "does-not-exist",
+				NodeId:           fakeCloud.GetMetadata().GetInstanceID(),
+				VolumeCapability: stdVolCap,
+			},
+			setup: func(req *csi.ControllerPublishVolumeRequest) {},
+		},
+		{
+			name:       "fail attach disk with already exists error",
+			expErrCode: codes.AlreadyExists,
+			req: &csi.ControllerPublishVolumeRequest{
+				VolumeId:         "does-not-exist",
+				NodeId:           fakeCloud.GetMetadata().GetInstanceID(),
+				VolumeCapability: stdVolCap,
+			},
+			// create a fake disk, attach it and setup the
+			// request appropriately
+			setup: func(req *csi.ControllerPublishVolumeRequest) {
+				fakeDiskOpts := &cloud.DiskOptions{
+					CapacityBytes:    1,
+					AvailabilityZone: "az",
+				}
+				fakeDisk, _ := fakeCloud.CreateDisk(context.TODO(), "vol-test", fakeDiskOpts)
+				req.VolumeId = fakeDisk.VolumeID
+				_, _ = fakeCloud.AttachDisk(context.TODO(), fakeDisk.VolumeID, fakeCloud.GetMetadata().GetInstanceID())
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setup(tc.req)
+			awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
+			_, err := awsDriver.ControllerPublishVolume(context.TODO(), tc.req)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != tc.expErrCode {
+					t.Fatalf("Expected error code '%d', got '%d': %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
+				}
+				return
+			}
+			if tc.expErrCode != codes.OK {
+				t.Fatalf("Expected error %v, got no error", tc.expErrCode)
+			}
+		})
+	}
+}
+
+func TestControllerUnpublishVolume(t *testing.T) {
+	fakeCloud := NewFakeCloudProvider()
+	testCases := []struct {
+		name       string
+		req        *csi.ControllerUnpublishVolumeRequest
+		expResp    *csi.ControllerUnpublishVolumeResponse
+		expErrCode codes.Code
+		setup      func(req *csi.ControllerUnpublishVolumeRequest)
+	}{
+		{
+			name:    "success normal",
+			expResp: &csi.ControllerUnpublishVolumeResponse{},
+			req: &csi.ControllerUnpublishVolumeRequest{
+				NodeId: fakeCloud.GetMetadata().GetInstanceID(),
+			},
+			// create a fake disk, attach it and setup the request
+			// parameters appropriately
+			setup: func(req *csi.ControllerUnpublishVolumeRequest) {
+				fakeDiskOpts := &cloud.DiskOptions{
+					CapacityBytes:    1,
+					AvailabilityZone: "az",
+				}
+				fakeDisk, _ := fakeCloud.CreateDisk(context.TODO(), "vol-test", fakeDiskOpts)
+				req.VolumeId = fakeDisk.VolumeID
+				_, _ = fakeCloud.AttachDisk(context.TODO(), fakeDisk.VolumeID, fakeCloud.GetMetadata().GetInstanceID())
+			},
+		},
+		{
+			name:       "fail no VolumeId",
+			req:        &csi.ControllerUnpublishVolumeRequest{},
+			expErrCode: codes.InvalidArgument,
+			setup:      func(req *csi.ControllerUnpublishVolumeRequest) {},
+		},
+		{
+			name:       "fail no NodeId",
+			expErrCode: codes.InvalidArgument,
+			req: &csi.ControllerUnpublishVolumeRequest{
+				VolumeId: "vol-test",
+			},
+			setup: func(req *csi.ControllerUnpublishVolumeRequest) {},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setup(tc.req)
+			awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
+			_, err := awsDriver.ControllerUnpublishVolume(context.TODO(), tc.req)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != tc.expErrCode {
+					t.Fatalf("Expected error code '%d', got '%d': %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
+				}
+				return
+			}
+			if tc.expErrCode != codes.OK {
+				t.Fatalf("Expected error %v, got no error", tc.expErrCode)
+			}
+		})
 	}
 }
