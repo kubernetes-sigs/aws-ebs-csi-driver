@@ -16,6 +16,7 @@ package testsuites
 
 import (
 	"fmt"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 
 	"k8s.io/api/core/v1"
@@ -54,8 +55,8 @@ func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, names
 	tpod := NewTestPod(client, namespace, pod.Cmd)
 	cleanupFuncs := make([]func(), 0)
 	for n, v := range pod.Volumes {
-		var tpvc *TestPersistentVolumeClaim
-		tpvc, cleanupFuncs = v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver)
+		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver)
+		cleanupFuncs = append(cleanupFuncs, funcs...)
 
 		tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
 	}
@@ -66,8 +67,8 @@ func (pod *PodDetails) SetupWithPreProvisionedVolumes(client clientset.Interface
 	tpod := NewTestPod(client, namespace, pod.Cmd)
 	cleanupFuncs := make([]func(), 0)
 	for n, v := range pod.Volumes {
-		var tpvc *TestPersistentVolumeClaim
-		tpvc, cleanupFuncs = v.SetupPreProvisionedPersistentVolumeClaim(client, namespace, csiDriver)
+		tpvc, funcs := v.SetupPreProvisionedPersistentVolumeClaim(client, namespace, csiDriver)
+		cleanupFuncs = append(cleanupFuncs, funcs...)
 
 		tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
 	}
