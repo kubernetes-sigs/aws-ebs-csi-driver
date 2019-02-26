@@ -15,6 +15,8 @@ limitations under the License.
 package e2e
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -22,7 +24,15 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
+const kubeconfigEnvVar = "KUBECONFIG"
+
 func init() {
+	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
+	// it does not fall back to defaults
+	if os.Getenv(kubeconfigEnvVar) == "" {
+		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		os.Setenv(kubeconfigEnvVar, kubeconfig)
+	}
 	framework.HandleFlags()
 	framework.AfterReadingAllFlags(&framework.TestContext)
 }
