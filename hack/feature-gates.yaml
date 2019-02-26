@@ -2,7 +2,9 @@
     featureGates:
       CSIDriverRegistry: "true"
       CSINodeInfo: "true"
+      CSIBlockVolume: "true"
   kubelet:
     featureGates:
       CSIDriverRegistry: "true"
       CSINodeInfo: "true"
+      CSIBlockVolume: "true"
