@@ -16,6 +16,7 @@ package driver
 
 import (
 	"fmt"
+	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -41,7 +42,7 @@ func InitEbsCSIDriver() PVTestDriver {
 
 func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass {
 	provisioner := d.driverName
-	generatedName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
+	generateName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
 	allowedTopologies := []v1.TopologySelectorTerm{}
 	if len(allowedTopologyValues) > 0 {
 		allowedTopologies = []v1.TopologySelectorTerm{
@@ -55,7 +56,13 @@ func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]str
 			},
 		}
 	}
-	return getStorageClass(generatedName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, allowedTopologies)
+	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, allowedTopologies)
+}
+
+func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string) *v1alpha1.VolumeSnapshotClass {
+	provisioner := d.driverName
+	generateName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
+	return getVolumeSnapshotClass(generateName, provisioner)
 }
 
 func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume {
