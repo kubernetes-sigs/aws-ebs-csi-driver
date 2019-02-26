@@ -197,6 +197,18 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          ports:
+            - name: healthz
+              containerPort: 9808
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 5
         - name: cluster-driver-registrar
           imagePullPolicy: Always
           image: quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1
@@ -238,16 +250,25 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
           image: quay.io/k8scsi/csi-snapshotter:v1.0.1
+          imagePullPolicy: Always
           args:
             - --csi-address=$(ADDRESS)
             - --connection-timeout=15s
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: Always
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: liveness-probe
+          image: quay.io/k8scsi/livenessprobe:v1.0.1
+          imagePullPolicy: Always
+          args:
+            - --csi-address=/csi/csi.sock
+            - --connection-timeout=3s
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
       volumes:
         - name: socket-dir
           emptyDir: {}

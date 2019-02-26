@@ -38,6 +38,18 @@ spec:
               mountPath: /csi
             - name: device-dir
               mountPath: /dev
+          ports:
+            - name: healthz
+              containerPort: 9808
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 5
         - name: node-driver-registrar
           imagePullPolicy: Always
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
@@ -59,6 +71,15 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
+        - name: liveness-probe
+          image: quay.io/k8scsi/livenessprobe:v1.0.1
+          imagePullPolicy: Always
+          args:
+            - --csi-address=/csi/csi.sock
+            - --connection-timeout=3s
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
       volumes:
         - name: kubelet-dir
           hostPath:
