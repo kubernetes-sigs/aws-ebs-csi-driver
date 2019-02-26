@@ -3,6 +3,7 @@
       CSIDriverRegistry: "true"
       CSINodeInfo: "true"
       CSIBlockVolume: "true"
+      VolumeSnapshotDataSource: "true"
   kubelet:
     featureGates:
       CSIDriverRegistry: "true"
