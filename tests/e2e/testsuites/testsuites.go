@@ -95,6 +95,7 @@ func (pv *TestPreProvisionedPersistentVolume) Create() v1.PersistentVolume {
 type TestPersistentVolumeClaim struct {
 	client                         clientset.Interface
 	claimSize                      string
+	volumeMode                     v1.PersistentVolumeMode
 	storageClass                   *storagev1.StorageClass
 	namespace                      *v1.Namespace
 	persistentVolume               *v1.PersistentVolume
@@ -102,10 +103,15 @@ type TestPersistentVolumeClaim struct {
 	requestedPersistentVolumeClaim *v1.PersistentVolumeClaim
 }
 
-func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claimSize string, sc *storagev1.StorageClass) *TestPersistentVolumeClaim {
+func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claimSize string, volumeMode VolumeMode, sc *storagev1.StorageClass) *TestPersistentVolumeClaim {
+	mode := v1.PersistentVolumeFilesystem
+	if volumeMode == Block {
+		mode = v1.PersistentVolumeBlock
+	}
 	return &TestPersistentVolumeClaim{
 		client:       c,
 		claimSize:    claimSize,
+		volumeMode:   mode,
 		namespace:    ns,
 		storageClass: sc,
 	}
@@ -119,7 +125,7 @@ func (t *TestPersistentVolumeClaim) Create() {
 	if t.storageClass != nil {
 		storageClassName = t.storageClass.Name
 	}
-	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize)
+	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize, t.volumeMode)
 	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Create(t.requestedPersistentVolumeClaim)
 	framework.ExpectNoError(err)
 }
@@ -139,7 +145,7 @@ func (t *TestPersistentVolumeClaim) WaitForBound() v1.PersistentVolumeClaim {
 	return *t.persistentVolumeClaim
 }
 
-func generatePVC(namespace, storageClassName, claimSize string) *v1.PersistentVolumeClaim {
+func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolumeClaim {
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "pvc-",
@@ -155,6 +161,7 @@ func generatePVC(namespace, storageClassName, claimSize string) *v1.PersistentVo
 					v1.ResourceName(v1.ResourceStorage): resource.MustParse(claimSize),
 				},
 			},
+			VolumeMode: &volumeMode,
 		},
 	}
 }
@@ -443,6 +450,24 @@ func (t *TestPod) SetupVolume(pvc *v1.PersistentVolumeClaim, name, mountPath str
 		ReadOnly:  readOnly,
 	}
 	t.pod.Spec.Containers[0].VolumeMounts = append(t.pod.Spec.Containers[0].VolumeMounts, volumeMount)
+
+	volume := v1.Volume{
+		Name: name,
+		VolumeSource: v1.VolumeSource{
+			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+				ClaimName: pvc.Name,
+			},
+		},
+	}
+	t.pod.Spec.Volumes = append(t.pod.Spec.Volumes, volume)
+}
+
+func (t *TestPod) SetupRawBlockVolume(pvc *v1.PersistentVolumeClaim, name, devicePath string) {
+	volumeDevice := v1.VolumeDevice{
+		Name:       name,
+		DevicePath: devicePath,
+	}
+	t.pod.Spec.Containers[0].VolumeDevices = append(t.pod.Spec.Containers[0].VolumeDevices, volumeDevice)
 
 	volume := v1.Volume{
 		Name: name,

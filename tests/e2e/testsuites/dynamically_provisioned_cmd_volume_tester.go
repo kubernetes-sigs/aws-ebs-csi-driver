@@ -16,22 +16,21 @@ package testsuites
 
 import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
-
 	"k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 
 	. "github.com/onsi/ginkgo"
 )
 
-// DynamicallyProvisionedWriterReaderVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)
+// DynamicallyProvisionedCmdVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)
 // Waiting for the PV provisioner to create a new PV
-// Testing if the Pod(s) can write and read to mounted volumes
-type DynamicallyProvisionedWriterReaderVolumeTest struct {
+// Testing if the Pod(s) Cmd is run with a 0 exit code
+type DynamicallyProvisionedCmdVolumeTest struct {
 	CSIDriver driver.DynamicPVTestDriver
 	Pods      []PodDetails
 }
 
-func (t *DynamicallyProvisionedWriterReaderVolumeTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *DynamicallyProvisionedCmdVolumeTest) Run(client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
 		tpod, cleanup := pod.SetupWithDynamicVolumes(client, namespace, t.CSIDriver)
 		// defer must be called here for resources not get removed before using them
