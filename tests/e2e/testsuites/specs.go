@@ -40,15 +40,29 @@ type VolumeDetails struct {
 	ReclaimPolicy         *v1.PersistentVolumeReclaimPolicy
 	VolumeBindingMode     *storagev1.VolumeBindingMode
 	AllowedTopologyValues []string
+	VolumeMode            VolumeMode
 	VolumeMount           VolumeMountDetails
+	VolumeDevice          VolumeDeviceDetails
 	// Optional, used with pre-provisioned volumes
 	VolumeID string
 }
+
+type VolumeMode int
+
+const (
+	FileSystem VolumeMode = iota
+	Block
+)
 
 type VolumeMountDetails struct {
 	NameGenerate      string
 	MountPathGenerate string
 	ReadOnly          bool
+}
+
+type VolumeDeviceDetails struct {
+	NameGenerate string
+	DevicePath   string
 }
 
 func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func()) {
@@ -58,7 +72,11 @@ func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, names
 		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver)
 		cleanupFuncs = append(cleanupFuncs, funcs...)
 
-		tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
+		if v.VolumeMode == Block {
+			tpod.SetupRawBlockVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeDevice.NameGenerate, n+1), v.VolumeDevice.DevicePath)
+		} else {
+			tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
+		}
 	}
 	return tpod, cleanupFuncs
 }
@@ -70,7 +88,11 @@ func (pod *PodDetails) SetupWithPreProvisionedVolumes(client clientset.Interface
 		tpvc, funcs := v.SetupPreProvisionedPersistentVolumeClaim(client, namespace, csiDriver)
 		cleanupFuncs = append(cleanupFuncs, funcs...)
 
-		tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
+		if v.VolumeMode == Block {
+			tpod.SetupRawBlockVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeDevice.NameGenerate, n+1), v.VolumeDevice.DevicePath)
+		} else {
+			tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
+		}
 	}
 	return tpod, cleanupFuncs
 }
@@ -84,7 +106,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
 	By("setting up the PVC")
-	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, &createdStorageClass)
+	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
 	tpvc.Create()
 	tpvc.WaitForBound()
 	tpvc.ValidateProvisionedPersistentVolume()
@@ -104,7 +126,7 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
 	By("setting up the PVC and PV")
-	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, &createdStorageClass)
+	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
 	// PV will not be ready until PVC is used in a pod when volumeBindingMode: WaitForFirstConsumer
@@ -123,7 +145,7 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
 	tpv.Create()
 	By("setting up the PVC")
-	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, nil)
+	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, nil)
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.DeleteBoundPersistentVolume)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)

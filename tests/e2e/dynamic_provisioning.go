@@ -68,7 +68,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 						},
 					},
 				}
-				test := testsuites.DynamicallyProvisionedWriterReaderVolumeTest{
+				test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 					CSIDriver: ebsDriver,
 					Pods:      pods,
 				}
@@ -97,7 +97,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 					},
 				},
 			}
-			test := testsuites.DynamicallyProvisionedWriterReaderVolumeTest{
+			test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 				CSIDriver: ebsDriver,
 				Pods:      pods,
 			}
@@ -123,7 +123,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 				},
 			},
 		}
-		test := testsuites.DynamicallyProvisionedWriterReaderVolumeTest{
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver: ebsDriver,
 			Pods:      pods,
 		}
@@ -156,7 +156,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 				},
 			},
 		}
-		test := testsuites.DynamicallyProvisionedWriterReaderVolumeTest{
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver: ebsDriver,
 			Pods:      pods,
 		}
@@ -194,7 +194,67 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 				},
 			},
 		}
-		test := testsuites.DynamicallyProvisionedWriterReaderVolumeTest{
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: ebsDriver,
+			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should create a raw block volume on demand", func() {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "dd if=/dev/zero of=/dev/xvda bs=1024k count=100",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeGP2,
+						FSType:     ebscsidriver.FSTypeExt4,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: ebsDriver,
+			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should create a raw block volume and a filesystem volume on demand and bind to the same pod", func() {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "dd if=/dev/zero of=/dev/xvda bs=1024k count=100 && echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO1,
+						FSType:     ebscsidriver.FSTypeExt4,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+					{
+						VolumeType:   awscloud.VolumeTypeGP2,
+						FSType:       ebscsidriver.FSTypeExt4,
+						MountOptions: []string{"rw"},
+						ClaimSize:    driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeMode:   testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver: ebsDriver,
 			Pods:      pods,
 		}
