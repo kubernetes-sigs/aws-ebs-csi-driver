@@ -21,7 +21,6 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          imagePullPolicy: Always
           image: amazon/aws-ebs-csi-driver:latest
           args:
             - --endpoint=$(CSI_ENDPOINT)
@@ -51,7 +50,6 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          imagePullPolicy: Always
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
           args:
             - --csi-address=$(ADDRESS)
@@ -73,7 +71,6 @@ spec:
               mountPath: /registration
         - name: liveness-probe
           image: quay.io/k8scsi/livenessprobe:v1.0.1
-          imagePullPolicy: Always
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
