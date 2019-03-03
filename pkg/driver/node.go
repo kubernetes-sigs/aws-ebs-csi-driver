@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
@@ -89,10 +90,17 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		d.inFlight.Delete(req)
 	}()
 
-	source, ok := req.PublishContext[DevicePathKey]
+	devicePath, ok := req.PublishContext[DevicePathKey]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
+
+	source, err := d.findDevicePath(devicePath, volumeID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
+	}
+
+	klog.Infof("NodeStageVolume: find device path %s -> %s", devicePath, source)
 
 	exists, err := d.mounter.ExistsPath(target)
 	if err != nil {
@@ -288,12 +296,24 @@ func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (
 
 func (d *Driver) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
 	target := req.GetTargetPath()
-	source := req.PublishContext[DevicePathKey]
+	volumeID := req.GetVolumeId()
+
+	devicePath, exists := req.PublishContext[DevicePathKey]
+	if !exists {
+		return status.Error(codes.InvalidArgument, "Device path not provided")
+	}
+	source, err := d.findDevicePath(devicePath, volumeID)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
+	}
+
+	klog.Infof("NodePublishVolume [block]: find device path %s -> %s", devicePath, source)
+
 	globalMountPath := filepath.Dir(target)
 
 	// create the global mount path if it is missing
 	// Path in the form of /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/{volumeName}
-	exists, err := d.mounter.ExistsPath(globalMountPath)
+	exists, err = d.mounter.ExistsPath(globalMountPath)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if path exists %q: %v", globalMountPath, err)
 	}
@@ -358,4 +378,58 @@ func (d *Driver) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeReques
 	}
 
 	return nil
+}
+
+// findDevicePath finds path of device and verifies its existence
+// if the device is not nvme, return the path directly
+// if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
+func (d *Driver) findDevicePath(devicePath, volumeId string) (string, error) {
+	exists, err := d.mounter.ExistsPath(devicePath)
+	if err != nil {
+		return "", err
+	}
+
+	// If the path exists, assume it is not nvme device
+	if exists {
+		return devicePath, nil
+	}
+
+	// Else find the nvme device path using volume ID
+	// This is the magic name on which AWS presents NVME devices under /dev/disk/by-id/
+	// For example, vol-0fab1d5e3f72a5e23 creates a symlink at
+	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
+	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeId, "-", "", -1)
+
+	return findNvmeVolume(nvmeName)
+}
+
+// findNvmeVolume looks for the nvme volume with the specified name
+// It follows the symlink (if it exists) and returns the absolute path to the device
+func findNvmeVolume(findName string) (device string, err error) {
+	p := filepath.Join("/dev/disk/by-id/", findName)
+	stat, err := os.Lstat(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			klog.V(5).Infof("nvme path %q not found", p)
+			return "", fmt.Errorf("nvme path %q not found", p)
+		}
+		return "", fmt.Errorf("error getting stat of %q: %v", p, err)
+	}
+
+	if stat.Mode()&os.ModeSymlink != os.ModeSymlink {
+		klog.Warningf("nvme file %q found, but was not a symlink", p)
+		return "", fmt.Errorf("nvme file %q found, but was not a symlink", p)
+	}
+	// Find the target, resolving to an absolute path
+	// For example, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23 -> ../../nvme2n1
+	resolved, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		return "", fmt.Errorf("error reading target of symlink %q: %v", p, err)
+	}
+
+	if !strings.HasPrefix(resolved, "/dev") {
+		return "", fmt.Errorf("resolved symlink for %q was unexpected: %q", p, resolved)
+	}
+
+	return resolved, nil
 }
