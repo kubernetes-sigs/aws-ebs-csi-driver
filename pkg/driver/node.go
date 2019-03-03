@@ -289,18 +289,18 @@ func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (
 func (d *Driver) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
 	target := req.GetTargetPath()
 	source := req.PublishContext[DevicePathKey]
-	podVolumePath := filepath.Dir(target)
+	globalMountPath := filepath.Dir(target)
 
-	// create the pod volume path if it is missing
+	// create the global mount path if it is missing
 	// Path in the form of /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/{volumeName}
-	exists, err := d.mounter.ExistsPath(podVolumePath)
+	exists, err := d.mounter.ExistsPath(globalMountPath)
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not check if path exists %q: %v", podVolumePath, err)
+		return status.Errorf(codes.Internal, "Could not check if path exists %q: %v", globalMountPath, err)
 	}
 
 	if !exists {
-		if err := d.mounter.MakeDir(podVolumePath); err != nil {
-			return status.Errorf(codes.Internal, "Could not create dir %q: %v", podVolumePath, err)
+		if err := d.mounter.MakeDir(globalMountPath); err != nil {
+			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
 
@@ -309,7 +309,7 @@ func (d *Driver) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mo
 	err = d.mounter.MakeFile(target)
 	if err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
-			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
 		}
 		return status.Errorf(codes.Internal, "Could not create file %q: %v", target, err)
 	}
@@ -317,7 +317,7 @@ func (d *Driver) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mo
 	klog.V(5).Infof("NodePublishVolume [block]: mounting %s at %s", source, target)
 	if err := d.mounter.Mount(source, target, "ext4", mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
-			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
 		}
 		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
