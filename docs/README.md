@@ -61,7 +61,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 2. Enable the flag `--allow-privileged=true` in the manifest entries of kubelet and kube-apiserver.
 
-3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,VolumeSnapshotDataSource=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes and restoring volumes from snapshots.
+3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true` in the manifest entries for `kube-apiserver` and `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true` in the `kubelets`. This is required to enable topology support of EBS volumes in Kubernetes, using `volumeMode: Block` and restoring volumes from snapshots.
 
 4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/csi-node-info-object.html#enabling-csinodeinfo).
 
@@ -95,10 +95,10 @@ kubectl apply -f deploy/kubernetes
 
 Now any user can start creating and using EBS volumes with the CSI driver. 
 
-6. Apply `examples/kubernetes/volume_scheduling` that uses the recently deployed driver:
+6. Apply `examples/kubernetes/pod-single-volume` that uses the recently deployed driver:
 
 ```
-kubectl apply -f examples/kubernetes/volume_scheduling
+kubectl apply -f examples/kubernetes/pod-single-volume
 ```
 
 ## Development

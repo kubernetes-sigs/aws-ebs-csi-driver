@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ebs-restore-claim
+  name: ebs-snapshot-restored-claim
 spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: ebs-sc
   resources:
     requests:
-      storage: 2Gi
+      storage: 4Gi
   dataSource:
     name: ebs-volume-snapshot
     kind: VolumeSnapshot
