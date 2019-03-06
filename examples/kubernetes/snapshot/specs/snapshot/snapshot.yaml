@@ -3,7 +3,7 @@ kind: VolumeSnapshot
 metadata:
   name: ebs-volume-snapshot
 spec:
-  snapshotClassName: csi-aws-snapclass
+  snapshotClassName: csi-aws-vsc
   source:
     name: ebs-claim
     kind: PersistentVolumeClaim
