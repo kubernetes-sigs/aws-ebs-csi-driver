@@ -40,14 +40,14 @@ func TestNodeStageVolume(t *testing.T) {
 	testCases := []struct {
 		name string
 		req  *csi.NodeStageVolumeRequest
+		// fakeMounter mocks mounter behaviour
+		fakeMounter *mount.FakeMounter
 		// expected fake mount actions the test will make
 		expActions []mount.FakeAction
 		// expected test error code
 		expErrCode codes.Code
 		// expected mount points when test finishes
 		expMountPoints []mount.MountPoint
-		// setup this mount point before running the test
-		fakeMountPoint *mount.MountPoint
 	}{
 		{
 			name: "success normal",
@@ -56,6 +56,11 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
+			},
+			fakeMounter: &mount.FakeMounter{
+				Filesystem: map[string]mount.FileType{
+					"/dev/fake": mount.FileTypeFile,
+				},
 			},
 			expActions: []mount.FakeAction{
 				{
@@ -89,6 +94,7 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
+			fakeMounter:    NewFakeMounter(),
 			expActions:     []mount.FakeAction{},
 			expMountPoints: []mount.MountPoint{},
 		},
@@ -100,6 +106,11 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeContext:     map[string]string{FsTypeKey: FSTypeExt3},
 				VolumeId:          "vol-test",
+			},
+			fakeMounter: &mount.FakeMounter{
+				Filesystem: map[string]mount.FileType{
+					"/dev/fake": mount.FileTypeFile,
+				},
 			},
 			expActions: []mount.FakeAction{
 				{
@@ -125,7 +136,8 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: "/test/path",
 				VolumeCapability:  stdVolCap,
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no StagingTargetPath",
@@ -134,7 +146,8 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability: stdVolCap,
 				VolumeId:         "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no VolumeCapability",
@@ -143,7 +156,8 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: "/test/path",
 				VolumeId:          "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail invalid VolumeCapability",
@@ -157,7 +171,8 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no devicePath",
@@ -166,7 +181,8 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			// To test idempotency we need to test the
@@ -182,9 +198,16 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
-			fakeMountPoint: &mount.MountPoint{
-				Device: "/dev/fake",
-				Path:   "/test/path",
+			fakeMounter: &mount.FakeMounter{
+				MountPoints: []mount.MountPoint{
+					{
+						Device: "/dev/fake",
+						Path:   "/test/path",
+					},
+				},
+				Filesystem: map[string]mount.FileType{
+					"/dev/fake": mount.FileTypeFile,
+				},
 			},
 			// no actions means mount isn't called because
 			// device is already mounted
@@ -202,11 +225,7 @@ func TestNodeStageVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fakeMounter := NewFakeMounter()
-			if tc.fakeMountPoint != nil {
-				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
-			}
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), tc.fakeMounter)
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -223,11 +242,11 @@ func TestNodeStageVolume(t *testing.T) {
 
 			// if fake mounter did anything we should
 			// check if it was expected
-			if len(fakeMounter.Log) > 0 && !reflect.DeepEqual(fakeMounter.Log, tc.expActions) {
-				t.Fatalf("Expected actions {%+v}, got {%+v}", tc.expActions, fakeMounter.Log)
+			if len(tc.fakeMounter.Log) > 0 && !reflect.DeepEqual(tc.fakeMounter.Log, tc.expActions) {
+				t.Fatalf("Expected actions {%+v}, got {%+v}", tc.expActions, tc.fakeMounter.Log)
 			}
-			if len(fakeMounter.MountPoints) > 0 && !reflect.DeepEqual(fakeMounter.MountPoints, tc.expMountPoints) {
-				t.Fatalf("Expected mount points {%+v}, got {%+v}", tc.expMountPoints, fakeMounter.MountPoints)
+			if len(tc.fakeMounter.MountPoints) > 0 && !reflect.DeepEqual(tc.fakeMounter.MountPoints, tc.expMountPoints) {
+				t.Fatalf("Expected mount points {%+v}, got {%+v}", tc.expMountPoints, tc.fakeMounter.MountPoints)
 			}
 		})
 	}
@@ -344,6 +363,8 @@ func TestNodePublishVolume(t *testing.T) {
 	testCases := []struct {
 		name string
 		req  *csi.NodePublishVolumeRequest
+		// fakeMounter mocks mounter behaviour
+		fakeMounter *mount.FakeMounter
 		// expect these actions to have occured
 		expActions []mount.FakeAction
 		// expected test error code
@@ -360,6 +381,7 @@ func TestNodePublishVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
+			fakeMounter: NewFakeMounter(),
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
@@ -387,6 +409,7 @@ func TestNodePublishVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
+			fakeMounter: NewFakeMounter(),
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
@@ -426,6 +449,7 @@ func TestNodePublishVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
+			fakeMounter: NewFakeMounter(),
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
@@ -459,6 +483,11 @@ func TestNodePublishVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
+			fakeMounter: &mount.FakeMounter{
+				Filesystem: map[string]mount.FileType{
+					"/dev/fake": mount.FileTypeFile,
+				},
+			},
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
@@ -484,7 +513,8 @@ func TestNodePublishVolume(t *testing.T) {
 				TargetPath:        "/test/target/path",
 				VolumeCapability:  stdVolCap,
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no StagingTargetPath",
@@ -494,7 +524,8 @@ func TestNodePublishVolume(t *testing.T) {
 				VolumeCapability: stdVolCap,
 				VolumeId:         "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no TargetPath",
@@ -504,7 +535,8 @@ func TestNodePublishVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail no VolumeCapability",
@@ -514,7 +546,8 @@ func TestNodePublishVolume(t *testing.T) {
 				TargetPath:        "/test/target/path",
 				VolumeId:          "vol-test",
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 		{
 			name: "fail invalid VolumeCapability",
@@ -529,14 +562,14 @@ func TestNodePublishVolume(t *testing.T) {
 					},
 				},
 			},
-			expErrCode: codes.InvalidArgument,
+			fakeMounter: NewFakeMounter(),
+			expErrCode:  codes.InvalidArgument,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fakeMounter := NewFakeMounter()
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), tc.fakeMounter)
 
 			_, err := awsDriver.NodePublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -553,6 +586,7 @@ func TestNodePublishVolume(t *testing.T) {
 
 			// if fake mounter did anything we should
 			// check if it was expected
+			fakeMounter := tc.fakeMounter
 			if len(fakeMounter.Log) > 0 && !reflect.DeepEqual(fakeMounter.Log, tc.expActions) {
 				t.Fatalf("Expected actions {%+v}, got {%+v}", tc.expActions, fakeMounter.Log)
 			}
