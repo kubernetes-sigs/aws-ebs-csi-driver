@@ -15,14 +15,21 @@ limitations under the License.
 package driver
 
 import (
+	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	VolumeSnapshotClassKind = "VolumeSnapshotClass"
+	SnapshotAPIVersion      = "snapshot.storage.k8s.io/v1alpha1"
+)
+
 type PVTestDriver interface {
 	DynamicPVTestDriver
 	PreProvisionedVolumeTestDriver
+	VolumeSnapshotTestDriver
 }
 
 // DynamicPVTestDriver represents an interface for a CSI driver that supports DynamicPV
@@ -35,6 +42,10 @@ type DynamicPVTestDriver interface {
 type PreProvisionedVolumeTestDriver interface {
 	// GetPersistentVolume returns a PersistentVolume with pre-provisioned volumeHandle
 	GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume
+}
+
+type VolumeSnapshotTestDriver interface {
+	GetVolumeSnapshotClass(namespace string) *v1alpha1.VolumeSnapshotClass
 }
 
 func getStorageClass(
@@ -64,5 +75,19 @@ func getStorageClass(
 		ReclaimPolicy:     reclaimPolicy,
 		VolumeBindingMode: bindingMode,
 		AllowedTopologies: allowedTopologies,
+	}
+}
+
+func getVolumeSnapshotClass(generateName string, provisioner string) *v1alpha1.VolumeSnapshotClass {
+	return &v1alpha1.VolumeSnapshotClass{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       VolumeSnapshotClassKind,
+			APIVersion: SnapshotAPIVersion,
+		},
+
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: generateName,
+		},
+		Snapshotter: provisioner,
 	}
 }

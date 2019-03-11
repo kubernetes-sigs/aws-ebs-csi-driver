@@ -17,9 +17,11 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"math/rand"
 	"time"
 
+	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +31,9 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
+	restclientset "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
@@ -71,6 +75,75 @@ func (t *TestStorageClass) Cleanup() {
 	framework.ExpectNoError(err)
 }
 
+type TestVolumeSnapshotClass struct {
+	client              restclientset.Interface
+	volumeSnapshotClass *v1alpha1.VolumeSnapshotClass
+	namespace           *v1.Namespace
+}
+
+func NewTestVolumeSnapshotClass(c restclientset.Interface, ns *v1.Namespace, vsc *v1alpha1.VolumeSnapshotClass) *TestVolumeSnapshotClass {
+	return &TestVolumeSnapshotClass{
+		client:              c,
+		volumeSnapshotClass: vsc,
+		namespace:           ns,
+	}
+}
+
+func (t *TestVolumeSnapshotClass) Create() {
+	By("creating a VolumeSnapshotClass")
+	var err error
+	t.volumeSnapshotClass, err = snapshotclientset.New(t.client).VolumesnapshotV1alpha1().VolumeSnapshotClasses().Create(t.volumeSnapshotClass)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) *v1alpha1.VolumeSnapshot {
+	By("creating a VolumeSnapshot for " + pvc.Name)
+	snapshot := &v1alpha1.VolumeSnapshot{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       VolumeSnapshotKind,
+			APIVersion: SnapshotAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "volume-snapshot-",
+			Namespace:    t.namespace.Name,
+		},
+		Spec: v1alpha1.VolumeSnapshotSpec{
+			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
+			Source: &v1.TypedLocalObjectReference{
+				Kind: "PersistentVolumeClaim",
+				Name: pvc.Name,
+			},
+		},
+	}
+	snapshot, err := snapshotclientset.New(t.client).VolumesnapshotV1alpha1().VolumeSnapshots(t.namespace.Name).Create(snapshot)
+	framework.ExpectNoError(err)
+	return snapshot
+}
+
+func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *v1alpha1.VolumeSnapshot) {
+	By("waiting for VolumeSnapshot to be ready to use - " + snapshot.Name)
+	err := wait.Poll(15*time.Second, 5*time.Minute, func() (bool, error) {
+		vs, err := snapshotclientset.New(t.client).VolumesnapshotV1alpha1().VolumeSnapshots(t.namespace.Name).Get(snapshot.Name, metav1.GetOptions{})
+		if err != nil {
+			return false, fmt.Errorf("did not see ReadyToUse: %v", err)
+		}
+		return vs.Status.ReadyToUse, nil
+	})
+	framework.ExpectNoError(err)
+}
+
+func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *v1alpha1.VolumeSnapshot) {
+	By("deleting a VolumeSnapshot " + vs.Name)
+	err := snapshotclientset.New(t.client).VolumesnapshotV1alpha1().VolumeSnapshots(t.namespace.Name).Delete(vs.Name, &metav1.DeleteOptions{})
+	framework.ExpectNoError(err)
+}
+
+func (t *TestVolumeSnapshotClass) Cleanup() {
+	framework.Logf("deleting VolumeSnapshotClass %s", t.volumeSnapshotClass.Name)
+	err := snapshotclientset.New(t.client).VolumesnapshotV1alpha1().VolumeSnapshotClasses().Delete(t.volumeSnapshotClass.Name, nil)
+	framework.ExpectNoError(err)
+}
+
 type TestPreProvisionedPersistentVolume struct {
 	client                    clientset.Interface
 	persistentVolume          *v1.PersistentVolume
@@ -101,6 +174,7 @@ type TestPersistentVolumeClaim struct {
 	persistentVolume               *v1.PersistentVolume
 	persistentVolumeClaim          *v1.PersistentVolumeClaim
 	requestedPersistentVolumeClaim *v1.PersistentVolumeClaim
+	dataSource                     *v1.TypedLocalObjectReference
 }
 
 func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claimSize string, volumeMode VolumeMode, sc *storagev1.StorageClass) *TestPersistentVolumeClaim {
@@ -117,6 +191,21 @@ func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claim
 	}
 }
 
+func NewTestPersistentVolumeClaimWithDataSource(c clientset.Interface, ns *v1.Namespace, claimSize string, volumeMode VolumeMode, sc *storagev1.StorageClass, dataSource *v1.TypedLocalObjectReference) *TestPersistentVolumeClaim {
+	mode := v1.PersistentVolumeFilesystem
+	if volumeMode == Block {
+		mode = v1.PersistentVolumeBlock
+	}
+	return &TestPersistentVolumeClaim{
+		client:       c,
+		claimSize:    claimSize,
+		volumeMode:   mode,
+		namespace:    ns,
+		storageClass: sc,
+		dataSource:   dataSource,
+	}
+}
+
 func (t *TestPersistentVolumeClaim) Create() {
 	var err error
 
@@ -125,45 +214,9 @@ func (t *TestPersistentVolumeClaim) Create() {
 	if t.storageClass != nil {
 		storageClassName = t.storageClass.Name
 	}
-	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize, t.volumeMode)
+	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize, t.volumeMode, t.dataSource)
 	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Create(t.requestedPersistentVolumeClaim)
 	framework.ExpectNoError(err)
-}
-
-func (t *TestPersistentVolumeClaim) WaitForBound() v1.PersistentVolumeClaim {
-	var err error
-
-	By(fmt.Sprintf("waiting for PVC to be in phase %q", v1.ClaimBound))
-	err = framework.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, t.client, t.namespace.Name, t.persistentVolumeClaim.Name, framework.Poll, framework.ClaimProvisionTimeout)
-	framework.ExpectNoError(err)
-
-	By("checking the PVC")
-	// Get new copy of the claim
-	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Get(t.persistentVolumeClaim.Name, metav1.GetOptions{})
-	framework.ExpectNoError(err)
-
-	return *t.persistentVolumeClaim
-}
-
-func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolumeClaim {
-	return &v1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "pvc-",
-			Namespace:    namespace,
-		},
-		Spec: v1.PersistentVolumeClaimSpec{
-			StorageClassName: &storageClassName,
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
-			},
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceName(v1.ResourceStorage): resource.MustParse(claimSize),
-				},
-			},
-			VolumeMode: &volumeMode,
-		},
-	}
 }
 
 func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
@@ -204,6 +257,43 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 			}
 
 		}
+	}
+}
+
+func (t *TestPersistentVolumeClaim) WaitForBound() v1.PersistentVolumeClaim {
+	var err error
+
+	By(fmt.Sprintf("waiting for PVC to be in phase %q", v1.ClaimBound))
+	err = framework.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, t.client, t.namespace.Name, t.persistentVolumeClaim.Name, framework.Poll, framework.ClaimProvisionTimeout)
+	framework.ExpectNoError(err)
+
+	By("checking the PVC")
+	// Get new copy of the claim
+	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Get(t.persistentVolumeClaim.Name, metav1.GetOptions{})
+	framework.ExpectNoError(err)
+
+	return *t.persistentVolumeClaim
+}
+
+func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.PersistentVolumeMode, dataSource *v1.TypedLocalObjectReference) *v1.PersistentVolumeClaim {
+	return &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "pvc-",
+			Namespace:    namespace,
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			StorageClassName: &storageClassName,
+			AccessModes: []v1.PersistentVolumeAccessMode{
+				v1.ReadWriteOnce,
+			},
+			Resources: v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceName(v1.ResourceStorage): resource.MustParse(claimSize),
+				},
+			},
+			VolumeMode: &volumeMode,
+			DataSource: dataSource,
+		},
 	}
 }
 
