@@ -30,9 +30,9 @@ kubectl describe pv
 ```
 
 4. Validate the pod successfully wrote data to the volume, taking note of the timestamp of the first entry:
- ```
- kubectl exec -it app cat /data/out.txt
- ```
+```
+kubectl exec -it app cat /data/out.txt
+```
 
 5. Create a `VolumeSnapshot` referencing the `PersistentVolumeClaim` name:
 ```
@@ -60,8 +60,8 @@ kubectl exec -it app cat /data/out.txt
 ```
 
 10. Cleanup resources:
- ```
- kubectl delete -f specs/snapshot-restore
- kubectl delete -f specs/snapshot
- kubectl delete -f specs/classes
- ```
+```
+kubectl delete -f specs/snapshot-restore
+kubectl delete -f specs/snapshot
+kubectl delete -f specs/classes
+```
