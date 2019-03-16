@@ -1,4 +1,5 @@
-# Dynamic Volume Provisioning with AWS EBS CSI Driver
+# Dynamic Volume Provisioning
+This example shows how to create a EBS volume and consume it from container dynamically.
 
 ## Prerequisites
 
