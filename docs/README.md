@@ -99,7 +99,7 @@ kubectl get pods -n kube-system
 
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
-* [Dynamic Provisioning](../examples/kubernetes/pod-single-volume)
+* [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
 * [Block Volume](../examples/kubernetes/block-volume)
 * [Volume Snapshot](../examples/kubernetes/snapshot)
 
