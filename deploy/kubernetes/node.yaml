@@ -21,7 +21,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: amazon/aws-ebs-csi-driver:v0.3.0
+          image: amazon/aws-ebs-csi-driver:latest
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr

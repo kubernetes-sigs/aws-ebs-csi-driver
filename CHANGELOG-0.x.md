@@ -1,5 +1,10 @@
 # v0.3.0
-[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/README.md)
+[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.3.0/docs/README.md)
+
+filename  | sha512 hash
+--------- | ------------
+[v0.3.0.zip](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.3.0.zip) | `27a7a1cd4fc7a8afa1c0dd8fb3ce4cb1d9fc7439ebdbeba7ac0bfb0df723acb654a92f88270bc68ab4dd6c8943febf779efa8cbebdf3ea2ada145ff7ce426870`
+[v0.3.0.tar.gz](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.3.0.tar.gz) | `9126a3493f958aaa4727bc62b1a5c545ac8795f08844a605541aac3d38dea8769cee12c7db94f44179a91af7e8702174bba2533b4e30eb3f32f9b8338101a5db`
 
 ## Action Required
 * None
