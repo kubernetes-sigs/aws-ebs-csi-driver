@@ -1,0 +1,58 @@
+#!/usr/local/bin/python
+
+# Copyright 2018 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import hashlib
+import os
+import requests
+
+def file_sha512(fileName, repoName):
+    download(fileName, repoName)
+    with open(fileName) as file:
+        m = hashlib.sha512()
+        blob = file.read()
+        m.update(blob)
+        print("[{}](https://github.com/{}/archive/{}) | `{}`"
+                .format(fileName,repoName, fileName,m.hexdigest()))
+    os.remove(fileName)
+
+def download(fileName, repoName):
+    url = 'https://github.com/{}/archive/{}'.format(repoName, fileName)
+    r = requests.get(url, allow_redirects=True)
+    open(fileName, 'wb').write(r.content)
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser(description='Generate release CHANGELOG')
+    parser.add_argument('--version', metavar='version', type=str,  required=True, help='the version to release')
+    parser.add_argument('--repo', metavar='repo', type=str, default='kubernetes-sigs/aws-ebs-csi-driver', help='the full github repository name')
+
+    arg = parser.parse_args()
+
+    version = arg.version 
+    repo = arg.repo
+
+    # Title
+    print('# {}'.format(version))
+
+    # documentation section
+    print('[Documentation](https://github.com/{}/blob/{}/docs/README.md)\n'
+            .format(repo,version))
+
+    # sha512
+    print('filename  | sha512 hash')
+    print('--------- | ------------')
+    file_sha512(version+".zip", repo)
+    file_sha512(version+".tar.gz", repo)
