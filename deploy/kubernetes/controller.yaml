@@ -188,11 +188,13 @@ spec:
                 secretKeyRef:
                   name: aws-secret
                   key: key_id
+                  optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: aws-secret
                   key: access_key
+                  optional: true
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
