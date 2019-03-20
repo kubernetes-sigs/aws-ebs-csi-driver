@@ -175,7 +175,7 @@ spec:
           operator: Exists
       containers:
         - name: ebs-plugin
-          image: amazon/aws-ebs-csi-driver:latest
+          image: amazon/aws-ebs-csi-driver:v0.3.0
           args :
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
