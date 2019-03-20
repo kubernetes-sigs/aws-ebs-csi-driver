@@ -16,6 +16,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
 |----------------------------------------|-------|--------|
 | master branch                          | no    | yes    |
+| v0.3.0                                 | no    | yes    |
 | v0.2.0                                 | no    | yes    |
 | v0.1.0                                 | yes   | no     |
 
@@ -43,6 +44,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 |
 |----------------------------------------|-------|-------|
 | master branch                          | no    | yes   |
+| v0.3.0                                 | no    | yes   |
 | v0.2.0                                 | no    | yes   |
 | v0.1.0                                 | yes   | yes   |
 
@@ -50,6 +52,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                               |
 |---------------------------|-------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
+|v0.3.0                     |amazon/aws-ebs-csi-driver:0.3.0      |
 |v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
 |v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
 
