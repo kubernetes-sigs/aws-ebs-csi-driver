@@ -91,8 +91,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1
 
 Then deploy the driver:
 ```sh
-kubectl apply -f deploy/kubernetes/controller.yaml
-kubectl apply -f deploy/kubernetes/node.yaml
+kubectl apply -f deploy/kubernetes/manifest.yaml
 ```
 
 Verify driver is running:
