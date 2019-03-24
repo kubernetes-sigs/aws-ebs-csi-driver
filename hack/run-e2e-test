@@ -80,14 +80,11 @@ docker push $IMAGE_NAME
 
 # Update manifest files
 cp deploy/kubernetes/*.yaml $TEST_DIR
-sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/controller.yaml
-sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/node.yaml
+sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/manifest.yaml
 
 echo "Deploying driver"
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
-kubectl apply -f $TEST_DIR/controller.yaml 
-kubectl apply -f $TEST_DIR/node.yaml 
-kubectl apply -f $TEST_DIR/secret.yaml
+kubectl apply -f $TEST_DIR/manifest.yaml 
 
 # Run the test
 go get -u github.com/onsi/ginkgo/ginkgo
@@ -96,9 +93,7 @@ ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
 TEST_PASS=$?
 
 echo "Removing driver"
-kubectl delete -f $TEST_DIR/controller.yaml
-kubectl delete -f $TEST_DIR/node.yaml
-kubectl delete -f $TEST_DIR/secret.yaml
+kubectl delete -f $TEST_DIR/manifest.yaml
 
 echo "Deleting cluster $CLUSTER_NAME"
 $KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes
