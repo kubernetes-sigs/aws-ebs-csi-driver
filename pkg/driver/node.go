@@ -37,13 +37,15 @@ const (
 	FSTypeExt3 = "ext3"
 	// FSTypeExt4 represents the ext4 filesystem type
 	FSTypeExt4 = "ext4"
+	// FSTypeXfs represents te xfs filesystem type
+	FSTypeXfs = "xfs"
 
 	// default file system type to be used when it is not provided
 	defaultFsType = FSTypeExt4
 )
 
 var (
-	ValidFSTypes = []string{FSTypeExt2, FSTypeExt3, FSTypeExt4}
+	ValidFSTypes = []string{FSTypeExt2, FSTypeExt3, FSTypeExt4, FSTypeXfs}
 )
 
 var (
