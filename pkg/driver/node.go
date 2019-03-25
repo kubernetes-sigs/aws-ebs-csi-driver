@@ -30,7 +30,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 const (
@@ -68,7 +67,7 @@ var (
 // nodeService represents the node service of CSI driver
 type nodeService struct {
 	metadata cloud.MetadataService
-	mounter  *mount.SafeFormatAndMount
+	mounter  Mounter
 	inFlight *internal.InFlight
 }
 
@@ -82,7 +81,7 @@ func newNodeService() nodeService {
 
 	return nodeService{
 		metadata: cloud.GetMetadata(),
-		mounter:  newSafeMounter(),
+		mounter:  newNodeMounter(),
 		inFlight: internal.NewInFlight(),
 	}
 }
@@ -154,7 +153,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Check if a device is mounted in target directory
-	device, _, err := mount.GetDeviceNameFromMount(d.mounter, target)
+	device, _, err := d.mounter.GetDeviceName(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if volume is already mounted: %v", err)
 		return nil, status.Error(codes.Internal, msg)
@@ -201,7 +200,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	// Check if target directory is a mount point. GetDeviceNameFromMount
 	// given a mnt point, finds the device from /proc/mounts
 	// returns the device name, reference count, and error code
-	dev, refCount, err := mount.GetDeviceNameFromMount(d.mounter, target)
+	dev, refCount, err := d.mounter.GetDeviceName(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if volume is mounted: %v", err)
 		return nil, status.Error(codes.Internal, msg)
@@ -481,11 +480,4 @@ func (d *nodeService) getVolumesLimit() int64 {
 		return defaultMaxEBSNitroVolumes
 	}
 	return defaultMaxEBSVolumes
-}
-
-func newSafeMounter() *mount.SafeFormatAndMount {
-	return &mount.SafeFormatAndMount{
-		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
-	}
 }
