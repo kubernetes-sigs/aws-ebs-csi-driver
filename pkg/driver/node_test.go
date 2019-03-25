@@ -385,7 +385,7 @@ func TestNodePublishVolume(t *testing.T) {
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
-					FSType: defaultFsType,
+					FSType: "",
 					Source: "/test/staging/path",
 					Target: "/test/target/path",
 				},
@@ -395,7 +395,7 @@ func TestNodePublishVolume(t *testing.T) {
 					Device: "/test/staging/path",
 					Opts:   []string{"bind"},
 					Path:   "/test/target/path",
-					Type:   defaultFsType,
+					Type:   "",
 				},
 			},
 		},
@@ -413,7 +413,7 @@ func TestNodePublishVolume(t *testing.T) {
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
-					FSType: defaultFsType,
+					FSType: "",
 					Source: "/test/staging/path",
 					Target: "/test/target/path",
 				},
@@ -423,7 +423,7 @@ func TestNodePublishVolume(t *testing.T) {
 					Device: "/test/staging/path",
 					Opts:   []string{"bind", "ro"},
 					Path:   "/test/target/path",
-					Type:   defaultFsType,
+					Type:   "",
 				},
 			},
 		},
@@ -453,7 +453,7 @@ func TestNodePublishVolume(t *testing.T) {
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
-					FSType: defaultFsType,
+					FSType: "",
 					Source: "/test/staging/path",
 					Target: "/test/target/path",
 				},
@@ -463,7 +463,7 @@ func TestNodePublishVolume(t *testing.T) {
 					Device: "/test/staging/path",
 					Opts:   []string{"bind", "test-flag"},
 					Path:   "/test/target/path",
-					Type:   defaultFsType,
+					Type:   "",
 				},
 			},
 		},
@@ -491,7 +491,7 @@ func TestNodePublishVolume(t *testing.T) {
 			expActions: []mount.FakeAction{
 				{
 					Action: "mount",
-					FSType: defaultFsType,
+					FSType: "",
 					Source: "/dev/fake",
 					Target: "/test/target/path",
 				},
@@ -501,7 +501,7 @@ func TestNodePublishVolume(t *testing.T) {
 					Device: "/dev/fake",
 					Opts:   []string{"bind"},
 					Path:   "/test/target/path",
-					Type:   defaultFsType,
+					Type:   "",
 				},
 			},
 		},
