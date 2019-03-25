@@ -29,21 +29,27 @@ func NewFakeMounter() *mount.FakeMounter {
 	}
 }
 
-func NewFakeSafeFormatAndMounter(fakeMounter *mount.FakeMounter) *mount.SafeFormatAndMount {
+func NewFakeSafeFormatAndMounter(fakeMounter mount.Interface) *mount.SafeFormatAndMount {
 	return &mount.SafeFormatAndMount{
 		Interface: fakeMounter,
 		Exec:      mount.NewFakeExec(nil),
 	}
-
 }
 
 // NewFakeDriver creates a new mock driver used for testing
 func NewFakeDriver(endpoint string, fakeCloud *cloud.FakeCloudProvider, fakeMounter *mount.FakeMounter) *Driver {
 	return &Driver{
 		endpoint: endpoint,
-		nodeID:   fakeCloud.GetMetadata().GetInstanceID(),
-		cloud:    fakeCloud,
-		mounter:  NewFakeSafeFormatAndMounter(fakeMounter),
-		inFlight: internal.NewInFlight(),
+		controllerService: controllerService{
+			cloud: fakeCloud,
+		},
+		nodeService: nodeService{
+			metadata: fakeCloud.GetMetadata(),
+			mounter: &mount.SafeFormatAndMount{
+				Interface: fakeMounter,
+				Exec:      mount.NewFakeExec(nil),
+			},
+			inFlight: internal.NewInFlight(),
+		},
 	}
 }

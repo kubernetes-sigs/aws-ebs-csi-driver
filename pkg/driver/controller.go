@@ -47,7 +47,25 @@ var (
 	}
 )
 
-func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+// controllerService represents the controller service of CSI driver
+type controllerService struct {
+	cloud cloud.Cloud
+}
+
+// newControllerService creates a new controller service
+// it panics if failed to create the service
+func newControllerService() controllerService {
+	cloud, err := cloud.NewCloud()
+	if err != nil {
+		panic(err)
+	}
+
+	return controllerService{
+		cloud: cloud,
+	}
+}
+
+func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	klog.V(4).Infof("CreateVolume: called with args %+v", *req)
 	volName := req.GetName()
 	if len(volName) == 0 {
@@ -71,7 +89,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if !d.isValidVolumeCapabilities(volCaps) {
+	if !isValidVolumeCapabilities(volCaps) {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
 	}
 
@@ -147,7 +165,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	return newCreateVolumeResponse(disk), nil
 }
 
-func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	klog.V(4).Infof("DeleteVolume: called with args: %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -165,7 +183,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
-func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	klog.V(4).Infof("ControllerPublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -183,7 +201,7 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 	}
 
 	caps := []*csi.VolumeCapability{volCap}
-	if !d.isValidVolumeCapabilities(caps) {
+	if !isValidVolumeCapabilities(caps) {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
@@ -211,7 +229,7 @@ func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controlle
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 }
 
-func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	klog.V(4).Infof("ControllerUnpublishVolume: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -231,7 +249,7 @@ func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.Control
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
-func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
+func (d *controllerService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
 	klog.V(4).Infof("ControllerGetCapabilities: called with args %+v", *req)
 	var caps []*csi.ControllerServiceCapability
 	for _, cap := range controllerCaps {
@@ -247,17 +265,17 @@ func (d *Driver) ControllerGetCapabilities(ctx context.Context, req *csi.Control
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
-func (d *Driver) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
+func (d *controllerService) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
 	klog.V(4).Infof("GetCapacity: called with args %+v", *req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
+func (d *controllerService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
 	klog.V(4).Infof("ListVolumes: called with args %+v", *req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+func (d *controllerService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 	klog.V(4).Infof("ValidateVolumeCapabilities: called with args %+v", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -277,7 +295,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}
 
 	var confirmed *csi.ValidateVolumeCapabilitiesResponse_Confirmed
-	if d.isValidVolumeCapabilities(volCaps) {
+	if isValidVolumeCapabilities(volCaps) {
 		confirmed = &csi.ValidateVolumeCapabilitiesResponse_Confirmed{VolumeCapabilities: volCaps}
 	}
 	return &csi.ValidateVolumeCapabilitiesResponse{
@@ -285,7 +303,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}, nil
 }
 
-func (d *Driver) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
+func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	hasSupport := func(cap *csi.VolumeCapability) bool {
 		for _, c := range volumeCaps {
 			if c.GetMode() == cap.AccessMode.GetMode() {
@@ -304,7 +322,7 @@ func (d *Driver) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool
 	return foundAll
 }
 
-func (d *Driver) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.V(4).Infof("CreateSnapshot: called with args %+v", req)
 	snapshotName := req.GetName()
 	if len(snapshotName) == 0 {
@@ -339,7 +357,7 @@ func (d *Driver) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequ
 	return newCreateSnapshotResponse(snapshot)
 }
 
-func (d *Driver) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+func (d *controllerService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	klog.V(4).Infof("DeleteSnapshot: called with args %+v", req)
 	snapshotID := req.GetSnapshotId()
 	if len(snapshotID) == 0 {
@@ -357,7 +375,7 @@ func (d *Driver) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequ
 	return &csi.DeleteSnapshotResponse{}, nil
 }
 
-func (d *Driver) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 

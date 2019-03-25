@@ -21,12 +21,9 @@ import (
 	"net"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
 )
 
 const (
@@ -35,31 +32,20 @@ const (
 )
 
 type Driver struct {
+	controllerService
+	nodeService
+
+	srv      *grpc.Server
 	endpoint string
-	nodeID   string
-
-	cloud cloud.Cloud
-	srv   *grpc.Server
-
-	mounter  *mount.SafeFormatAndMount
-	inFlight *internal.InFlight
 }
 
 func NewDriver(endpoint string) (*Driver, error) {
 	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
-	cloud, err := cloud.NewCloud()
-	if err != nil {
-		return nil, err
-	}
-
-	m := cloud.GetMetadata()
 	return &Driver{
-		endpoint: endpoint,
-		nodeID:   m.GetInstanceID(),
-		cloud:    cloud,
-		mounter:  newSafeMounter(),
-		inFlight: internal.NewInFlight(),
+		endpoint:          endpoint,
+		controllerService: newControllerService(),
+		nodeService:       newNodeService(),
 	}, nil
 }
 
@@ -97,11 +83,4 @@ func (d *Driver) Run() error {
 func (d *Driver) Stop() {
 	klog.Infof("Stopping server")
 	d.srv.Stop()
-}
-
-func newSafeMounter() *mount.SafeFormatAndMount {
-	return &mount.SafeFormatAndMount{
-		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
-	}
 }

@@ -268,7 +268,7 @@ func TestCreateVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+			awsDriver := controllerService{cloud: cloud.NewFakeCloudProvider()}
 
 			resp, err := awsDriver.CreateVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -353,7 +353,7 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+			awsDriver := controllerService{cloud: cloud.NewFakeCloudProvider()}
 			_, err := awsDriver.DeleteVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
@@ -499,7 +499,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+		awsDriver := controllerService{cloud: cloud.NewFakeCloudProvider()}
 		resp, err := awsDriver.CreateSnapshot(context.TODO(), tc.req)
 		if err != nil {
 			srvErr, ok := status.FromError(err)
@@ -565,7 +565,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Logf("Test case: %s", tc.name)
-		awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+		awsDriver := controllerService{cloud: cloud.NewFakeCloudProvider()}
 		snapResp, err := awsDriver.CreateSnapshot(context.TODO(), snapReq)
 		if err != nil {
 			t.Fatalf("Error creating testing snapshot: %v", err)
@@ -707,7 +707,7 @@ func TestControllerPublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setup(tc.req)
-			awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
+			awsDriver := controllerService{cloud: fakeCloud}
 			_, err := awsDriver.ControllerPublishVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
@@ -772,7 +772,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setup(tc.req)
-			awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
+			awsDriver := controllerService{cloud: cloud.NewFakeCloudProvider()}
 			_, err := awsDriver.ControllerUnpublishVolume(context.TODO(), tc.req)
 			if err != nil {
 				srvErr, ok := status.FromError(err)
