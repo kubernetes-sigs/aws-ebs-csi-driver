@@ -65,9 +65,8 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 * **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
 
 ## Prerequisites
-* Get yourself familiar with how to setup Kubernetes on AWS
 * If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
-* Have a working Kubernetes cluster:
+* Get yourself familiar with how to setup Kubernetes on AWS and have a working Kubernetes cluster:
   * Enable flag `--allow-privileged=true` for `kubelet` and `kube-apiserver`
   * Enable `kube-apiserver` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true`
   * Enable `kubelet` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true`
@@ -91,7 +90,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1
 
 Then deploy the driver:
 ```sh
-kubectl apply -f deploy/kubernetes/manifest.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/manifest.yaml
 ```
 
 Verify driver is running:
@@ -104,6 +103,7 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
 * [Block Volume](../examples/kubernetes/block-volume)
 * [Volume Snapshot](../examples/kubernetes/snapshot)
+* [Configure StorageClass](../examples/kubernetes/storageclass)
 
 ## Migrating from in-tree EBS plugin
 Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
