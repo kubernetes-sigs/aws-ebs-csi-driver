@@ -594,6 +594,133 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 }
 
+func TestResizeDisk(t *testing.T) {
+	testCases := []struct {
+		name                string
+		volumeID            string
+		existingVolume      *ec2.Volume
+		existingVolumeError awserr.Error
+		modifiedVolume      *ec2.ModifyVolumeOutput
+		modifiedVolumeError awserr.Error
+		descModVolume       *ec2.DescribeVolumesModificationsOutput
+		reqSizeGiB          int64
+		expErr              error
+	}{
+		{
+			name:     "success: normal",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2),
+					ModificationState: aws.String(ec2.VolumeModificationStateOptimizing),
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+		{
+			name:     "success: normal modifying state",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2),
+					ModificationState: aws.String(ec2.VolumeModificationStateModifying),
+				},
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+		{
+			name:                "fail: volume doesn't exist",
+			volumeID:            "vol-test",
+			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
+			reqSizeGiB:          2,
+			expErr:              fmt.Errorf("ResizeDisk generic error"),
+		},
+		{
+			name:     "sucess: there is a resizing in progress",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			if tc.existingVolume != nil || tc.existingVolumeError != nil {
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+					&ec2.DescribeVolumesOutput{
+						Volumes: []*ec2.Volume{tc.existingVolume},
+					}, tc.existingVolumeError).AnyTimes()
+			}
+			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
+				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+			}
+			if tc.descModVolume != nil {
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+			}
+
+			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("ResizeDisk() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("ResizeDisk() failed: expected error, got nothing")
+				} else {
+					if tc.reqSizeGiB != newSize {
+						t.Fatalf("ResizeDisk() failed: expected capacity %d, got %d", tc.reqSizeGiB, newSize)
+					}
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestGetSnapshotByName(t *testing.T) {
 	testCases := []struct {
 		name            string

@@ -160,6 +160,8 @@ type EC2 interface {
 	CreateSnapshotWithContext(ctx aws.Context, input *ec2.CreateSnapshotInput, opts ...request.Option) (*ec2.Snapshot, error)
 	DeleteSnapshotWithContext(ctx aws.Context, input *ec2.DeleteSnapshotInput, opts ...request.Option) (*ec2.DeleteSnapshotOutput, error)
 	DescribeSnapshotsWithContext(ctx aws.Context, input *ec2.DescribeSnapshotsInput, opts ...request.Option) (*ec2.DescribeSnapshotsOutput, error)
+	ModifyVolumeWithContext(ctx aws.Context, input *ec2.ModifyVolumeInput, opts ...request.Option) (*ec2.ModifyVolumeOutput, error)
+	DescribeVolumesModificationsWithContext(ctx aws.Context, input *ec2.DescribeVolumesModificationsInput, opts ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error)
 }
 
 type Cloud interface {
@@ -168,6 +170,7 @@ type Cloud interface {
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
+	ResizeDisk(ctx context.Context, volumeID string, reqSize int64) (newSize int64, err error)
 	WaitForAttachmentState(ctx context.Context, volumeID, state string) error
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
@@ -765,27 +768,139 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	return err
 }
 
-// Helper function for describeVolume callers. Tries to retype given error to AWS error
-// and returns true in case the AWS error is "InvalidVolume.NotFound", false otherwise
-func isAWSErrorVolumeNotFound(err error) bool {
+// isAWSError returns a boolean indicating whether the error is AWS-related
+// and has the given code. More information on AWS error codes at:
+// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
+func isAWSError(err error, code string) bool {
 	if awsError, ok := err.(awserr.Error); ok {
-		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
-		if awsError.Code() == "InvalidVolume.NotFound" {
+		if awsError.Code() == code {
 			return true
 		}
 	}
 	return false
 }
 
-// Helper function for describeSnapshot callers. Tries to retype given error to AWS error
-// and returns true in case the AWS error is "InvalidSnapshot.NotFound", false otherwise
+// isAWSErrorIncorrectModification returns a boolean indicating whether the given error
+// is an AWS IncorrectModificationState error. This error means that a modification action
+// on an EBS volume cannot occur because the volume is currently being modified.
+func isAWSErrorIncorrectModification(err error) bool {
+	return isAWSError(err, "IncorrectModificationState")
+}
+
+// isAWSErrorVolumeNotFound returns a boolean indicating whether the
+// given error is an AWS InvalidVolume.NotFound error. This error is
+// reported when the specified volume doesn't exist.
+func isAWSErrorVolumeNotFound(err error) bool {
+	return isAWSError(err, "InvalidVolume.NotFound")
+}
+
+// isAWSErrorSnapshotNotFound returns a boolean indicating whether the
+// given error is an AWS InvalidSnapshot.NotFound error. This error is
+// reported when the specified snapshot doesn't exist.
 func isAWSErrorSnapshotNotFound(err error) bool {
-	if awsError, ok := err.(awserr.Error); ok {
-		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
-		if awsError.Code() == "InvalidSnapshot.NotFound" {
-			return true
-		}
+	return isAWSError(err, "InvalidSnapshot.NotFound")
+}
+
+// ResizeDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit.
+// It returns the volume size after this call or an error if the size couldn't be determined.
+func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes int64) (int64, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return 0, err
 	}
 
-	return false
+	// AWS resizes in chunks of GiB (not GB)
+	newSizeGiB := util.RoundUpGiB(newSizeBytes)
+	oldSizeGiB := aws.Int64Value(volume.Size)
+
+	if oldSizeGiB >= newSizeGiB {
+		klog.V(5).Infof("Volume %q's current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
+		return oldSizeGiB, nil
+	}
+
+	req := &ec2.ModifyVolumeInput{
+		VolumeId: aws.String(volumeID),
+		Size:     aws.Int64(newSizeGiB),
+	}
+
+	var mod *ec2.VolumeModification
+	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+	if err != nil {
+		if !isAWSErrorIncorrectModification(err) {
+			return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
+		}
+
+		m, err := c.getLatestVolumeModification(ctx, volumeID)
+		if err != nil {
+			return 0, err
+		}
+		mod = m
+	}
+
+	if mod == nil {
+		mod = response.VolumeModification
+	}
+
+	state := aws.StringValue(mod.ModificationState)
+	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+		return aws.Int64Value(mod.TargetSize), nil
+	}
+
+	return c.waitForVolumeSize(ctx, volumeID)
+}
+
+// waitForVolumeSize waits for a volume modification to finish and return its size.
+func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
+	backoff := wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   1.8,
+		Steps:    20,
+	}
+
+	var modVolSizeGiB int64
+	waitErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		m, err := c.getLatestVolumeModification(ctx, volumeID)
+		if err != nil {
+			return false, err
+		}
+
+		state := aws.StringValue(m.ModificationState)
+		if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+			modVolSizeGiB = aws.Int64Value(m.TargetSize)
+			return true, nil
+		}
+
+		return false, nil
+	})
+
+	if waitErr != nil {
+		return 0, waitErr
+	}
+
+	return modVolSizeGiB, nil
+}
+
+// getLatestVolumeModification returns the last modification of the volume.
+func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string) (*ec2.VolumeModification, error) {
+	request := &ec2.DescribeVolumesModificationsInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	mod, err := c.ec2.DescribeVolumesModificationsWithContext(ctx, request)
+	if err != nil {
+		return nil, fmt.Errorf("error describing modifications in volume %q: %v", volumeID, err)
+	}
+
+	volumeMods := mod.VolumesModifications
+	if len(volumeMods) == 0 {
+		return nil, fmt.Errorf("could not find any modifications for volume %q", volumeID)
+	}
+
+	return volumeMods[len(volumeMods)-1], nil
 }

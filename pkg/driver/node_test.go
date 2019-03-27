@@ -1042,6 +1042,13 @@ func TestNodeGetCapabilities(t *testing.T) {
 				},
 			},
 		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+				},
+			},
+		},
 	}
 	expResp := &csi.NodeGetCapabilitiesResponse{Capabilities: caps}
 
