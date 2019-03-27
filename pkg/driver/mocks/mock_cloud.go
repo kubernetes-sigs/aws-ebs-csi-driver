@@ -211,6 +211,21 @@ func (mr *MockCloudMockRecorder) ListSnapshots(arg0, arg1, arg2, arg3 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshots", reflect.TypeOf((*MockCloud)(nil).ListSnapshots), arg0, arg1, arg2, arg3)
 }
 
+// ResizeDisk mocks base method
+func (m *MockCloud) ResizeDisk(arg0 context.Context, arg1 string, arg2 int64) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResizeDisk", arg0, arg1, arg2)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResizeDisk indicates an expected call of ResizeDisk
+func (mr *MockCloudMockRecorder) ResizeDisk(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeDisk", reflect.TypeOf((*MockCloud)(nil).ResizeDisk), arg0, arg1, arg2)
+}
+
 // WaitForAttachmentState mocks base method
 func (m *MockCloud) WaitForAttachmentState(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
