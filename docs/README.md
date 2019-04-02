@@ -72,23 +72,23 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
   * Enable `kubelet` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true`
 
 ## Installation
-Checkout the project:
+#### Set up driver permission
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
+* Using secret object - create an IAM user with proper permission, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml) then deploy the secret.
 ```sh
-git clone https://github.com/kubernetes-sigs/aws-ebs-csi-driver.git
-cd aws-ebs-csi-driver
+curl https://raw.githubusercontent.com/aws/csi-driver-amazon-fsx/master/deploy/kubernetes/secret.yaml > secret.yaml
+# Edit the secret with user credentials
+kubectl apply -f secret.yaml
 ```
+* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-Edit the [secret manifest](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/deploy/kubernetes/secret.yaml) using your favorite text editor. The secret should have [enough IAM permission](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/example-iam-policy.json) to create EBS volume. Then deploy the secret:
-```sh
-kubectl apply -f deploy/kubernetes/secret.yaml
-```
-
+#### Deploy CDR (optinal)
 If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
 
-Then deploy the driver:
+#### Deploy driver
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/manifest.yaml
 ```
