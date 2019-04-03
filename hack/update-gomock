@@ -20,4 +20,5 @@ IMPORT_PATH=github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 mockgen -package=mocks -destination=./pkg/cloud/mocks/mock_ec2.go ${IMPORT_PATH}/pkg/cloud EC2 
 mockgen -package=mocks -destination=./pkg/cloud/mocks/mock_ec2metadata.go ${IMPORT_PATH}/pkg/cloud EC2Metadata 
+mockgen -package=mocks -destination=./pkg/cloud/mocks/mock_cloud.go ${IMPORT_PATH}/pkg/cloud Cloud 
 
