@@ -167,12 +167,10 @@ type cloud struct {
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
-// Pass in nil metadata to use an auto created EC2Metadata service
 // It panics if session is invalid
 func NewCloud() (Cloud, error) {
 	svc := newEC2MetadataSvc()
 
-	var err error
 	metadata, err := NewMetadataService(svc)
 	if err != nil {
 		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
