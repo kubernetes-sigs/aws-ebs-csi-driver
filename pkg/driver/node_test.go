@@ -22,7 +22,8 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/golang/mock/gomock"
+	cloudmocks "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
@@ -225,7 +226,10 @@ func TestNodeStageVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), tc.fakeMounter)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			fakeCloud := cloudmocks.NewMockCloud(mockCtl)
+			awsDriver := NewFakeDriver("", fakeCloud, tc.fakeMounter)
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -321,11 +325,15 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			fakeCloud := cloudmocks.NewMockCloud(mockCtl)
+
 			fakeMounter := NewFakeMounter()
 			if len(tc.fakeMountPoints) > 0 {
 				fakeMounter.MountPoints = tc.fakeMountPoints
 			}
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", fakeCloud, fakeMounter)
 
 			_, err := awsDriver.NodeUnstageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -569,7 +577,11 @@ func TestNodePublishVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), tc.fakeMounter)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			fakeCloud := cloudmocks.NewMockCloud(mockCtl)
+
+			awsDriver := NewFakeDriver("", fakeCloud, tc.fakeMounter)
 
 			_, err := awsDriver.NodePublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -643,11 +655,14 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+			fakeCloud := cloudmocks.NewMockCloud(mockCtl)
 			fakeMounter := NewFakeMounter()
 			if tc.fakeMountPoint != nil {
 				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
 			}
-			awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), fakeMounter)
+			awsDriver := NewFakeDriver("", fakeCloud, fakeMounter)
 
 			_, err := awsDriver.NodeUnpublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -672,8 +687,11 @@ func TestNodeUnpublishVolume(t *testing.T) {
 }
 
 func TestNodeGetVolumeStats(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+	fakeCloud := cloudmocks.NewMockCloud(mockCtl)
 	req := &csi.NodeGetVolumeStatsRequest{}
-	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+	awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
 	expErrCode := codes.Unimplemented
 
 	_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -691,7 +709,10 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 func TestNodeGetCapabilities(t *testing.T) {
 	req := &csi.NodeGetCapabilitiesRequest{}
-	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+	fakeCloud := cloudmocks.NewMockCloud(mockCtl)
+	awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
 	caps := []*csi.NodeServiceCapability{
 		{
 			Type: &csi.NodeServiceCapability_Rpc{
@@ -718,7 +739,10 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 func TestNodeGetInfo(t *testing.T) {
 	req := &csi.NodeGetInfoRequest{}
-	awsDriver := NewFakeDriver("", cloud.NewFakeCloudProvider(), NewFakeMounter())
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+	fakeCloud := cloudmocks.NewMockCloud(mockCtl)
+	awsDriver := NewFakeDriver("", fakeCloud, NewFakeMounter())
 	m := awsDriver.cloud.GetMetadata()
 	expResp := &csi.NodeGetInfoResponse{
 		NodeId: "instanceID",
