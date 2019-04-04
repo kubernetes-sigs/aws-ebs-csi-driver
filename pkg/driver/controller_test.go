@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"reflect"
+	//"reflect"
 	"testing"
 	"time"
 
@@ -52,6 +52,7 @@ func TestCreateVolume(t *testing.T) {
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
+	stdInstanceId := "i-123456789abcdef01"
 
 	testCases := []struct {
 		name       string
@@ -59,66 +60,239 @@ func TestCreateVolume(t *testing.T) {
 		extraReq   *csi.CreateVolumeRequest
 		expVol     *csi.Volume
 		expErrCode codes.Code
+		testFunc   func(t *testing.T)
 	}{
 		{
 			name: "success normal",
-			req: &csi.CreateVolumeRequest{
-				Name:               "random-vol-name",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         nil,
-			},
-			expVol: &csi.Volume{
-				CapacityBytes: stdVolSize,
-				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{FsTypeKey: ""},
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+				}
+				expVol := &csi.Volume{
+					CapacityBytes: stdVolSize,
+					VolumeId:      "vol-test",
+					VolumeContext: map[string]string{FsTypeKey: ""},
+				}
+
+				ctx := context.TODO()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					FsType:           expVol.VolumeContext[FsTypeKey],
+				}
+				volSizeBytes, err := getVolSizeBytes(req)
+				if err != nil {
+					t.Fatalf("Unable to get volume size bytes for req: %s", err)
+				}
+				mockDisk.CapacityGiB = util.BytesToGiB(volSizeBytes)
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata.EXPECT().GetInstanceID().Return(stdInstanceId)
+
+				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+
+				_, err = awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+				}
 			},
 		},
 		{
 			name: "fail no name",
-			req: &csi.CreateVolumeRequest{
-				Name:               "",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         stdParams,
+				}
+
+				ctx := context.TODO()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata.EXPECT().GetInstanceID().Return(stdInstanceId)
+
+				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
+
+				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				}
 			},
-			expErrCode: codes.InvalidArgument,
 		},
 		{
 			name: "success same name and same capacity",
-			req: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
-			},
-			extraReq: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
-			},
-			expVol: &csi.Volume{
-				CapacityBytes: stdVolSize,
-				VolumeId:      "vol-test",
-				VolumeContext: map[string]string{FsTypeKey: ""},
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         stdParams,
+				}
+				extraReq := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         stdParams,
+				}
+				expVol := &csi.Volume{
+					CapacityBytes: stdVolSize,
+					VolumeId:      "vol-test",
+					VolumeContext: map[string]string{FsTypeKey: ""},
+				}
+
+				ctx := context.TODO()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					FsType:           expVol.VolumeContext[FsTypeKey],
+				}
+				volSizeBytes, err := getVolSizeBytes(req)
+				if err != nil {
+					t.Fatalf("Unable to get volume size bytes for req: %s", err)
+				}
+				mockDisk.CapacityGiB = util.BytesToGiB(volSizeBytes)
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata.EXPECT().GetInstanceID().Return(stdInstanceId)
+
+				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+
+				_, err = awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+				}
+
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(mockDisk, nil)
+				resp, err := awsDriver.CreateVolume(ctx, extraReq)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+				}
+
+				vol := resp.GetVolume()
+				if vol == nil && expVol != nil {
+					t.Fatalf("Expected volume %v, got nil", expVol)
+				}
+
+				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
+					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
+				}
+
+				for expKey, expVal := range expVol.GetVolumeContext() {
+					ctx := vol.GetVolumeContext()
+					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
+						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
+					}
+				}
 			},
 		},
 		{
 			name: "fail same name and different capacity",
-			req: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      stdCapRange,
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         stdParams,
+				}
+				extraReq := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      &csi.CapacityRange{RequiredBytes: 10000},
+					VolumeCapabilities: stdVolCap,
+					Parameters:         stdParams,
+				}
+
+				ctx := context.TODO()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					FsType:           expFsType,
+				}
+				volSizeBytes, err := getVolSizeBytes(req)
+				if err != nil {
+					t.Fatalf("Unable to get volume size bytes for req: %s", err)
+				}
+				mockDisk.CapacityGiB = util.BytesToGiB(volSizeBytes)
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata.EXPECT().GetInstanceID().Return(stdInstanceId)
+
+				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+
+				_, err = awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+				}
+
+				extraVolSizeBytes, err := getVolSizeBytes(extraReq)
+				if err != nil {
+					t.Fatalf("Unable to get volume size bytes for req: %s", err)
+				}
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(extraReq.Name), gomock.Eq(extraVolSizeBytes)).Return(nil, cloud.ErrDiskExistsDiffSize)
+				if _, err := awsDriver.CreateVolume(ctx, extraReq); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.AlreadyExists {
+						t.Fatalf("Expected error code %d, got %d", codes.AlreadyExists, srvErr.Code())
+					}
+				} else {
+					t.Fatalf("Expected error code %d, got nil", codes.AlreadyExists)
+				}
 			},
-			extraReq: &csi.CreateVolumeRequest{
-				Name:               "test-vol",
-				CapacityRange:      &csi.CapacityRange{RequiredBytes: 10000},
-				VolumeCapabilities: stdVolCap,
-				Parameters:         stdParams,
-			},
-			expErrCode: codes.AlreadyExists,
 		},
 		{
 			name: "success no capacity range",
@@ -273,77 +447,9 @@ func TestCreateVolume(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.TODO()
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-			mockCloud := cloudmocks.NewMockCloud(mockCtl)
-			mockDisk := &cloud.Disk{
-				VolumeID:         tc.expVol.VolumeId,
-				CapacityGiB:      util.BytesToGiB(tc.expVol.CapacityBytes),
-				AvailabilityZone: tc.expVol.AccessibleTopology[0].Segments[TopologyKey],
-				FsType:           tc.expVol.VolumeContext[FsTypeKey],
-			}
-			mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(tc.expVol.VolumeId), gomock.Eq(tc.expVol.CapacityBytes)).Return(mockDisk)
-			mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(tc.expVol.VolumeId), gomock.Any()).Return(mockDisk)
-
-			awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
-
-			resp, err := awsDriver.CreateVolume(ctx, tc.req)
-			if err != nil {
-				srvErr, ok := status.FromError(err)
-				if !ok {
-					t.Fatalf("Could not get error status code from error: %v", srvErr)
-				}
-				if srvErr.Code() != tc.expErrCode {
-					t.Fatalf("Expected error code %d, got %d message %s", tc.expErrCode, srvErr.Code(), srvErr.Message())
-				}
-				return
-			}
-
-			// Repeat the same request and check they results of the second call
-			if tc.extraReq != nil {
-				resp, err = awsDriver.CreateVolume(ctx, tc.extraReq)
-				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					if srvErr.Code() != tc.expErrCode {
-						t.Fatalf("Expected error code %d, got %d", tc.expErrCode, srvErr.Code())
-					}
-					return
-				}
-			}
-
-			if tc.expErrCode != codes.OK {
-				t.Fatalf("Expected error %v, got no error", tc.expErrCode)
-			}
-
-			vol := resp.GetVolume()
-			if vol == nil && tc.expVol != nil {
-				t.Fatalf("Expected volume %v, got nil", tc.expVol)
-			}
-
-			if vol.GetCapacityBytes() != tc.expVol.GetCapacityBytes() {
-				t.Fatalf("Expected volume capacity bytes: %v, got: %v", tc.expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-			}
-
-			for expKey, expVal := range tc.expVol.GetVolumeContext() {
-				ctx := vol.GetVolumeContext()
-				if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-					t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-				}
-			}
-			if tc.expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-				t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
-			}
-			if tc.expVol.GetAccessibleTopology() != nil {
-				if !reflect.DeepEqual(tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
-					t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", tc.expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
-				}
-			}
-		})
+		if tc.testFunc != nil {
+			t.Run(tc.name, tc.testFunc)
+		}
 	}
 }
 
