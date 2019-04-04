@@ -190,6 +190,7 @@ func TestCreateVolume(t *testing.T) {
 					}
 				}
 
+				// Subsequent call returns the created disk
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
 				resp, err := awsDriver.CreateVolume(ctx, extraReq)
 				if err != nil {
@@ -274,6 +275,8 @@ func TestCreateVolume(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to get volume size bytes for req: %s", err)
 				}
+
+				// Subsequent failure
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(extraReq.Name), gomock.Eq(extraVolSizeBytes)).Return(nil, cloud.ErrDiskExistsDiffSize)
 				if _, err := awsDriver.CreateVolume(ctx, extraReq); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -412,17 +415,6 @@ func TestCreateVolume(t *testing.T) {
 				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
 					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
 				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
-				}
 			},
 		},
 		{
@@ -529,32 +521,11 @@ func TestCreateVolume(t *testing.T) {
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
 
-				resp, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-				}
-
-				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
-					t.Fatalf("Expected volume %v, got nil", expVol)
-				}
-
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 			},
 		},
@@ -596,32 +567,11 @@ func TestCreateVolume(t *testing.T) {
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
 
-				resp, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-				}
-
-				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
-					t.Fatalf("Expected volume %v, got nil", expVol)
-				}
-
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 			},
 		},
@@ -663,32 +613,11 @@ func TestCreateVolume(t *testing.T) {
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
 
-				resp, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-				}
-
-				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
-					t.Fatalf("Expected volume %v, got nil", expVol)
-				}
-
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 			},
 		},
@@ -731,32 +660,11 @@ func TestCreateVolume(t *testing.T) {
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
 
-				resp, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-				}
-
-				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
-					t.Fatalf("Expected volume %v, got nil", expVol)
-				}
-
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 			},
 		},
@@ -847,10 +755,6 @@ func TestCreateVolume(t *testing.T) {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
 				for expKey, expVal := range expVol.GetVolumeContext() {
 					ctx := vol.GetVolumeContext()
 					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
@@ -872,9 +776,7 @@ func TestCreateVolume(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if tc.testFunc != nil {
-			t.Run(tc.name, tc.testFunc)
-		}
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
