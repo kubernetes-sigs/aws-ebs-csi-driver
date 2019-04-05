@@ -99,6 +99,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
@@ -111,6 +112,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: stdVolCap,
 					Parameters:         stdParams,
 				}
+				expErr := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -130,9 +132,11 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != codes.InvalidArgument {
-						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != expErr {
+						t.Fatalf("Expected error code %d, got %d message %s", expErr, srvErr.Code(), srvErr.Message())
 					}
+				} else {
+					t.Fatalf("Expected error got nil")
 				}
 			},
 		},
@@ -184,6 +188,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				// Subsequent call returns the created disk
@@ -194,6 +199,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				vol := resp.GetVolume()
@@ -265,6 +271,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				extraVolSizeBytes, err := getVolSizeBytes(extraReq)
@@ -332,6 +339,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				vol := resp.GetVolume()
@@ -401,6 +409,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				vol := resp.GetVolume()
@@ -455,6 +464,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				vol := resp.GetVolume()
@@ -522,6 +532,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
@@ -568,6 +579,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
@@ -614,6 +626,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
@@ -661,6 +674,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
@@ -735,6 +749,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
@@ -744,6 +759,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				vol := resp.GetVolume()
@@ -806,6 +822,7 @@ func TestDeleteVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
@@ -837,6 +854,7 @@ func TestDeleteVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
@@ -1179,6 +1197,7 @@ func TestDeleteSnapshot(t *testing.T) {
 					if srvErr.Code() != expErrCode {
 						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
 					}
+					return
 				}
 				if expErrCode != codes.OK {
 					t.Fatalf("Expected error %v, got no error", expErrCode)
@@ -1216,6 +1235,7 @@ func TestDeleteSnapshot(t *testing.T) {
 					if srvErr.Code() != expErrCode {
 						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
 					}
+					return
 				}
 				if expErrCode != codes.OK {
 					t.Fatalf("Expected error %v, got no error", expErrCode)
@@ -1278,6 +1298,7 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				if !reflect.DeepEqual(resp, expResp) {
@@ -1591,6 +1612,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
 				if !reflect.DeepEqual(resp, expResp) {
