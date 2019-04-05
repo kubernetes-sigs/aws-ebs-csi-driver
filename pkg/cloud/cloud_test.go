@@ -649,10 +649,10 @@ func TestGetSnapshotByName(t *testing.T) {
 
 func newCloud(mockEC2 EC2) Cloud {
 	return &cloud{
-		metadata: &metadata{
-			instanceID:       "test-instance",
-			region:           "test-region",
-			availabilityZone: defaultZone,
+		metadata: &Metadata{
+			InstanceID:       "test-instance",
+			Region:           "test-region",
+			AvailabilityZone: defaultZone,
 		},
 		dm:  dm.NewDeviceManager(),
 		ec2: mockEC2,

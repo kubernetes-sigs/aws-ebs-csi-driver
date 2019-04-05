@@ -37,7 +37,7 @@ func NewFakeSafeFormatAndMounter(fakeMounter mount.Interface) *mount.SafeFormatA
 }
 
 // NewFakeDriver creates a new mock driver used for testing
-func NewFakeDriver(endpoint string, fakeCloud *cloud.FakeCloudProvider, fakeMounter *mount.FakeMounter) *Driver {
+func NewFakeDriver(endpoint string, fakeCloud cloud.Cloud, fakeMounter *mount.FakeMounter) *Driver {
 	return &Driver{
 		endpoint: endpoint,
 		controllerService: controllerService{
