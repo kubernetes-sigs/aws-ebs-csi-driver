@@ -909,8 +909,7 @@ func TestCreateSnapshot(t *testing.T) {
 				if expErrCode != codes.OK {
 					t.Fatalf("Expected error %v, got no error", expErrCode)
 				}
-				snap := resp.GetSnapshot()
-				if snap == nil && expSnapshot != nil {
+				if snap := resp.GetSnapshot(); snap == nil {
 					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
 				}
 			},
@@ -987,7 +986,7 @@ func TestCreateSnapshot(t *testing.T) {
 					t.Fatalf("Expected error %v, got no error", expErrCode)
 				}
 				snap := resp.GetSnapshot()
-				if snap == nil && expSnapshot != nil {
+				if snap == nil {
 					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
 				}
 
@@ -1053,7 +1052,7 @@ func TestCreateSnapshot(t *testing.T) {
 					t.Fatalf("Expected error %v, got no error", expErrCode)
 				}
 				snap := resp.GetSnapshot()
-				if snap == nil && expSnapshot != nil {
+				if snap == nil {
 					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
 				}
 
