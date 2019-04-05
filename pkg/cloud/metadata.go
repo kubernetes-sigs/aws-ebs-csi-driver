@@ -34,27 +34,27 @@ type MetadataService interface {
 	GetAvailabilityZone() string
 }
 
-type metadata struct {
-	instanceID       string
-	region           string
-	availabilityZone string
+type Metadata struct {
+	InstanceID       string
+	Region           string
+	AvailabilityZone string
 }
 
-var _ MetadataService = &metadata{}
+var _ MetadataService = &Metadata{}
 
 // GetInstanceID returns the instance identification.
-func (m *metadata) GetInstanceID() string {
-	return m.instanceID
+func (m *Metadata) GetInstanceID() string {
+	return m.InstanceID
 }
 
 // GetRegion returns the region which the instance is in.
-func (m *metadata) GetRegion() string {
-	return m.region
+func (m *Metadata) GetRegion() string {
+	return m.Region
 }
 
 // GetAvailabilityZone returns the Availability Zone which the instance is in.
-func (m *metadata) GetAvailabilityZone() string {
-	return m.availabilityZone
+func (m *Metadata) GetAvailabilityZone() string {
+	return m.AvailabilityZone
 }
 
 // NewMetadataService returns a new MetadataServiceImplementation.
@@ -80,9 +80,9 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 		return nil, fmt.Errorf("could not get valid EC2 availavility zone")
 	}
 
-	return &metadata{
-		instanceID:       doc.InstanceID,
-		region:           doc.Region,
-		availabilityZone: doc.AvailabilityZone,
+	return &Metadata{
+		InstanceID:       doc.InstanceID,
+		Region:           doc.Region,
+		AvailabilityZone: doc.AvailabilityZone,
 	}, nil
 }
