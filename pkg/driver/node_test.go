@@ -23,7 +23,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
-	cloudmocks "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/mocks"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
@@ -229,10 +229,10 @@ func TestNodeStageVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-			mockCloud := cloudmocks.NewMockCloud(mockCtl)
+			mockCloud := mocks.NewMockCloud(mockCtl)
 			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 			awsDriver := NewFakeDriver("", mockCloud, tc.fakeMounter)
@@ -334,10 +334,10 @@ func TestNodeUnstageVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-			mockCloud := cloudmocks.NewMockCloud(mockCtl)
+			mockCloud := mocks.NewMockCloud(mockCtl)
 			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 			fakeMounter := NewFakeMounter()
@@ -591,10 +591,10 @@ func TestNodePublishVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-			mockCloud := cloudmocks.NewMockCloud(mockCtl)
+			mockCloud := mocks.NewMockCloud(mockCtl)
 			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 			awsDriver := NewFakeDriver("", mockCloud, tc.fakeMounter)
@@ -674,10 +674,10 @@ func TestNodeUnpublishVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-			mockCloud := cloudmocks.NewMockCloud(mockCtl)
+			mockCloud := mocks.NewMockCloud(mockCtl)
 			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 			fakeMounter := NewFakeMounter()
@@ -712,10 +712,10 @@ func TestNodeGetVolumeStats(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-	mockCloud := cloudmocks.NewMockCloud(mockCtl)
+	mockCloud := mocks.NewMockCloud(mockCtl)
 	mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 	req := &csi.NodeGetVolumeStatsRequest{}
@@ -739,10 +739,10 @@ func TestNodeGetCapabilities(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-	mockCloud := cloudmocks.NewMockCloud(mockCtl)
+	mockCloud := mocks.NewMockCloud(mockCtl)
 	mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 	req := &csi.NodeGetCapabilitiesRequest{}
@@ -776,11 +776,11 @@ func TestNodeGetInfo(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId).Times(2)
 	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
 
-	mockCloud := cloudmocks.NewMockCloud(mockCtl)
+	mockCloud := mocks.NewMockCloud(mockCtl)
 	mockCloud.EXPECT().GetMetadata().Return(mockMetadata).Times(3)
 
 	req := &csi.NodeGetInfoRequest{}

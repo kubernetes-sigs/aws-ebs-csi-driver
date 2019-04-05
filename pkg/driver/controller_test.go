@@ -27,7 +27,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	cloudmocks "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/mocks"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -84,10 +84,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -119,10 +119,10 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -173,10 +173,10 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -255,10 +255,10 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -323,10 +323,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -393,10 +393,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -448,10 +448,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -517,10 +517,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -564,10 +564,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -611,10 +611,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -659,10 +659,10 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -734,10 +734,10 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
@@ -809,10 +809,10 @@ func TestDeleteVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -841,10 +841,10 @@ func TestDeleteVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -954,10 +954,10 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
@@ -995,10 +995,10 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1043,10 +1043,10 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
@@ -1113,10 +1113,10 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
@@ -1176,9 +1176,9 @@ func TestDeleteSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
@@ -1214,9 +1214,9 @@ func TestDeleteSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
@@ -1281,10 +1281,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
@@ -1317,10 +1317,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1352,10 +1352,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1388,10 +1388,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1429,10 +1429,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1466,10 +1466,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(false)
@@ -1505,10 +1505,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
@@ -1545,10 +1545,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
@@ -1598,9 +1598,9 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(nil)
@@ -1631,9 +1631,9 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
@@ -1665,9 +1665,9 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
 				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-				mockCloud := cloudmocks.NewMockCloud(mockCtl)
+				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
 				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())

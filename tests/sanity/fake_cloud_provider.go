@@ -29,37 +29,41 @@ import (
 type fakeCloudProvider struct {
 	disks     map[string]*fakeDisk
 	snapshots map[string]*fakeSnapshot
-	m         *metadata
+	m         *cloud.Metadata
 	pub       map[string]string
 }
 
 type fakeDisk struct {
-	*Disk
+	*cloud.Disk
 	tags map[string]string
 }
 
 type fakeSnapshot struct {
-	*Snapshot
+	*cloud.Snapshot
 	tags map[string]string
 }
 
-func newfakeCloudProvider() *fakeCloudProvider {
+func newFakeCloudProvider() *fakeCloudProvider {
 	return &fakeCloudProvider{
 		disks:     make(map[string]*fakeDisk),
 		snapshots: make(map[string]*fakeSnapshot),
 		pub:       make(map[string]string),
-		m:         &metadata{"instanceID", "region", "az"},
+		m: &cloud.Metadata{
+			InstanceID:       "instanceID",
+			Region:           "region",
+			AvailabilityZone: "az",
+		},
 	}
 }
 
-func (c *fakeCloudProvider) GetMetadata() MetadataService {
+func (c *fakeCloudProvider) GetMetadata() cloud.MetadataService {
 	return c.m
 }
 
-func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
+func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := &fakeDisk{
-		Disk: &Disk{
+		Disk: &cloud.Disk{
 			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
 			CapacityGiB:      util.BytesToGiB(diskOptions.CapacityBytes),
 			AvailabilityZone: diskOptions.AvailabilityZone,
@@ -95,7 +99,7 @@ func (c *fakeCloudProvider) WaitForAttachmentState(ctx context.Context, volumeID
 	return nil
 }
 
-func (c *fakeCloudProvider) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
+func (c *fakeCloudProvider) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*cloud.Disk, error) {
 	var disks []*fakeDisk
 	for _, d := range c.disks {
 		for key, value := range d.tags {
@@ -115,28 +119,28 @@ func (c *fakeCloudProvider) GetDiskByName(ctx context.Context, name string, capa
 	return nil, nil
 }
 
-func (c *fakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error) {
+func (c *fakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*cloud.Disk, error) {
 	for _, f := range c.disks {
 		if f.Disk.VolumeID == volumeID {
 			return f.Disk, nil
 		}
 	}
-	return nil, ErrNotFound
+	return nil, cloud.ErrNotFound
 }
 
 func (c *fakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
 	return nodeID == c.m.GetInstanceID()
 }
 
-func (c *fakeCloudProvider) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
+func (c *fakeCloudProvider) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *cloud.SnapshotOptions) (snapshot *cloud.Snapshot, err error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	snapshotID := fmt.Sprintf("snapshot-%d", r1.Uint64())
-	if len(snapshotOptions.Tags[SnapshotNameTagKey]) == 0 {
+	if len(snapshotOptions.Tags[cloud.SnapshotNameTagKey]) == 0 {
 		// for simplicity: let's have the Name and ID identical
-		snapshotOptions.Tags[SnapshotNameTagKey] = snapshotID
+		snapshotOptions.Tags[cloud.SnapshotNameTagKey] = snapshotID
 	}
 	s := &fakeSnapshot{
-		Snapshot: &Snapshot{
+		Snapshot: &cloud.Snapshot{
 			SnapshotID:     snapshotID,
 			SourceVolumeID: volumeID,
 			Size:           1,
@@ -155,7 +159,7 @@ func (c *fakeCloudProvider) DeleteSnapshot(ctx context.Context, snapshotID strin
 
 }
 
-func (c *fakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error) {
+func (c *fakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) (snapshot *cloud.Snapshot, err error) {
 	var snapshots []*fakeSnapshot
 	for _, s := range c.snapshots {
 		for key, value := range s.tags {
