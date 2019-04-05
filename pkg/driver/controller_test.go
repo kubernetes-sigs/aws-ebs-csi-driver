@@ -192,7 +192,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
+				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
@@ -321,7 +321,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
+				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
@@ -384,7 +384,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
+				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
@@ -436,7 +436,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
+				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
@@ -711,7 +711,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				vol := resp.GetVolume()
-				if vol == nil && expVol != nil {
+				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
 				}
 
