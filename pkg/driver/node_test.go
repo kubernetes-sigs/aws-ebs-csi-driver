@@ -777,10 +777,11 @@ func TestNodeGetInfo(t *testing.T) {
 	defer mockCtl.Finish()
 
 	mockMetadata := cloudmocks.NewMockMetadataService(mockCtl)
-	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
+	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId).Times(2)
+	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
 
 	mockCloud := cloudmocks.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetMetadata().Return(mockMetadata).Times(2)
+	mockCloud.EXPECT().GetMetadata().Return(mockMetadata).Times(3)
 
 	req := &csi.NodeGetInfoRequest{}
 
@@ -788,7 +789,7 @@ func TestNodeGetInfo(t *testing.T) {
 
 	m := awsDriver.cloud.GetMetadata()
 	expResp := &csi.NodeGetInfoResponse{
-		NodeId: "instanceID",
+		NodeId: expInstanceId,
 		AccessibleTopology: &csi.Topology{
 			Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
 		},
