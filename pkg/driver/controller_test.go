@@ -1453,7 +1453,6 @@ func TestControllerPublishVolume(t *testing.T) {
 func TestControllerUnpublishVolume(t *testing.T) {
 	testCases := []struct {
 		name     string
-		setup    func(req *csi.ControllerUnpublishVolumeRequest)
 		testFunc func(t *testing.T)
 	}{
 		{
