@@ -84,15 +84,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -119,13 +116,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -173,15 +166,11 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -255,15 +244,11 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				_, err = awsDriver.CreateVolume(ctx, req)
 				if err != nil {
@@ -323,15 +308,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
 				if err != nil {
@@ -393,15 +375,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
 				if err != nil {
@@ -448,15 +427,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
 				if err != nil {
@@ -517,15 +493,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -564,15 +537,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -611,15 +581,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -659,15 +626,12 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -734,15 +698,11 @@ func TestCreateVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -809,13 +769,9 @@ func TestDeleteVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -841,13 +797,9 @@ func TestDeleteVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -954,15 +906,11 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -995,13 +943,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.CreateSnapshot(context.Background(), req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1043,15 +987,11 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -1113,15 +1053,11 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -1169,20 +1105,14 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
-
 				expErrCode := codes.OK
-
 				ctx := context.Background()
+
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 				mockCloud := mocks.NewMockCloud(mockCtl)
 
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				req := &csi.DeleteSnapshotRequest{
 					SnapshotId: "xxx",
@@ -1207,20 +1137,14 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success not found",
 			testFunc: func(t *testing.T) {
-
 				expErrCode := codes.OK
-
 				ctx := context.Background()
+
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 				mockCloud := mocks.NewMockCloud(mockCtl)
 
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 
 				req := &csi.DeleteSnapshotRequest{
 					SnapshotId: "xxx",
@@ -1281,17 +1205,12 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(&cloud.Disk{}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return(expDevicePath, nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ControllerPublishVolume(ctx, req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -1317,13 +1236,9 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1352,13 +1267,9 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1388,13 +1299,9 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1429,13 +1336,9 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1466,15 +1369,10 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(false)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1505,16 +1403,11 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(nil, cloud.ErrNotFound)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1545,17 +1438,12 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(&cloud.Disk{}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return("", cloud.ErrAlreadyExists)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1598,14 +1486,10 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(nil)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -1631,12 +1515,9 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerUnpublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -1665,12 +1546,9 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
 
-				awsDriver := NewFakeDriver("", mockCloud, NewFakeMounter())
+				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ControllerUnpublishVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
