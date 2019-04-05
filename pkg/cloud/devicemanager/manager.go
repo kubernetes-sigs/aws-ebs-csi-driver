@@ -205,7 +205,7 @@ func (d *deviceManager) release(device *Device) error {
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
-	klog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device, device.VolumeID)
+	klog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device.Path, device.VolumeID)
 	d.inFlight.Del(nodeID, name)
 
 	return nil
