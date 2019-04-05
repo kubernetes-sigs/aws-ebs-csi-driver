@@ -24,7 +24,7 @@ import (
 )
 
 func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
-	klog.V(4).Infof("GetPluginInfo: called with args %+v", *req)
+	klog.V(6).Infof("GetPluginInfo: called with args %+v", *req)
 	resp := &csi.GetPluginInfoResponse{
 		Name:          DriverName,
 		VendorVersion: driverVersion,
@@ -34,7 +34,7 @@ func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoReques
 }
 
 func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	klog.V(4).Infof("GetPluginCapabilities: called with args %+v", *req)
+	klog.V(6).Infof("GetPluginCapabilities: called with args %+v", *req)
 	resp := &csi.GetPluginCapabilitiesResponse{
 		Capabilities: []*csi.PluginCapability{
 			{

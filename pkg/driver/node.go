@@ -112,7 +112,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.Internal, msg)
 	}
 	defer func() {
-		klog.Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
+		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
 		d.inFlight.Delete(req)
 	}()
 
@@ -126,7 +126,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
 
-	klog.Infof("NodeStageVolume: find device path %s -> %s", devicePath, source)
+	klog.V(4).Infof("NodeStageVolume: find device path %s -> %s", devicePath, source)
 
 	exists, err := d.mounter.ExistsPath(target)
 	if err != nil {
@@ -138,7 +138,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	// Otherwise we need to create the target directory.
 	if !exists {
 		// If target path does not exist we need to create the directory where volume will be staged
-		klog.Infof("NodeStageVolume: creating target dir %q", target)
+		klog.V(4).Infof("NodeStageVolume: creating target dir %q", target)
 		if err = d.mounter.MakeDir(target); err != nil {
 			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
 			return nil, status.Error(codes.Internal, msg)
@@ -156,7 +156,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	// If the volume corresponding to the volume_id is already staged to the staging_target_path,
 	// and is identical to the specified volume_capability the Plugin MUST reply 0 OK.
 	if device == source {
-		klog.Infof("NodeStageVolume: volume=%q already staged", volumeID)
+		klog.V(4).Infof("NodeStageVolume: volume=%q already staged", volumeID)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
@@ -337,7 +337,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		return status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
 
-	klog.Infof("NodePublishVolume [block]: find device path %s -> %s", devicePath, source)
+	klog.V(4).Infof("NodePublishVolume [block]: find device path %s -> %s", devicePath, source)
 
 	globalMountPath := filepath.Dir(target)
 
