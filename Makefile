@@ -20,25 +20,7 @@ BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 GO111MODULE=on
 
-# Hard-coded version is needed in case GitHub API rate limit is exceeded.
-# TODO: When aws-k8s-tester becomes a full release (https://developer.github.com/v3/repos/releases/#get-the-latest-release), use:
-# $(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/releases/latest | jq -r '.tag_name? // "<current version number>"')
-AWS_K8S_TESTER_VERSION?=$(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/tags | jq -r '.[0]?.name // "0.2.5"')
-AWS_K8S_TESTER_OS_ARCH?=$(shell go env GOOS)-amd64
-AWS_K8S_TESTER_DOWNLOAD_URL?=https://github.com/aws/aws-k8s-tester/releases/download/${AWS_K8S_TESTER_VERSION}/aws-k8s-tester-${AWS_K8S_TESTER_VERSION}-${AWS_K8S_TESTER_OS_ARCH}
-AWS_K8S_TESTER_PATH?=/tmp/aws-k8s-tester
-
 .EXPORT_ALL_VARIABLES:
-
-VPC_ID_FLAG=
-ifdef AWS_K8S_TESTER_VPC_ID
-	VPC_ID_FLAG=--vpc-id=${AWS_K8S_TESTER_VPC_ID}
-endif
-
-PR_NUM_FLAG=
-ifdef PULL_NUMBER
-	PR_NUM_FLAG=--pr-num=${PULL_NUMBER}
-endif
 
 .PHONY: aws-ebs-csi-driver
 aws-ebs-csi-driver:
@@ -59,9 +41,7 @@ test-sanity:
 
 .PHONY: test-integration
 test-integration:
-	curl -L ${AWS_K8S_TESTER_DOWNLOAD_URL} -o ${AWS_K8S_TESTER_PATH}
-	chmod +x ${AWS_K8S_TESTER_PATH}
-	${AWS_K8S_TESTER_PATH} csi test integration --terminate-on-exit=true --timeout=20m ${PR_NUM_FLAG} ${VPC_ID_FLAG}
+	./hack/run-integration-test
 
 .PHONY: test-e2e-single-az
 test-e2e-single-az:
