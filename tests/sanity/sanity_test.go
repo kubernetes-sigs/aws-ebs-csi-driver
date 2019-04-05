@@ -26,7 +26,6 @@ import (
 
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
@@ -50,7 +49,7 @@ var _ = BeforeSuite(func() {
 			"/dev/xvdbc": mount.FileTypeFile,
 		},
 	}
-	ebsDriver = driver.NewFakeDriver(endpoint, cloud.NewFakeCloudProvider(), fakeMounter)
+	ebsDriver = driver.NewFakeDriver(endpoint, newFakeCloudProvider(), fakeMounter)
 	go func() {
 		Expect(ebsDriver.Run()).NotTo(HaveOccurred())
 	}()
