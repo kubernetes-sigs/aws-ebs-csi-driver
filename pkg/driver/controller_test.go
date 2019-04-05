@@ -206,10 +206,6 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
 					}
 				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
-				}
 			},
 		},
 		{
@@ -339,10 +335,6 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
 					}
 				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
-				}
 			},
 		},
 		{
@@ -457,10 +449,6 @@ func TestCreateVolume(t *testing.T) {
 					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
 						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
 					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 			},
 		},
@@ -732,10 +720,6 @@ func TestCreateVolume(t *testing.T) {
 					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
 						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
 					}
-				}
-
-				if expVol.GetVolumeContext() == nil && vol.GetVolumeContext() != nil {
-					t.Fatalf("Expected volume context to be nil, got: %#v", vol.GetVolumeContext())
 				}
 
 				if expVol.GetAccessibleTopology() != nil {
