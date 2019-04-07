@@ -18,8 +18,6 @@ package devicemanager
 
 import (
 	"fmt"
-	"sort"
-	"sync"
 )
 
 // ExistingNames is a map of assigned device names. Presence of a key with a device
@@ -36,84 +34,30 @@ type ExistingNames map[string]string
 // device name to the previously assigned one (from previous NameAllocator
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
-// All these allocations are in-memory, nothing is written to / read from
-// /dev directory.
 type NameAllocator interface {
 	// GetNext returns a free device name or error when there is no free device
 	// name. Only the device name is returned, e.g. "ba" for "/dev/xvdba".
 	// It's up to the called to add appropriate "/dev/sd" or "/dev/xvd" prefix.
 	GetNext(existingNames ExistingNames) (name string, err error)
-
-	// Deprioritize the device name so as it can't be used immediately again
-	Deprioritize(chosen string)
 }
 
-type nameAllocator struct {
-	possibleNames map[string]int
-	counter       int
-	mux           sync.Mutex
-}
+type nameAllocator struct{}
 
 var _ NameAllocator = &nameAllocator{}
 
-type namePair struct {
-	name  string
-	index int
-}
-
-type namePairList []namePair
-
-func (p namePairList) Len() int           { return len(p) }
-func (p namePairList) Less(i, j int) bool { return p[i].index < p[j].index }
-func (p namePairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-// Allocates device names according to scheme ba..bz, ca..cz
-// it moves along the ring and always picks next device until
-// device list is exhausted.
-func NewNameAllocator() NameAllocator {
-	possibleNames := make(map[string]int)
-	for _, firstChar := range []rune{'b', 'c'} {
-		for i := 'a'; i <= 'z'; i++ {
-			name := string([]rune{firstChar, i})
-			possibleNames[name] = 0
-		}
-	}
-	return &nameAllocator{
-		possibleNames: possibleNames,
-		counter:       0,
-	}
-}
-
-// GetNext gets next available device from the pool, this function assumes that caller
-// holds the necessary lock on nameAllocator
+// GetNext gets next available device given existing names that are being used
+// This function iterate through the device names in deterministic order of:
+//     a, b, ... , z, aa, ab, ... , az
+// and return the first one that is not used yet.
 func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	for _, namePair := range d.sortByCount() {
-		if _, found := existingNames[namePair.name]; !found {
-			return namePair.name, nil
+	for _, c1 := range []string{"", "a"} {
+		for c2 := 'a'; c2 <= 'z'; c2++ {
+			name := fmt.Sprintf("%s%s", c1, string(c2))
+			if _, found := existingNames[name]; !found {
+				return name, nil
+			}
 		}
 	}
+
 	return "", fmt.Errorf("there are no names available")
-}
-
-// Deprioritize the name so as it can't be used immediately again
-func (d *nameAllocator) Deprioritize(chosen string) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	if _, ok := d.possibleNames[chosen]; ok {
-		d.counter++
-		d.possibleNames[chosen] = d.counter
-	}
-}
-
-func (d *nameAllocator) sortByCount() namePairList {
-	npl := make(namePairList, 0)
-	for name, index := range d.possibleNames {
-		npl = append(npl, namePair{name, index})
-	}
-	sort.Sort(npl)
-	return npl
 }

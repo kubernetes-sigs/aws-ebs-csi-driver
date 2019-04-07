@@ -21,65 +21,44 @@ import (
 )
 
 func TestNameAllocator(t *testing.T) {
+	existingNames := map[string]string{}
+	allocator := nameAllocator{}
+
 	tests := []struct {
-		name           string
-		existingNames  ExistingNames
-		deviceMap      map[string]int
-		expectedOutput string
+		expectedName string
 	}{
-		{
-			"empty device list with wrap",
-			ExistingNames{},
-			generateUnsortedNameList(),
-			"bd", // next to 'cz' is the first one, 'ba'
-		},
+		{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}, {"g"}, {"h"}, {"i"}, {"j"},
+		{"k"}, {"l"}, {"m"}, {"n"}, {"o"}, {"p"}, {"q"}, {"r"}, {"s"}, {"t"},
+		{"u"}, {"v"}, {"w"}, {"x"}, {"y"}, {"z"},
+		{"aa"}, {"ab"}, {"ac"}, {"ad"}, {"ae"}, {"af"}, {"ag"}, {"ah"}, {"ai"}, {"aj"},
+		{"ak"}, {"al"}, {"am"}, {"an"}, {"ao"}, {"ap"}, {"aq"}, {"ar"}, {"as"}, {"at"},
+		{"au"}, {"av"}, {"aw"}, {"ax"}, {"ay"}, {"az"},
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			allocator := NewNameAllocator().(*nameAllocator)
-			for k, v := range test.deviceMap {
-				allocator.possibleNames[k] = v
-			}
-
-			got, err := allocator.GetNext(test.existingNames)
+		t.Run(test.expectedName, func(t *testing.T) {
+			actual, err := allocator.GetNext(existingNames)
 			if err != nil {
-				t.Errorf("text %q: unexpected error: %v", test.name, err)
+				t.Errorf("test %q: unexpected error: %v", test.expectedName, err)
 			}
-			if got != test.expectedOutput {
-				t.Errorf("text %q: expected %q, got %q", test.name, test.expectedOutput, got)
+			if actual != test.expectedName {
+				t.Errorf("test %q: expected %q, got %q", test.expectedName, test.expectedName, actual)
 			}
+			existingNames[actual] = ""
 		})
 	}
 }
 
-func generateUnsortedNameList() map[string]int {
-	possibleNames := make(map[string]int)
-	for _, firstChar := range []rune{'b', 'c'} {
-		for i := 'a'; i <= 'z'; i++ {
-			dev := string([]rune{firstChar, i})
-			possibleNames[dev] = 3
-		}
-	}
-	possibleNames["bd"] = 0
-	return possibleNames
-}
-
 func TestNameAllocatorError(t *testing.T) {
-	allocator := NewNameAllocator().(*nameAllocator)
-	existingNames := ExistingNames{}
+	allocator := nameAllocator{}
+	existingNames := map[string]string{}
 
-	// make all devices used
-	var first, second byte
-	for first = 'b'; first <= 'c'; first++ {
-		for second = 'a'; second <= 'z'; second++ {
-			device := [2]byte{first, second}
-			existingNames[string(device[:])] = "used"
-		}
+	for i := 0; i < 52; i++ {
+		name, _ := allocator.GetNext(existingNames)
+		existingNames[name] = ""
 	}
-
-	device, err := allocator.GetNext(existingNames)
+	name, err := allocator.GetNext(existingNames)
 	if err == nil {
-		t.Errorf("expected error, got device  %q", device)
+		t.Errorf("expected error, got device  %q", name)
 	}
 }
