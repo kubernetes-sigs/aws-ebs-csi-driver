@@ -41,12 +41,12 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compability Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 |
-|----------------------------------------|-------|-------|
-| master branch                          | no    | yes   |
-| v0.3.0                                 | no    | yes   |
-| v0.2.0                                 | no    | yes   |
-| v0.1.0                                 | yes   | yes   |
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 |
+|----------------------------------------|-------|-------|-------|
+| master branch                          | no    | yes   | yes   |
+| v0.3.0                                 | no    | yes   | yes   |
+| v0.2.0                                 | no    | yes   | yes   |
+| v0.1.0                                 | yes   | yes   | yes   |
 
 ## Container Images:
 |AWS EBS CSI Driver Version | Image                               |
@@ -82,7 +82,7 @@ kubectl apply -f secret.yaml
 ```
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-#### Deploy CDR (optinal)
+#### Deploy CRD (optinal)
 If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
