@@ -233,10 +233,7 @@ func TestNodeStageVolume(t *testing.T) {
 
 			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-			mockCloud := mocks.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
-			awsDriver := newTestNodeService(mockCloud, tc.fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, tc.fakeMounter)
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -337,14 +334,11 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-			mockCloud := mocks.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 			fakeMounter := NewFakeMounter()
 			if len(tc.fakeMountPoints) > 0 {
 				fakeMounter.MountPoints = tc.fakeMountPoints
 			}
-			awsDriver := newTestNodeService(mockCloud, fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, fakeMounter)
 
 			_, err := awsDriver.NodeUnstageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -593,10 +587,7 @@ func TestNodePublishVolume(t *testing.T) {
 
 			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-			mockCloud := mocks.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
-			awsDriver := newTestNodeService(mockCloud, tc.fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, tc.fakeMounter)
 
 			_, err := awsDriver.NodePublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -675,15 +666,12 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 			mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-			mockCloud := mocks.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 			fakeMounter := NewFakeMounter()
 			if tc.fakeMountPoint != nil {
 				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
 			}
 
-			awsDriver := newTestNodeService(mockCloud, fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, fakeMounter)
 
 			_, err := awsDriver.NodeUnpublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -713,12 +701,9 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-	mockCloud := mocks.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 	req := &csi.NodeGetVolumeStatsRequest{}
 
-	awsDriver := newTestNodeService(mockCloud, NewFakeMounter())
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
 	expErrCode := codes.Unimplemented
 
@@ -741,12 +726,9 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 
-	mockCloud := mocks.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetMetadata().Return(mockMetadata)
-
 	req := &csi.NodeGetCapabilitiesRequest{}
 
-	awsDriver := newTestNodeService(mockCloud, NewFakeMounter())
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
 	caps := []*csi.NodeServiceCapability{
 		{
@@ -777,21 +759,17 @@ func TestNodeGetInfo(t *testing.T) {
 	defer mockCtl.Finish()
 
 	mockMetadata := mocks.NewMockMetadataService(mockCtl)
-	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
 	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-
-	mockCloud := mocks.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetMetadata().Return(mockMetadata).Times(2)
+	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
 
 	req := &csi.NodeGetInfoRequest{}
 
-	awsDriver := newTestNodeService(mockCloud, NewFakeMounter())
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
-	m := mockCloud.GetMetadata()
 	expResp := &csi.NodeGetInfoResponse{
 		NodeId: expInstanceId,
 		AccessibleTopology: &csi.Topology{
-			Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
+			Segments: map[string]string{TopologyKey: mockMetadata.GetAvailabilityZone()},
 		},
 	}
 
@@ -808,9 +786,9 @@ func TestNodeGetInfo(t *testing.T) {
 	}
 }
 
-func newTestNodeService(cloud cloud.Cloud, mounter mount.Interface) nodeService {
+func newTestNodeService(metadataService cloud.MetadataService, mounter mount.Interface) nodeService {
 	return nodeService{
-		metadata: cloud.GetMetadata(),
+		metadata: metadataService,
 		mounter:  NewFakeSafeFormatAndMounter(mounter),
 		inFlight: internal.NewInFlight(),
 	}
