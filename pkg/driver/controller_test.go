@@ -109,7 +109,6 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: stdVolCap,
 					Parameters:         stdParams,
 				}
-				expErr := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -125,11 +124,11 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErr {
-						t.Fatalf("Expected error code %d, got %d message %s", expErr, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
 				} else {
-					t.Fatalf("Expected error got nil")
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -150,7 +149,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 				expVol := &csi.Volume{
 					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
+					VolumeId:      "test-vol",
 					VolumeContext: map[string]string{FsTypeKey: ""},
 				}
 
@@ -198,6 +197,16 @@ func TestCreateVolume(t *testing.T) {
 
 				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
 					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
+				}
+
+				if vol.GetVolumeId() != expVol.GetVolumeId() {
+					t.Fatalf("Expected volume id: %v, got: %v", expVol.GetVolumeId(), vol.GetVolumeId())
+				}
+
+				if expVol.GetAccessibleTopology() != nil {
+					if !reflect.DeepEqual(expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
+						t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
+					}
 				}
 
 				for expKey, expVal := range expVol.GetVolumeContext() {
@@ -271,7 +280,7 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Expected error code %d, got %d", codes.AlreadyExists, srvErr.Code())
 					}
 				} else {
-					t.Fatalf("Expected error code %d, got nil", codes.AlreadyExists)
+					t.Fatalf("Expected error %v, got no error", codes.AlreadyExists)
 				}
 			},
 		},
@@ -295,18 +304,14 @@ func TestCreateVolume(t *testing.T) {
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
 					FsType:           expVol.VolumeContext[FsTypeKey],
+					CapacityGiB:      util.BytesToGiB(cloud.DefaultVolumeSize),
 				}
-				volSizeBytes, err := getVolSizeBytes(req)
-				if err != nil {
-					t.Fatalf("Unable to get volume size bytes for req: %s", err)
-				}
-				mockDisk.CapacityGiB = util.BytesToGiB(volSizeBytes)
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(cloud.DefaultVolumeSize)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{cloud: mockCloud}
@@ -358,18 +363,14 @@ func TestCreateVolume(t *testing.T) {
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
 					FsType:           expVol.VolumeContext[FsTypeKey],
+					CapacityGiB:      util.BytesToGiB(expVol.CapacityBytes),
 				}
-				volSizeBytes, err := getVolSizeBytes(req)
-				if err != nil {
-					t.Fatalf("Unable to get volume size bytes for req: %s", err)
-				}
-				mockDisk.CapacityGiB = util.BytesToGiB(volSizeBytes)
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSizeBytes)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(expVol.CapacityBytes)).Return(nil, cloud.ErrNotFound)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{cloud: mockCloud}
@@ -782,7 +783,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(false, cloud.ErrNotFound)
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
@@ -794,6 +795,38 @@ func TestDeleteVolume(t *testing.T) {
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
+			},
+		},
+		{
+			name: "fail delete disk",
+			testFunc: func(t *testing.T) {
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "test-vol",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.DeleteVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.Internal {
+						t.Fatalf("Unexpected error: %v", srvErr.Code())
+					}
+				} else {
+					t.Fatalf("Expected error, got nil")
+				}
+
+				if resp != nil {
+					t.Fatalf("Expected resp to be nil, got: %+v", resp)
 				}
 			},
 		},
@@ -878,7 +911,6 @@ func TestCreateSnapshot(t *testing.T) {
 				expSnapshot := &csi.Snapshot{
 					ReadyToUse: true,
 				}
-				expErrCode := codes.OK
 
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
@@ -897,18 +929,9 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
-					}
-					return
+					t.Fatalf("Unexpected error: %v", err)
 				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
-				}
+
 				if snap := resp.GetSnapshot(); snap == nil {
 					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
 				}
@@ -921,7 +944,6 @@ func TestCreateSnapshot(t *testing.T) {
 					Parameters:     nil,
 					SourceVolumeId: "vol-test",
 				}
-				expErrCode := codes.InvalidArgument
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
@@ -934,10 +956,11 @@ func TestCreateSnapshot(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -957,8 +980,6 @@ func TestCreateSnapshot(t *testing.T) {
 				expSnapshot := &csi.Snapshot{
 					ReadyToUse: true,
 				}
-				expErrCode := codes.OK
-				extraExpErrCode := codes.AlreadyExists
 
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
@@ -981,9 +1002,10 @@ func TestCreateSnapshot(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+					if srvErr.Code() != codes.OK {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.OK, srvErr.Code(), srvErr.Message())
+					}
+					t.Fatalf("Unexpected error: %v", err)
 				}
 				snap := resp.GetSnapshot()
 				if snap == nil {
@@ -997,13 +1019,11 @@ func TestCreateSnapshot(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != extraExpErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.AlreadyExists {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.AlreadyExists, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if extraExpErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", extraExpErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.AlreadyExists)
 				}
 			},
 		},
@@ -1023,8 +1043,6 @@ func TestCreateSnapshot(t *testing.T) {
 				expSnapshot := &csi.Snapshot{
 					ReadyToUse: true,
 				}
-				expErrCode := codes.OK
-				extraExpErrCode := codes.OK
 
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
@@ -1043,13 +1061,7 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+					t.Fatalf("Unexpected error: %v", err)
 				}
 				snap := resp.GetSnapshot()
 				if snap == nil {
@@ -1059,17 +1071,7 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(extraReq.GetName())).Return(mockSnapshot, nil)
 				_, err = awsDriver.CreateSnapshot(ctx, extraReq)
 				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					if srvErr.Code() != extraExpErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
-					}
-					return
-				}
-				if extraExpErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", extraExpErrCode)
+					t.Fatalf("Unexpected error: %v", err)
 				}
 			},
 		},
@@ -1088,7 +1090,6 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
-				expErrCode := codes.OK
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -1103,24 +1104,13 @@ func TestDeleteSnapshot(t *testing.T) {
 
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq("xxx")).Return(true, nil)
 				if _, err := awsDriver.DeleteSnapshot(ctx, req); err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
-					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+					t.Fatalf("Unexpected error: %v", err)
 				}
 			},
 		},
 		{
 			name: "success not found",
 			testFunc: func(t *testing.T) {
-				expErrCode := codes.OK
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -1135,17 +1125,7 @@ func TestDeleteSnapshot(t *testing.T) {
 
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq("xxx")).Return(false, cloud.ErrNotFound)
 				if _, err := awsDriver.DeleteSnapshot(ctx, req); err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
-					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+					t.Fatalf("Unexpected error: %v", err)
 				}
 			},
 		},
@@ -1196,11 +1176,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ControllerPublishVolume(ctx, req)
 				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", err)
 				}
 
 				if !reflect.DeepEqual(resp, expResp) {
@@ -1212,7 +1188,6 @@ func TestControllerPublishVolume(t *testing.T) {
 			name: "fail no VolumeId",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1227,13 +1202,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -1243,7 +1216,6 @@ func TestControllerPublishVolume(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
 					VolumeId: "vol-test",
 				}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1258,13 +1230,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -1275,7 +1245,6 @@ func TestControllerPublishVolume(t *testing.T) {
 					NodeId:   expInstanceId,
 					VolumeId: "vol-test",
 				}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1290,13 +1259,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -1312,7 +1279,6 @@ func TestControllerPublishVolume(t *testing.T) {
 					},
 					VolumeId: "vol-test",
 				}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1327,13 +1293,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -1345,7 +1309,6 @@ func TestControllerPublishVolume(t *testing.T) {
 					VolumeId:         "vol-test",
 					VolumeCapability: stdVolCap,
 				}
-				expErrCode := codes.NotFound
 
 				ctx := context.Background()
 
@@ -1361,13 +1324,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.NotFound {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.NotFound, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.NotFound)
 				}
 			},
 		},
@@ -1379,7 +1340,6 @@ func TestControllerPublishVolume(t *testing.T) {
 					NodeId:           expInstanceId,
 					VolumeCapability: stdVolCap,
 				}
-				expErrCode := codes.NotFound
 
 				ctx := context.Background()
 
@@ -1396,13 +1356,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.NotFound {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.NotFound, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.NotFound)
 				}
 			},
 		},
@@ -1414,7 +1372,6 @@ func TestControllerPublishVolume(t *testing.T) {
 					NodeId:           expInstanceId,
 					VolumeCapability: stdVolCap,
 				}
-				expErrCode := codes.AlreadyExists
 
 				ctx := context.Background()
 
@@ -1432,13 +1389,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.AlreadyExists {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.AlreadyExists, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.AlreadyExists)
 				}
 			},
 		},
@@ -1474,11 +1429,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
 				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", err)
 				}
 
 				if !reflect.DeepEqual(resp, expResp) {
@@ -1490,7 +1441,6 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			name: "fail no VolumeId",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerUnpublishVolumeRequest{}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1505,13 +1455,11 @@ func TestControllerUnpublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
@@ -1521,7 +1469,6 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				req := &csi.ControllerUnpublishVolumeRequest{
 					VolumeId: "vol-test",
 				}
-				expErrCode := codes.InvalidArgument
 
 				ctx := context.Background()
 
@@ -1536,13 +1483,11 @@ func TestControllerUnpublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != expErrCode {
-						t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
-					return
-				}
-				if expErrCode != codes.OK {
-					t.Fatalf("Expected error %v, got no error", expErrCode)
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
 			},
 		},
