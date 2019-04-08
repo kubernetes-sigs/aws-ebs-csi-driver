@@ -72,16 +72,9 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	var volSizeBytes int64
-	capRange := req.GetCapacityRange()
-	if capRange == nil {
-		volSizeBytes = cloud.DefaultVolumeSize
-	} else {
-		volSizeBytes = util.RoundUpBytes(capRange.GetRequiredBytes())
-		maxVolSize := capRange.GetLimitBytes()
-		if maxVolSize > 0 && maxVolSize < volSizeBytes {
-			return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
-		}
+	volSizeBytes, err := getVolSizeBytes(req)
+	if err != nil {
+		return nil, err
 	}
 
 	volCaps := req.GetVolumeCapabilities()
@@ -435,4 +428,19 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) (*csi.CreateSnapshotRes
 			ReadyToUse:     snapshot.ReadyToUse,
 		},
 	}, nil
+}
+
+func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
+	var volSizeBytes int64
+	capRange := req.GetCapacityRange()
+	if capRange == nil {
+		volSizeBytes = cloud.DefaultVolumeSize
+	} else {
+		volSizeBytes = util.RoundUpBytes(capRange.GetRequiredBytes())
+		maxVolSize := capRange.GetLimitBytes()
+		if maxVolSize > 0 && maxVolSize < volSizeBytes {
+			return 0, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
+		}
+	}
+	return volSizeBytes, nil
 }

@@ -22,8 +22,10 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/mocks"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/kubernetes/pkg/util/mount"
@@ -226,9 +228,12 @@ func TestNodeStageVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := newTestNodeService(
-				cloud.NewFakeCloudProvider().GetMetadata(),
-				tc.fakeMounter)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
+			awsDriver := newTestNodeService(mockMetadata, tc.fakeMounter)
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -324,13 +329,16 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
 			fakeMounter := NewFakeMounter()
 			if len(tc.fakeMountPoints) > 0 {
 				fakeMounter.MountPoints = tc.fakeMountPoints
 			}
-			awsDriver := newTestNodeService(
-				cloud.NewFakeCloudProvider().GetMetadata(),
-				fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, fakeMounter)
 
 			_, err := awsDriver.NodeUnstageVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -574,9 +582,12 @@ func TestNodePublishVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			awsDriver := newTestNodeService(
-				cloud.NewFakeCloudProvider().GetMetadata(),
-				tc.fakeMounter)
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
+			awsDriver := newTestNodeService(mockMetadata, tc.fakeMounter)
 
 			_, err := awsDriver.NodePublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -650,14 +661,17 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
 			fakeMounter := NewFakeMounter()
 			if tc.fakeMountPoint != nil {
 				fakeMounter.MountPoints = append(fakeMounter.MountPoints, *tc.fakeMountPoint)
 			}
 
-			awsDriver := newTestNodeService(
-				cloud.NewFakeCloudProvider().GetMetadata(),
-				fakeMounter)
+			awsDriver := newTestNodeService(mockMetadata, fakeMounter)
 
 			_, err := awsDriver.NodeUnpublishVolume(context.TODO(), tc.req)
 			if err != nil {
@@ -682,11 +696,14 @@ func TestNodeUnpublishVolume(t *testing.T) {
 }
 
 func TestNodeGetVolumeStats(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
 	req := &csi.NodeGetVolumeStatsRequest{}
 
-	awsDriver := newTestNodeService(
-		cloud.NewFakeCloudProvider().GetMetadata(),
-		NewFakeMounter())
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
 	expErrCode := codes.Unimplemented
 
@@ -704,10 +721,14 @@ func TestNodeGetVolumeStats(t *testing.T) {
 }
 
 func TestNodeGetCapabilities(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
+
 	req := &csi.NodeGetCapabilitiesRequest{}
-	awsDriver := newTestNodeService(
-		cloud.NewFakeCloudProvider().GetMetadata(),
-		NewFakeMounter())
+
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
 	caps := []*csi.NodeServiceCapability{
 		{
@@ -734,18 +755,21 @@ func TestNodeGetCapabilities(t *testing.T) {
 }
 
 func TestNodeGetInfo(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
+	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
+	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
+
 	req := &csi.NodeGetInfoRequest{}
-	cloud := cloud.NewFakeCloudProvider()
 
-	awsDriver := newTestNodeService(
-		cloud.GetMetadata(),
-		NewFakeMounter())
+	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
 
-	m := cloud.GetMetadata()
 	expResp := &csi.NodeGetInfoResponse{
-		NodeId: "instanceID",
+		NodeId: expInstanceId,
 		AccessibleTopology: &csi.Topology{
-			Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
+			Segments: map[string]string{TopologyKey: mockMetadata.GetAvailabilityZone()},
 		},
 	}
 
@@ -762,9 +786,9 @@ func TestNodeGetInfo(t *testing.T) {
 	}
 }
 
-func newTestNodeService(metadata cloud.MetadataService, mounter mount.Interface) nodeService {
+func newTestNodeService(metadataService cloud.MetadataService, mounter mount.Interface) nodeService {
 	return nodeService{
-		metadata: cloud.NewFakeCloudProvider().GetMetadata(),
+		metadata: metadataService,
 		mounter:  NewFakeSafeFormatAndMounter(mounter),
 		inFlight: internal.NewInFlight(),
 	}
