@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-controller-sa
+  name: ebs-csi-controller-sa
   namespace: kube-system
 
 ---
@@ -10,7 +10,7 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: external-provisioner-role
+  name: ebs-external-provisioner-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -30,14 +30,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-provisioner-binding
+  name: ebs-csi-provisioner-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-controller-sa
+    name: ebs-csi-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: external-provisioner-role
+  name: ebs-external-provisioner-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -45,7 +45,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: external-attacher-role
+  name: ebs-external-attacher-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -65,14 +65,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-attacher-binding
+  name: ebs-csi-attacher-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-controller-sa
+    name: ebs-csi-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: external-attacher-role
+  name: ebs-external-attacher-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -80,7 +80,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: cluster-driver-registrar-role
+  name: ebs-cluster-driver-registrar-role
 rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
@@ -94,14 +94,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-driver-registrar-binding
+  name: ebs-csi-driver-registrar-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-controller-sa
+    name: ebs-csi-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: cluster-driver-registrar-role
+  name: ebs-cluster-driver-registrar-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -109,7 +109,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: external-snapshotter-role
+  name: ebs-external-snapshotter-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -144,14 +144,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-snapshotter-binding
+  name: ebs-csi-snapshotter-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-controller-sa
+    name: ebs-csi-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: external-snapshotter-role
+  name: ebs-external-snapshotter-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -169,7 +169,7 @@ spec:
       labels:
         app: ebs-csi-controller
     spec:
-      serviceAccount: csi-controller-sa
+      serviceAccount: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
         - key: CriticalAddonsOnly
