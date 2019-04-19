@@ -26,17 +26,17 @@ const (
 // constants of keys in volume parameters
 const (
 	// FsTypeKey represents key for filesystem type
-	FsTypeKey = "fsType"
+	FsTypeKey = "fstype"
 
 	// VolumeTypeKey represents key for volume type
 	VolumeTypeKey = "type"
 
 	// IopsPerGBKey represents key for IOPS per GB
-	IopsPerGBKey = "iopsPerGB"
+	IopsPerGBKey = "iopspergb"
 
 	// EncryptedKey represents key for whether filesystem is encrypted
 	EncryptedKey = "encrypted"
 
 	// KmsKeyId represents key for KMS encryption key
-	KmsKeyIdKey = "kmsKeyId"
+	KmsKeyIdKey = "kmskeyid"
 )
