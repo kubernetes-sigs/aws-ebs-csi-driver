@@ -16,15 +16,16 @@ package e2e
 
 import (
 	"fmt"
+	"math/rand"
+	"os"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"math/rand"
-	"os"
-	"strings"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
@@ -55,7 +56,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		for _, fs := range ebscsidriver.ValidFSTypes {
 			volumeType := t
 			fsType := fs
-			It(fmt.Sprintf("should create a volume on demand with volumeType %q and fsType %q", volumeType, fsType), func() {
+			It(fmt.Sprintf("should create a volume on demand with volume type %q and fs type %q", volumeType, fsType), func() {
 				pods := []testsuites.PodDetails{
 					{
 						Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
