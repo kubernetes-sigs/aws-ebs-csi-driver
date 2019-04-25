@@ -1136,6 +1136,189 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 }
 
+func TestListSnapshots(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success normal",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{}
+				mockCloudSnapshotsResponse := &cloud.ListSnapshotsResponse{
+					Snapshots: []*cloud.Snapshot{
+						{
+							SnapshotID:     "snapshot-1",
+							SourceVolumeID: "test-vol",
+							Size:           1,
+							CreationTime:   time.Now(),
+						},
+						{
+							SnapshotID:     "snapshot-2",
+							SourceVolumeID: "test-vol",
+							Size:           1,
+							CreationTime:   time.Now(),
+						},
+					},
+					NextToken: "",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(0)), gomock.Eq("")).Return(mockCloudSnapshotsResponse, nil)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ListSnapshots(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if len(resp.GetEntries()) != len(mockCloudSnapshotsResponse.Snapshots) {
+					t.Fatalf("Expected %d entries, got %d", len(mockCloudSnapshotsResponse.Snapshots), len(resp.GetEntries()))
+				}
+			},
+		},
+		{
+			name: "success no snapshots",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{}
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(0)), gomock.Eq("")).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ListSnapshots(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, &csi.ListSnapshotsResponse{}) {
+					t.Fatalf("Expected empty response, got %+v", resp)
+				}
+			},
+		},
+		{
+			name: "success snapshot ID",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{
+					SnapshotId: "snapshot-1",
+				}
+				mockCloudSnapshotsResponse := &cloud.Snapshot{
+					SnapshotID:     "snapshot-1",
+					SourceVolumeID: "test-vol",
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ListSnapshots(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if len(resp.GetEntries()) != 1 {
+					t.Fatalf("Expected %d entry, got %d", 1, len(resp.GetEntries()))
+				}
+			},
+		},
+		{
+			name: "success snapshot ID not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{
+					SnapshotId: "snapshot-1",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ListSnapshots(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, &csi.ListSnapshotsResponse{}) {
+					t.Fatalf("Expected empty response, got %+v", resp)
+				}
+			},
+		},
+		{
+			name: "fail snapshot ID multiple found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{
+					SnapshotId: "snapshot-1",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.Internal {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.Internal, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error code %d, got no error", codes.Internal)
+				}
+			},
+		},
+		{
+			name: "fail 0 < MaxEntries < 5",
+			testFunc: func(t *testing.T) {
+				req := &csi.ListSnapshotsRequest{
+					MaxEntries: 4,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.Internal, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error code %d, got no error", codes.Internal)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
 func TestControllerPublishVolume(t *testing.T) {
 	stdVolCap := &csi.VolumeCapability{
 		AccessType: &csi.VolumeCapability_Mount{

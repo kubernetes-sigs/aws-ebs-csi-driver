@@ -173,3 +173,13 @@ func (c *fakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) 
 	}
 	return snapshots[0].Snapshot, nil
 }
+
+func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *cloud.ListSnapshotsResponse, err error) {
+	var snapshots []*cloud.Snapshot
+	for _, fakeSnapshot := range c.snapshots {
+		snapshots = append(snapshots, fakeSnapshot.Snapshot)
+	}
+	return &cloud.ListSnapshotsResponse{
+		Snapshots: snapshots,
+	}, nil
+}
