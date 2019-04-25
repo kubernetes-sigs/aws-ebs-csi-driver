@@ -18,6 +18,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -644,6 +645,165 @@ func TestGetSnapshotByName(t *testing.T) {
 
 			mockCtrl.Finish()
 		})
+	}
+}
+
+func TestListSnapshots(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success: normal",
+			testFunc: func(t *testing.T) {
+				expSnapshots := []*Snapshot{
+					{
+						SourceVolumeID: "snap-test-volume1",
+						SnapshotID:     "snap-test-name1",
+					},
+					{
+						SourceVolumeID: "snap-test-volume2",
+						SnapshotID:     "snap-test-name2",
+					},
+				}
+				ec2Snapshots := []*ec2.Snapshot{
+					{
+						SnapshotId: aws.String(expSnapshots[0].SnapshotID),
+						VolumeId:   aws.String("snap-test-volume1"),
+						State:      aws.String("completed"),
+					},
+					{
+						SnapshotId: aws.String(expSnapshots[1].SnapshotID),
+						VolumeId:   aws.String("snap-test-volume2"),
+						State:      aws.String("completed"),
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+
+				_, err := c.ListSnapshots(ctx, "", 0, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success: max results, next token",
+			testFunc: func(t *testing.T) {
+				maxResults := 5
+				nextTokenValue := "nextTokenValue"
+				var expSnapshots []*Snapshot
+				for i := 0; i < maxResults*2; i++ {
+					expSnapshots = append(expSnapshots, &Snapshot{
+						SourceVolumeID: "snap-test-volume1",
+						SnapshotID:     fmt.Sprintf("snap-test-name%d", i),
+					})
+				}
+
+				var ec2Snapshots []*ec2.Snapshot
+				for i := 0; i < maxResults*2; i++ {
+					ec2Snapshots = append(ec2Snapshots, &ec2.Snapshot{
+						SnapshotId: aws.String(expSnapshots[i].SnapshotID),
+						VolumeId:   aws.String(fmt.Sprintf("snap-test-volume%d", i)),
+						State:      aws.String("completed"),
+					})
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				firstCall := mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+					Snapshots: ec2Snapshots[:maxResults],
+					NextToken: aws.String(nextTokenValue),
+				}, nil)
+				secondCall := mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+					Snapshots: ec2Snapshots[maxResults:],
+				}, nil)
+				gomock.InOrder(
+					firstCall,
+					secondCall,
+				)
+
+				firstSnapshotsResponse, err := c.ListSnapshots(ctx, "", 5, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+
+				if len(firstSnapshotsResponse.Snapshots) != maxResults {
+					t.Fatalf("Expected %d snapshots, got %d", maxResults, len(firstSnapshotsResponse.Snapshots))
+				}
+
+				if firstSnapshotsResponse.NextToken != nextTokenValue {
+					t.Fatalf("Expected next token value '%s' got '%s'", nextTokenValue, firstSnapshotsResponse.NextToken)
+				}
+
+				secondSnapshotsResponse, err := c.ListSnapshots(ctx, "", 0, firstSnapshotsResponse.NextToken)
+				if err != nil {
+					t.Fatalf("CreateSnapshot() failed: expected no error, got: %v", err)
+				}
+
+				if len(secondSnapshotsResponse.Snapshots) != maxResults {
+					t.Fatalf("Expected %d snapshots, got %d", maxResults, len(secondSnapshotsResponse.Snapshots))
+				}
+
+				if secondSnapshotsResponse.NextToken != "" {
+					t.Fatalf("Expected next token value to be empty got %s", secondSnapshotsResponse.NextToken)
+				}
+			},
+		},
+		{
+			name: "fail: AWS DescribeSnapshotsWithContext error",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, errors.New("test error"))
+
+				if _, err := c.ListSnapshots(ctx, "", 0, ""); err == nil {
+					t.Fatalf("ListSnapshots() failed: expected an error, got none")
+				}
+			},
+		},
+		{
+			name: "fail: no snapshots ErrNotFound",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{}, nil)
+
+				if _, err := c.ListSnapshots(ctx, "", 0, ""); err != nil {
+					if err != ErrNotFound {
+						t.Fatalf("Expected error %v, got %v", ErrNotFound, err)
+					}
+				} else {
+					t.Fatalf("Expected error, got none")
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
