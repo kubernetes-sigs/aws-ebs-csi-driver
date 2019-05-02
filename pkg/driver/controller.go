@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
@@ -99,8 +100,37 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
-	volumeParams := req.GetParameters()
-	fsType := volumeParams[FsTypeKey]
+	var (
+		fsType      string
+		volumeType  string
+		iopsPerGB   int
+		isEncrypted bool
+		kmsKeyId    string
+	)
+
+	for key, value := range req.GetParameters() {
+		switch strings.ToLower(key) {
+		case FsTypeKey:
+			fsType = value
+		case VolumeTypeKey:
+			volumeType = value
+		case IopsPerGBKey:
+			iopsPerGB, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
+			}
+		case EncryptedKey:
+			if value == "true" {
+				isEncrypted = true
+			} else {
+				isEncrypted = false
+			}
+		case KmsKeyIdKey:
+			kmsKeyId = value
+		default:
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
+		}
+	}
 
 	// volume exists already
 	if disk != nil {
@@ -110,24 +140,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
-	volumeType := volumeParams[VolumeTypeKey]
-	iopsPerGB := 0
-	if volumeType == cloud.VolumeTypeIO1 {
-		iopsPerGB, err = strconv.Atoi(volumeParams[IopsPerGBKey])
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
-		}
-	}
-
-	var (
-		isEncrypted bool
-		kmsKeyId    string
-	)
-	if volumeParams[EncryptedKey] == "true" {
-		isEncrypted = true
-		kmsKeyId = volumeParams[KmsKeyIdKey]
-	}
-
 	opts := &cloud.DiskOptions{
 		CapacityBytes:    volSizeBytes,
 		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
