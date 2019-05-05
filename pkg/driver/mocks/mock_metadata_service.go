@@ -60,6 +60,20 @@ func (mr *MockMetadataServiceMockRecorder) GetInstanceID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceID", reflect.TypeOf((*MockMetadataService)(nil).GetInstanceID))
 }
 
+// GetInstanceType mocks base method
+func (m *MockMetadataService) GetInstanceType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstanceType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetInstanceType indicates an expected call of GetInstanceType
+func (mr *MockMetadataServiceMockRecorder) GetInstanceType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceType", reflect.TypeOf((*MockMetadataService)(nil).GetInstanceType))
+}
+
 // GetRegion mocks base method
 func (m *MockMetadataService) GetRegion() string {
 	m.ctrl.T.Helper()
