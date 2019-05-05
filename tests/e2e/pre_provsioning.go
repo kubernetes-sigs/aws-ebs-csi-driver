@@ -17,16 +17,17 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"os"
+	"strings"
+
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	. "github.com/onsi/ginkgo"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"math/rand"
-	"os"
-	"strings"
 
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
@@ -50,6 +51,10 @@ type e2eMetdataService struct {
 
 // GetInstanceID will always return an empty string as the test does not need to run on an EC2 machine
 func (s e2eMetdataService) GetInstanceID() string {
+	return ""
+}
+
+func (s e2eMetdataService) GetInstanceType() string {
 	return ""
 }
 
