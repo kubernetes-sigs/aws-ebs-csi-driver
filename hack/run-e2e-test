@@ -25,10 +25,11 @@ REGION=${AWS_REGION-us-east-1}
 ZONES=${AWS_AVAILABILITY_ZONES-us-east-1a,us-east-1b,us-east-1c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
+K8S_VERSION=${K8S_VERSION-1.14.0}
 
 echo "Testing in region: $REGION and zones: $ZONES"
 
-KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.11.0/kops-$OS_ARCH
+KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.14.0-alpha.1/kops-$OS_ARCH
 KOPS_PATH=$TEST_DIR/kops
 KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
 
@@ -49,7 +50,7 @@ ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
-    --kubernetes-version=1.13.0 \
+    --kubernetes-version=$K8S_VERSION \
     --ssh-public-key=$SSH_KEY_PATH.pub \
         $CLUSTER_NAME.k8s.local
 $KOPS_PATH get cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local -o yaml > $CLUSTER_YAML_PATH
@@ -83,7 +84,6 @@ cp deploy/kubernetes/*.yaml $TEST_DIR
 sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/manifest.yaml
 
 echo "Deploying driver"
-kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
 kubectl apply -f $TEST_DIR/manifest.yaml 
 
 # Run the test
