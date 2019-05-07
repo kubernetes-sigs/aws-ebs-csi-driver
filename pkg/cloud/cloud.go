@@ -273,6 +273,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	response, err := c.ec2.CreateVolumeWithContext(ctx, request)
 	if err != nil {
+		if isAWSErrorSnapshotNotFound(err) {
+			return nil, ErrNotFound
+		}
 		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
 	}
 
