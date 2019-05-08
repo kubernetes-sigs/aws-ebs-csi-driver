@@ -44,6 +44,7 @@ var (
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 	}
 )
 
@@ -396,15 +397,14 @@ func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	nextToken := req.GetStartingToken()
 	maxEntries := int64(req.GetMaxEntries())
 
-	if maxEntries > 0 && maxEntries < 5 {
-		return nil, status.Errorf(codes.InvalidArgument, "MaxEntries must be greater than or equal to 5")
-	}
-
 	cloudSnapshots, err := d.cloud.ListSnapshots(ctx, volumeID, maxEntries, nextToken)
 	if err != nil {
 		if err == cloud.ErrNotFound {
 			klog.V(4).Info("ListSnapshots: snapshot not found, returning with success")
 			return &csi.ListSnapshotsResponse{}, nil
+		}
+		if err == cloud.ErrInvalidMaxResults {
+			return nil, status.Errorf(codes.InvalidArgument, "Error mapping MaxEntries to AWS MaxResults: %v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not list snapshots: %v", err)
 	}
