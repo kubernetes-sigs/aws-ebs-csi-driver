@@ -1294,9 +1294,11 @@ func TestListSnapshots(t *testing.T) {
 					MaxEntries: 4,
 				}
 
+				ctx := context.Background()
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(4)), gomock.Eq("")).Return(nil, cloud.ErrInvalidMaxResults)
 
 				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
@@ -1305,10 +1307,10 @@ func TestListSnapshots(t *testing.T) {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					if srvErr.Code() != codes.InvalidArgument {
-						t.Fatalf("Expected error code %d, got %d message %s", codes.Internal, srvErr.Code(), srvErr.Message())
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
 					}
 				} else {
-					t.Fatalf("Expected error code %d, got no error", codes.Internal)
+					t.Fatalf("Expected error code %d, got no error", codes.InvalidArgument)
 				}
 			},
 		},
