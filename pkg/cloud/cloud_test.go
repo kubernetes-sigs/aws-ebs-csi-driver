@@ -695,6 +695,58 @@ func TestListSnapshots(t *testing.T) {
 			},
 		},
 		{
+			name: "success: with volume ID",
+			testFunc: func(t *testing.T) {
+				sourceVolumeID := "snap-test-volume"
+				expSnapshots := []*Snapshot{
+					{
+						SourceVolumeID: sourceVolumeID,
+						SnapshotID:     "snap-test-name1",
+					},
+					{
+						SourceVolumeID: sourceVolumeID,
+						SnapshotID:     "snap-test-name2",
+					},
+				}
+				ec2Snapshots := []*ec2.Snapshot{
+					{
+						SnapshotId: aws.String(expSnapshots[0].SnapshotID),
+						VolumeId:   aws.String(sourceVolumeID),
+						State:      aws.String("completed"),
+					},
+					{
+						SnapshotId: aws.String(expSnapshots[1].SnapshotID),
+						VolumeId:   aws.String(sourceVolumeID),
+						State:      aws.String("completed"),
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+
+				resp, err := c.ListSnapshots(ctx, sourceVolumeID, 0, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+
+				if len(resp.Snapshots) != len(expSnapshots) {
+					t.Fatalf("Expected %d snapshots, got %d", len(expSnapshots), len(resp.Snapshots))
+				}
+
+				for _, snap := range resp.Snapshots {
+					if snap.SourceVolumeID != sourceVolumeID {
+						t.Fatalf("Unexpected source volume.  Expected %s, got %s", sourceVolumeID, snap.SourceVolumeID)
+					}
+				}
+			},
+		},
+		{
 			name: "success: max results, next token",
 			testFunc: func(t *testing.T) {
 				maxResults := 5
