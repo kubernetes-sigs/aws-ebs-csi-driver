@@ -45,6 +45,7 @@ var (
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 	}
 )
 
@@ -385,7 +386,50 @@ func (d *controllerService) DeleteSnapshot(ctx context.Context, req *csi.DeleteS
 }
 
 func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	klog.V(4).Infof("ListSnapshots: called with args %+v", req)
+	var snapshots []*cloud.Snapshot
+
+	snapshotID := req.GetSnapshotId()
+	if len(snapshotID) != 0 {
+		snapshot, err := d.cloud.GetSnapshotByName(ctx, snapshotID)
+		if err != nil {
+			if err == cloud.ErrNotFound {
+				klog.V(4).Info("ListSnapshots: snapshot not found, returning with success")
+				return &csi.ListSnapshotsResponse{}, nil
+			}
+			return nil, status.Errorf(codes.Internal, "Could not get snapshot ID %q: %v", snapshotID, err)
+		}
+		snapshots = append(snapshots, snapshot)
+		if response, err := newListSnapshotsResponse(&cloud.ListSnapshotsResponse{
+			Snapshots: snapshots,
+		}); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not build ListSnapshotsResponse: %v", err)
+		} else {
+			return response, nil
+		}
+	}
+
+	volumeID := req.GetSourceVolumeId()
+	nextToken := req.GetStartingToken()
+	maxEntries := int64(req.GetMaxEntries())
+
+	cloudSnapshots, err := d.cloud.ListSnapshots(ctx, volumeID, maxEntries, nextToken)
+	if err != nil {
+		if err == cloud.ErrNotFound {
+			klog.V(4).Info("ListSnapshots: snapshot not found, returning with success")
+			return &csi.ListSnapshotsResponse{}, nil
+		}
+		if err == cloud.ErrInvalidMaxResults {
+			return nil, status.Errorf(codes.InvalidArgument, "Error mapping MaxEntries to AWS MaxResults: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "Could not list snapshots: %v", err)
+	}
+
+	response, err := newListSnapshotsResponse(cloudSnapshots)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not build ListSnapshotsResponse: %v", err)
+	}
+	return response, nil
 }
 
 func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
@@ -436,6 +480,38 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) (*csi.CreateSnapshotRes
 		return nil, err
 	}
 	return &csi.CreateSnapshotResponse{
+		Snapshot: &csi.Snapshot{
+			SnapshotId:     snapshot.SnapshotID,
+			SourceVolumeId: snapshot.SourceVolumeID,
+			SizeBytes:      snapshot.Size,
+			CreationTime:   ts,
+			ReadyToUse:     snapshot.ReadyToUse,
+		},
+	}, nil
+}
+
+func newListSnapshotsResponse(cloudResponse *cloud.ListSnapshotsResponse) (*csi.ListSnapshotsResponse, error) {
+
+	var entries []*csi.ListSnapshotsResponse_Entry
+	for _, snapshot := range cloudResponse.Snapshots {
+		snapshotResponseEntry, err := newListSnapshotsResponseEntry(snapshot)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, snapshotResponseEntry)
+	}
+	return &csi.ListSnapshotsResponse{
+		Entries:   entries,
+		NextToken: cloudResponse.NextToken,
+	}, nil
+}
+
+func newListSnapshotsResponseEntry(snapshot *cloud.Snapshot) (*csi.ListSnapshotsResponse_Entry, error) {
+	ts, err := ptypes.TimestampProto(snapshot.CreationTime)
+	if err != nil {
+		return nil, err
+	}
+	return &csi.ListSnapshotsResponse_Entry{
 		Snapshot: &csi.Snapshot{
 			SnapshotId:     snapshot.SnapshotID,
 			SourceVolumeId: snapshot.SourceVolumeID,
