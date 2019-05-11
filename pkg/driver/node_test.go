@@ -755,34 +755,62 @@ func TestNodeGetCapabilities(t *testing.T) {
 }
 
 func TestNodeGetInfo(t *testing.T) {
-	mockCtl := gomock.NewController(t)
-	defer mockCtl.Finish()
-
-	mockMetadata := mocks.NewMockMetadataService(mockCtl)
-	mockMetadata.EXPECT().GetInstanceID().Return(expInstanceId)
-	mockMetadata.EXPECT().GetAvailabilityZone().Return(expZone).Times(2)
-
-	req := &csi.NodeGetInfoRequest{}
-
-	awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
-
-	expResp := &csi.NodeGetInfoResponse{
-		NodeId: expInstanceId,
-		AccessibleTopology: &csi.Topology{
-			Segments: map[string]string{TopologyKey: mockMetadata.GetAvailabilityZone()},
+	testCases := []struct {
+		name             string
+		instanceID       string
+		instanceType     string
+		availabilityZone string
+		expMaxVolumes    int64
+	}{
+		{
+			name:             "success normal",
+			instanceID:       "i-123456789abcdef01",
+			instanceType:     "t2.medium",
+			availabilityZone: "us-west-2b",
+			expMaxVolumes:    39,
+		},
+		{
+			name:             "success normal with NVMe",
+			instanceID:       "i-123456789abcdef01",
+			instanceType:     "m5d.large",
+			availabilityZone: "us-west-2b",
+			expMaxVolumes:    25,
 		},
 	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
 
-	resp, err := awsDriver.NodeGetInfo(context.TODO(), req)
-	if err != nil {
-		srvErr, ok := status.FromError(err)
-		if !ok {
-			t.Fatalf("Could not get error status code from error: %v", srvErr)
-		}
-		t.Fatalf("Expected nil error, got %d message %s", srvErr.Code(), srvErr.Message())
-	}
-	if !reflect.DeepEqual(expResp, resp) {
-		t.Fatalf("Expected response {%+v}, got {%+v}", expResp, resp)
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
+			mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
+			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
+
+			awsDriver := newTestNodeService(mockMetadata, NewFakeMounter())
+
+			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				t.Fatalf("Expected nil error, got %d message %s", srvErr.Code(), srvErr.Message())
+			}
+
+			if resp.GetNodeId() != tc.instanceID {
+				t.Fatalf("Expected node ID %q, got %q", tc.instanceID, resp.GetNodeId())
+			}
+
+			at := resp.GetAccessibleTopology()
+			if at.Segments[TopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[TopologyKey])
+			}
+
+			if resp.GetMaxVolumesPerNode() != tc.expMaxVolumes {
+				t.Fatalf("Expected %d max volumes per node, got %d", tc.expMaxVolumes, resp.GetMaxVolumesPerNode())
+			}
+		})
 	}
 }
 

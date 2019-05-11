@@ -30,12 +30,14 @@ type EC2Metadata interface {
 // MetadataService represents AWS metadata service.
 type MetadataService interface {
 	GetInstanceID() string
+	GetInstanceType() string
 	GetRegion() string
 	GetAvailabilityZone() string
 }
 
 type Metadata struct {
 	InstanceID       string
+	InstanceType     string
 	Region           string
 	AvailabilityZone string
 }
@@ -45,6 +47,11 @@ var _ MetadataService = &Metadata{}
 // GetInstanceID returns the instance identification.
 func (m *Metadata) GetInstanceID() string {
 	return m.InstanceID
+}
+
+// GetInstanceID returns the instance type.
+func (m *Metadata) GetInstanceType() string {
+	return m.InstanceType
 }
 
 // GetRegion returns the region which the instance is in.
@@ -72,6 +79,10 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 		return nil, fmt.Errorf("could not get valid EC2 instance ID")
 	}
 
+	if len(doc.InstanceType) == 0 {
+		return nil, fmt.Errorf("could not get valid EC2 instance type")
+	}
+
 	if len(doc.Region) == 0 {
 		return nil, fmt.Errorf("could not get valid EC2 region")
 	}
@@ -82,6 +93,7 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 
 	return &Metadata{
 		InstanceID:       doc.InstanceID,
+		InstanceType:     doc.InstanceType,
 		Region:           doc.Region,
 		AvailabilityZone: doc.AvailabilityZone,
 	}, nil
