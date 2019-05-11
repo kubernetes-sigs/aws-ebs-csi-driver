@@ -91,6 +91,13 @@ var (
 
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("Resource already exists")
+
+	// ErrMultiSnapshots is returned when multiple snapshots are found
+	// with the same ID
+	ErrMultiSnapshots = errors.New("Multiple snapshots with the same name found")
+
+	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
+	ErrInvalidMaxResults = errors.New("MaxResults parameter must be 0 or greater than or equal to 5")
 )
 
 // Disk represents a EBS volume
@@ -124,9 +131,21 @@ type Snapshot struct {
 	ReadyToUse     bool
 }
 
+// ListSnapshotsResponse is the container for our snapshots along with a pagination token to pass back to the caller
+type ListSnapshotsResponse struct {
+	Snapshots []*Snapshot
+	NextToken string
+}
+
 // SnapshotOptions represents parameters to create an EBS volume
 type SnapshotOptions struct {
 	Tags map[string]string
+}
+
+// ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function
+type ec2ListSnapshotsResponse struct {
+	Snapshots []*ec2.Snapshot
+	NextToken *string
 }
 
 // EC2 abstracts aws.EC2 to facilitate its mocking.
@@ -156,6 +175,7 @@ type Cloud interface {
 	CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error)
 	DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error)
 	GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error)
+	ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error)
 }
 
 type cloud struct {
@@ -545,6 +565,49 @@ func (c *cloud) GetSnapshotByName(ctx context.Context, name string) (snapshot *S
 	return c.ec2SnapshotResponseToStruct(ec2snapshot), nil
 }
 
+// ListSnapshots retrieves AWS EBS snapshots for an optionally specified volume ID.  If maxResults is set, it will return up to maxResults snapshots.  If there are more snapshots than maxResults,
+// a next token value will be returned to the client as well.  They can use this token with subsequent calls to retrieve the next page of results.  If maxResults is not set (0),
+// there will be no restriction up to 1000 results (https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#DescribeSnapshotsInput).
+func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error) {
+	if maxResults > 0 && maxResults < 5 {
+		return nil, ErrInvalidMaxResults
+	}
+
+	describeSnapshotsInput := &ec2.DescribeSnapshotsInput{
+		MaxResults: aws.Int64(maxResults),
+	}
+
+	if len(nextToken) != 0 {
+		describeSnapshotsInput.NextToken = aws.String(nextToken)
+	}
+	if len(volumeID) != 0 {
+		describeSnapshotsInput.Filters = []*ec2.Filter{
+			{
+				Name:   aws.String("volume-id"),
+				Values: []*string{aws.String(volumeID)},
+			},
+		}
+	}
+
+	ec2SnapshotsResponse, err := c.listSnapshots(ctx, describeSnapshotsInput)
+	if err != nil {
+		return nil, err
+	}
+	var snapshots []*Snapshot
+	for _, ec2Snapshot := range ec2SnapshotsResponse.Snapshots {
+		snapshots = append(snapshots, c.ec2SnapshotResponseToStruct(ec2Snapshot))
+	}
+
+	if len(snapshots) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return &ListSnapshotsResponse{
+		Snapshots: snapshots,
+		NextToken: aws.StringValue(ec2SnapshotsResponse.NextToken),
+	}, nil
+}
+
 // Helper method converting EC2 snapshot type to the internal struct
 func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot {
 	if ec2Snapshot == nil {
@@ -628,7 +691,6 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2.Snapshot, error) {
 	var snapshots []*ec2.Snapshot
 	var nextToken *string
-
 	for {
 		response, err := c.ec2.DescribeSnapshotsWithContext(ctx, request)
 		if err != nil {
@@ -643,12 +705,34 @@ func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsI
 	}
 
 	if l := len(snapshots); l > 1 {
-		return nil, errors.New("Multiple snapshots with the same name found")
+		return nil, ErrMultiSnapshots
 	} else if l < 1 {
 		return nil, ErrNotFound
 	}
 
 	return snapshots[0], nil
+}
+
+// listSnapshots returns all snapshots based from a request
+func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2ListSnapshotsResponse, error) {
+	var snapshots []*ec2.Snapshot
+	var nextToken *string
+
+	response, err := c.ec2.DescribeSnapshotsWithContext(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshots = append(snapshots, response.Snapshots...)
+
+	if response.NextToken != nil {
+		nextToken = response.NextToken
+	}
+
+	return &ec2ListSnapshotsResponse{
+		Snapshots: snapshots,
+		NextToken: nextToken,
+	}, nil
 }
 
 // waitForVolume waits for volume to be in the "available" state.
