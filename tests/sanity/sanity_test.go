@@ -30,8 +30,8 @@ import (
 )
 
 const (
-	mountPath = "/tmp/csi/mount"
-	stagePath = "/tmp/csi/stage"
+	mountPath = "/tmp/csi-mount"
+	stagePath = "/tmp/csi-stage"
 	socket    = "/tmp/csi.sock"
 	endpoint  = "unix://" + socket
 )
