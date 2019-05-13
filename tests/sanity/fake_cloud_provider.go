@@ -64,6 +64,11 @@ func (c *fakeCloudProvider) GetMetadata() cloud.MetadataService {
 
 func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if len(diskOptions.SnapshotID) > 0 {
+		if _, ok := c.snapshots[diskOptions.SnapshotID]; !ok {
+			return nil, cloud.ErrNotFound
+		}
+	}
 	d := &fakeDisk{
 		Disk: &cloud.Disk{
 			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
