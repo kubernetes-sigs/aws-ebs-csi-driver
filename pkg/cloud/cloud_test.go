@@ -39,167 +39,294 @@ const (
 
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name               string
-		volumeName         string
-		volState           string
-		diskOptions        *DiskOptions
-		expDisk            *Disk
-		expErr             error
-		expCreateVolumeErr error
-		expDescVolumeErr   error
+		name     string
+		testFunc func(t *testing.T)
 	}{
 		{
-			name:       "success: normal",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+			name: "success: normal",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes: util.GiBToBytes(1),
+					Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				}
+				expDisk := &Disk{
+					VolumeID:         "vol-test",
+					CapacityGiB:      1,
+					AvailabilityZone: defaultZone,
+				}
+
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("available"),
+					AvailabilityZone: aws.String(diskOptions.AvailabilityZone),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+
+				disk, err := c.CreateDisk(ctx, "vol-test-name", diskOptions)
+				if err != nil {
+					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+				} else {
+					if expDisk.CapacityGiB != disk.CapacityGiB {
+						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", expDisk.CapacityGiB, disk.CapacityGiB)
+					}
+					if expDisk.VolumeID != disk.VolumeID {
+						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", expDisk.VolumeID, disk.VolumeID)
+					}
+					if expDisk.AvailabilityZone != disk.AvailabilityZone {
+						t.Fatalf("CreateDisk() failed: expected availability zone %q, got %q", expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+				}
 			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: defaultZone,
-			},
-			expErr: nil,
 		},
 		{
-			name:       "success: normal with provided zone",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: expZone,
+			name: "success: normal with provided zone",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: expZone,
+				}
+				expDisk := &Disk{
+					VolumeID:         "vol-test",
+					CapacityGiB:      1,
+					AvailabilityZone: expZone,
+				}
+
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("available"),
+					AvailabilityZone: aws.String(expZone),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+
+				disk, err := c.CreateDisk(ctx, "vol-test-name", diskOptions)
+				if err != nil {
+					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+				} else {
+					if expDisk.CapacityGiB != disk.CapacityGiB {
+						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", expDisk.CapacityGiB, disk.CapacityGiB)
+					}
+					if expDisk.VolumeID != disk.VolumeID {
+						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", expDisk.VolumeID, disk.VolumeID)
+					}
+					if expDisk.AvailabilityZone != disk.AvailabilityZone {
+						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+				}
 			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: expZone,
-			},
-			expErr: nil,
 		},
 		{
-			name:       "success: normal with encrypted volume",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: expZone,
-				Encrypted:        true,
-				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+			name: "success: normal with encrypted volume",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: expZone,
+					Encrypted:        true,
+					KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				}
+				expDisk := &Disk{
+					VolumeID:         "vol-test",
+					CapacityGiB:      1,
+					AvailabilityZone: expZone,
+				}
+
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("available"),
+					AvailabilityZone: aws.String(expZone),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+
+				disk, err := c.CreateDisk(ctx, "vol-test-name", diskOptions)
+				if err != nil {
+					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+				} else {
+					if expDisk.CapacityGiB != disk.CapacityGiB {
+						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", expDisk.CapacityGiB, disk.CapacityGiB)
+					}
+					if expDisk.VolumeID != disk.VolumeID {
+						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", expDisk.VolumeID, disk.VolumeID)
+					}
+					if expDisk.AvailabilityZone != disk.AvailabilityZone {
+						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+				}
 			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: expZone,
-			},
-			expErr: nil,
 		},
 		{
-			name:       "fail: CreateVolume returned CreateVolume error",
-			volumeName: "vol-test-name-error",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: expZone,
+			name: "success: normal from snapshot",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: expZone,
+					SnapshotID:       "snapshot-test",
+				}
+				expDisk := &Disk{
+					VolumeID:         "vol-test",
+					CapacityGiB:      1,
+					AvailabilityZone: expZone,
+				}
+
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("available"),
+					AvailabilityZone: aws.String(diskOptions.AvailabilityZone),
+				}
+
+				snapshot := &ec2.Snapshot{
+					SnapshotId: aws.String(diskOptions.SnapshotID),
+					VolumeId:   aws.String("snap-test-volume"),
+					State:      aws.String("completed"),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
+
+				disk, err := c.CreateDisk(ctx, "vol-test-name", diskOptions)
+				if err != nil {
+					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
+				} else {
+					if expDisk.CapacityGiB != disk.CapacityGiB {
+						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", expDisk.CapacityGiB, disk.CapacityGiB)
+					}
+					if expDisk.VolumeID != disk.VolumeID {
+						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", expDisk.VolumeID, disk.VolumeID)
+					}
+					if expDisk.AvailabilityZone != disk.AvailabilityZone {
+						t.Fatalf("CreateDisk() failed: expected availability zone %q, got %q", expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+				}
 			},
-			expErr:             fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
-			expCreateVolumeErr: fmt.Errorf("CreateVolume generic error"),
 		},
 		{
-			name:       "fail: CreateVolume returned a DescribeVolumes error",
-			volumeName: "vol-test-name-error",
-			volState:   "creating",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "",
+			name: "fail: CreateVolume returned CreateVolume error",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: expZone,
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, fmt.Errorf("CreateVolume generic error"))
+
+				if _, err := c.CreateDisk(ctx, "vol-test-name", diskOptions); err == nil {
+					t.Fatalf("CreateDisk() succeeded, expected error")
+				} else {
+					expErr := fmt.Errorf("could not create volume in EC2: CreateVolume generic error")
+					if err.Error() != expErr.Error() {
+						t.Fatalf("CreateDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
 			},
-			expErr:             fmt.Errorf("could not create volume in EC2: DescribeVolumes generic error"),
-			expCreateVolumeErr: fmt.Errorf("DescribeVolumes generic error"),
 		},
 		{
-			name:       "fail: CreateVolume returned a volume with wrong state",
-			volumeName: "vol-test-name-error",
-			volState:   "creating",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: "",
+			name: "fail: CreateVolume returned DescribeVolumes error",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: "",
+				}
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("creating"),
+					AvailabilityZone: aws.String(expZone),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(fmt.Errorf("DescribeVolumes generic error")).AnyTimes()
+
+				if _, err := c.CreateDisk(ctx, "vol-test-name", diskOptions); err == nil {
+					t.Fatalf("CreateDisk() succeeded, expected error")
+				} else {
+					expErr := fmt.Errorf("failed to get an available volume in EC2: DescribeVolumes generic error")
+					if err.Error() != expErr.Error() {
+						t.Fatalf("CreateDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
 			},
-			expErr: fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
 		},
 		{
-			name:       "success: normal from snapshot",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
-				AvailabilityZone: expZone,
-				SnapshotID:       "snapshot-test",
+			name: "fail: CreateVolume returned a volume with wrong state causing wait timeout",
+			testFunc: func(t *testing.T) {
+				diskOptions := &DiskOptions{
+					CapacityBytes:    util.GiBToBytes(1),
+					Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+					AvailabilityZone: "",
+				}
+				vol := &ec2.Volume{
+					VolumeId:         aws.String(diskOptions.Tags[VolumeNameTagKey]),
+					Size:             aws.Int64(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            aws.String("creating"),
+					AvailabilityZone: aws.String(expZone),
+				}
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(fmt.Errorf("timed out waiting for the condition")).AnyTimes()
+
+				if _, err := c.CreateDisk(ctx, "vol-test-name", diskOptions); err == nil {
+					t.Fatalf("CreateDisk() succeeded, expected error")
+				} else {
+					expErr := fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition")
+					if err.Error() != expErr.Error() {
+						t.Fatalf("CreateDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
 			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: expZone,
-			},
-			expErr: nil,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			mockEC2 := mocks.NewMockEC2(mockCtrl)
-			c := newCloud(mockEC2)
-
-			volState := tc.volState
-			if volState == "" {
-				volState = "available"
-			}
-
-			vol := &ec2.Volume{
-				VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-				State:            aws.String(volState),
-				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
-			}
-			snapshot := &ec2.Snapshot{
-				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
-				VolumeId:   aws.String("snap-test-volume"),
-				State:      aws.String("completed"),
-			}
-			ctx := context.Background()
-			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
-			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
-			if len(tc.diskOptions.SnapshotID) > 0 {
-				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
-			}
-
-			disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
-			if err != nil {
-				if tc.expErr == nil {
-					t.Fatalf("CreateDisk() failed: expected no error, got: %v", err)
-				} else if tc.expErr.Error() != err.Error() {
-					t.Fatalf("CreateDisk() failed: expected error %q, got: %q", tc.expErr, err)
-				}
-			} else {
-				if tc.expErr != nil {
-					t.Fatal("CreateDisk() failed: expected error, got nothing")
-				} else {
-					if tc.expDisk.CapacityGiB != disk.CapacityGiB {
-						t.Fatalf("CreateDisk() failed: expected capacity %d, got %d", tc.expDisk.CapacityGiB, disk.CapacityGiB)
-					}
-					if tc.expDisk.VolumeID != disk.VolumeID {
-						t.Fatalf("CreateDisk() failed: expected capacity %q, got %q", tc.expDisk.VolumeID, disk.VolumeID)
-					}
-					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
-						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
-					}
-				}
-			}
-
-			mockCtrl.Finish()
-		})
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
@@ -260,56 +387,113 @@ func TestDeleteDisk(t *testing.T) {
 func TestAttachDisk(t *testing.T) {
 	testCases := []struct {
 		name     string
-		volumeID string
-		nodeID   string
-		expErr   error
+		testFunc func(t *testing.T)
 	}{
 		{
-			name:     "success: normal",
-			volumeID: "vol-test-1234",
-			nodeID:   "node-1234",
-			expErr:   nil,
+			name: "success: normal",
+			testFunc: func(t *testing.T) {
+
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+				}
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, nil)
+				mockEC2.EXPECT().WaitUntilVolumeInUseWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+
+				devicePath, err := c.AttachDisk(ctx, volumeID, nodeID)
+				if err != nil {
+					t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
+				} else {
+					if !strings.HasPrefix(devicePath, "/dev/") {
+						t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
+					}
+				}
+
+				mockCtrl.Finish()
+			},
 		},
 		{
-			name:     "fail: AttachVolume returned generic error",
-			volumeID: "vol-test-1234",
-			nodeID:   "node-1234",
-			expErr:   fmt.Errorf(""),
+			name: "fail: AttachVolume generic error",
+			testFunc: func(t *testing.T) {
+
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+				}
+
+				attachErr := fmt.Errorf("generic error")
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, attachErr)
+
+				expErr := fmt.Errorf("could not attach volume \"%s\" to node \"%s\": %s", volumeID, nodeID, attachErr.Error())
+				if _, err := c.AttachDisk(ctx, volumeID, nodeID); err == nil {
+					t.Fatalf("AttachDisk() succeeded: expected error %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("AttachDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
+			},
+		},
+		{
+			name: "fail: wait error",
+			testFunc: func(t *testing.T) {
+
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+				}
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, nil)
+				mockEC2.EXPECT().WaitUntilVolumeInUseWithContext(gomock.Eq(ctx), gomock.Any()).Return(fmt.Errorf("timed out waiting for the condition")).AnyTimes()
+
+				expErr := fmt.Errorf("timed out waiting for the condition")
+				if _, err := c.AttachDisk(ctx, volumeID, nodeID); err == nil {
+					t.Fatalf("AttachDisk() succeeded: expected error %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("AttachDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			mockEC2 := mocks.NewMockEC2(mockCtrl)
-			c := newCloud(mockEC2)
-
-			vol := &ec2.Volume{
-				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
-			}
-
-			ctx := context.Background()
-			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
-			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-			mockEC2.EXPECT().AttachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
-
-			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
-			if err != nil {
-				if tc.expErr == nil {
-					t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
-				}
-			} else {
-				if tc.expErr != nil {
-					t.Fatal("AttachDisk() failed: expected error, got nothing")
-				}
-				if !strings.HasPrefix(devicePath, "/dev/") {
-					t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
-				}
-			}
-
-			mockCtrl.Finish()
-		})
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
@@ -319,50 +503,111 @@ func TestDetachDisk(t *testing.T) {
 		volumeID string
 		nodeID   string
 		expErr   error
+		testFunc func(t *testing.T)
 	}{
 		{
-			name:     "success: normal",
-			volumeID: "vol-test-1234",
-			nodeID:   "node-1234",
-			expErr:   nil,
+			name: "success: normal",
+			testFunc: func(t *testing.T) {
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: nil,
+				}
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil).AnyTimes()
+
+				if err := c.DetachDisk(ctx, volumeID, nodeID); err != nil {
+					t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
+				}
+			},
 		},
 		{
 			name:     "fail: DetachVolume returned generic error",
 			volumeID: "vol-test-1234",
 			nodeID:   "node-1234",
 			expErr:   fmt.Errorf("DetachVolume generic error"),
+			testFunc: func(t *testing.T) {
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: nil,
+				}
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, fmt.Errorf("generic error"))
+
+				expErr := fmt.Errorf("could not detach volume \"%s\" from node \"%s\": generic error", volumeID, nodeID)
+				if err := c.DetachDisk(ctx, volumeID, nodeID); err == nil {
+					t.Fatalf("DetachDisk() failed: expected error, %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("DetachDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
+			},
+		},
+		{
+			name:     "fail: wait error",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   fmt.Errorf("DetachVolume generic error"),
+			testFunc: func(t *testing.T) {
+				volumeID := "vol-test-1234"
+				nodeID := "node-1234"
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+
+				vol := &ec2.Volume{
+					VolumeId:    aws.String(volumeID),
+					Attachments: nil,
+				}
+
+				expErr := fmt.Errorf("timed out waiting for the condition")
+
+				ctx := context.Background()
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(nodeID), nil)
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, nil)
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(expErr).AnyTimes()
+
+				if err := c.DetachDisk(ctx, volumeID, nodeID); err == nil {
+					t.Fatalf("DetachDisk() failed: expected error, %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("DetachDisk() failed: expected error: %q, got: %q", expErr, err)
+					}
+				}
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			mockEC2 := mocks.NewMockEC2(mockCtrl)
-			c := newCloud(mockEC2)
-
-			vol := &ec2.Volume{
-				VolumeId:    aws.String(tc.volumeID),
-				Attachments: nil,
-			}
-
-			ctx := context.Background()
-			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
-			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-			mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
-
-			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
-			if err != nil {
-				if tc.expErr == nil {
-					t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
-				}
-			} else {
-				if tc.expErr != nil {
-					t.Fatal("DetachDisk() failed: expected error, got nothing")
-				}
-			}
-
-			mockCtrl.Finish()
-		})
+		if tc.testFunc != nil {
+			t.Run(tc.name, tc.testFunc)
+		}
 	}
 }
 
@@ -645,6 +890,97 @@ func TestGetSnapshotByName(t *testing.T) {
 
 			mockCtrl.Finish()
 		})
+	}
+}
+
+func TestWaitForAttachmentState(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success: in use",
+			testFunc: func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().WaitUntilVolumeInUseWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil)
+				if err := c.WaitForAttachmentState(ctx, "vol-test", "attached"); err != nil {
+					t.Fatalf("WaitForAttachmentState() unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "success: available",
+			testFunc: func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil)
+				if err := c.WaitForAttachmentState(ctx, "vol-test", "detached"); err != nil {
+					t.Fatalf("WaitForAttachmentState() unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "fail: in use",
+			testFunc: func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				expErr := fmt.Errorf("generic error")
+				mockEC2.EXPECT().WaitUntilVolumeAvailableWithContext(gomock.Eq(ctx), gomock.Any()).Return(fmt.Errorf("generic error"))
+				if err := c.WaitForAttachmentState(ctx, "vol-test", "detached"); err == nil {
+					t.Fatalf("WaitForAttachmentState() expected error: %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("WaitForAttachmentState() expected error %v, got %v", expErr, err)
+					}
+				}
+			},
+		},
+		{
+			name: "fail: detached",
+			testFunc: func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				expErr := fmt.Errorf("generic error")
+				mockEC2.EXPECT().WaitUntilVolumeInUseWithContext(gomock.Eq(ctx), gomock.Any()).Return(fmt.Errorf("generic error"))
+				if err := c.WaitForAttachmentState(ctx, "vol-test", "attached"); err == nil {
+					t.Fatalf("WaitForAttachmentState() expected error: %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("WaitForAttachmentState() expected error %v, got %v", expErr, err)
+					}
+				}
+			},
+		},
+		{
+			name: "fail: invalid state",
+			testFunc: func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := mocks.NewMockEC2(mockCtrl)
+				c := newCloud(mockEC2)
+				ctx := context.Background()
+				state := "foo"
+				expErr := fmt.Errorf("invalid state name %s", state)
+				if err := c.WaitForAttachmentState(ctx, "vol-test", state); err == nil {
+					t.Fatalf("WaitForAttachmentState() expected error: %v", expErr)
+				} else {
+					if err.Error() != expErr.Error() {
+						t.Fatalf("WaitForAttachmentState() expected error %v, got %v", expErr, err)
+					}
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 

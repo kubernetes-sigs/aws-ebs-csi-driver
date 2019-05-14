@@ -214,3 +214,41 @@ func (mr *MockEC2MockRecorder) DetachVolumeWithContext(arg0, arg1 interface{}, a
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DetachVolumeWithContext), varargs...)
 }
+
+// WaitUntilVolumeAvailableWithContext mocks base method
+func (m *MockEC2) WaitUntilVolumeAvailableWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesInput, arg2 ...request.WaiterOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitUntilVolumeAvailableWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilVolumeAvailableWithContext indicates an expected call of WaitUntilVolumeAvailableWithContext
+func (mr *MockEC2MockRecorder) WaitUntilVolumeAvailableWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilVolumeAvailableWithContext", reflect.TypeOf((*MockEC2)(nil).WaitUntilVolumeAvailableWithContext), varargs...)
+}
+
+// WaitUntilVolumeInUseWithContext mocks base method
+func (m *MockEC2) WaitUntilVolumeInUseWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesInput, arg2 ...request.WaiterOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitUntilVolumeInUseWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilVolumeInUseWithContext indicates an expected call of WaitUntilVolumeInUseWithContext
+func (mr *MockEC2MockRecorder) WaitUntilVolumeInUseWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilVolumeInUseWithContext", reflect.TypeOf((*MockEC2)(nil).WaitUntilVolumeInUseWithContext), varargs...)
+}

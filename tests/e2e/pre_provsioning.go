@@ -116,12 +116,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 	AfterEach(func() {
 		if !skipManuallyDeletingVolume {
-			err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached")
-			if err != nil {
+			if err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached"); err != nil {
 				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
 			}
-			ok, err := cloud.DeleteDisk(context.Background(), volumeID)
-			if err != nil || !ok {
+			if ok, err := cloud.DeleteDisk(context.Background(), volumeID); err != nil || !ok {
 				Fail(fmt.Sprintf("could not delete volume %q: %v", volumeID, err))
 			}
 		}

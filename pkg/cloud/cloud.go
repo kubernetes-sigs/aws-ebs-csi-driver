@@ -32,7 +32,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 )
 
@@ -160,6 +159,8 @@ type EC2 interface {
 	CreateSnapshotWithContext(ctx aws.Context, input *ec2.CreateSnapshotInput, opts ...request.Option) (*ec2.Snapshot, error)
 	DeleteSnapshotWithContext(ctx aws.Context, input *ec2.DeleteSnapshotInput, opts ...request.Option) (*ec2.DeleteSnapshotOutput, error)
 	DescribeSnapshotsWithContext(ctx aws.Context, input *ec2.DescribeSnapshotsInput, opts ...request.Option) (*ec2.DescribeSnapshotsOutput, error)
+	WaitUntilVolumeAvailableWithContext(ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.WaiterOption) error
+	WaitUntilVolumeInUseWithContext(ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.WaiterOption) error
 }
 
 type Cloud interface {
@@ -168,7 +169,7 @@ type Cloud interface {
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
-	WaitForAttachmentState(ctx context.Context, volumeID, state string) error
+	WaitForAttachmentState(ctx context.Context, volumeID string, state string) error
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
 	IsExistInstance(ctx context.Context, nodeID string) (success bool)
@@ -309,7 +310,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
 	}
 
-	if err := c.waitForVolume(ctx, volumeID); err != nil {
+	if err := c.WaitForAttachmentState(ctx, volumeID, "detached"); err != nil {
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
@@ -408,47 +409,17 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
-	// Most attach/detach operations on AWS finish within 1-4 seconds.
-	// By using 1 second starting interval with a backoff of 1.8,
-	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
-	// In total we wait for 2601 seconds.
-	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.8,
-		Steps:    13,
+	describeVolumesInput := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{aws.String(volumeID)},
 	}
-
-	verifyVolumeFunc := func() (bool, error) {
-		request := &ec2.DescribeVolumesInput{
-			VolumeIds: []*string{
-				aws.String(volumeID),
-			},
-		}
-
-		volume, err := c.getVolume(ctx, request)
-		if err != nil {
-			return false, err
-		}
-
-		if len(volume.Attachments) == 0 {
-			if state == "detached" {
-				return true, nil
-			}
-		}
-
-		for _, a := range volume.Attachments {
-			if a.State == nil {
-				klog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
-				continue
-			}
-			if *a.State == state {
-				return true, nil
-			}
-		}
-		return false, nil
+	switch state {
+	case "attached":
+		return c.ec2.WaitUntilVolumeInUseWithContext(ctx, describeVolumesInput)
+	case "detached":
+		return c.ec2.WaitUntilVolumeAvailableWithContext(ctx, describeVolumesInput)
+	default:
+		return fmt.Errorf("invalid state name %s", state)
 	}
-
-	return wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
@@ -733,36 +704,6 @@ func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshot
 		Snapshots: snapshots,
 		NextToken: nextToken,
 	}, nil
-}
-
-// waitForVolume waits for volume to be in the "available" state.
-// On a random AWS account (shared among several developers) it took 4s on average.
-func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
-	var (
-		checkInterval = 3 * time.Second
-		// This timeout can be "ovewritten" if the value returned by ctx.Deadline()
-		// comes sooner. That value comes from the external provisioner controller.
-		checkTimeout = 1 * time.Minute
-	)
-
-	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
-	}
-
-	err := wait.Poll(checkInterval, checkTimeout, func() (done bool, err error) {
-		vol, err := c.getVolume(ctx, request)
-		if err != nil {
-			return true, err
-		}
-		if vol.State != nil {
-			return *vol.State == "available", nil
-		}
-		return false, nil
-	})
-
-	return err
 }
 
 // Helper function for describeVolume callers. Tries to retype given error to AWS error
