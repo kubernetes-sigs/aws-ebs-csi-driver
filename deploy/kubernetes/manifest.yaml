@@ -53,8 +53,8 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: ["csi.storage.k8s.io"]
-    resources: ["csinodeinfos"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
@@ -85,7 +85,7 @@ rules:
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["create", "list", "watch", "delete"]
-  - apiGroups: ["csi.storage.k8s.io"]
+  - apiGroups: ["storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["create", "delete"]
 
@@ -176,7 +176,7 @@ spec:
           operator: Exists
       containers:
         - name: ebs-plugin
-          image: amazon/aws-ebs-csi-driver:latest
+          image: aragunathan/aws-ebs-csi-driver:latest
           args :
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
@@ -212,10 +212,9 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: cluster-driver-registrar
-          image: quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1
+          image: quay.io/k8scsi/csi-cluster-driver-registrar:canary
           args:
             - --csi-address=$(ADDRESS)
-            - --driver-requires-attachment=true
             - --v=5
           env:
             - name: ADDRESS
@@ -224,7 +223,7 @@ spec:
             - name: socket-dir
               mountPath: /csi
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.0.1
+          image: quay.io/k8scsi/csi-provisioner:canary
           args:
             - --provisioner=ebs.csi.aws.com
             - --csi-address=$(ADDRESS)
@@ -237,7 +236,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.0.1
+          image: quay.io/k8scsi/csi-attacher:canary
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -248,7 +247,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.0.1
+          image: quay.io/k8scsi/csi-snapshotter:canary
           args:
             - --csi-address=$(ADDRESS)
             - --connection-timeout=15s
@@ -259,7 +258,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.0.2
+          image: quay.io/k8scsi/livenessprobe:canary
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
@@ -295,7 +294,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: amazon/aws-ebs-csi-driver:latest
+          image: aragunathan/aws-ebs-csi-driver:latest
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
@@ -344,7 +343,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.0.2
+          image: quay.io/k8scsi/livenessprobe:canary
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
