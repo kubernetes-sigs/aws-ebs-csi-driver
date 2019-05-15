@@ -13,7 +13,7 @@
 # limitations under the License.
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
-IMAGE=amazon/aws-ebs-csi-driver
+IMAGE=aragunathan/aws-ebs-csi-driver
 VERSION=0.4.0
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
