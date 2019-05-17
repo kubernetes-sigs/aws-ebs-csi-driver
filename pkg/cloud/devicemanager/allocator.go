@@ -47,10 +47,10 @@ var _ NameAllocator = &nameAllocator{}
 
 // GetNext gets next available device given existing names that are being used
 // This function iterate through the device names in deterministic order of:
-//     a, b, ... , z, aa, ab, ... , az
+//     ba, ... ,bz, ca, ... , cz
 // and return the first one that is not used yet.
 func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
-	for _, c1 := range []string{"", "a"} {
+	for _, c1 := range []string{"b", "c"} {
 		for c2 := 'a'; c2 <= 'z'; c2++ {
 			name := fmt.Sprintf("%s%s", c1, string(c2))
 			if _, found := existingNames[name]; !found {
