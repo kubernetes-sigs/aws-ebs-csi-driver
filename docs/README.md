@@ -76,7 +76,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
 * Using secret object - create an IAM user with proper permission, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml) then deploy the secret.
 ```sh
-curl https://raw.githubusercontent.com/aws/csi-driver-amazon-fsx/master/deploy/kubernetes/secret.yaml > secret.yaml
+curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
 # Edit the secret with user credentials
 kubectl apply -f secret.yaml
 ```
