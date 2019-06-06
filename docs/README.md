@@ -22,7 +22,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 ## Features
 The following CSI gRPC calls are implemented:
-* **Controller Service**: CreateVolume, DeleteVolume, ControllerPublishVolume, ControllerUnpublishVolume, ControllerGetCapabilities, ValidateVolumeCapabilities, CreateSnapshot, DeleteSnapshot
+* **Controller Service**: CreateVolume, DeleteVolume, ControllerPublishVolume, ControllerUnpublishVolume, ControllerGetCapabilities, ValidateVolumeCapabilities, CreateSnapshot, DeleteSnapshot, ListSnapshots
 * **Node Service**: NodeStageVolume, NodeUnstageVolume, NodePublishVolume, NodeUnpublishVolume, NodeGetCapabilities, NodeGetInfo
 * **Identity Service**: GetPluginInfo, GetPluginCapabilities, Probe
 
@@ -36,6 +36,9 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
 | "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
 | "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
+
+**Notes**:
+* The parameters are case insensitive.
 
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
@@ -52,7 +55,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                               |
 |---------------------------|-------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
-|v0.3.0                     |amazon/aws-ebs-csi-driver:0.3.0      |
+|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0     |
 |v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
 |v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
 
