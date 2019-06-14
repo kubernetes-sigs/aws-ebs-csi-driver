@@ -1719,3 +1719,83 @@ func TestControllerUnpublishVolume(t *testing.T) {
 		t.Run(tc.name, tc.testFunc)
 	}
 }
+
+func TestControllerExpandVolume(t *testing.T) {
+	testCases := []struct {
+		name     string
+		req      *csi.ControllerExpandVolumeRequest
+		newSize  int64
+		expResp  *csi.ControllerExpandVolumeResponse
+		expError bool
+	}{
+		{
+			name: "success normal",
+			req: &csi.ControllerExpandVolumeRequest{
+				VolumeId: "vol-test",
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: 5 * util.GiB,
+				},
+			},
+			expResp: &csi.ControllerExpandVolumeResponse{
+				CapacityBytes: 5 * util.GiB,
+			},
+		},
+		{
+			name:     "fail empty request",
+			req:      &csi.ControllerExpandVolumeRequest{},
+			expError: true,
+		},
+		{
+			name: "fail exceeds limit after round up",
+			req: &csi.ControllerExpandVolumeRequest{
+				VolumeId: "vol-test",
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: 5*util.GiB + 1, // should round up to 6 GiB
+					LimitBytes:    5 * util.GiB,
+				},
+			},
+			expError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			var retSizeGiB int64
+			if tc.newSize != 0 {
+				retSizeGiB = tc.newSize
+			} else {
+				retSizeGiB = util.BytesToGiB(tc.req.CapacityRange.GetRequiredBytes())
+			}
+
+			mockCloud := mocks.NewMockCloud(mockCtl)
+			mockCloud.EXPECT().ResizeDisk(gomock.Eq(ctx), gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
+
+			awsDriver := controllerService{cloud: mockCloud}
+
+			resp, err := awsDriver.ControllerExpandVolume(ctx, tc.req)
+			if err != nil {
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if !tc.expError {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+			} else {
+				if tc.expError {
+					t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
+				}
+			}
+
+			sizeGiB := util.BytesToGiB(resp.GetCapacityBytes())
+			expSizeGiB := util.BytesToGiB(tc.expResp.GetCapacityBytes())
+			if sizeGiB != expSizeGiB {
+				t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
+			}
+		})
+	}
+}
