@@ -421,7 +421,7 @@ func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 
 	snapshotID := req.GetSnapshotId()
 	if len(snapshotID) != 0 {
-		snapshot, err := d.cloud.GetSnapshotByName(ctx, snapshotID)
+		snapshot, err := d.cloud.GetSnapshotById(ctx, snapshotID)
 		if err != nil {
 			if err == cloud.ErrNotFound {
 				klog.V(4).Info("ListSnapshots: snapshot not found, returning with success")
