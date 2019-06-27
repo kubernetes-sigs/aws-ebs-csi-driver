@@ -37,7 +37,6 @@ func (m *MockEC2) EXPECT() *MockEC2MockRecorder {
 
 // AttachVolumeWithContext mocks base method
 func (m *MockEC2) AttachVolumeWithContext(arg0 aws.Context, arg1 *ec2.AttachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -50,14 +49,12 @@ func (m *MockEC2) AttachVolumeWithContext(arg0 aws.Context, arg1 *ec2.AttachVolu
 
 // AttachVolumeWithContext indicates an expected call of AttachVolumeWithContext
 func (mr *MockEC2MockRecorder) AttachVolumeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).AttachVolumeWithContext), varargs...)
 }
 
 // CreateSnapshotWithContext mocks base method
 func (m *MockEC2) CreateSnapshotWithContext(arg0 aws.Context, arg1 *ec2.CreateSnapshotInput, arg2 ...request.Option) (*ec2.Snapshot, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -70,14 +67,12 @@ func (m *MockEC2) CreateSnapshotWithContext(arg0 aws.Context, arg1 *ec2.CreateSn
 
 // CreateSnapshotWithContext indicates an expected call of CreateSnapshotWithContext
 func (mr *MockEC2MockRecorder) CreateSnapshotWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshotWithContext", reflect.TypeOf((*MockEC2)(nil).CreateSnapshotWithContext), varargs...)
 }
 
 // CreateVolumeWithContext mocks base method
 func (m *MockEC2) CreateVolumeWithContext(arg0 aws.Context, arg1 *ec2.CreateVolumeInput, arg2 ...request.Option) (*ec2.Volume, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -90,14 +85,12 @@ func (m *MockEC2) CreateVolumeWithContext(arg0 aws.Context, arg1 *ec2.CreateVolu
 
 // CreateVolumeWithContext indicates an expected call of CreateVolumeWithContext
 func (mr *MockEC2MockRecorder) CreateVolumeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).CreateVolumeWithContext), varargs...)
 }
 
 // DeleteSnapshotWithContext mocks base method
 func (m *MockEC2) DeleteSnapshotWithContext(arg0 aws.Context, arg1 *ec2.DeleteSnapshotInput, arg2 ...request.Option) (*ec2.DeleteSnapshotOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -110,14 +103,12 @@ func (m *MockEC2) DeleteSnapshotWithContext(arg0 aws.Context, arg1 *ec2.DeleteSn
 
 // DeleteSnapshotWithContext indicates an expected call of DeleteSnapshotWithContext
 func (mr *MockEC2MockRecorder) DeleteSnapshotWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSnapshotWithContext", reflect.TypeOf((*MockEC2)(nil).DeleteSnapshotWithContext), varargs...)
 }
 
 // DeleteVolumeWithContext mocks base method
 func (m *MockEC2) DeleteVolumeWithContext(arg0 aws.Context, arg1 *ec2.DeleteVolumeInput, arg2 ...request.Option) (*ec2.DeleteVolumeOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -130,14 +121,12 @@ func (m *MockEC2) DeleteVolumeWithContext(arg0 aws.Context, arg1 *ec2.DeleteVolu
 
 // DeleteVolumeWithContext indicates an expected call of DeleteVolumeWithContext
 func (mr *MockEC2MockRecorder) DeleteVolumeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DeleteVolumeWithContext), varargs...)
 }
 
 // DescribeInstancesWithContext mocks base method
 func (m *MockEC2) DescribeInstancesWithContext(arg0 aws.Context, arg1 *ec2.DescribeInstancesInput, arg2 ...request.Option) (*ec2.DescribeInstancesOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -150,14 +139,12 @@ func (m *MockEC2) DescribeInstancesWithContext(arg0 aws.Context, arg1 *ec2.Descr
 
 // DescribeInstancesWithContext indicates an expected call of DescribeInstancesWithContext
 func (mr *MockEC2MockRecorder) DescribeInstancesWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstancesWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeInstancesWithContext), varargs...)
 }
 
 // DescribeSnapshotsWithContext mocks base method
 func (m *MockEC2) DescribeSnapshotsWithContext(arg0 aws.Context, arg1 *ec2.DescribeSnapshotsInput, arg2 ...request.Option) (*ec2.DescribeSnapshotsOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -170,14 +157,12 @@ func (m *MockEC2) DescribeSnapshotsWithContext(arg0 aws.Context, arg1 *ec2.Descr
 
 // DescribeSnapshotsWithContext indicates an expected call of DescribeSnapshotsWithContext
 func (mr *MockEC2MockRecorder) DescribeSnapshotsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSnapshotsWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeSnapshotsWithContext), varargs...)
 }
 
 // DescribeVolumesModificationsWithContext mocks base method
 func (m *MockEC2) DescribeVolumesModificationsWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesModificationsInput, arg2 ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -190,14 +175,12 @@ func (m *MockEC2) DescribeVolumesModificationsWithContext(arg0 aws.Context, arg1
 
 // DescribeVolumesModificationsWithContext indicates an expected call of DescribeVolumesModificationsWithContext
 func (mr *MockEC2MockRecorder) DescribeVolumesModificationsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVolumesModificationsWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeVolumesModificationsWithContext), varargs...)
 }
 
 // DescribeVolumesWithContext mocks base method
 func (m *MockEC2) DescribeVolumesWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesInput, arg2 ...request.Option) (*ec2.DescribeVolumesOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -210,14 +193,12 @@ func (m *MockEC2) DescribeVolumesWithContext(arg0 aws.Context, arg1 *ec2.Describ
 
 // DescribeVolumesWithContext indicates an expected call of DescribeVolumesWithContext
 func (mr *MockEC2MockRecorder) DescribeVolumesWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVolumesWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeVolumesWithContext), varargs...)
 }
 
 // DetachVolumeWithContext mocks base method
 func (m *MockEC2) DetachVolumeWithContext(arg0 aws.Context, arg1 *ec2.DetachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -230,14 +211,12 @@ func (m *MockEC2) DetachVolumeWithContext(arg0 aws.Context, arg1 *ec2.DetachVolu
 
 // DetachVolumeWithContext indicates an expected call of DetachVolumeWithContext
 func (mr *MockEC2MockRecorder) DetachVolumeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DetachVolumeWithContext), varargs...)
 }
 
 // ModifyVolumeWithContext mocks base method
 func (m *MockEC2) ModifyVolumeWithContext(arg0 aws.Context, arg1 *ec2.ModifyVolumeInput, arg2 ...request.Option) (*ec2.ModifyVolumeOutput, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -250,7 +229,6 @@ func (m *MockEC2) ModifyVolumeWithContext(arg0 aws.Context, arg1 *ec2.ModifyVolu
 
 // ModifyVolumeWithContext indicates an expected call of ModifyVolumeWithContext
 func (mr *MockEC2MockRecorder) ModifyVolumeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).ModifyVolumeWithContext), varargs...)
 }
