@@ -160,6 +160,51 @@ roleRef:
   name: ebs-external-snapshotter-role
   apiGroup: rbac.authorization.k8s.io
 
+{{- if .Values.enableVolumeResizing }}
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-external-resizer-role
+rules:
+  # The following rule should be uncommented for plugins that require secrets
+  # for provisioning.
+  # - apiGroups: [""]
+  #   resources: ["secrets"]
+  #   verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-resizer-binding
+subjects:
+  - kind: ServiceAccount
+    name: ebs-csi-controller-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: ebs-external-resizer-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end}}
+
 ---
 
 kind: StatefulSet
@@ -188,7 +233,7 @@ spec:
           operator: Exists
       containers:
         - name: ebs-plugin
-          image: amazon/aws-ebs-csi-driver:latest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           args :
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
@@ -272,6 +317,20 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.enableVolumeResizing }}
+        - name: csi-resizer
+          image: quay.io/k8scsi/csi-resizer:v0.2.0
+          imagePullPolicy: Always
+          args:
+            - --csi-address=$(ADDRESS)
+            - --v=5
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
         - name: liveness-probe
           image: quay.io/k8scsi/livenessprobe:v1.1.0
           args:
