@@ -178,6 +178,7 @@ type Cloud interface {
 	CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error)
 	DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error)
 	GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error)
+	GetSnapshotById(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error)
 	ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error)
 }
 
@@ -557,6 +558,21 @@ func (c *cloud) GetSnapshotByName(ctx context.Context, name string) (snapshot *S
 				Name:   aws.String("tag:" + SnapshotNameTagKey),
 				Values: []*string{aws.String(name)},
 			},
+		},
+	}
+
+	ec2snapshot, err := c.getSnapshot(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.ec2SnapshotResponseToStruct(ec2snapshot), nil
+}
+
+func (c *cloud) GetSnapshotById(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error) {
+	request := &ec2.DescribeSnapshotsInput{
+		SnapshotIds: []*string{
+			aws.String(snapshotID),
 		},
 	}
 
