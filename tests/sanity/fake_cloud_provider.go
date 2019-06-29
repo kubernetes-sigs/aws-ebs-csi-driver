@@ -27,7 +27,8 @@ import (
 )
 
 type fakeCloudProvider struct {
-	disks     map[string]*fakeDisk
+	disks map[string]*fakeDisk
+	// snapshots contains mapping from snapshot ID to snapshot
 	snapshots map[string]*fakeSnapshot
 	m         *cloud.Metadata
 	pub       map[string]string
@@ -140,20 +141,15 @@ func (c *fakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) 
 }
 
 func (c *fakeCloudProvider) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *cloud.SnapshotOptions) (snapshot *cloud.Snapshot, err error) {
-	var snapshotID string
-	if len(snapshotOptions.Tags[cloud.SnapshotNameTagKey]) == 0 {
-		// for simplicity: let's have the Name and ID identical
-		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		snapshotID = fmt.Sprintf("snapshot-%d", r1.Uint64())
-		snapshotOptions.Tags[cloud.SnapshotNameTagKey] = snapshotID
-	} else {
-		snapshotID = snapshotOptions.Tags[cloud.SnapshotNameTagKey]
-	}
+	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	snapshotID := fmt.Sprintf("snapshot-%d", r1.Uint64())
+
 	for _, existingSnapshot := range c.snapshots {
 		if existingSnapshot.Snapshot.SnapshotID == snapshotID && existingSnapshot.Snapshot.SourceVolumeID == volumeID {
 			return nil, cloud.ErrAlreadyExists
 		}
 	}
+
 	s := &fakeSnapshot{
 		Snapshot: &cloud.Snapshot{
 			SnapshotID:     snapshotID,
@@ -177,14 +173,28 @@ func (c *fakeCloudProvider) DeleteSnapshot(ctx context.Context, snapshotID strin
 func (c *fakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) (snapshot *cloud.Snapshot, err error) {
 	var snapshots []*fakeSnapshot
 	for _, s := range c.snapshots {
-		if s.SnapshotID == name {
+		snapshotName, exists := s.tags[cloud.SnapshotNameTagKey]
+		if !exists {
+			continue
+		}
+		if snapshotName == name {
 			snapshots = append(snapshots, s)
 		}
 	}
 	if len(snapshots) == 0 {
 		return nil, cloud.ErrNotFound
 	}
+
 	return snapshots[0].Snapshot, nil
+}
+
+func (c *fakeCloudProvider) GetSnapshotById(ctx context.Context, snapshotID string) (snapshot *cloud.Snapshot, err error) {
+	ret, exists := c.snapshots[snapshotID]
+	if !exists {
+		return nil, cloud.ErrNotFound
+	}
+
+	return ret.Snapshot, nil
 }
 
 func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *cloud.ListSnapshotsResponse, err error) {

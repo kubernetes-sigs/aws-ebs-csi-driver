@@ -775,6 +775,59 @@ func TestGetSnapshotByName(t *testing.T) {
 	}
 }
 
+func TestGetSnapshotById(t *testing.T) {
+	testCases := []struct {
+		name            string
+		snapshotName    string
+		snapshotOptions *SnapshotOptions
+		expSnapshot     *Snapshot
+		expErr          error
+	}{
+		{
+			name:         "success: normal",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+				},
+			},
+			expSnapshot: &Snapshot{
+				SourceVolumeID: "snap-test-volume",
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ec2snapshot := &ec2.Snapshot{
+				SnapshotId: aws.String(tc.snapshotOptions.Tags[SnapshotNameTagKey]),
+				VolumeId:   aws.String("snap-test-volume"),
+				State:      aws.String("completed"),
+			}
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil)
+
+			_, err := c.GetSnapshotById(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("GetSnapshotByName() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("GetSnapshotByName() failed: expected error, got nothing")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
 func TestListSnapshots(t *testing.T) {
 	testCases := []struct {
 		name     string

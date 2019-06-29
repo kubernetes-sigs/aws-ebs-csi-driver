@@ -35,7 +35,6 @@ func (m *MockEC2Metadata) EXPECT() *MockEC2MetadataMockRecorder {
 
 // Available mocks base method
 func (m *MockEC2Metadata) Available() bool {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Available")
 	ret0, _ := ret[0].(bool)
 	return ret0
@@ -43,13 +42,11 @@ func (m *MockEC2Metadata) Available() bool {
 
 // Available indicates an expected call of Available
 func (mr *MockEC2MetadataMockRecorder) Available() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Available", reflect.TypeOf((*MockEC2Metadata)(nil).Available))
 }
 
 // GetInstanceIdentityDocument mocks base method
 func (m *MockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInstanceIdentityDocument")
 	ret0, _ := ret[0].(ec2metadata.EC2InstanceIdentityDocument)
 	ret1, _ := ret[1].(error)
@@ -58,6 +55,5 @@ func (m *MockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2Instance
 
 // GetInstanceIdentityDocument indicates an expected call of GetInstanceIdentityDocument
 func (mr *MockEC2MetadataMockRecorder) GetInstanceIdentityDocument() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIdentityDocument", reflect.TypeOf((*MockEC2Metadata)(nil).GetInstanceIdentityDocument))
 }

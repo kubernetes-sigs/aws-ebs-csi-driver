@@ -1258,7 +1258,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
+				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
 
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -1283,7 +1283,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{cloud: mockCloud}
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -1308,7 +1308,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
+				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
 
 				awsDriver := controllerService{cloud: mockCloud}
 				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
