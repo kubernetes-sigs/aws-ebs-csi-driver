@@ -66,6 +66,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 * **Block Volume** - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
 * **Volume Snapshot** - creating volume snapshots and restore volume from snapshot.
 * **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
+* **Volume Resizing** - expand the volume size.
 
 ## Prerequisites
 * If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
@@ -107,6 +108,7 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Block Volume](../examples/kubernetes/block-volume)
 * [Volume Snapshot](../examples/kubernetes/snapshot)
 * [Configure StorageClass](../examples/kubernetes/storageclass)
+* [Volume Resizing](../examples/kubernetes/resizing)
 
 ## Migrating from in-tree EBS plugin
 Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
