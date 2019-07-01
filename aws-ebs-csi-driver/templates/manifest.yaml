@@ -110,6 +110,7 @@ roleRef:
   name: ebs-cluster-driver-registrar-role
   apiGroup: rbac.authorization.k8s.io
 
+{{- if .Values.enableVolumeSnapshot }}
 ---
 
 kind: ClusterRole
@@ -159,6 +160,8 @@ roleRef:
   kind: ClusterRole
   name: ebs-external-snapshotter-role
   apiGroup: rbac.authorization.k8s.io
+
+{{- end }}
 
 {{- if .Values.enableVolumeResizing }}
 ---
@@ -306,6 +309,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.enableVolumeSnapshot }}
         - name: csi-snapshotter
           image: quay.io/k8scsi/csi-snapshotter:v1.1.0
           args:
@@ -317,6 +321,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- end }}
         {{- if .Values.enableVolumeResizing }}
         - name: csi-resizer
           image: quay.io/k8scsi/csi-resizer:v0.2.0

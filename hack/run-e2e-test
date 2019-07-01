@@ -27,6 +27,8 @@ FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
 K8S_VERSION=${K8S_VERSION-1.14.0}
 
+source $(dirname "${BASH_SOURCE}")/utils/helm.sh
+
 echo "Testing in region: $REGION and zones: $ZONES"
 
 KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.14.0-alpha.1/kops-$OS_ARCH
@@ -41,6 +43,8 @@ if [[ ! -e $KOPS_PATH ]]; then
 fi
 
 chmod +x $KOPS_PATH
+
+helm::install
 
 echo "Creating cluster $CLUSTER_NAME"
 CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
@@ -75,16 +79,21 @@ done;
 eval $(aws ecr get-login --region $REGION --no-include-email)
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_TAG=$TEST_ID
-IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver:$IMAGE_TAG
-docker build -t $IMAGE_NAME .
-docker push $IMAGE_NAME
-
-# Update manifest files
-cp deploy/kubernetes/*.yaml $TEST_DIR
-sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/manifest.yaml
+IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver
+docker build -t $IMAGE_NAME:$IMAGE_TAG .
+docker push $IMAGE_NAME:$IMAGE_TAG
 
 echo "Deploying driver"
-kubectl apply -f $TEST_DIR/manifest.yaml 
+helm::init
+helm::wait_tiller
+
+helm install --name aws-ebs-csi-driver \
+    --set enableVolumeScheduling=true \
+    --set enableVolumeResizing=true \
+    --set enableVolumeSnapshot=true \
+    --set image.repository=$IMAGE_NAME \
+    --set image.tag=$IMAGE_TAG \
+    ./aws-ebs-csi-driver
 
 # Run the test
 go get -u github.com/onsi/ginkgo/ginkgo
@@ -93,7 +102,7 @@ ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
 TEST_PASS=$?
 
 echo "Removing driver"
-kubectl delete -f $TEST_DIR/manifest.yaml
+helm del --purge aws-ebs-csi-driver
 
 echo "Deleting cluster $CLUSTER_NAME"
 $KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes
