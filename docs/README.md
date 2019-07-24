@@ -13,12 +13,12 @@
 The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage Interface (CSI) Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes.
 
 ## CSI Specification Compability Matrix
-| AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
-|----------------------------------------|-------|--------|
-| master branch                          | no    | yes    |
-| v0.3.0                                 | no    | yes    |
-| v0.2.0                                 | no    | yes    |
-| v0.1.0                                 | yes   | no     |
+| AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
+|----------------------------------------|-------|--------|--------|
+| master branch                          | no    | no     | yes    |
+| v0.3.0                                 | no    | yes    | no     |
+| v0.2.0                                 | no    | yes    | no     |
+| v0.1.0                                 | yes   | no     | no     |
 
 ## Features
 The following CSI gRPC calls are implemented:
