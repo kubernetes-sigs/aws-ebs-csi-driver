@@ -21,11 +21,11 @@ TEST_ID=$RANDOM
 CLUSTER_NAME=test-cluster-$TEST_ID
 TEST_DIR=/tmp/ebs-e2e-test
 BASE_DIR=$(dirname $0)
-REGION=${AWS_REGION-us-east-1}
-ZONES=${AWS_AVAILABILITY_ZONES-us-east-1a,us-east-1b,us-east-1c}
+REGION=${AWS_REGION-us-west-2}
+ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
-K8S_VERSION=${K8S_VERSION-1.14.0}
+K8S_VERSION=${K8S_VERSION-1.15.3}
 INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
 
 source $(dirname "${BASH_SOURCE}")/utils/helm.sh
@@ -38,7 +38,7 @@ KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
 
 # Download kops if not yet
 if [[ ! -e $KOPS_PATH ]]; then
-    mkdir -p $TEST_DIR 
+    mkdir -p $TEST_DIR
     echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
     curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
 fi
@@ -88,7 +88,6 @@ done;
 
 echo "Deploying driver"
 helm::init
-helm::wait_tiller
 
 helm install --name aws-ebs-csi-driver \
     --set enableVolumeScheduling=true \
@@ -99,10 +98,43 @@ helm install --name aws-ebs-csi-driver \
     ./aws-ebs-csi-driver
 
 # Run the test
-go get -u github.com/onsi/ginkgo/ginkgo
-export KUBECONFIG=$HOME/.kube/config
-ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e -- -report-dir=$ARTIFACTS
-TEST_PASS=$?
+if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
+    # TODO known test failures to skip temporarily
+    # - should not allow expansion of pvcs without AllowVolumeExpansion property
+    #   - Test passes but cleanup fails, need https://github.com/kubernetes/kubernetes/pull/81107
+    # - (block volmode) Verify if offline PVC expansion works / should resize volume when PVC is edited while pod is using it
+    #   - NodeExpand for BlockVolumes not well-defined, need more investigation and possibly https://github.com/container-storage-interface/spec/issues/380
+    # - should provision storage with mount options
+    #   - Known bug, need https://github.com/kubernetes/kubernetes/pull/80191 but not yet in a patch release
+    pushd ./tests/e2e-migration
+    go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="$FOCUS" -ginkgo.skip="\[Disruptive\]\
+|should.not.allow.expansion\
+|block.volmode.+volume-expand\
+|should.provision.storage.with.mount.options" -gce-zone=${ZONES%,*}
+    TEST_PASS=$?
+    popd
+
+    # There should have been no calls to the in-tree driver kubernetes.io/aws-ebs but many calls to ebs.csi.aws.com
+    # Find the controller-manager log and read its metrics to verify
+    NODE=$(kubectl get node -l kubernetes.io/role=master -o json | jq -r ".items[].metadata.name")
+    kubectl port-forward kube-controller-manager-$NODE 10252:10252 -n kube-system&
+    curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="ebs.csi.aws.com"'
+    CSI_CALLED=$?
+    curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="kubernetes.io/aws-ebs"'
+    INTREE_CALLED=$?
+
+    # TEST_PASS if tests passed, CSI was called, and In-tree was not called
+    if [ "$TEST_PASS" == 0 ] && [ "$CSI_CALLED" == 0 ] && [ "$INTREE_CALLED" == 1 ]; then
+        TEST_PASS=0
+    else
+        TEST_PASS=1
+    fi
+else
+    go get -u github.com/onsi/ginkgo/ginkgo
+    export KUBECONFIG=$HOME/.kube/config
+    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e -- -report-dir=$ARTIFACTS
+    TEST_PASS=$?
+fi
 
 echo "Removing driver"
 helm del --purge aws-ebs-csi-driver
