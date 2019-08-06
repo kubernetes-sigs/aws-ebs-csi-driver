@@ -81,35 +81,6 @@ roleRef:
   name: ebs-external-attacher-role
   apiGroup: rbac.authorization.k8s.io
 
----
-
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: ebs-cluster-driver-registrar-role
-rules:
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions"]
-    verbs: ["create", "list", "watch", "delete"]
-  - apiGroups: ["csi.storage.k8s.io"]
-    resources: ["csidrivers"]
-    verbs: ["create", "delete"]
-
----
-
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: ebs-csi-driver-registrar-binding
-subjects:
-  - kind: ServiceAccount
-    name: ebs-csi-controller-sa
-    namespace: kube-system
-roleRef:
-  kind: ClusterRole
-  name: ebs-cluster-driver-registrar-role
-  apiGroup: rbac.authorization.k8s.io
-
 {{- if .Values.enableVolumeSnapshot }}
 ---
 
@@ -211,7 +182,7 @@ roleRef:
 ---
 
 kind: StatefulSet
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
   namespace: kube-system
@@ -220,6 +191,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
+      app: ebs-csi-controller
       app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
@@ -271,20 +243,8 @@ spec:
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: 5
-        - name: cluster-driver-registrar
-          image: quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1
-          args:
-            - --csi-address=$(ADDRESS)
-            - --driver-requires-attachment=true
-            - --v=5
-          env:
-            - name: ADDRESS
-              value: /csi/csi.sock
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /csi
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.1.0
+          image: quay.io/k8scsi/csi-provisioner:v1.3.0
           args:
             - --provisioner=ebs.csi.aws.com
             - --csi-address=$(ADDRESS)
@@ -299,7 +259,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.1.0
+          image: quay.io/k8scsi/csi-attacher:v1.2.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -351,7 +311,7 @@ spec:
 ---
 # Node Service
 kind: DaemonSet
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
   namespace: kube-system
@@ -450,3 +410,13 @@ spec:
           hostPath:
             path: /dev
             type: Directory
+
+---
+
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
+metadata:
+  name: ebs.csi.aws.com
+spec:
+  attachRequired: true
+  podInfoOnMount: false
