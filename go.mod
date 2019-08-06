@@ -37,7 +37,10 @@ require (
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/kubernetes-csi/csi-test v2.0.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter v1.0.1
-	github.com/onsi/ginkgo v1.7.0
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.4.3
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect

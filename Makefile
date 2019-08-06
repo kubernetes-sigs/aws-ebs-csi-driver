@@ -52,6 +52,10 @@ test-e2e-single-az:
 test-e2e-multi-az:
 	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c INSTANCE_TYPE=c5.large GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" ./hack/run-e2e-test
 
+.PHONY: test-e2e-migration
+test-e2e-migration:
+	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-migration\]" ./hack/run-e2e-test
+
 .PHONY: image-release
 image-release:
 	docker build -t $(IMAGE):$(VERSION) .
