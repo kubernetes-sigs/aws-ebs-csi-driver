@@ -340,7 +340,6 @@ spec:
           image: quay.io/k8scsi/livenessprobe:v1.1.0
           args:
             - --csi-address=/csi/csi.sock
-            - --connection-timeout=3s
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -429,7 +428,6 @@ spec:
           image: quay.io/k8scsi/livenessprobe:v1.1.0
           args:
             - --csi-address=/csi/csi.sock
-            - --connection-timeout=3s
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
