@@ -103,8 +103,8 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 // GetParameters returns the parameters specific for this driver
 func GetParameters(volumeType string, fsType string, encrypted bool) map[string]string {
 	parameters := map[string]string{
-		"type":   volumeType,
-		"fsType": fsType,
+		"type":                      volumeType,
+		"csi.storage.k8s.io/fstype": fsType,
 	}
 	if iops := IOPSPerGBForVolumeType(volumeType); iops != "" {
 		parameters["iopsPerGB"] = iops

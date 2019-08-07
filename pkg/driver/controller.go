@@ -103,7 +103,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	var (
-		fsType      string
 		volumeType  string
 		iopsPerGB   int
 		isEncrypted bool
@@ -112,8 +111,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
-		case FsTypeKey:
-			fsType = value
+		case "fstype":
+			klog.Warning("\"fstype\" is deprecated, please use \"csi.storage.k8s.io/fstype\" instead")
 		case VolumeTypeKey:
 			volumeType = value
 		case IopsPerGBKey:
@@ -136,7 +135,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// volume exists already
 	if disk != nil {
-		disk.FsType = fsType
 		return newCreateVolumeResponse(disk), nil
 	}
 
@@ -172,7 +170,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
-	disk.FsType = fsType
 	return newCreateVolumeResponse(disk), nil
 }
 
@@ -488,9 +485,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
-			VolumeContext: map[string]string{
-				FsTypeKey: disk.FsType,
-			},
+			VolumeContext: map[string]string{},
 			AccessibleTopology: []*csi.Topology{
 				{
 					Segments: map[string]string{TopologyKey: disk.AvailabilityZone},

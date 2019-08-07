@@ -25,9 +25,6 @@ const (
 
 // constants of keys in volume parameters
 const (
-	// FsTypeKey represents key for filesystem type
-	FsTypeKey = "fstype"
-
 	// VolumeTypeKey represents key for volume type
 	VolumeTypeKey = "type"
 

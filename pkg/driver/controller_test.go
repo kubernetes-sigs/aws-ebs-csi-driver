@@ -35,7 +35,6 @@ import (
 
 const (
 	expZone       = "us-west-2b"
-	expFsType     = "ext2"
 	expInstanceId = "i-123456789abcdef01"
 )
 
@@ -67,18 +66,12 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: stdVolCap,
 					Parameters:         nil,
 				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
-				}
 
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -150,7 +143,7 @@ func TestCreateVolume(t *testing.T) {
 				expVol := &csi.Volume{
 					CapacityBytes: stdVolSize,
 					VolumeId:      "test-vol",
-					VolumeContext: map[string]string{FsTypeKey: ""},
+					VolumeContext: map[string]string{},
 				}
 
 				ctx := context.Background()
@@ -158,7 +151,6 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -238,7 +230,6 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expFsType,
 				}
 				volSizeBytes, err := getVolSizeBytes(req)
 				if err != nil {
@@ -295,7 +286,7 @@ func TestCreateVolume(t *testing.T) {
 				expVol := &csi.Volume{
 					CapacityBytes: cloud.DefaultVolumeSize,
 					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
+					VolumeContext: map[string]string{},
 				}
 
 				ctx := context.Background()
@@ -303,7 +294,6 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(cloud.DefaultVolumeSize),
 				}
 
@@ -354,7 +344,7 @@ func TestCreateVolume(t *testing.T) {
 				expVol := &csi.Volume{
 					CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
 					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
+					VolumeContext: map[string]string{},
 				}
 
 				ctx := context.Background()
@@ -362,7 +352,6 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(expVol.CapacityBytes),
 				}
 
@@ -395,65 +384,6 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "success with fstype parameter",
-			testFunc: func(t *testing.T) {
-				req := &csi.CreateVolumeRequest{
-					Name:               "vol-test",
-					CapacityRange:      stdCapRange,
-					VolumeCapabilities: stdVolCap,
-					Parameters:         map[string]string{FsTypeKey: defaultFsType},
-				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: defaultFsType},
-				}
-
-				ctx := context.Background()
-
-				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
-					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
-					CapacityGiB:      util.BytesToGiB(stdVolSize),
-				}
-
-				mockCtl := gomock.NewController(t)
-				defer mockCtl.Finish()
-
-				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
-
-				awsDriver := controllerService{cloud: mockCloud}
-
-				resp, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
-				}
-
-				vol := resp.GetVolume()
-				if vol == nil {
-					t.Fatalf("Expected volume %v, got nil", expVol)
-				}
-
-				if vol.GetCapacityBytes() != expVol.GetCapacityBytes() {
-					t.Fatalf("Expected volume capacity bytes: %v, got: %v", expVol.GetCapacityBytes(), vol.GetCapacityBytes())
-				}
-
-				for expKey, expVal := range expVol.GetVolumeContext() {
-					ctx := vol.GetVolumeContext()
-					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
-						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
-					}
-				}
-			},
-		},
-		{
 			name: "success with volume type io1",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
@@ -465,18 +395,12 @@ func TestCreateVolume(t *testing.T) {
 						IopsPerGBKey:  "5",
 					},
 				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
-				}
 
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -509,18 +433,12 @@ func TestCreateVolume(t *testing.T) {
 						VolumeTypeKey: cloud.VolumeTypeSC1,
 					},
 				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
-				}
 
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -553,18 +471,12 @@ func TestCreateVolume(t *testing.T) {
 						EncryptedKey: "true",
 					},
 				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
-				}
 
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -598,18 +510,12 @@ func TestCreateVolume(t *testing.T) {
 						KmsKeyIdKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 					},
 				}
-				expVol := &csi.Volume{
-					CapacityBytes: stdVolSize,
-					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: ""},
-				}
 
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
@@ -675,9 +581,7 @@ func TestCreateVolume(t *testing.T) {
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
 					VolumeCapabilities: stdVolCap,
-					Parameters: map[string]string{
-						FsTypeKey: expFsType,
-					},
+					Parameters:         map[string]string{},
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
@@ -690,9 +594,7 @@ func TestCreateVolume(t *testing.T) {
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
 					VolumeCapabilities: stdVolCap,
-					Parameters: map[string]string{
-						FsTypeKey: expFsType,
-					},
+					Parameters:         map[string]string{},
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
@@ -704,7 +606,7 @@ func TestCreateVolume(t *testing.T) {
 				expVol := &csi.Volume{
 					CapacityBytes: stdVolSize,
 					VolumeId:      "vol-test",
-					VolumeContext: map[string]string{FsTypeKey: expFsType},
+					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{TopologyKey: expZone},
@@ -717,7 +619,6 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:         req.Name,
 					AvailabilityZone: expZone,
-					FsType:           expVol.VolumeContext[FsTypeKey],
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
 
