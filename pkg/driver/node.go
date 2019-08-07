@@ -117,6 +117,15 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
+	mount := volCap.GetMount()
+	if mount == nil {
+		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mount is nil within volume capability")
+	}
+	fsType := mount.GetFsType()
+	if len(fsType) == 0 {
+		fsType = defaultFsType
+	}
+
 	if ok := d.inFlight.Insert(req); !ok {
 		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
 		return nil, status.Error(codes.Internal, msg)
@@ -170,15 +179,8 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	// Get fs type that the volume will be formatted with
-	attributes := req.GetVolumeContext()
-	fsType, exists := attributes[FsTypeKey]
-	if !exists || fsType == "" {
-		fsType = defaultFsType
-	}
-
 	// FormatAndMount will format only if needed
-	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s", source, target)
+	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
 	err = d.mounter.FormatAndMount(source, target, fsType, nil)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
@@ -439,8 +441,13 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
 	}
 
-	klog.V(5).Infof("NodePublishVolume: mounting %s at %s", source, target)
-	if err := d.mounter.Mount(source, target, "", mountOptions); err != nil {
+	fsType := mode.Mount.GetFsType()
+	if len(fsType) == 0 {
+		fsType = defaultFsType
+	}
+
+	klog.V(5).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
+	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
 		}

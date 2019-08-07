@@ -37,7 +37,9 @@ func TestNodeStageVolume(t *testing.T) {
 		devicePath = "/dev/fake"
 		stdVolCap  = &csi.VolumeCapability{
 			AccessType: &csi.VolumeCapability_Mount{
-				Mount: &csi.VolumeCapability_MountVolume{},
+				Mount: &csi.VolumeCapability_MountVolume{
+					FsType: FSTypeExt4,
+				},
 			},
 			AccessMode: &csi.VolumeCapability_AccessMode{
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
@@ -137,9 +139,17 @@ func TestNodeStageVolume(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
 					StagingTargetPath: targetPath,
-					VolumeCapability:  stdVolCap,
-					VolumeContext:     map[string]string{FsTypeKey: FSTypeExt3},
-					VolumeId:          "vol-test",
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								FsType: FSTypeExt3,
+							},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeId: "vol-test",
 				}
 
 				gomock.InOrder(
@@ -150,6 +160,51 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceName(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
+				_, err := awsDriver.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success mount with default fsType ext4",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeStageVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath},
+					StagingTargetPath: targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								FsType: "",
+							},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeId: "vol-test",
+				}
+
+				gomock.InOrder(
+					mockMounter.EXPECT().ExistsPath(gomock.Eq(devicePath)).Return(true, nil),
+					mockMounter.EXPECT().ExistsPath(gomock.Eq(targetPath)).Return(false, nil),
+				)
+
+				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
+				mockMounter.EXPECT().GetDeviceName(targetPath).Return("", 1, nil)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
 				_, err := awsDriver.NodeStageVolume(context.TODO(), req)
 				if err != nil {
 					t.Fatalf("Expect no error but got: %v", err)
@@ -175,6 +230,40 @@ func TestNodeStageVolume(t *testing.T) {
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
 					StagingTargetPath: targetPath,
 					VolumeCapability:  stdVolCap,
+				}
+
+				_, err := awsDriver.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatalf("Expect error but got no error")
+				}
+
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no mount",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeStageVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath},
+					StagingTargetPath: targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
 				}
 
 				_, err := awsDriver.NodeStageVolume(context.TODO(), req)
@@ -550,7 +639,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
-				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind"})).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -558,6 +647,47 @@ func TestNodePublishVolume(t *testing.T) {
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
 					VolumeId:          "vol-test",
+				}
+
+				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success fstype",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(FSTypeXfs), gomock.Eq([]string{"bind"})).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								FsType: FSTypeXfs,
+							},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeId: "vol-test",
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -582,7 +712,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
-				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind", "ro"})).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind", "ro"})).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -615,7 +745,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
-				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind", "test-flag"})).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind", "test-flag"})).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
