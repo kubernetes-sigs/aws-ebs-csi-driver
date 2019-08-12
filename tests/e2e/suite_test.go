@@ -15,12 +15,19 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
@@ -39,5 +46,17 @@ func init() {
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AWS EBS CSI Driver End-to-End Tests")
+
+	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
+	var r []Reporter
+	if framework.TestContext.ReportDir != "" {
+		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
+			log.Fatalf("Failed creating report directory: %v", err)
+		} else {
+			r = append(r, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", framework.TestContext.ReportPrefix, config.GinkgoConfig.ParallelNode))))
+		}
+	}
+	log.Printf("Starting e2e run %q on Ginkgo node %d", uuid.NewUUID(), config.GinkgoConfig.ParallelNode) // TODO use framework.RunID like upstream
+
+	RunSpecsWithDefaultAndCustomReporters(t, "AWS EBS CSI Driver End-to-End Tests", r)
 }
