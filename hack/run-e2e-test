@@ -98,7 +98,7 @@ helm install --name aws-ebs-csi-driver \
 # Run the test
 go get -u github.com/onsi/ginkgo/ginkgo
 export KUBECONFIG=$HOME/.kube/config
-ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
+ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e -- -report-dir=$ARTIFACTS
 TEST_PASS=$?
 
 echo "Removing driver"
