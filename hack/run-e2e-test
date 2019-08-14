@@ -26,6 +26,7 @@ ZONES=${AWS_AVAILABILITY_ZONES-us-east-1a,us-east-1b,us-east-1c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
 K8S_VERSION=${K8S_VERSION-1.14.0}
+INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
 
 source $(dirname "${BASH_SOURCE}")/utils/helm.sh
 
@@ -54,6 +55,7 @@ ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
+    --node-size=$INSTANCE_TYPE \
     --kubernetes-version=$K8S_VERSION \
     --ssh-public-key=$SSH_KEY_PATH.pub \
         $CLUSTER_NAME.k8s.local
