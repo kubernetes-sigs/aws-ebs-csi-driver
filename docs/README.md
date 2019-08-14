@@ -4,8 +4,6 @@
 
 **WARNING**: This driver is currently in Beta release and should not be used in performance critical applications.
 
-**DISCLAIMER**: This is not an officially supported Amazon product
-
 # Amazon Elastic Block Store (EBS) CSI driver
 
 ## Overview
