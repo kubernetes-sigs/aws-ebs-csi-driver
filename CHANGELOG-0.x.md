@@ -1,3 +1,33 @@
+# v0.4.0
+[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.4.0/docs/README.md)
+
+filename  | sha512 hash
+--------- | ------------
+[v0.4.0.zip](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.4.0.zip) | ``
+[v0.4.0.tar.gz](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.4.0.tar.gz) | ``
+
+## Action Required
+* Update Kubernetes cluster to 1.14+ before installing the driver, since the released driver manifest assumes 1.14+ cluster.
+* storageclass parameter's `fstype` key is deprecated in favor of `csi.storage.k8s.io/fstype` key. Please update the key in you stroage parameters.
+
+## Changes since v0.3.0
+See [details](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/compare/v0.3.0...v0.4.0) for all the changes.
+
+### Notable changes
+* Make secret optional ([#247](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/247), [@leakingtapan](https://github.com/leakingtapan/))
+* Add support for XFS filesystem ([#253](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/253), [@leakingtapan](https://github.com/leakingtapan/))
+* Upgrade CSI spec to 1.1.0 ([#263](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/263), [@leakingtapan](https://github.com/leakingtapan/))
+* Refactor controller unit test with proper mock ([#269](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/269), [@zacharya](https://github.com/zacharya/))
+* Refactor device path allocator ([#274](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/274), [@leakingtapan](https://github.com/leakingtapan/))
+* Implementing ListSnapshots ([#286](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/286), [@zacharya](https://github.com/zacharya/))
+* Add max number of volumes that can be attached to an instance ([#289](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/289), [@bertinatto](https://github.com/bertinatto/))
+* Add helm chart ([#303](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/303), [@leakingtapan](https://github.com/leakingtapan/))
+* Add volume expansion ([#271](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/271), [@bertinatto](https://github.com/bertinatto/))
+* Remove cluster-driver-registrar ([#322](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/322), [@jsafrane](https://github.com/jsafrane/))
+* Upgrade to golang 1.12 ([#329](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/329), [@leakingtapan](https://github.com/leakingtapan/))
+* Fix bugs by passing fstype correctly ([#335](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/335), [@leakingtapan](https://github.com/leakingtapan/))
+* Output junit to ARTIFACTS for testgrid ([#340](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/340), [@wongma7](https://github.com/wongma7/))
+
 # v0.3.0
 [Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.3.0/docs/README.md)
 
@@ -15,7 +45,7 @@ Driver upgrade should be performed one version at a time by using following step
 1. Deploy the new driver controller service and node service along with other resources including cluster roles, cluster role bindings and service accounts.
 
 ## Changes since v0.2.0
-See [details](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/compare/v0.2.0...master) for all the changes.
+See [details](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/compare/v0.2.0...v0.3.0) for all the changes.
 
 ### Notable changes
 * Strip symbol for production build ([#201](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/201), [@leakingtapan](https://github.com/leakingtapan/))
