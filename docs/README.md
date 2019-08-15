@@ -27,13 +27,13 @@ The following CSI gRPC calls are implemented:
 ### CreateVolume Parameters
 There are several optional parameters that could be passed into `CreateVolumeRequest.parameters` map:
 
-| Parameters        | Values           | Default  | Description         |
-|-------------------|------------------|----------|---------------------|
-| "type"            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
-| "iopsPerGB"       |                  |          | I/O operations per second per GiB. Required when io1 volume type is specified |
-| "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
-| "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
-| "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
+| Parameters        | Values               | Default  | Description         |
+|-------------------|----------------------|----------|---------------------|
+| "type"            |io1, gp2, sc1, st1    | gp2      | EBS volume type     |
+| "iopsPerGB"       |                      |          | I/O operations per second per GiB. Required when io1 volume type is specified |
+| "fsType"          |xfs, ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
+| "encrypted"       |                      |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
+| "kmsKeyId"        |                      |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
 **Notes**:
 * The parameters are case insensitive.
@@ -61,10 +61,10 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 * **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
 * **Dynamic Provisioning** - uses persistence volume claim (PVC) to request the Kuberenetes to create the EBS volume on behalf of user and consumes the volume from inside container.
 * **Mount Option** - mount options could be specified in persistence volume (PV) to define how the volume should be mounted.
-* **Block Volume** - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
-* **Volume Snapshot** - creating volume snapshots and restore volume from snapshot.
 * **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
-* **Volume Resizing** - expand the volume size.
+* **Block Volume** (beta since 1.14) - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
+* **Volume Snapshot** (alpha) - creating volume snapshots and restore volume from snapshot.
+* **Volume Resizing** (alpha) - expand the volume size.
 
 ## Prerequisites
 * If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
@@ -115,7 +115,7 @@ Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If y
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.11.4+
+* Golang 1.12.7+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
