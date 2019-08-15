@@ -4,11 +4,31 @@ metadata:
   name: ebs-sc
 provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
-parameters:
-  csi.storage.k8s.io/fstype: xfs
-  type: io1
-  iopsPerGB: "50"
-  encrypted: "true"
+reclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-pv
+spec:
+  capacity:
+    storage: 50Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ebs-sc
+  csi:
+    driver: ebs.csi.aws.com
+    volumeHandle: vol-05786ec9ec9526b67
+    fsType: xfs
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: topology.ebs.csi.aws.com/zone
+          operator: In
+          values:
+          - us-east-1c 
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -20,7 +40,7 @@ spec:
   storageClassName: ebs-sc
   resources:
     requests:
-      storage: 4Gi
+      storage: 50Gi
 ---
 apiVersion: v1
 kind: Pod

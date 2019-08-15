@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -uo pipefail
+set -euo pipefail
 
 OS_ARCH=$(go env GOOS)-amd64
 TEST_ID=$RANDOM
@@ -47,6 +47,15 @@ chmod +x $KOPS_PATH
 
 helm::install
 
+echo "Build and push test driver image"
+eval $(aws ecr get-login --region $REGION --no-include-email)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+IMAGE_TAG=$TEST_ID
+IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver
+docker build -t $IMAGE_NAME:$IMAGE_TAG .
+docker push $IMAGE_NAME:$IMAGE_TAG
+
+set +e
 echo "Creating cluster $CLUSTER_NAME"
 CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
 SSH_KEY_PATH=$TEST_DIR/id_rsa
@@ -76,14 +85,6 @@ while [[ 1 ]]; do
         sleep 30
     fi
 done;
-
-# Push test driver image
-eval $(aws ecr get-login --region $REGION --no-include-email)
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-IMAGE_TAG=$TEST_ID
-IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver
-docker build -t $IMAGE_NAME:$IMAGE_TAG .
-docker push $IMAGE_NAME:$IMAGE_TAG
 
 echo "Deploying driver"
 helm::init
