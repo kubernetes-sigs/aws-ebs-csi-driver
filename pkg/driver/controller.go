@@ -52,19 +52,21 @@ var (
 
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
-	cloud cloud.Cloud
+	cloud         cloud.Cloud
+	driverOptions *DriverOptions
 }
 
 // newControllerService creates a new controller service
 // it panics if failed to create the service
-func newControllerService() controllerService {
+func newControllerService(driverOptions *DriverOptions) controllerService {
 	cloud, err := cloud.NewCloud()
 	if err != nil {
 		panic(err)
 	}
 
 	return controllerService{
-		cloud: cloud,
+		cloud:         cloud,
+		driverOptions: driverOptions,
 	}
 }
 
@@ -140,9 +142,17 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+
+	volumeTags := map[string]string{
+		cloud.VolumeNameTagKey: volName,
+	}
+	for k, v := range d.driverOptions.extraVolumeTags {
+		volumeTags[k] = v
+	}
+
 	opts := &cloud.DiskOptions{
 		CapacityBytes:    volSizeBytes,
-		Tags:             map[string]string{cloud.VolumeNameTagKey: volName},
+		Tags:             volumeTags,
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,

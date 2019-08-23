@@ -37,3 +37,8 @@ const (
 	// KmsKeyId represents key for KMS encryption key
 	KmsKeyIdKey = "kmskeyid"
 )
+
+// constants for default command line flag values
+const (
+	DefaultCSIEndpoint = "unix://tmp/csi.sock"
+)
