@@ -22,18 +22,25 @@ import (
 	"os"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/klog"
 )
 
 func main() {
 	var (
-		endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
-		version  = flag.Bool("version", false, "Print the version and exit.")
+		version         bool
+		endpoint        string
+		extraVolumeTags map[string]string
 	)
+
+	flag.BoolVar(&version, "version", false, "Print the version and exit.")
+	flag.StringVar(&endpoint, "endpoint", driver.DefaultCSIEndpoint, "CSI Endpoint")
+	flag.Var(cliflag.NewMapStringString(&extraVolumeTags), "extra-volume-tags", "Extra volume tags to attach to each dynamically provisioned volume. It is a comma separated list of key value pairs like '<key1>=<value1>,<key2>=<value2>'")
+
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	if *version {
+	if version {
 		info, err := driver.GetVersionJSON()
 		if err != nil {
 			klog.Fatalln(err)
@@ -42,7 +49,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	drv, err := driver.NewDriver(*endpoint)
+	drv, err := driver.NewDriver(
+		driver.WithEndpoint(endpoint),
+		driver.WithExtraVolumeTags(extraVolumeTags),
+	)
 	if err != nil {
 		klog.Fatalln(err)
 	}
