@@ -14,6 +14,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
+| v0.4.0                                 | no    | no     | yes    |
 | v0.3.0                                 | no    | yes    | no     |
 | v0.2.0                                 | no    | yes    | no     |
 | v0.1.0                                 | yes   | no     | no     |
@@ -44,15 +45,19 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Kubernetes Version Compability Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 |
 |----------------------------------------|-------|-------|-------|
-| master branch                          | no    | yes   | yes   |
-| v0.3.0                                 | no    | yes   | yes   |
+| master branch                          | no    | no+   | yes   |
+| v0.4.0                                 | no    | no+   | yes   |
+| v0.3.0                                 | no    | no+   | yes   |
 | v0.2.0                                 | no    | yes   | yes   |
 | v0.1.0                                 | yes   | yes   | yes   |
+
+**Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
 ## Container Images:
 |AWS EBS CSI Driver Version | Image                               |
 |---------------------------|-------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
+|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0     |
 |v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0     |
 |v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
 |v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
