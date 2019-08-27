@@ -14,10 +14,6 @@ helm::install() {
 helm::init() {
     declare -r rbac_file_path=$(dirname "${BASH_SOURCE}")/tiller-rbac.yaml
     kubectl apply -f $rbac_file_path
-    helm init --service-account tiller --history-max 200
-}
-
-helm::wait_tiller() {
-    kubectl wait --for=condition=Ready --timeout=600s deployment/tiller-deploy -n kube-system
+    helm init --service-account tiller --history-max 200 --wait
     kubectl get po -n kube-system
 }
