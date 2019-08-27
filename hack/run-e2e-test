@@ -110,7 +110,8 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
     go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="$FOCUS" -ginkgo.skip="\[Disruptive\]\
 |should.not.allow.expansion\
 |block.volmode.+volume-expand\
-|should.provision.storage.with.mount.options" -gce-zone=${ZONES%,*}
+|should.provision.storage.with.mount.options\
+|should.not.mount./.map.unused.volumes.in.a.pod" -gce-zone=${ZONES%,*}
     TEST_PASS=$?
     popd
 
