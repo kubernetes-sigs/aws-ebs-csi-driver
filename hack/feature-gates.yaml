@@ -3,9 +3,26 @@
       CSIDriverRegistry: "true"
       CSINodeInfo: "true"
       CSIBlockVolume: "true"
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
       VolumeSnapshotDataSource: "true"
+      CSIInlineVolume: "true"
+  kubeControllerManager:
+    featureGates:
+      CSIDriverRegistry: "true"
+      CSINodeInfo: "true"
+      CSIBlockVolume: "true"
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
+      CSIInlineVolume: "true"
   kubelet:
     featureGates:
       CSIDriverRegistry: "true"
       CSINodeInfo: "true"
       CSIBlockVolume: "true"
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
+      CSIInlineVolume: "true"
