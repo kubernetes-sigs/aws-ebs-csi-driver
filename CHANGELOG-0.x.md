@@ -1,4 +1,10 @@
 # v0.4.0
+[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.4.0/docs/README.md)
+
+filename  | sha512 hash
+--------- | ------------
+[v0.4.0.zip](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.4.0.zip) | `2f46b54211178ad1e55926284b9f6218be874038a1a62ef364809a5d2c37b7bbbe58a2cc4991b9cf44cbfe4966c61dd6c16df0790627dffac4f7df9ffc084a0c`
+[v0.4.0.tar.gz](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.4.0.tar.gz) | `0199df52ac1e19ee6b04efb80439024dde11de3d8fc292ce10527f2e658b393d8bfd4e37a6ec321cb415c9bdbee83ff5dbdf58e2336d03fe5d1b2717ccb11169`
 
 ## Action Required
 * Update Kubernetes cluster to 1.14+ before installing the driver, since the released driver manifest assumes 1.14+ cluster.
