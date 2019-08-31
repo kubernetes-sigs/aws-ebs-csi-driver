@@ -4,7 +4,7 @@ require (
 	bitbucket.org/ww/goautoneg v0.0.0-20120707110453-75cd24fc2f2c // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
-	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190901021541-950ab5eb9653 //indirect
+	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190906052806-9cfd86ce7f9c // indirect
 	github.com/aws/aws-sdk-go v1.16.26
 	github.com/container-storage-interface/spec v1.1.0
 	github.com/coreos/go-semver v0.2.0 // indirect

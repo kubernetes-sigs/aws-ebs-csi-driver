@@ -55,6 +55,8 @@ test-e2e-multi-az:
 .PHONY: test-e2e-migration
 test-e2e-migration:
 	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-migration\]" ./hack/run-e2e-test
+	# TODO: enable migration test to use new framework
+	#TESTCONFIG=./tester/migration-test-config.yaml go run tester/cmd/main.go
 
 .PHONY: image-release
 image-release:
