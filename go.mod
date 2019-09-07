@@ -4,6 +4,7 @@ require (
 	bitbucket.org/ww/goautoneg v0.0.0-20120707110453-75cd24fc2f2c // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
+	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190906052806-9cfd86ce7f9c // indirect
 	github.com/aws/aws-sdk-go v1.16.26
 	github.com/container-storage-interface/spec v1.1.0
 	github.com/coreos/go-semver v0.2.0 // indirect
@@ -37,9 +38,6 @@ require (
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/kubernetes-csi/csi-test v2.0.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter v1.0.1
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.4.3
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
@@ -63,7 +61,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.1 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
+	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v0.0.0
