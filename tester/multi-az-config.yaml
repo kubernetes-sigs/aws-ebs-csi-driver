@@ -1,0 +1,105 @@
+cluster:
+  kops:
+    stateFile: s3://k8s-kops-csi-e2e
+    zones: us-west-2a,us-west-2b,us-west-2c
+    nodeCount: 3
+    nodeSize: c5.large
+    kubernetesVersion: 1.15.3
+    featureGates: |2
+        kubeAPIServer:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            VolumeSnapshotDataSource: "true"
+            CSIInlineVolume: "true"
+        kubeControllerManager:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            CSIInlineVolume: "true"
+        kubelet:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            CSIInlineVolume: "true"
+    iamPolicies: |2
+        additionalPolicies:
+          node: |
+            [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ec2:AttachVolume",
+                  "ec2:CreateSnapshot",
+                  "ec2:CreateTags",
+                  "ec2:CreateVolume",
+                  "ec2:DeleteSnapshot",
+                  "ec2:DeleteTags",
+                  "ec2:DeleteVolume",
+                  "ec2:DescribeInstances",
+                  "ec2:DescribeSnapshots",
+                  "ec2:DescribeTags",
+                  "ec2:DescribeVolumes",
+                  "ec2:DetachVolume",
+                  "ec2:ModifyVolume",
+                  "ec2:DescribeVolumesModifications"
+                ],
+                "Resource": "*"
+              }
+            ]
+
+build: |
+  eval $(aws ecr get-login --region us-west-2 --no-include-email)
+  AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  IMAGE_TAG={{TEST_ID}}
+  IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/aws-ebs-csi-driver
+  docker build -t $IMAGE_NAME:$IMAGE_TAG .
+  docker push $IMAGE_NAME:$IMAGE_TAG
+
+install: |
+  echo "Deploying driver"
+  # install helm
+  OS_ARCH=$(go env GOOS)-amd64
+  helm_name=helm-v2.14.1-$OS_ARCH.tar.gz
+  wget https://get.helm.sh/$helm_name
+  tar xvzf $helm_name
+  mv $OS_ARCH/helm /usr/local/bin/helm
+
+  AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  IMAGE_TAG={{TEST_ID}}
+  IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/aws-ebs-csi-driver
+
+  # install tiller
+  kubectl apply -f ./hack/utils/tiller-rbac.yaml 
+  helm init --service-account tiller --history-max 200 --wait
+  kubectl get po -n kube-system
+
+  helm install --name aws-ebs-csi-driver \
+      --set enableVolumeScheduling=true \
+      --set enableVolumeResizing=true \
+      --set enableVolumeSnapshot=true \
+      --set image.repository=$IMAGE_NAME \
+      --set image.tag=$IMAGE_TAG \
+      ./aws-ebs-csi-driver
+
+uninstall: | 
+  echo "Removing driver"
+  helm del --purge aws-ebs-csi-driver
+
+test: |
+  go get -u github.com/onsi/ginkgo/ginkgo
+  export KUBECONFIG=$HOME/.kube/config
+  export AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c
+  ginkgo -p -nodes=32 -v --focus="\[ebs-csi-e2e\] \[multi-az\]" tests/e2e -- -report-dir=$ARTIFACTS

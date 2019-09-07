@@ -1,0 +1,136 @@
+cluster:
+  kops:
+    stateFile: s3://k8s-kops-csi-e2e
+    zones: us-west-2a
+    nodeCount: 3
+    nodeSize: c5.large
+    kubernetesVersion: 1.15.3
+    featureGates: |2
+        kubeAPIServer:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            VolumeSnapshotDataSource: "true"
+            CSIInlineVolume: "true"
+        kubeControllerManager:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            CSIInlineVolume: "true"
+        kubelet:
+          featureGates:
+            CSIDriverRegistry: "true"
+            CSINodeInfo: "true"
+            CSIBlockVolume: "true"
+            CSIMigration: "true"
+            CSIMigrationAWS: "true"
+            ExpandCSIVolumes: "true"
+            CSIInlineVolume: "true"
+    iamPolicies: |2
+        additionalPolicies:
+          node: |
+            [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ec2:AttachVolume",
+                  "ec2:CreateSnapshot",
+                  "ec2:CreateTags",
+                  "ec2:CreateVolume",
+                  "ec2:DeleteSnapshot",
+                  "ec2:DeleteTags",
+                  "ec2:DeleteVolume",
+                  "ec2:DescribeInstances",
+                  "ec2:DescribeSnapshots",
+                  "ec2:DescribeTags",
+                  "ec2:DescribeVolumes",
+                  "ec2:DetachVolume",
+                  "ec2:ModifyVolume",
+                  "ec2:DescribeVolumesModifications"
+                ],
+                "Resource": "*"
+              }
+            ]
+
+build: |
+  eval $(aws ecr get-login --region us-west-2 --no-include-email)
+  AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  IMAGE_TAG={{TEST_ID}}
+  IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/aws-ebs-csi-driver
+  docker build -t $IMAGE_NAME:$IMAGE_TAG .
+  docker push $IMAGE_NAME:$IMAGE_TAG
+
+install: |
+  echo "Deploying driver"
+  # install helm
+  OS_ARCH=$(go env GOOS)-amd64
+  helm_name=helm-v2.14.1-$OS_ARCH.tar.gz
+  wget https://get.helm.sh/$helm_name
+  tar xvzf $helm_name
+  mv $OS_ARCH/helm /usr/local/bin/helm
+
+  AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  IMAGE_TAG={{TEST_ID}}
+  IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/aws-ebs-csi-driver
+
+  # install tiller
+  kubectl apply -f ./hack/utils/tiller-rbac.yaml 
+  helm init --service-account tiller --history-max 200 --wait
+  kubectl get po -n kube-system
+
+  helm install --name aws-ebs-csi-driver \
+      --set enableVolumeScheduling=true \
+      --set enableVolumeResizing=true \
+      --set enableVolumeSnapshot=true \
+      --set image.repository=$IMAGE_NAME \
+      --set image.tag=$IMAGE_TAG \
+      ./aws-ebs-csi-driver
+
+uninstall: | 
+  echo "Removing driver"
+  helm del --purge aws-ebs-csi-driver
+
+test: |
+  # TODO known test failures to skip temporarily
+  # - should not allow expansion of pvcs without AllowVolumeExpansion property
+  #   - Test passes but cleanup fails, need https://github.com/kubernetes/kubernetes/pull/81107
+  # - (block volmode) Verify if offline PVC expansion works / should resize volume when PVC is edited while pod is using it
+  #   - NodeExpand for BlockVolumes not well-defined, need more investigation and possibly https://github.com/container-storage-interface/spec/issues/380
+  # - should provision storage with mount options
+  #   - Known bug, need https://github.com/kubernetes/kubernetes/pull/80191 but not yet in a patch release
+  cd ./tests/e2e-migration
+  go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="\[ebs-csi-migration\]" -ginkgo.skip="\[Disruptive\]\
+    |should.not.allow.expansion\
+    |block.volmode.+volume-expand\
+    |should.provision.storage.with.mount.options\
+    |should.not.mount./.map.unused.volumes.in.a.pod" -gce-zone=us-west-2a
+  TEST_PASS=$?
+  cd ../..
+
+  # There should have been no calls to the in-tree driver kubernetes.io/aws-ebs but many calls to ebs.csi.aws.com
+  # Find the controller-manager log and read its metrics to verify
+  NODE=$(kubectl get node -l kubernetes.io/role=master -o json | jq -r ".items[].metadata.name")
+  kubectl port-forward kube-controller-manager-$NODE 10252:10252 -n kube-system&
+  curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="ebs.csi.aws.com"'
+  CSI_CALLED=$?
+  curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="kubernetes.io/aws-ebs"'
+  INTREE_CALLED=$?
+
+  # TEST_PASS if tests passed, CSI was called, and In-tree was not called
+  if [ "$TEST_PASS" == 0 ] && [ "$CSI_CALLED" == 0 ] && [ "$INTREE_CALLED" == 1 ]; then
+      TEST_PASS=0
+  else
+      TEST_PASS=1
+  fi
+
+  if [[ $TEST_PASS -ne 0 ]]; then
+      exit 1
+  fi
