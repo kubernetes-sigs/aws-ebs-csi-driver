@@ -97,7 +97,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1
 
 #### Deploy driver
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/manifest.yaml
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
 ```
 
 Verify driver is running:
