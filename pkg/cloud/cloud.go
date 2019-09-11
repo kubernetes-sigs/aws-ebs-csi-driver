@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -222,6 +223,11 @@ func newEC2Cloud(metadata MetadataService, svc *ec2metadata.EC2Metadata) (Cloud,
 		Region:                        aws.String(metadata.GetRegion()),
 		Credentials:                   credentials.NewChainCredentials(provider),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+	}
+
+	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
+	if endpoint != "" {
+		awsConfig.Endpoint = aws.String(endpoint)
 	}
 
 	return &cloud{
