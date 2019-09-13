@@ -63,7 +63,6 @@ spec:
         - name: csi-provisioner
           image: quay.io/k8scsi/csi-provisioner:v1.3.0
           args:
-            - --provisioner=ebs.csi.aws.com
             - --csi-address=$(ADDRESS)
             - --v=5
             - --feature-gates=Topology=true
