@@ -1497,6 +1497,34 @@ func TestControllerPublishVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success when resource is not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+				expResp := &csi.ControllerUnpublishVolumeResponse{}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(cloud.ErrNotFound)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
+			},
+		},
+		{
 			name: "fail no VolumeId",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{}
