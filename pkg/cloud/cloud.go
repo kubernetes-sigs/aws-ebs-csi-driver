@@ -47,10 +47,18 @@ const (
 	VolumeTypeSC1 = "sc1"
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
 	VolumeTypeST1 = "st1"
+	// VolumeTypeStandard represents a previous type of  volume.
+	VolumeTypeStandard = "standard"
 )
 
 var (
-	ValidVolumeTypes = []string{VolumeTypeIO1, VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1}
+	ValidVolumeTypes = []string{
+		VolumeTypeIO1,
+		VolumeTypeGP2,
+		VolumeTypeSC1,
+		VolumeTypeST1,
+		VolumeTypeStandard,
+	}
 )
 
 // AWS provisioning limits.
@@ -249,7 +257,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1:
+	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
