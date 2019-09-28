@@ -126,6 +126,8 @@ func MinimumSizeForVolumeType(volumeType string) string {
 		return "1Gi"
 	case "io1":
 		return "4Gi"
+	case "standard":
+		return "10Gi"
 	default:
 		return "1Gi"
 	}
