@@ -22,13 +22,16 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
+    verbs: ["list", "watch", "create", "update", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csinodes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
 
 ---
 
