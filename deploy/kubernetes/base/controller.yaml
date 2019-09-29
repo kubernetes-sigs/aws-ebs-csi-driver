@@ -1,13 +1,12 @@
 ---
 # Controller Service
-kind: StatefulSet
+kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
   namespace: kube-system
 spec:
-  serviceName: ebs-csi-controller
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: ebs-csi-controller
@@ -66,6 +65,8 @@ spec:
             - --csi-address=$(ADDRESS)
             - --v=5
             - --feature-gates=Topology=true
+            - --enable-leader-election
+            - --leader-election-type=leases
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
