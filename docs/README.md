@@ -111,6 +111,15 @@ Verify driver is running:
 kubectl get pods -n kube-system
 ```
 
+Alternatively, you could also install the driver using helm:
+```sh
+helm install --name aws-ebs-csi-driver \
+    --set enableVolumeScheduling=true \
+    --set enableVolumeResizing=true \
+    --set enableVolumeSnapshot=true \
+    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.4.0/helm-chart.tgz
+```
+
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
 * [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
