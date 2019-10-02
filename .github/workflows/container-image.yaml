@@ -1,0 +1,38 @@
+name: Container Images
+
+on: push
+jobs:
+  build:
+    # this is to prevent the job to run at forked projects
+    if: github.repository == 'kubernetes-sigs/aws-ebs-csi-driver'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build container image
+      run: |
+        docker build -t aws-ebs-csi-driver .
+    - name: Push to Github registry
+      run: |
+        USER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+        BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
+        IMAGE=aws-ebs-csi-driver
+        if [ "$BRANCH" = "master" ]; then
+          TAG="latest"
+        else
+          TAG=$BRANCH
+        fi
+        docker login docker.pkg.github.com -u $USER -p ${{ secrets.REGISTRY_TOKEN }}
+        docker tag aws-ebs-csi-driver docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
+        docker push docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
+    - name: Push to Dockerhub registry
+      run: |
+        BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
+        IMAGE=aws-ebs-csi-driver
+        if [ "$BRANCH" = "master" ]; then
+          TAG="latest"
+        else
+          TAG=$BRANCH
+        fi
+        docker login -u ${{ secrets.DOCKERHUB_USER }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+        docker tag aws-ebs-csi-driver ${{secrets.DOCKERHUB_USER}}/$IMAGE:$TAG
+        docker push ${{secrets.DOCKERHUB_USER}}/$IMAGE:$TAG
