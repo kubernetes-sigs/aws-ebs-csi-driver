@@ -53,5 +53,5 @@ replace k8s.io/sample-controller => k8s.io/sample-controller v0.0.0-201910030017
 require (
 	github.com/onsi/ginkgo v1.9.0
 	github.com/onsi/gomega v1.6.0
-	k8s.io/kubernetes v1.16.0-beta.2
+	k8s.io/kubernetes v1.16.1
 )
