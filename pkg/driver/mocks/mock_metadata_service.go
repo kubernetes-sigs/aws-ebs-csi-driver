@@ -34,6 +34,7 @@ func (m *MockMetadataService) EXPECT() *MockMetadataServiceMockRecorder {
 
 // GetAvailabilityZone mocks base method
 func (m *MockMetadataService) GetAvailabilityZone() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAvailabilityZone")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -41,11 +42,13 @@ func (m *MockMetadataService) GetAvailabilityZone() string {
 
 // GetAvailabilityZone indicates an expected call of GetAvailabilityZone
 func (mr *MockMetadataServiceMockRecorder) GetAvailabilityZone() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailabilityZone", reflect.TypeOf((*MockMetadataService)(nil).GetAvailabilityZone))
 }
 
 // GetInstanceID mocks base method
 func (m *MockMetadataService) GetInstanceID() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInstanceID")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -53,11 +56,13 @@ func (m *MockMetadataService) GetInstanceID() string {
 
 // GetInstanceID indicates an expected call of GetInstanceID
 func (mr *MockMetadataServiceMockRecorder) GetInstanceID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceID", reflect.TypeOf((*MockMetadataService)(nil).GetInstanceID))
 }
 
 // GetInstanceType mocks base method
 func (m *MockMetadataService) GetInstanceType() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInstanceType")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -65,11 +70,13 @@ func (m *MockMetadataService) GetInstanceType() string {
 
 // GetInstanceType indicates an expected call of GetInstanceType
 func (mr *MockMetadataServiceMockRecorder) GetInstanceType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceType", reflect.TypeOf((*MockMetadataService)(nil).GetInstanceType))
 }
 
 // GetRegion mocks base method
 func (m *MockMetadataService) GetRegion() string {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRegion")
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -77,5 +84,6 @@ func (m *MockMetadataService) GetRegion() string {
 
 // GetRegion indicates an expected call of GetRegion
 func (mr *MockMetadataServiceMockRecorder) GetRegion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockMetadataService)(nil).GetRegion))
 }

@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -38,6 +38,8 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2edeployment "k8s.io/kubernetes/test/e2e/framework/deployment"
 	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
+	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
 
@@ -289,7 +291,7 @@ func (t *TestPersistentVolumeClaim) WaitForBound() v1.PersistentVolumeClaim {
 	var err error
 
 	By(fmt.Sprintf("waiting for PVC to be in phase %q", v1.ClaimBound))
-	err = framework.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, t.client, t.namespace.Name, t.persistentVolumeClaim.Name, framework.Poll, framework.ClaimProvisionTimeout)
+	err = e2epv.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, t.client, t.namespace.Name, t.persistentVolumeClaim.Name, framework.Poll, framework.ClaimProvisionTimeout)
 	framework.ExpectNoError(err)
 
 	By("checking the PVC")
@@ -324,7 +326,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 
 func (t *TestPersistentVolumeClaim) Cleanup() {
 	e2elog.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
-	err := framework.DeletePersistentVolumeClaim(t.client, t.persistentVolumeClaim.Name, t.namespace.Name)
+	err := e2epv.DeletePersistentVolumeClaim(t.client, t.persistentVolumeClaim.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 	// Wait for the PV to get deleted if reclaim policy is Delete. (If it's
 	// Retain, there's no use waiting because the PV won't be auto-deleted and
@@ -338,7 +340,7 @@ func (t *TestPersistentVolumeClaim) Cleanup() {
 		framework.ExpectNoError(err)
 	}
 	// Wait for the PVC to be deleted
-	err = framework.WaitForPersistentVolumeClaimDeleted(t.client, t.persistentVolumeClaim.Name, t.namespace.Name, 5*time.Second, 5*time.Minute)
+	err = waitForPersistentVolumeClaimDeleted(t.client, t.namespace.Name, t.persistentVolumeClaim.Name, 5*time.Second, 5*time.Minute)
 	framework.ExpectNoError(err)
 }
 
@@ -347,13 +349,13 @@ func (t *TestPersistentVolumeClaim) ReclaimPolicy() v1.PersistentVolumeReclaimPo
 }
 
 func (t *TestPersistentVolumeClaim) WaitForPersistentVolumePhase(phase v1.PersistentVolumePhase) {
-	err := framework.WaitForPersistentVolumePhase(phase, t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
+	err := e2epv.WaitForPersistentVolumePhase(phase, t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
 	framework.ExpectNoError(err)
 }
 
 func (t *TestPersistentVolumeClaim) DeleteBoundPersistentVolume() {
 	By(fmt.Sprintf("deleting PV %q", t.persistentVolume.Name))
-	err := framework.DeletePersistentVolume(t.client, t.persistentVolume.Name)
+	err := e2epv.DeletePersistentVolume(t.client, t.persistentVolume.Name)
 	framework.ExpectNoError(err)
 	By(fmt.Sprintf("waiting for claim's PV %q to be deleted", t.persistentVolume.Name))
 	err = framework.WaitForPersistentVolumeDeleted(t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
@@ -448,7 +450,7 @@ func (t *TestDeployment) WaitForPodReady() {
 	// always get first pod as there should only be one
 	pod := pods.Items[0]
 	t.podName = pod.Name
-	err = framework.WaitForPodRunningInNamespace(t.client, &pod)
+	err = e2epod.WaitForPodRunningInNamespace(t.client, &pod)
 	framework.ExpectNoError(err)
 }
 
@@ -467,7 +469,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 		return
 	}
 	e2elog.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
-	err = framework.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
+	err = e2epod.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
 			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
@@ -489,6 +491,22 @@ func (t *TestDeployment) Cleanup() {
 
 func (t *TestDeployment) Logs() ([]byte, error) {
 	return podLogs(t.client, t.podName, t.namespace.Name)
+}
+
+// waitForPersistentVolumeClaimDeleted waits for a PersistentVolumeClaim to be removed from the system until timeout occurs, whichever comes first.
+func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcName string, Poll, timeout time.Duration) error {
+	framework.Logf("Waiting up to %v for PersistentVolumeClaim %s to be removed", timeout, pvcName)
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(Poll) {
+		_, err := c.CoreV1().PersistentVolumeClaims(ns).Get(pvcName, metav1.GetOptions{})
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				framework.Logf("Claim %q in namespace %q doesn't exist in the system", pvcName, ns)
+				return nil
+			}
+			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %v", pvcName, ns, Poll, err)
+		}
+	}
+	return fmt.Errorf("PersistentVolumeClaim %s is not removed from the system within %v", pvcName, timeout)
 }
 
 type TestPod struct {
@@ -530,12 +548,12 @@ func (t *TestPod) Create() {
 }
 
 func (t *TestPod) WaitForSuccess() {
-	err := framework.WaitForPodSuccessInNamespaceSlow(t.client, t.pod.Name, t.namespace.Name)
+	err := e2epod.WaitForPodSuccessInNamespaceSlow(t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 }
 
 func (t *TestPod) WaitForRunning() {
-	err := framework.WaitForPodRunningInNamespace(t.client, t.pod)
+	err := e2epod.WaitForPodRunningInNamespace(t.client, t.pod)
 	framework.ExpectNoError(err)
 }
 
@@ -554,7 +572,7 @@ var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 }
 
 func (t *TestPod) WaitForFailure() {
-	err := framework.WaitForPodCondition(t.client, t.namespace.Name, t.pod.Name, failedConditionDescription, slowPodStartTimeout, podFailedCondition)
+	err := e2epod.WaitForPodCondition(t.client, t.namespace.Name, t.pod.Name, failedConditionDescription, slowPodStartTimeout, podFailedCondition)
 	framework.ExpectNoError(err)
 }
 
@@ -615,7 +633,7 @@ func cleanupPodOrFail(client clientset.Interface, name, namespace string) {
 	} else {
 		e2elog.Logf("Pod %s has the following logs: %s", name, body)
 	}
-	framework.DeletePodOrFail(client, namespace, name)
+	e2epod.DeletePodOrFail(client, namespace, name)
 }
 
 func podLogs(client clientset.Interface, name, namespace string) ([]byte, error) {
