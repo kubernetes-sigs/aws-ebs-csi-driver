@@ -15,6 +15,7 @@ limitations under the License.
 package e2e
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -32,6 +33,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/kubernetes/test/e2e/framework"
+	frameworkconfig "k8s.io/kubernetes/test/e2e/framework/config"
 )
 
 const kubeconfigEnvVar = "KUBECONFIG"
@@ -45,8 +47,12 @@ func init() {
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		os.Setenv(kubeconfigEnvVar, kubeconfig)
 	}
-	framework.HandleFlags()
 	framework.AfterReadingAllFlags(&framework.TestContext)
+
+	frameworkconfig.CopyFlags(frameworkconfig.Flags, flag.CommandLine)
+	framework.RegisterCommonFlags(flag.CommandLine)
+	framework.RegisterClusterFlags(flag.CommandLine)
+	flag.Parse()
 }
 
 func TestE2E(t *testing.T) {

@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
@@ -547,6 +547,6 @@ func restClient(group string, version string) (restclientset.Interface, error) {
 	gv := schema.GroupVersion{Group: group, Version: version}
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(runtime.NewScheme())}
+	config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: serializer.NewCodecFactory(runtime.NewScheme())}
 	return restclientset.RESTClientFor(config)
 }
