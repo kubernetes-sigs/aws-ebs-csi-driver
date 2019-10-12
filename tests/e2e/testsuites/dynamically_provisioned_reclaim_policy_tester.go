@@ -35,7 +35,7 @@ func (t *DynamicallyProvisionedReclaimPolicyTest) Run(client clientset.Interface
 		tpvc, _ := volume.SetupDynamicPersistentVolumeClaim(client, namespace, t.CSIDriver)
 
 		// will delete the PVC
-		// will also wait for PV to be deleted when reclaimPolicy=Delete
+		// will also wait for PV to be deleted separately when reclaimPolicy=Retian
 		tpvc.Cleanup()
 		// first check PV stills exists, then manually delete it
 		if tpvc.ReclaimPolicy() == v1.PersistentVolumeReclaimRetain {
