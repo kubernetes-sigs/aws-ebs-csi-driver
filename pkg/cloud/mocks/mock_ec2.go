@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	aws "github.com/aws/aws-sdk-go/aws"
+	context "context"
 	request "github.com/aws/aws-sdk-go/aws/request"
 	ec2 "github.com/aws/aws-sdk-go/service/ec2"
 	gomock "github.com/golang/mock/gomock"
@@ -36,7 +36,7 @@ func (m *MockEC2) EXPECT() *MockEC2MockRecorder {
 }
 
 // AttachVolumeWithContext mocks base method
-func (m *MockEC2) AttachVolumeWithContext(arg0 aws.Context, arg1 *ec2.AttachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
+func (m *MockEC2) AttachVolumeWithContext(arg0 context.Context, arg1 *ec2.AttachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -54,7 +54,7 @@ func (mr *MockEC2MockRecorder) AttachVolumeWithContext(arg0, arg1 interface{}, a
 }
 
 // CreateSnapshotWithContext mocks base method
-func (m *MockEC2) CreateSnapshotWithContext(arg0 aws.Context, arg1 *ec2.CreateSnapshotInput, arg2 ...request.Option) (*ec2.Snapshot, error) {
+func (m *MockEC2) CreateSnapshotWithContext(arg0 context.Context, arg1 *ec2.CreateSnapshotInput, arg2 ...request.Option) (*ec2.Snapshot, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -72,7 +72,7 @@ func (mr *MockEC2MockRecorder) CreateSnapshotWithContext(arg0, arg1 interface{},
 }
 
 // CreateVolumeWithContext mocks base method
-func (m *MockEC2) CreateVolumeWithContext(arg0 aws.Context, arg1 *ec2.CreateVolumeInput, arg2 ...request.Option) (*ec2.Volume, error) {
+func (m *MockEC2) CreateVolumeWithContext(arg0 context.Context, arg1 *ec2.CreateVolumeInput, arg2 ...request.Option) (*ec2.Volume, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -90,7 +90,7 @@ func (mr *MockEC2MockRecorder) CreateVolumeWithContext(arg0, arg1 interface{}, a
 }
 
 // DeleteSnapshotWithContext mocks base method
-func (m *MockEC2) DeleteSnapshotWithContext(arg0 aws.Context, arg1 *ec2.DeleteSnapshotInput, arg2 ...request.Option) (*ec2.DeleteSnapshotOutput, error) {
+func (m *MockEC2) DeleteSnapshotWithContext(arg0 context.Context, arg1 *ec2.DeleteSnapshotInput, arg2 ...request.Option) (*ec2.DeleteSnapshotOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -108,7 +108,7 @@ func (mr *MockEC2MockRecorder) DeleteSnapshotWithContext(arg0, arg1 interface{},
 }
 
 // DeleteVolumeWithContext mocks base method
-func (m *MockEC2) DeleteVolumeWithContext(arg0 aws.Context, arg1 *ec2.DeleteVolumeInput, arg2 ...request.Option) (*ec2.DeleteVolumeOutput, error) {
+func (m *MockEC2) DeleteVolumeWithContext(arg0 context.Context, arg1 *ec2.DeleteVolumeInput, arg2 ...request.Option) (*ec2.DeleteVolumeOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -125,8 +125,26 @@ func (mr *MockEC2MockRecorder) DeleteVolumeWithContext(arg0, arg1 interface{}, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DeleteVolumeWithContext), varargs...)
 }
 
+// DescribeAvailabilityZonesWithContext mocks base method
+func (m *MockEC2) DescribeAvailabilityZonesWithContext(arg0 context.Context, arg1 *ec2.DescribeAvailabilityZonesInput, arg2 ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeAvailabilityZonesWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeAvailabilityZonesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeAvailabilityZonesWithContext indicates an expected call of DescribeAvailabilityZonesWithContext
+func (mr *MockEC2MockRecorder) DescribeAvailabilityZonesWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAvailabilityZonesWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeAvailabilityZonesWithContext), varargs...)
+}
+
 // DescribeInstancesWithContext mocks base method
-func (m *MockEC2) DescribeInstancesWithContext(arg0 aws.Context, arg1 *ec2.DescribeInstancesInput, arg2 ...request.Option) (*ec2.DescribeInstancesOutput, error) {
+func (m *MockEC2) DescribeInstancesWithContext(arg0 context.Context, arg1 *ec2.DescribeInstancesInput, arg2 ...request.Option) (*ec2.DescribeInstancesOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -144,7 +162,7 @@ func (mr *MockEC2MockRecorder) DescribeInstancesWithContext(arg0, arg1 interface
 }
 
 // DescribeSnapshotsWithContext mocks base method
-func (m *MockEC2) DescribeSnapshotsWithContext(arg0 aws.Context, arg1 *ec2.DescribeSnapshotsInput, arg2 ...request.Option) (*ec2.DescribeSnapshotsOutput, error) {
+func (m *MockEC2) DescribeSnapshotsWithContext(arg0 context.Context, arg1 *ec2.DescribeSnapshotsInput, arg2 ...request.Option) (*ec2.DescribeSnapshotsOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -162,7 +180,7 @@ func (mr *MockEC2MockRecorder) DescribeSnapshotsWithContext(arg0, arg1 interface
 }
 
 // DescribeVolumesModificationsWithContext mocks base method
-func (m *MockEC2) DescribeVolumesModificationsWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesModificationsInput, arg2 ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error) {
+func (m *MockEC2) DescribeVolumesModificationsWithContext(arg0 context.Context, arg1 *ec2.DescribeVolumesModificationsInput, arg2 ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -180,7 +198,7 @@ func (mr *MockEC2MockRecorder) DescribeVolumesModificationsWithContext(arg0, arg
 }
 
 // DescribeVolumesWithContext mocks base method
-func (m *MockEC2) DescribeVolumesWithContext(arg0 aws.Context, arg1 *ec2.DescribeVolumesInput, arg2 ...request.Option) (*ec2.DescribeVolumesOutput, error) {
+func (m *MockEC2) DescribeVolumesWithContext(arg0 context.Context, arg1 *ec2.DescribeVolumesInput, arg2 ...request.Option) (*ec2.DescribeVolumesOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -198,7 +216,7 @@ func (mr *MockEC2MockRecorder) DescribeVolumesWithContext(arg0, arg1 interface{}
 }
 
 // DetachVolumeWithContext mocks base method
-func (m *MockEC2) DetachVolumeWithContext(arg0 aws.Context, arg1 *ec2.DetachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
+func (m *MockEC2) DetachVolumeWithContext(arg0 context.Context, arg1 *ec2.DetachVolumeInput, arg2 ...request.Option) (*ec2.VolumeAttachment, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -216,7 +234,7 @@ func (mr *MockEC2MockRecorder) DetachVolumeWithContext(arg0, arg1 interface{}, a
 }
 
 // ModifyVolumeWithContext mocks base method
-func (m *MockEC2) ModifyVolumeWithContext(arg0 aws.Context, arg1 *ec2.ModifyVolumeInput, arg2 ...request.Option) (*ec2.ModifyVolumeOutput, error) {
+func (m *MockEC2) ModifyVolumeWithContext(arg0 context.Context, arg1 *ec2.ModifyVolumeInput, arg2 ...request.Option) (*ec2.ModifyVolumeOutput, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)

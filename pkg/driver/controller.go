@@ -59,7 +59,12 @@ type controllerService struct {
 // newControllerService creates a new controller service
 // it panics if failed to create the service
 func newControllerService(driverOptions *DriverOptions) controllerService {
-	cloud, err := cloud.NewCloud()
+	metadata, err := cloud.NewMetadata()
+	if err != nil {
+		panic(err)
+	}
+	region := metadata.GetRegion()
+	cloud, err := cloud.NewCloud(region)
 	if err != nil {
 		panic(err)
 	}

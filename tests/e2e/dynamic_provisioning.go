@@ -363,8 +363,8 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		}
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
-		metadata := e2eMetdataService{availabilityZone: availabilityZone}
-		cloud, err := awscloud.NewCloudWithMetadata(metadata)
+		region := availabilityZone[0 : len(availabilityZone)-1]
+		cloud, err := awscloud.NewCloud(region)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

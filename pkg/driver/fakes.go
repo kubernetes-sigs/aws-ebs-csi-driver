@@ -34,7 +34,11 @@ func NewFakeDriver(endpoint string, fakeCloud cloud.Cloud, fakeMounter *mount.Fa
 			driverOptions: driverOptions,
 		},
 		nodeService: nodeService{
-			metadata: fakeCloud.GetMetadata(),
+			metadata: &cloud.Metadata{
+				InstanceID:       "instanceID",
+				Region:           "region",
+				AvailabilityZone: "az",
+			},
 			mounter:  &NodeMounter{mount.SafeFormatAndMount{Interface: fakeMounter, Exec: mount.NewFakeExec(nil)}},
 			inFlight: internal.NewInFlight(),
 		},

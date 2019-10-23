@@ -34,18 +34,6 @@ func (m *MockMounter) EXPECT() *MockMounterMockRecorder {
 	return m.recorder
 }
 
-// CleanSubPaths mocks base method
-func (m *MockMounter) CleanSubPaths(arg0, arg1 string) error {
-	ret := m.ctrl.Call(m, "CleanSubPaths", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CleanSubPaths indicates an expected call of CleanSubPaths
-func (mr *MockMounterMockRecorder) CleanSubPaths(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanSubPaths", reflect.TypeOf((*MockMounter)(nil).CleanSubPaths), arg0, arg1)
-}
-
 // DeviceOpened mocks base method
 func (m *MockMounter) DeviceOpened(arg0 string) (bool, error) {
 	ret := m.ctrl.Call(m, "DeviceOpened", arg0)
@@ -214,19 +202,6 @@ func (mr *MockMounterMockRecorder) IsMountPointMatch(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMountPointMatch", reflect.TypeOf((*MockMounter)(nil).IsMountPointMatch), arg0, arg1)
 }
 
-// IsNotMountPoint mocks base method
-func (m *MockMounter) IsNotMountPoint(arg0 string) (bool, error) {
-	ret := m.ctrl.Call(m, "IsNotMountPoint", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsNotMountPoint indicates an expected call of IsNotMountPoint
-func (mr *MockMounterMockRecorder) IsNotMountPoint(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNotMountPoint", reflect.TypeOf((*MockMounter)(nil).IsNotMountPoint), arg0)
-}
-
 // List mocks base method
 func (m *MockMounter) List() ([]mount.MountPoint, error) {
 	ret := m.ctrl.Call(m, "List")
@@ -301,20 +276,6 @@ func (mr *MockMounterMockRecorder) PathIsDevice(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PathIsDevice", reflect.TypeOf((*MockMounter)(nil).PathIsDevice), arg0)
 }
 
-// PrepareSafeSubpath mocks base method
-func (m *MockMounter) PrepareSafeSubpath(arg0 mount.Subpath) (string, func(), error) {
-	ret := m.ctrl.Call(m, "PrepareSafeSubpath", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(func())
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// PrepareSafeSubpath indicates an expected call of PrepareSafeSubpath
-func (mr *MockMounterMockRecorder) PrepareSafeSubpath(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareSafeSubpath", reflect.TypeOf((*MockMounter)(nil).PrepareSafeSubpath), arg0)
-}
-
 // Run mocks base method
 func (m *MockMounter) Run(arg0 string, arg1 ...string) ([]byte, error) {
 	varargs := []interface{}{arg0}
@@ -331,18 +292,6 @@ func (m *MockMounter) Run(arg0 string, arg1 ...string) ([]byte, error) {
 func (mr *MockMounterMockRecorder) Run(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockMounter)(nil).Run), varargs...)
-}
-
-// SafeMakeDir mocks base method
-func (m *MockMounter) SafeMakeDir(arg0, arg1 string, arg2 os.FileMode) error {
-	ret := m.ctrl.Call(m, "SafeMakeDir", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SafeMakeDir indicates an expected call of SafeMakeDir
-func (mr *MockMounterMockRecorder) SafeMakeDir(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SafeMakeDir", reflect.TypeOf((*MockMounter)(nil).SafeMakeDir), arg0, arg1, arg2)
 }
 
 // Unmount mocks base method
