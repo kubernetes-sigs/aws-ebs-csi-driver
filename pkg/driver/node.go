@@ -77,13 +77,13 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it panics if failed to create the service
 func newNodeService() nodeService {
-	cloud, err := cloud.NewCloud()
+	metadata, err := cloud.NewMetadata()
 	if err != nil {
 		panic(err)
 	}
 
 	return nodeService{
-		metadata: cloud.GetMetadata(),
+		metadata: metadata,
 		mounter:  newNodeMounter(),
 		inFlight: internal.NewInFlight(),
 	}
@@ -353,14 +353,13 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
-	m := d.metadata
 
 	topology := &csi.Topology{
-		Segments: map[string]string{TopologyKey: m.GetAvailabilityZone()},
+		Segments: map[string]string{TopologyKey: d.metadata.GetAvailabilityZone()},
 	}
 
 	return &csi.NodeGetInfoResponse{
-		NodeId:             m.GetInstanceID(),
+		NodeId:             d.metadata.GetInstanceID(),
 		MaxVolumesPerNode:  d.getVolumesLimit(),
 		AccessibleTopology: topology,
 	}, nil

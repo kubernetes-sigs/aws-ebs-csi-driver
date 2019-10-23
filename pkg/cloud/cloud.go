@@ -25,7 +25,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -180,10 +179,10 @@ type EC2 interface {
 	DescribeSnapshotsWithContext(ctx aws.Context, input *ec2.DescribeSnapshotsInput, opts ...request.Option) (*ec2.DescribeSnapshotsOutput, error)
 	ModifyVolumeWithContext(ctx aws.Context, input *ec2.ModifyVolumeInput, opts ...request.Option) (*ec2.ModifyVolumeOutput, error)
 	DescribeVolumesModificationsWithContext(ctx aws.Context, input *ec2.DescribeVolumesModificationsInput, opts ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error)
+	DescribeAvailabilityZonesWithContext(ctx aws.Context, input *ec2.DescribeAvailabilityZonesInput, opts ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error)
 }
 
 type Cloud interface {
-	GetMetadata() MetadataService
 	CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
@@ -201,38 +200,22 @@ type Cloud interface {
 }
 
 type cloud struct {
-	metadata MetadataService
-	ec2      EC2
-	dm       dm.DeviceManager
+	region string
+	ec2    EC2
+	dm     dm.DeviceManager
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud() (Cloud, error) {
-	svc := newEC2MetadataSvc()
-
-	metadata, err := NewMetadataService(svc)
-	if err != nil {
-		return nil, fmt.Errorf("could not get metadata from AWS: %v", err)
-	}
-
-	return newEC2Cloud(metadata, svc)
+func NewCloud(region string) (Cloud, error) {
+	return newEC2Cloud(region)
 }
 
-func NewCloudWithMetadata(metadata MetadataService) (Cloud, error) {
-	return newEC2Cloud(metadata, newEC2MetadataSvc())
-}
-
-func newEC2MetadataSvc() *ec2metadata.EC2Metadata {
-	sess := session.Must(session.NewSession(&aws.Config{}))
-	return ec2metadata.New(sess)
-}
-
-func newEC2Cloud(metadata MetadataService, svc *ec2metadata.EC2Metadata) (Cloud, error) {
+func newEC2Cloud(region string) (Cloud, error) {
 	awsConfig := &aws.Config{
-		Region:                        aws.String(metadata.GetRegion()),
+		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
 	}
 
@@ -242,14 +225,10 @@ func newEC2Cloud(metadata MetadataService, svc *ec2metadata.EC2Metadata) (Cloud,
 	}
 
 	return &cloud{
-		metadata: metadata,
-		dm:       dm.NewDeviceManager(),
-		ec2:      ec2.New(session.Must(session.NewSession(awsConfig))),
+		region: region,
+		dm:     dm.NewDeviceManager(),
+		ec2:    ec2.New(session.Must(session.NewSession(awsConfig))),
 	}, nil
-}
-
-func (c *cloud) GetMetadata() MetadataService {
-	return c.metadata
 }
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
@@ -290,8 +269,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
-		zone = c.metadata.GetAvailabilityZone()
 		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
+		var err error
+		zone, err = c.randomAvailabilityZone(ctx, c.region)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get availability zone %s", err)
+		}
 	}
 
 	request := &ec2.CreateVolumeInput{
@@ -937,4 +920,21 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 	}
 
 	return volumeMods[len(volumeMods)-1], nil
+}
+
+// randomAvailabilityZone returns a random zone from the given region
+// the randomness relies on the response of DescribeAvailabilityZones
+func (c *cloud) randomAvailabilityZone(ctx context.Context, region string) (string, error) {
+	request := &ec2.DescribeAvailabilityZonesInput{}
+	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
+	if err != nil {
+		return "", err
+	}
+
+	zones := []string{}
+	for _, zone := range response.AvailabilityZones {
+		zones = append(zones, *zone.ZoneName)
+	}
+
+	return zones[0], nil
 }

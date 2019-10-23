@@ -45,28 +45,6 @@ var (
 	defaultDiskSizeBytes int64 = defaultDiskSize * 1024 * 1024 * 1024
 )
 
-type e2eMetdataService struct {
-	availabilityZone string
-}
-
-// GetInstanceID will always return an empty string as the test does not need to run on an EC2 machine
-func (s e2eMetdataService) GetInstanceID() string {
-	return ""
-}
-
-func (s e2eMetdataService) GetInstanceType() string {
-	return ""
-}
-
-func (s e2eMetdataService) GetAvailabilityZone() string {
-	return s.availabilityZone
-}
-
-// GetRegion will try to determine the Region from the specified AZ, specifically trims the last character
-func (s e2eMetdataService) GetRegion() string {
-	return s.availabilityZone[0 : len(s.availabilityZone)-1]
-}
-
 // Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set
 var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
@@ -93,15 +71,16 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		}
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
+		region := availabilityZone[0 : len(availabilityZone)-1]
+
 		diskOptions := &awscloud.DiskOptions{
 			CapacityBytes:    defaultDiskSizeBytes,
 			VolumeType:       defaultVoluemType,
 			AvailabilityZone: availabilityZone,
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
 		}
-		metadata := e2eMetdataService{availabilityZone: availabilityZone}
 		var err error
-		cloud, err = awscloud.NewCloudWithMetadata(metadata)
+		cloud, err = awscloud.NewCloud(region)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
