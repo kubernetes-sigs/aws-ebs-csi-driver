@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -35,22 +36,40 @@ type Driver struct {
 	controllerService
 	nodeService
 
-	srv      *grpc.Server
-	endpoint string
+	srv     *grpc.Server
+	options *DriverOptions
 }
 
-func NewDriver(endpoint string) (*Driver, error) {
+type DriverOptions struct {
+	endpoint        string
+	extraVolumeTags map[string]string
+}
+
+func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
-	return &Driver{
-		endpoint:          endpoint,
-		controllerService: newControllerService(),
+	driverOptions := DriverOptions{
+		endpoint: DefaultCSIEndpoint,
+	}
+	for _, option := range options {
+		option(&driverOptions)
+	}
+
+	if err := ValidateDriverOptions(&driverOptions); err != nil {
+		return nil, fmt.Errorf("Invalid driver options: %v", err)
+	}
+
+	driver := Driver{
+		controllerService: newControllerService(&driverOptions),
 		nodeService:       newNodeService(),
-	}, nil
+		options:           &driverOptions,
+	}
+
+	return &driver, nil
 }
 
 func (d *Driver) Run() error {
-	scheme, addr, err := util.ParseEndpoint(d.endpoint)
+	scheme, addr, err := util.ParseEndpoint(d.options.endpoint)
 	if err != nil {
 		return err
 	}
@@ -83,4 +102,16 @@ func (d *Driver) Run() error {
 func (d *Driver) Stop() {
 	klog.Infof("Stopping server")
 	d.srv.Stop()
+}
+
+func WithEndpoint(endpoint string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.endpoint = endpoint
+	}
+}
+
+func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.extraVolumeTags = extraVolumeTags
+	}
 }

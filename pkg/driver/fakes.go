@@ -24,10 +24,14 @@ import (
 
 // NewFakeDriver creates a new mock driver used for testing
 func NewFakeDriver(endpoint string, fakeCloud cloud.Cloud, fakeMounter *mount.FakeMounter) *Driver {
-	return &Driver{
+	driverOptions := &DriverOptions{
 		endpoint: endpoint,
+	}
+	return &Driver{
+		options: driverOptions,
 		controllerService: controllerService{
-			cloud: fakeCloud,
+			cloud:         fakeCloud,
+			driverOptions: driverOptions,
 		},
 		nodeService: nodeService{
 			metadata: fakeCloud.GetMetadata(),
