@@ -23,6 +23,7 @@ github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:l
 github.com/auth0/go-jwt-middleware v0.0.0-20170425171159-5493cabe49f7/go.mod h1:LWMyo4iOLWXHGdBki7NIht1kHru/0wM179h+d3g8ATM=
 github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190907061006-260b0e114d90 h1:FRpHLOVjM/FO/sl84ilNQWATtRd1FR6uk7UUs8MUl5Y=
 github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190907061006-260b0e114d90/go.mod h1:xCa3ZGICI7/IqtJdYjEsM3QL9vwlLHxgwSA/MD09Zgo=
+github.com/aws/aws-sdk-go v1.16.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.23.21 h1:eVJT2C99cAjZlBY8+CJovf6AwrSANzAcYNuxdCB+SPk=
 github.com/aws/aws-sdk-go v1.23.21/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/bazelbuild/bazel-gazelle v0.0.0-20181012220611-c728ce9f663e/go.mod h1:uHBSeeATKpVazAACZBDPL/Nk/UhQDDsJWDlqYJo8/Us=
