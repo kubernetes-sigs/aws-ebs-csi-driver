@@ -53,7 +53,7 @@ func TestIntegration(t *testing.T) {
 var _ = BeforeSuite(func() {
 	// Run CSI Driver in its own goroutine
 	var err error
-	drv, err = driver.NewDriver(endpoint)
+	drv, err = driver.NewDriver(driver.WithEndpoint(endpoint))
 	Expect(err).To(BeNil())
 	go func() {
 		err := drv.Run()

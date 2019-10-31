@@ -60,12 +60,20 @@ var (
 )
 
 // AWS provisioning limits.
-// Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+// Sources:
+//   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+//   https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
 const (
 	// MinTotalIOPS represents the minimum Input Output per second.
 	MinTotalIOPS = 100
 	// MaxTotalIOPS represents the maximum Input Output per second.
 	MaxTotalIOPS = 20000
+	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
+	MaxNumTagsPerResource = 50
+	// MaxTagKeyLength represents the maximum key length for a tag.
+	MaxTagKeyLength = 128
+	// MaxTagValueLength represents the maximum value length for a tag.
+	MaxTagValueLength = 256
 )
 
 // Defaults
@@ -82,6 +90,10 @@ const (
 	VolumeNameTagKey = "CSIVolumeName"
 	// SnapshotNameTagKey is the key value that refers to the snapshot's name.
 	SnapshotNameTagKey = "CSIVolumeSnapshotName"
+	// KubernetesTagKeyPrefix is the prefix of the key value that is reserved for Kubernetes.
+	KubernetesTagKeyPrefix = "kubernetes.io"
+	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
+	AWSTagKeyPrefix = "aws:"
 )
 
 var (
@@ -267,7 +279,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	var tags []*ec2.Tag
 	for key, value := range diskOptions.Tags {
-		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
+		copiedKey := key
+		copiedValue := value
+		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
 	}
 	tagSpec := ec2.TagSpecification{
 		ResourceType: aws.String("volume"),
