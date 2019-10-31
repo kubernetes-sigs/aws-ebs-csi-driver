@@ -2,8 +2,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/aws-ebs-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/aws-ebs-csi-driver?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-sigs/aws-ebs-csi-driver)](https://goreportcard.com/report/github.com/kubernetes-sigs/aws-ebs-csi-driver)
 
-**NOTE**: This driver is currently in Beta release and should not be used in performance critical applications.
-
 # Amazon Elastic Block Store (EBS) CSI driver
 
 ## Overview
