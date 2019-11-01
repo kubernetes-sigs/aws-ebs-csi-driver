@@ -19,7 +19,9 @@ package cloud
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type EC2Metadata interface {
@@ -62,6 +64,12 @@ func (m *Metadata) GetRegion() string {
 // GetAvailabilityZone returns the Availability Zone which the instance is in.
 func (m *Metadata) GetAvailabilityZone() string {
 	return m.AvailabilityZone
+}
+
+func NewMetadata() (MetadataService, error) {
+	sess := session.Must(session.NewSession(&aws.Config{}))
+	svc := ec2metadata.New(sess)
+	return NewMetadataService(svc)
 }
 
 // NewMetadataService returns a new MetadataServiceImplementation.

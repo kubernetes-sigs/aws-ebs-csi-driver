@@ -137,18 +137,6 @@ func (mr *MockCloudMockRecorder) GetDiskByName(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), arg0, arg1, arg2)
 }
 
-// GetMetadata mocks base method
-func (m *MockCloud) GetMetadata() cloud.MetadataService {
-	ret := m.ctrl.Call(m, "GetMetadata")
-	ret0, _ := ret[0].(cloud.MetadataService)
-	return ret0
-}
-
-// GetMetadata indicates an expected call of GetMetadata
-func (mr *MockCloudMockRecorder) GetMetadata() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockCloud)(nil).GetMetadata))
-}
-
 // GetSnapshotById mocks base method
 func (m *MockCloud) GetSnapshotById(arg0 context.Context, arg1 string) (*cloud.Snapshot, error) {
 	ret := m.ctrl.Call(m, "GetSnapshotById", arg0, arg1)
