@@ -30,7 +30,6 @@ type fakeCloudProvider struct {
 	disks map[string]*fakeDisk
 	// snapshots contains mapping from snapshot ID to snapshot
 	snapshots map[string]*fakeSnapshot
-	m         *cloud.Metadata
 	pub       map[string]string
 	tokens    map[string]int64
 }
@@ -50,17 +49,8 @@ func newFakeCloudProvider() *fakeCloudProvider {
 		disks:     make(map[string]*fakeDisk),
 		snapshots: make(map[string]*fakeSnapshot),
 		pub:       make(map[string]string),
-		m: &cloud.Metadata{
-			InstanceID:       "instanceID",
-			Region:           "region",
-			AvailabilityZone: "az",
-		},
-		tokens: make(map[string]int64),
+		tokens:    make(map[string]int64),
 	}
-}
-
-func (c *fakeCloudProvider) GetMetadata() cloud.MetadataService {
-	return c.m
 }
 
 func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
@@ -137,7 +127,7 @@ func (c *fakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*
 }
 
 func (c *fakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
-	return nodeID == c.m.GetInstanceID()
+	return nodeID == "instanceID"
 }
 
 func (c *fakeCloudProvider) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *cloud.SnapshotOptions) (snapshot *cloud.Snapshot, err error) {
