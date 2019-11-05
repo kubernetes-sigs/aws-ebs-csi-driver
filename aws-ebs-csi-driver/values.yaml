@@ -39,3 +39,10 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# Extra volume tags to attach to each dynamically provisioned volume.
+# ---
+# extraVolumeTags:
+#   key1: value1
+#   key2: value2
+extraVolumeTags: {}
