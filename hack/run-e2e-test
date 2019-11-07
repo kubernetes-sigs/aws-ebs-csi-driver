@@ -25,22 +25,24 @@ REGION=${AWS_REGION-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-32}
-K8S_VERSION=${K8S_VERSION-1.15.3}
+K8S_VERSION=${K8S_VERSION-1.16.1}
 INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
 
 source $(dirname "${BASH_SOURCE}")/utils/helm.sh
 
 echo "Testing in region: $REGION and zones: $ZONES"
 
-KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.14.0-alpha.1/kops-$OS_ARCH
+#KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.14.0-alpha.1/kops-$OS_ARCH
 KOPS_PATH=$TEST_DIR/kops
 KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
 
 # Download kops if not yet
 if [[ ! -e $KOPS_PATH ]]; then
     mkdir -p $TEST_DIR
-    echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
-    curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
+    #echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
+    #curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
+    echo "Downloading KOPS from s3 to $KOPS_PATH"
+    aws s3 cp ${KOPS_STATE_FILE}/kops/bin/kops $KOPS_PATH
 fi
 
 chmod +x $KOPS_PATH
@@ -61,6 +63,7 @@ CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
 SSH_KEY_PATH=$TEST_DIR/id_rsa
 ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 
+export KOPS_BASE_URL=https://k8s-kops-csi-e2e.s3.amazonaws.com/kops/1.16.0-alpha.1/
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
@@ -107,11 +110,14 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
     # - should provision storage with mount options
     #   - Known bug, need https://github.com/kubernetes/kubernetes/pull/80191 but not yet in a patch release
     pushd ./tests/e2e-migration
-    go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="$FOCUS" -ginkgo.skip="\[Disruptive\]\
+    go get -u github.com/onsi/ginkgo/ginkgo
+    SKIP="\[Disruptive\]
 |should.not.allow.expansion\
 |block.volmode.+volume-expand\
 |should.provision.storage.with.mount.options\
-|should.not.mount./.map.unused.volumes.in.a.pod" -gce-zone=${ZONES%,*}
+|should.not.mount./.map.unused.volumes.in.a.pod"
+    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --skip="$SKIP" ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -gce-zone=${ZONES%,*}
+    #go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="$FOCUS" -ginkgo.skip="$SKIP" -gce-zone=${ZONES%,*}
     TEST_PASS=$?
     popd
 

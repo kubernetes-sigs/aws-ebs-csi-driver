@@ -38,6 +38,7 @@ import (
 const kubeconfigEnvVar = "KUBECONFIG"
 
 func init() {
+	testing.Init()
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {
