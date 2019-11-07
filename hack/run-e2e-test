@@ -24,7 +24,7 @@ BASE_DIR=$(dirname $0)
 REGION=${AWS_REGION-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
-NODES=${GINKGO_NODES:-32}
+NODES=${GINKGO_NODES:-4}
 K8S_VERSION=${K8S_VERSION-1.16.1}
 INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
 
@@ -64,6 +64,7 @@ SSH_KEY_PATH=$TEST_DIR/id_rsa
 ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 
 export KOPS_BASE_URL=https://k8s-kops-csi-e2e.s3.amazonaws.com/kops/1.16.0-alpha.1/
+K8S_VERSION=https://k8s-kops-csi-e2e.s3.amazonaws.com/kubernetes/dev/v1.17.0-dev/
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
@@ -116,8 +117,7 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
 |block.volmode.+volume-expand\
 |should.provision.storage.with.mount.options\
 |should.not.mount./.map.unused.volumes.in.a.pod"
-    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --skip="$SKIP" ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -gce-zone=${ZONES%,*}
-    #go test -v -timeout 0 ./... -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -ginkgo.focus="$FOCUS" -ginkgo.skip="$SKIP" -gce-zone=${ZONES%,*}
+    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --skip="$SKIP" --noColor ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -gce-zone=${ZONES%,*}
     TEST_PASS=$?
     popd
 
