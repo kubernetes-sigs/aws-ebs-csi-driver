@@ -18,10 +18,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -38,6 +40,7 @@ import (
 const kubeconfigEnvVar = "KUBECONFIG"
 
 func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
 	testing.Init()
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
