@@ -125,10 +125,26 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
     # Find the controller-manager log and read its metrics to verify
     NODE=$(kubectl get node -l kubernetes.io/role=master -o json | jq -r ".items[].metadata.name")
     kubectl port-forward kube-controller-manager-$NODE 10252:10252 -n kube-system&
+
+    # Ensure port forwarding is succeeded
+    while true
+    do
+        HEALTHZ=$(curl -s 127.0.0.1:10252/healthz)
+        if [[ $HEALTHZ == "ok" ]]; then
+            echo "Port forwarding is succeeded"
+            break
+        else
+            echo "Port forwarding is not yet ready"
+        fi
+        sleep 1
+    done
+
     curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="ebs.csi.aws.com"'
     CSI_CALLED=$?
     curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="kubernetes.io/aws-ebs"'
     INTREE_CALLED=$?
+
+    echo "TEST_PASS: $TEST_PASS CSI_CALLED: $CSI_CALLED INTREE_CALLED: $INTREE_CALLED"
 
     # TEST_PASS if tests passed, CSI was called, and In-tree was not called
     if [ "$TEST_PASS" == 0 ] && [ "$CSI_CALLED" == 0 ] && [ "$INTREE_CALLED" == 1 ]; then
