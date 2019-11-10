@@ -459,7 +459,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 // findDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
 // if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
-func (d *nodeService) findDevicePath(devicePath, volumeId string) (string, error) {
+func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error) {
 	exists, err := d.mounter.ExistsPath(devicePath)
 	if err != nil {
 		return "", err
@@ -474,7 +474,7 @@ func (d *nodeService) findDevicePath(devicePath, volumeId string) (string, error
 	// This is the magic name on which AWS presents NVME devices under /dev/disk/by-id/
 	// For example, vol-0fab1d5e3f72a5e23 creates a symlink at
 	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
-	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeId, "-", "", -1)
+	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
 
 	return findNvmeVolume(nvmeName)
 }

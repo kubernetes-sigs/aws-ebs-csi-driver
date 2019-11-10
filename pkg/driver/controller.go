@@ -113,7 +113,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeType  string
 		iopsPerGB   int
 		isEncrypted bool
-		kmsKeyId    string
+		kmsKeyID    string
 	)
 
 	for key, value := range req.GetParameters() {
@@ -133,8 +133,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			} else {
 				isEncrypted = false
 			}
-		case KmsKeyIdKey:
-			kmsKeyId = value
+		case KmsKeyIDKey:
+			kmsKeyID = value
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 		}
@@ -162,7 +162,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,
 		Encrypted:        isEncrypted,
-		KmsKeyID:         kmsKeyId,
+		KmsKeyID:         kmsKeyID,
 	}
 
 	volumeSource := req.GetVolumeContentSource()
@@ -433,7 +433,7 @@ func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 
 	snapshotID := req.GetSnapshotId()
 	if len(snapshotID) != 0 {
-		snapshot, err := d.cloud.GetSnapshotById(ctx, snapshotID)
+		snapshot, err := d.cloud.GetSnapshotByID(ctx, snapshotID)
 		if err != nil {
 			if err == cloud.ErrNotFound {
 				klog.V(4).Info("ListSnapshots: snapshot not found, returning with success")
