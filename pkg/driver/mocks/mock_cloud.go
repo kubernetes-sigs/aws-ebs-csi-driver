@@ -137,17 +137,17 @@ func (mr *MockCloudMockRecorder) GetDiskByName(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), arg0, arg1, arg2)
 }
 
-// GetSnapshotById mocks base method
-func (m *MockCloud) GetSnapshotById(arg0 context.Context, arg1 string) (*cloud.Snapshot, error) {
-	ret := m.ctrl.Call(m, "GetSnapshotById", arg0, arg1)
+// GetSnapshotByID mocks base method
+func (m *MockCloud) GetSnapshotByID(arg0 context.Context, arg1 string) (*cloud.Snapshot, error) {
+	ret := m.ctrl.Call(m, "GetSnapshotByID", arg0, arg1)
 	ret0, _ := ret[0].(*cloud.Snapshot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSnapshotById indicates an expected call of GetSnapshotById
-func (mr *MockCloudMockRecorder) GetSnapshotById(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotById", reflect.TypeOf((*MockCloud)(nil).GetSnapshotById), arg0, arg1)
+// GetSnapshotByID indicates an expected call of GetSnapshotByID
+func (mr *MockCloudMockRecorder) GetSnapshotByID(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotByID", reflect.TypeOf((*MockCloud)(nil).GetSnapshotByID), arg0, arg1)
 }
 
 // GetSnapshotByName mocks base method

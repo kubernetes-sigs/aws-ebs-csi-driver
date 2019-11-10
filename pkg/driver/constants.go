@@ -35,7 +35,7 @@ const (
 	EncryptedKey = "encrypted"
 
 	// KmsKeyId represents key for KMS encryption key
-	KmsKeyIdKey = "kmskeyid"
+	KmsKeyIDKey = "kmskeyid"
 )
 
 // constants for default command line flag values
