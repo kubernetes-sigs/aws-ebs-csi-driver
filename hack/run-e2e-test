@@ -113,8 +113,6 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
     pushd ./tests/e2e-migration
     go get -u github.com/onsi/ginkgo/ginkgo
     SKIP="\[Disruptive\]\
-|should.not.allow.expansion\
-|block.volmode.+volume-expand\
 |should.provision.storage.with.mount.options\
 |should.not.mount./.map.unused.volumes.in.a.pod"
     ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --skip="$SKIP" --noColor ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -gce-zone=${ZONES%,*}
