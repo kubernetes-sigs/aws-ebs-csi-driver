@@ -31,7 +31,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4      | ext4     | File system type that will be formatted during volume creation |
 | "type"                      | io1, gp2, sc1, st1,standard| gp2      | EBS volume type     |
 | "iopsPerGB"                 |                            |          | I/O operations per second per GiB. Required when io1 volume type is specified |
-| "encrypted"                 |                            |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
+| "encrypted"                 |                            |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" |
 | "kmsKeyId"                  |                       |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
 **Notes**:
@@ -148,8 +148,8 @@ Dependencies are managed through go module. To build the project, first turn on 
 
 **Notes**:
 * Sanity tests make sure the driver complies with the CSI specification
-* EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk. See [Ingetration Testing](../tests/integration/README.md) for more details.
-* E22 tests exercises various driver functionalities in Kubernetes cluster. See [E2E Testing](../tests/e2e/README.md) for more details.
+* EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk. See [Integration Testing](../tests/integration/README.md) for more details.
+* E2E tests exercises various driver functionalities in Kubernetes cluster. See [E2E Testing](../tests/e2e/README.md) for more details.
 
 ### Build and Publish Container Image
 * Build image and push it with latest tag: `make image && make push`
