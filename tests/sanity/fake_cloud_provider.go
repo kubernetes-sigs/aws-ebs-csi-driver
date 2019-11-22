@@ -178,7 +178,7 @@ func (c *fakeCloudProvider) GetSnapshotByName(ctx context.Context, name string) 
 	return snapshots[0].Snapshot, nil
 }
 
-func (c *fakeCloudProvider) GetSnapshotById(ctx context.Context, snapshotID string) (snapshot *cloud.Snapshot, err error) {
+func (c *fakeCloudProvider) GetSnapshotByID(ctx context.Context, snapshotID string) (snapshot *cloud.Snapshot, err error) {
 	ret, exists := c.snapshots[snapshotID]
 	if !exists {
 		return nil, cloud.ErrNotFound
