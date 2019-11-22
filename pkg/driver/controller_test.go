@@ -35,7 +35,7 @@ import (
 
 const (
 	expZone       = "us-west-2b"
-	expInstanceId = "i-123456789abcdef01"
+	expInstanceID = "i-123456789abcdef01"
 )
 
 func TestCreateVolume(t *testing.T) {
@@ -575,7 +575,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: stdVolCap,
 					Parameters: map[string]string{
 						EncryptedKey: "true",
-						KmsKeyIdKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+						KmsKeyIDKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 					},
 				}
 
@@ -1328,7 +1328,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
+				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1357,7 +1357,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1386,7 +1386,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetSnapshotById(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
+				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1463,7 +1463,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			name: "success normal",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
-					NodeId:           expInstanceId,
+					NodeId:           expInstanceID,
 					VolumeCapability: stdVolCap,
 					VolumeId:         "vol-test",
 				}
@@ -1562,7 +1562,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			name: "fail no VolumeCapability",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
-					NodeId:   expInstanceId,
+					NodeId:   expInstanceID,
 					VolumeId: "vol-test",
 				}
 
@@ -1595,7 +1595,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			name: "fail invalid VolumeCapability",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
-					NodeId: expInstanceId,
+					NodeId: expInstanceID,
 					VolumeCapability: &csi.VolumeCapability{
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
@@ -1669,7 +1669,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
 					VolumeId:         "does-not-exist",
-					NodeId:           expInstanceId,
+					NodeId:           expInstanceID,
 					VolumeCapability: stdVolCap,
 				}
 
@@ -1705,7 +1705,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
 					VolumeId:         "does-not-exist",
-					NodeId:           expInstanceId,
+					NodeId:           expInstanceID,
 					VolumeCapability: stdVolCap,
 				}
 
@@ -1753,7 +1753,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			name: "success normal",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerUnpublishVolumeRequest{
-					NodeId:   expInstanceId,
+					NodeId:   expInstanceID,
 					VolumeId: "vol-test",
 				}
 				expResp := &csi.ControllerUnpublishVolumeResponse{}

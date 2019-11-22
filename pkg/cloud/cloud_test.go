@@ -783,7 +783,7 @@ func TestGetSnapshotByName(t *testing.T) {
 	}
 }
 
-func TestGetSnapshotById(t *testing.T) {
+func TestGetSnapshotByID(t *testing.T) {
 	testCases := []struct {
 		name            string
 		snapshotName    string
@@ -821,7 +821,7 @@ func TestGetSnapshotById(t *testing.T) {
 			ctx := context.Background()
 			mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil)
 
-			_, err := c.GetSnapshotById(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
+			_, err := c.GetSnapshotByID(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
 			if err != nil {
 				if tc.expErr == nil {
 					t.Fatalf("GetSnapshotByName() failed: expected no error, got: %v", err)
