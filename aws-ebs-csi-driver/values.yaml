@@ -36,7 +36,9 @@ resources: {}
 
 nodeSelector: {}
 
-tolerations: []
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
 
 affinity: {}
 
