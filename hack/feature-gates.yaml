@@ -5,6 +5,7 @@
       CSIBlockVolume: "true"
       CSIMigration: "true"
       CSIMigrationAWS: "true"
+      CSIMigrationAWSComplete: "true"
       ExpandCSIVolumes: "true"
       VolumeSnapshotDataSource: "true"
       CSIInlineVolume: "true"
@@ -15,6 +16,7 @@
       CSIBlockVolume: "true"
       CSIMigration: "true"
       CSIMigrationAWS: "true"
+      CSIMigrationAWSComplete: "true"
       ExpandCSIVolumes: "true"
       CSIInlineVolume: "true"
   kubelet:
@@ -24,5 +26,6 @@
       CSIBlockVolume: "true"
       CSIMigration: "true"
       CSIMigrationAWS: "true"
+      CSIMigrationAWSComplete: "true"
       ExpandCSIVolumes: "true"
       CSIInlineVolume: "true"
