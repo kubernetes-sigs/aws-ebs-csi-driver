@@ -9,6 +9,11 @@ parameters:
   type: io1
   iopsPerGB: "50"
   encrypted: "true"
+allowedTopologies:
+- matchLabelExpressions:
+  - key: topology.ebs.csi.aws.com/zone
+    values:
+    - us-east-1a
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
