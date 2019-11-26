@@ -19,7 +19,6 @@ package driver
 import (
 	"context"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,6 +73,7 @@ var (
 type nodeService struct {
 	metadata      cloud.MetadataService
 	mounter       Mounter
+	statter       Statter
 	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
 }
@@ -89,6 +89,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 	return nodeService{
 		metadata:      metadata,
 		mounter:       newNodeMounter(),
+		statter:       NewStatter(),
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
@@ -362,7 +363,7 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		return nil, status.Errorf(codes.NotFound, "path %s does not exist", req.VolumePath)
 	}
 
-	isBlock, err := isBlockDevice(req.VolumePath)
+	isBlock, err := d.statter.IsBlockDevice(req.VolumePath)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to determine whether %s is block device: %v", req.VolumePath, err)
 	}
@@ -381,29 +382,27 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		}, nil
 	}
 
-	metrics, err := volume.NewMetricsStatFS(req.VolumePath).GetMetrics()
+	available, capacity, used, inodesFree, inodes, inodesUsed, err := d.statter.StatFS(req.VolumePath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get metrics for %s: %s", req.VolumePath, err)
+		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.VolumePath, err)
 	}
 
 	return &csi.NodeGetVolumeStatsResponse{
 		Usage: []*csi.VolumeUsage{
 			{
-				Total:     metrics.Capacity.Value(),
-				Used:      metrics.Used.Value(),
-				Available: metrics.Available.Value(),
 				Unit:      csi.VolumeUsage_BYTES,
+				Available: available,
+				Total:     capacity,
+				Used:      used,
 			},
-
 			{
-				Total:     metrics.Inodes.Value(),
-				Used:      metrics.InodesUsed.Value(),
-				Available: metrics.InodesFree.Value(),
 				Unit:      csi.VolumeUsage_INODES,
+				Available: inodesFree,
+				Total:     inodes,
+				Used:      inodesUsed,
 			},
 		},
 	}, nil
-
 }
 
 func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
@@ -621,14 +620,4 @@ func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
 		return -1, fmt.Errorf("failed to parse size %s into int a size", strOut)
 	}
 	return gotSizeBytes, nil
-}
-
-func isBlockDevice(fullPath string) (bool, error) {
-	var st unix.Stat_t
-	err := unix.Stat(fullPath, &st)
-	if err != nil {
-		return false, err
-	}
-
-	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
 }

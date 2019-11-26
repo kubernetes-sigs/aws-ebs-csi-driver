@@ -1175,26 +1175,24 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 	mockMetadata := mocks.NewMockMetadataService(mockCtl)
 	mockMounter := mocks.NewMockMounter(mockCtl)
+	VolumePath := "/test"
+
+	mockMounter.EXPECT().ExistsPath(VolumePath).Return(true, nil)
 
 	awsDriver := nodeService{
 		metadata: mockMetadata,
 		mounter:  mockMounter,
+		statter:  NewFakeStatter(),
 		inFlight: internal.NewInFlight(),
 	}
 
-	expErrCode := codes.Unimplemented
-
-	req := &csi.NodeGetVolumeStatsRequest{}
+	req := &csi.NodeGetVolumeStatsRequest{
+		VolumeId:   "vol-test",
+		VolumePath: VolumePath,
+	}
 	_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
-	if err == nil {
-		t.Fatalf("Expected error code %d, got nil", expErrCode)
-	}
-	srvErr, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("Could not get error status code from error: %v", srvErr)
-	}
-	if srvErr.Code() != expErrCode {
-		t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
 	}
 }
 
