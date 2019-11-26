@@ -62,7 +62,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
-* **Dynamic Provisioning** - uses persistence volume claim (PVC) to request the Kuberenetes to create the EBS volume on behalf of user and consumes the volume from inside container.
+* **Dynamic Provisioning** - uses persistence volume claim (PVC) to request the Kuberenetes to create the EBS volume on behalf of user and consumes the volume from inside container. Storage class's **allowedTopologies** could be used to restrict which AZ the volume should be provisioned in. The topology key should be **topology.ebs.csi.aws.com/zone**.
 * **Mount Option** - mount options could be specified in persistence volume (PV) to define how the volume should be mounted.
 * **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
 * **Block Volume** (beta since 1.14) - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
