@@ -32,10 +32,10 @@ spec:
       affinity:
 {{ toYaml . | indent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
+      {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
       {{- end }}
       containers:
