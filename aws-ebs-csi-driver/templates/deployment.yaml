@@ -22,10 +22,11 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
       {{- end }}
     spec:
-      {{- with .Values.nodeSelector }}
       nodeSelector:
+        beta.kubernetes.io/os: linux
+        {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
-      {{- end }}
+        {{- end }}
       serviceAccountName: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       {{- with .Values.affinity }}
