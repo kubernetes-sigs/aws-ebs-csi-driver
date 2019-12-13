@@ -338,13 +338,12 @@ spec:
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+{{ toYaml .Values.tolerations | indent 8 }}
       containers:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" 
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
