@@ -20,6 +20,7 @@ BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 GO111MODULE=on
 GOPROXY=direct
+GOPATH=$(shell go env GOPATH)
 
 .EXPORT_ALL_VARIABLES:
 
@@ -40,18 +41,22 @@ test:
 test-sanity:
 	go test -v ./tests/sanity/...
 
+.PHONY: tester
+tester:
+	go get github.com/aws/aws-k8s-tester/e2e/tester/cmd/k8s-e2e-tester@master
+
 .PHONY: test-integration
 test-integration:
 	#./hack/run-integration-test
 	echo "succeed"
 
 .PHONY: test-e2e-single-az
-test-e2e-single-az:
-	TESTCONFIG=./tester/single-az-config.yaml go run tester/cmd/main.go
+test-e2e-single-az: tester
+	TESTCONFIG=./tester/single-az-config.yaml ${GOPATH}/bin/k8s-e2e-tester
 
 .PHONY: test-e2e-multi-az
-test-e2e-multi-az:
-	TESTCONFIG=./tester/multi-az-config.yaml go run tester/cmd/main.go
+test-e2e-multi-az: tester
+	TESTCONFIG=./tester/multi-az-config.yaml ${GOPATH}/bin/k8s-e2e-tester
 
 .PHONY: test-e2e-migration
 test-e2e-migration:

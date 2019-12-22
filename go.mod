@@ -1,7 +1,7 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
-	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190907061006-260b0e114d90
+	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191204032858-d97ad2e4255e // indirect
 	github.com/aws/aws-sdk-go v1.23.21
 	github.com/container-storage-interface/spec v1.1.0
 	github.com/coreos/go-semver v0.2.0 // indirect
@@ -86,3 +86,5 @@ replace (
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.0.0-20190805143616-1485e5142db3
 	k8s.io/sample-controller => k8s.io/sample-controller v0.0.0-20190805142825-b16fad786282
 )
+
+go 1.13
