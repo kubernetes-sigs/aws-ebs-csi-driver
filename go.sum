@@ -21,8 +21,14 @@ github.com/Rican7/retry v0.1.0/go.mod h1:FgOROf8P5bebcC1DS0PdOQiqGUridaZvikzUmkF
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/auth0/go-jwt-middleware v0.0.0-20170425171159-5493cabe49f7/go.mod h1:LWMyo4iOLWXHGdBki7NIht1kHru/0wM179h+d3g8ATM=
+github.com/aws/aws-k8s-tester v0.4.5-0.20191203073900-e5a28058b567 h1:tzabayjAiOaNO1nEoy+Fj9JHs1X3+LYqrRHbJRfVwqg=
+github.com/aws/aws-k8s-tester v0.4.5-0.20191204032858-d97ad2e4255e h1:WSYBU6UIqHrVV5xoVpWwacwaIGY8+oohVmhaszJSqFA=
 github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190907061006-260b0e114d90 h1:FRpHLOVjM/FO/sl84ilNQWATtRd1FR6uk7UUs8MUl5Y=
 github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20190907061006-260b0e114d90/go.mod h1:xCa3ZGICI7/IqtJdYjEsM3QL9vwlLHxgwSA/MD09Zgo=
+github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191203073900-e5a28058b567 h1:6zSO87AbCbY3doj1VEaqIs9Z81QxzNX0LWF7o2P6liU=
+github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191203073900-e5a28058b567/go.mod h1:DJkIJa8BA0LCJWjl01jsEl8vm/fjei0uWJFzZol0KUI=
+github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191204032858-d97ad2e4255e h1:QbCzp3el1/7dBBLfM+LPB2KkXaU+Svlpp4Yod/hIueQ=
+github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191204032858-d97ad2e4255e/go.mod h1:DJkIJa8BA0LCJWjl01jsEl8vm/fjei0uWJFzZol0KUI=
 github.com/aws/aws-sdk-go v1.16.26/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.23.21 h1:eVJT2C99cAjZlBY8+CJovf6AwrSANzAcYNuxdCB+SPk=
 github.com/aws/aws-sdk-go v1.23.21/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
