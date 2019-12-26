@@ -265,6 +265,9 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 	}
 
 	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
+		if err == cloud.ErrNotFound {
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 	klog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
