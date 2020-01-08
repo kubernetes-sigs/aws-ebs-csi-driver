@@ -208,8 +208,7 @@ spec:
       serviceAccount: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+{{ toYaml .Values.tolerations | indent 8 }}
       containers:
         - name: ebs-plugin
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
