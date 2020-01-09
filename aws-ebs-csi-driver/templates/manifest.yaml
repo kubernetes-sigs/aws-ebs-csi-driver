@@ -248,7 +248,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.3.0
+          image: "{{ .Values.sidecars.provisionerImage.repository }}:{{ .Values.sidecars.provisionerImage.tag }}"
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -264,7 +264,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.2.0
+          image: "{{ .Values.sidecars.attacherImage.repository }}:{{ .Values.sidecars.attacherImage.tag }}"
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -276,7 +276,7 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
         {{- if .Values.enableVolumeSnapshot }}
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.1.0
+          image: "{{ .Values.sidecars.snapshotterImage.repository }}:{{ .Values.sidecars.snapshotterImage.tag }}"
           args:
             - --csi-address=$(ADDRESS)
             - --connection-timeout=15s
@@ -289,7 +289,7 @@ spec:
         {{- end }}
         {{- if .Values.enableVolumeResizing }}
         - name: csi-resizer
-          image: quay.io/k8scsi/csi-resizer:v0.2.0
+          image: "{{ .Values.sidecars.resizerImage.repository }}:{{ .Values.sidecars.resizerImage.tag }}"
           imagePullPolicy: Always
           args:
             - --csi-address=$(ADDRESS)
@@ -302,7 +302,7 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
         {{- end }}
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.1.0
+          image: "{{ .Values.sidecars.livenessProbeImage.repository }}:{{ .Values.sidecars.livenessProbeImage.tag }}"
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
@@ -371,7 +371,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
+          image: "{{ .Values.sidecars.nodeDriverRegistrarImage.repository }}:{{ .Values.sidecars.nodeDriverRegistrarImage.tag }}"
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -391,7 +391,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.1.0
+          image: "{{ .Values.sidecars.livenessProbeImage.repository }}:{{ .Values.sidecars.livenessProbeImage.tag }}"
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
