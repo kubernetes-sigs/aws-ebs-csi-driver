@@ -9,6 +9,26 @@ image:
   tag: "v0.4.0"
   pullPolicy: IfNotPresent
 
+sidecars:
+  provisionerImage:
+    repository: quay.io/k8scsi/csi-provisioner
+    tag: "v1.3.0"
+  attacherImage:
+    repository: quay.io/k8scsi/csi-attacher
+    tag: "v1.2.0"
+  snapshotterImage:
+    repository: quay.io/k8scsi/csi-snapshotter
+    tag: "v1.1.0"
+  livenessProbeImage:
+    repository: quay.io/k8scsi/livenessprobe
+    tag: "v1.1.0"
+  resizerImage:
+    repository: quay.io/k8scsi/csi-resizer
+    tag: "v0.2.0"
+  nodeDriverRegistrarImage:
+    repository: quay.io/k8scsi/csi-node-driver-registrar
+    tag: "v1.1.0"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
