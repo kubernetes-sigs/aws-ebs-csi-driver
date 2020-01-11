@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 
@@ -56,15 +57,28 @@ type controllerService struct {
 	driverOptions *DriverOptions
 }
 
+var (
+	// NewMetadataFunc is a variable for the cloud.NewMetadata function that can
+	// be overwritten in unit tests.
+	NewMetadataFunc = cloud.NewMetadata
+	// NewCloudFunc is a variable for the cloud.NewCloud function that can
+	// be overwritten in unit tests.
+	NewCloudFunc = cloud.NewCloud
+)
+
 // newControllerService creates a new controller service
 // it panics if failed to create the service
 func newControllerService(driverOptions *DriverOptions) controllerService {
-	metadata, err := cloud.NewMetadata()
-	if err != nil {
-		panic(err)
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		metadata, err := NewMetadataFunc()
+		if err != nil {
+			panic(err)
+		}
+		region = metadata.GetRegion()
 	}
-	region := metadata.GetRegion()
-	cloud, err := cloud.NewCloud(region)
+
+	cloud, err := NewCloudFunc(region)
 	if err != nil {
 		panic(err)
 	}

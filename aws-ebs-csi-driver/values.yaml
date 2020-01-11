@@ -68,3 +68,9 @@ affinity: {}
 #   key1: value1
 #   key2: value2
 extraVolumeTags: {}
+
+# AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
+# service.
+# ---
+# region: us-east-1
+region: ""
