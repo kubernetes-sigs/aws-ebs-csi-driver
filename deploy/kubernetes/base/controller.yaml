@@ -26,6 +26,7 @@ spec:
         - name: ebs-plugin
           image: amazon/aws-ebs-csi-driver:latest
           args :
+          # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=5
@@ -44,6 +45,9 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
+          # overwrite the AWS region instead of looking it up dynamically via the AWS EC2 metadata svc
+          # - name: AWS_REGION
+          #   value: us-east-1
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

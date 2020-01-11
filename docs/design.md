@@ -216,3 +216,22 @@ Blindly return:
   rpc:
     - STAGE\_UNSTAGE\_VOLUME
 ```
+
+## Driver modes
+
+Traditionally, you run the CSI controllers together with the EBS driver in the same Kubernetes cluster.
+Though, in some scenarios you might want to run the CSI controllers (csi-provisioner, csi-attacher, etc.) together with the EBS controller service of this driver separately from the Kubernetes cluster it serves (while the EBS driver with an activated node service still runs inside the cluster).
+This may not necessarily have to be in the same AWS region.
+Also, the controllers may not necessarily have to run on an AWS EC2 instance.
+To support these cases, the AWS EBS CSI driver plugin supports three modes:
+
+- `all`: This is the standard/default mode that is used for the mentioned traditional scenario. It assumes that the CSI controllers run together with the EBS driver in the same AWS cluster. It starts both the controller and the node service of the driver.\
+Example 1: `/bin/aws-ebs-csi-driver --extra-volume-tags=foo=bar`\
+Example 2: `/bin/aws-ebs-csi-driver all --extra-volume-tags=foo=bar`
+
+- `controller`: This will only start the controller service of the CSI driver. It enables use-cases as mentioned above, e.g., running the CSI controllers outside of the Kubernetes cluster they serve. Still, this mode assumes that it runs in the same AWS region on an AWS EC2 instance. If this is not true you may overwrite the region by specifying the `AWS_REGION` environment variable (if not specified the controller will try to use the AWS EC2 metadata service to look it up dynamically).\
+Example 1: `/bin/aws-ebs-csi-driver controller --extra-volume-tags=foo=bar`\
+Example 2: `AWS_REGION=us-west-1 /bin/aws-ebs-csi-driver controller --extra-volume-tags=foo=bar`\
+
+- `node`: This will only start the node service of the CSI driver.\
+Example: `/bin/aws-ebs-csi-driver node --endpoint=unix://...`

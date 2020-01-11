@@ -18,8 +18,10 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -37,6 +39,107 @@ const (
 	expZone       = "us-west-2b"
 	expInstanceID = "i-123456789abcdef01"
 )
+
+func TestNewControllerService(t *testing.T) {
+
+	var (
+		cloudObj   cloud.Cloud
+		testErr    = errors.New("test error")
+		testRegion = "test-region"
+
+		getNewCloudFunc = func(expectedRegion string) func(region string) (cloud.Cloud, error) {
+			return func(region string) (cloud.Cloud, error) {
+				if region != expectedRegion {
+					t.Fatalf("expected region %q but got %q", expectedRegion, region)
+				}
+				return cloudObj, nil
+			}
+		}
+	)
+
+	testCases := []struct {
+		name                  string
+		region                string
+		newCloudFunc          func(string) (cloud.Cloud, error)
+		newMetadataFuncErrors bool
+		expectPanic           bool
+	}{
+		{
+			name:         "AWS_REGION variable set, newCloud does not error",
+			region:       "foo",
+			newCloudFunc: getNewCloudFunc("foo"),
+		},
+		{
+			name:   "AWS_REGION variable set, newCloud errors",
+			region: "foo",
+			newCloudFunc: func(region string) (cloud.Cloud, error) {
+				return nil, testErr
+			},
+			expectPanic: true,
+		},
+		{
+			name:         "AWS_REGION variable not set, newMetadata does not error",
+			newCloudFunc: getNewCloudFunc(testRegion),
+		},
+		{
+			name:                  "AWS_REGION variable not set, newMetadata errors",
+			newCloudFunc:          getNewCloudFunc(testRegion),
+			newMetadataFuncErrors: true,
+			expectPanic:           true,
+		},
+	}
+
+	driverOptions := &DriverOptions{
+		endpoint: "test",
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			oldNewCloudFunc := NewCloudFunc
+			defer func() { NewCloudFunc = oldNewCloudFunc }()
+			NewCloudFunc = tc.newCloudFunc
+
+			if tc.region == "" {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockMetadataService := mocks.NewMockMetadataService(mockCtl)
+
+				oldNewMetadataFunc := NewMetadataFunc
+				defer func() { NewMetadataFunc = oldNewMetadataFunc }()
+				NewMetadataFunc = func() (cloud.MetadataService, error) {
+					if tc.newMetadataFuncErrors {
+						return nil, testErr
+					}
+					return mockMetadataService, nil
+				}
+
+				if !tc.newMetadataFuncErrors {
+					mockMetadataService.EXPECT().GetRegion().Return(testRegion)
+				}
+			} else {
+				os.Setenv("AWS_REGION", tc.region)
+				defer os.Unsetenv("AWS_REGION")
+			}
+
+			if tc.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("The code did not panic")
+					}
+				}()
+			}
+
+			controllerService := newControllerService(driverOptions)
+
+			if controllerService.cloud != cloudObj {
+				t.Fatalf("expected cloud attribute to be equal to instantiated cloud object")
+			}
+			if !reflect.DeepEqual(controllerService.driverOptions, driverOptions) {
+				t.Fatalf("expected driverOptions attribute to be equal to input")
+			}
+		})
+	}
+}
 
 func TestCreateVolume(t *testing.T) {
 	stdVolCap := []*csi.VolumeCapability{
