@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.1.0
+          image: quay.io/k8scsi/csi-snapshotter:v1.2.2
           args:
             - --csi-address=$(ADDRESS)
             - --connection-timeout=15s
