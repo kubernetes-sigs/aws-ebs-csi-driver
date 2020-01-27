@@ -35,7 +35,7 @@ verify:
 
 .PHONY: test
 test:
-	go test -v -race ./pkg/...
+	go test -v -race ./cmd/... ./pkg/...
 
 .PHONY: test-sanity
 test-sanity:

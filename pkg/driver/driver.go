@@ -27,6 +27,18 @@ import (
 	"k8s.io/klog"
 )
 
+// Mode is the operating mode of the CSI driver.
+type Mode string
+
+const (
+	// ControllerMode is the mode that only starts the controller service.
+	ControllerMode Mode = "controller"
+	// NodeMode is the mode that only starts the node service.
+	NodeMode Mode = "node"
+	// AllMode is the mode that only starts both the controller and the node service.
+	AllMode Mode = "all"
+)
+
 const (
 	DriverName  = "ebs.csi.aws.com"
 	TopologyKey = "topology." + DriverName + "/zone"
@@ -43,6 +55,7 @@ type Driver struct {
 type DriverOptions struct {
 	endpoint        string
 	extraVolumeTags map[string]string
+	mode            Mode
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -50,6 +63,7 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 
 	driverOptions := DriverOptions{
 		endpoint: DefaultCSIEndpoint,
+		mode:     AllMode,
 	}
 	for _, option := range options {
 		option(&driverOptions)
@@ -60,9 +74,19 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	}
 
 	driver := Driver{
-		controllerService: newControllerService(&driverOptions),
-		nodeService:       newNodeService(),
-		options:           &driverOptions,
+		options: &driverOptions,
+	}
+
+	switch driverOptions.mode {
+	case ControllerMode:
+		driver.controllerService = newControllerService(&driverOptions)
+	case NodeMode:
+		driver.nodeService = newNodeService()
+	case AllMode:
+		driver.controllerService = newControllerService(&driverOptions)
+		driver.nodeService = newNodeService()
+	default:
+		return nil, fmt.Errorf("unknown mode: %s", driverOptions.mode)
 	}
 
 	return &driver, nil
@@ -92,8 +116,18 @@ func (d *Driver) Run() error {
 	d.srv = grpc.NewServer(opts...)
 
 	csi.RegisterIdentityServer(d.srv, d)
-	csi.RegisterControllerServer(d.srv, d)
-	csi.RegisterNodeServer(d.srv, d)
+
+	switch d.options.mode {
+	case ControllerMode:
+		csi.RegisterControllerServer(d.srv, d)
+	case NodeMode:
+		csi.RegisterNodeServer(d.srv, d)
+	case AllMode:
+		csi.RegisterControllerServer(d.srv, d)
+		csi.RegisterNodeServer(d.srv, d)
+	default:
+		return fmt.Errorf("unknown mode: %s", d.options.mode)
+	}
 
 	klog.Infof("Listening for connections on address: %#v", listener.Addr())
 	return d.srv.Serve(listener)
@@ -113,5 +147,11 @@ func WithEndpoint(endpoint string) func(*DriverOptions) {
 func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.extraVolumeTags = extraVolumeTags
+	}
+}
+
+func WithMode(mode Mode) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.mode = mode
 	}
 }
