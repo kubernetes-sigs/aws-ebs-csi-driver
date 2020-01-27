@@ -15,7 +15,7 @@
 FROM golang:1.12.7-stretch as builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 ADD . .
-RUN make 
+RUN make
 
 FROM amazonlinux:2
 RUN yum install ca-certificates e2fsprogs xfsprogs util-linux -y

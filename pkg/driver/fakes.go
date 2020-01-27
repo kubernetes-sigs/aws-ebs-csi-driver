@@ -26,6 +26,7 @@ import (
 func NewFakeDriver(endpoint string, fakeCloud cloud.Cloud, fakeMounter *mount.FakeMounter) *Driver {
 	driverOptions := &DriverOptions{
 		endpoint: endpoint,
+		mode:     AllMode,
 	}
 	return &Driver{
 		options: driverOptions,

@@ -222,10 +222,11 @@ spec:
         - name: ebs-plugin
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           args:
+            - controller
             - --endpoint=$(CSI_ENDPOINT)
+            {{ include "aws-ebs-csi-driver.extra-volume-tags" . }}
             - --logtostderr
             - --v=5
-            {{ include "aws-ebs-csi-driver.extra-volume-tags" . }}
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -241,6 +242,10 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
+            {{- if .Values.region }}
+            - name: AWS_REGION
+              value: {{ .Values.region }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -353,6 +358,7 @@ spec:
             privileged: true
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           args:
+            - node
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=5
