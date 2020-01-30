@@ -154,9 +154,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	snapshotID := ""
+	if snapshotSource := req.VolumeContentSource.GetSnapshot(); snapshotSource != nil {
+		snapshotID = snapshotSource.SnapshotId
+	}
+
 	// volume exists already
 	if disk != nil {
-		return newCreateVolumeResponse(disk), nil
+		return newCreateVolumeResponse(disk, snapshotID), nil
 	}
 
 	// create a new volume
@@ -199,7 +204,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
-	return newCreateVolumeResponse(disk), nil
+	return newCreateVolumeResponse(disk, snapshotID), nil
 }
 
 func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
@@ -512,7 +517,17 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
-func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
+func newCreateVolumeResponse(disk *cloud.Disk, snapshotID string) *csi.CreateVolumeResponse {
+	var src *csi.VolumeContentSource
+	if snapshotID != "" {
+		src = &csi.VolumeContentSource{
+			Type: &csi.VolumeContentSource_Snapshot{
+				Snapshot: &csi.VolumeContentSource_SnapshotSource{
+					SnapshotId: snapshotID,
+				},
+			},
+		}
+	}
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
@@ -523,6 +538,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 					Segments: map[string]string{TopologyKey: disk.AvailabilityZone},
 				},
 			},
+			ContentSource: src,
 		},
 	}
 }
