@@ -154,8 +154,24 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	snapshotID := ""
+	volumeSource := req.GetVolumeContentSource()
+	if volumeSource != nil {
+		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
+			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
+		}
+		sourceSnapshot := volumeSource.GetSnapshot()
+		if sourceSnapshot == nil {
+			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
+		}
+		snapshotID = sourceSnapshot.GetSnapshotId()
+	}
+
 	// volume exists already
 	if disk != nil {
+		if disk.SnapshotID != snapshotID {
+			return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
+		}
 		return newCreateVolumeResponse(disk), nil
 	}
 
@@ -177,18 +193,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AvailabilityZone: zone,
 		Encrypted:        isEncrypted,
 		KmsKeyID:         kmsKeyID,
-	}
-
-	volumeSource := req.GetVolumeContentSource()
-	if volumeSource != nil {
-		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
-			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
-		}
-		sourceSnapshot := volumeSource.GetSnapshot()
-		if sourceSnapshot == nil {
-			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
-		}
-		opts.SnapshotID = sourceSnapshot.GetSnapshotId()
+		SnapshotID:       snapshotID,
 	}
 
 	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
