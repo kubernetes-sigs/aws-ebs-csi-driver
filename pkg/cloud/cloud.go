@@ -123,6 +123,7 @@ type Disk struct {
 	VolumeID         string
 	CapacityGiB      int64
 	AvailabilityZone string
+	SnapshotID       string
 }
 
 // DiskOptions represents parameters to create an EBS volume
@@ -318,7 +319,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone}, nil
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -485,6 +486,7 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		VolumeID:         aws.StringValue(volume.VolumeId),
 		CapacityGiB:      volSizeBytes,
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
+		SnapshotID:       aws.StringValue(volume.SnapshotId),
 	}, nil
 }
 
