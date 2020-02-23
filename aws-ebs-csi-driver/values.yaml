@@ -12,13 +12,13 @@ image:
 sidecars:
   provisionerImage:
     repository: quay.io/k8scsi/csi-provisioner
-    tag: "v1.3.1"
+    tag: "v1.5.0"
   attacherImage:
     repository: quay.io/k8scsi/csi-attacher
     tag: "v1.2.0"
   snapshotterImage:
     repository: quay.io/k8scsi/csi-snapshotter
-    tag: "v1.2.2"
+    tag: "v2.0.1"
   livenessProbeImage:
     repository: quay.io/k8scsi/livenessprobe
     tag: "v1.1.0"
