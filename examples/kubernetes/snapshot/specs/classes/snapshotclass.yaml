@@ -1,5 +1,6 @@
-apiVersion: snapshot.storage.k8s.io/v1alpha1
+apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotClass
 metadata:
   name: csi-aws-vsc
-snapshotter: ebs.csi.aws.com
+driver: ebs.csi.aws.com
+deletionPolicy: Delete

@@ -59,8 +59,8 @@ const (
 
 const (
 	VolumeSnapshotKind = "VolumeSnapshot"
-	SnapshotAPIVersion = "snapshot.storage.k8s.io/v1alpha1"
-	APIVersionv1alpha1 = "v1alpha1"
+	SnapshotAPIVersion = "snapshot.storage.k8s.io/v1beta1"
+	APIVersionv1beta1  = "v1beta1"
 )
 
 var (
