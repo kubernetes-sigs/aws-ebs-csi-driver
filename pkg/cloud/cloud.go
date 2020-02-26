@@ -123,6 +123,7 @@ type Disk struct {
 	VolumeID         string
 	CapacityGiB      int64
 	AvailabilityZone string
+	SnapshotID       string
 }
 
 // DiskOptions represents parameters to create an EBS volume
@@ -318,7 +319,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone}, nil
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -401,6 +402,11 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 
 	_, err = c.ec2.DetachVolumeWithContext(ctx, request)
 	if err != nil {
+		if isAWSErrorIncorrectState(err) ||
+			isAWSErrorInvalidAttachmentNotFound(err) ||
+			isAWSErrorVolumeNotFound(err) {
+			return ErrNotFound
+		}
 		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 
@@ -480,6 +486,7 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		VolumeID:         aws.StringValue(volume.VolumeId),
 		CapacityGiB:      volSizeBytes,
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
+		SnapshotID:       aws.StringValue(volume.SnapshotId),
 	}, nil
 }
 
@@ -685,6 +692,9 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 	for {
 		response, err := c.ec2.DescribeInstancesWithContext(ctx, request)
 		if err != nil {
+			if isAWSErrorInstanceNotFound(err) {
+				return nil, ErrNotFound
+			}
 			return nil, fmt.Errorf("error listing AWS instances: %q", err)
 		}
 
@@ -804,11 +814,32 @@ func isAWSErrorIncorrectModification(err error) bool {
 	return isAWSError(err, "IncorrectModificationState")
 }
 
+// isAWSErrorInstanceNotFound returns a boolean indicating whether the
+// given error is an AWS InvalidInstanceID.NotFound error. This error is
+// reported when the specified instance doesn't exist.
+func isAWSErrorInstanceNotFound(err error) bool {
+	return isAWSError(err, "InvalidInstanceID.NotFound")
+}
+
 // isAWSErrorVolumeNotFound returns a boolean indicating whether the
 // given error is an AWS InvalidVolume.NotFound error. This error is
 // reported when the specified volume doesn't exist.
 func isAWSErrorVolumeNotFound(err error) bool {
 	return isAWSError(err, "InvalidVolume.NotFound")
+}
+
+// isAWSErrorIncorrectState returns a boolean indicating whether the
+// given error is an AWS IncorrectState error. This error is
+// reported when the resource is not in a correct state for the request.
+func isAWSErrorIncorrectState(err error) bool {
+	return isAWSError(err, "IncorrectState")
+}
+
+// isAWSErrorInvalidAttachmentNotFound returns a boolean indicating whether the
+// given error is an AWS InvalidAttachment.NotFound error. This error is reported
+// when attempting to detach a volume from an instance to which it is not attached.
+func isAWSErrorInvalidAttachmentNotFound(err error) bool {
+	return isAWSError(err, "InvalidAttachment.NotFound")
 }
 
 // isAWSErrorSnapshotNotFound returns a boolean indicating whether the

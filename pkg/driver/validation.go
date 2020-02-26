@@ -28,6 +28,10 @@ func ValidateDriverOptions(options *DriverOptions) error {
 		return fmt.Errorf("Invalid extra volume tags: %v", err)
 	}
 
+	if err := validateMode(options.mode); err != nil {
+		return fmt.Errorf("Invalid mode: %v", err)
+	}
+
 	return nil
 }
 
@@ -52,6 +56,14 @@ func validateExtraVolumeTags(tags map[string]string) error {
 		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
 			return fmt.Errorf("Volume tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
 		}
+	}
+
+	return nil
+}
+
+func validateMode(mode Mode) error {
+	if mode != AllMode && mode != ControllerMode && mode != NodeMode {
+		return fmt.Errorf("Mode is not supported (actual: %s, supported: %v)", mode, []Mode{AllMode, ControllerMode, NodeMode})
 	}
 
 	return nil

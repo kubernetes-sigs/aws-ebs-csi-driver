@@ -1,9 +1,8 @@
-apiVersion: snapshot.storage.k8s.io/v1alpha1
+apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshot
 metadata:
   name: ebs-volume-snapshot
 spec:
-  snapshotClassName: csi-aws-vsc
+  volumeSnapshotClassName: csi-aws-vsc
   source:
-    name: ebs-claim
-    kind: PersistentVolumeClaim
+    persistentVolumeClaimName: ebs-claim

@@ -8,3 +8,5 @@ patches:
 resources:
 - rbac_add_snapshotter.yaml
 - rbac_add_resizer.yaml
+- rbac_add_snapshot_controller.yaml
+- snapshot_controller.yaml

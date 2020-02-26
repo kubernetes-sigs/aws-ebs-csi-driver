@@ -65,6 +65,7 @@ func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
 			CapacityGiB:      util.BytesToGiB(diskOptions.CapacityBytes),
 			AvailabilityZone: diskOptions.AvailabilityZone,
+			SnapshotID:       diskOptions.SnapshotID,
 		},
 		tags: diskOptions.Tags,
 	}
