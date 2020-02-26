@@ -417,7 +417,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
 	BeforeEach(func() {
 		cs = f.ClientSet
 		var err error
-		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1alpha1)
+		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1beta1)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get rest clientset: %v", err))
 		}

@@ -18,8 +18,10 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -37,6 +39,107 @@ const (
 	expZone       = "us-west-2b"
 	expInstanceID = "i-123456789abcdef01"
 )
+
+func TestNewControllerService(t *testing.T) {
+
+	var (
+		cloudObj   cloud.Cloud
+		testErr    = errors.New("test error")
+		testRegion = "test-region"
+
+		getNewCloudFunc = func(expectedRegion string) func(region string) (cloud.Cloud, error) {
+			return func(region string) (cloud.Cloud, error) {
+				if region != expectedRegion {
+					t.Fatalf("expected region %q but got %q", expectedRegion, region)
+				}
+				return cloudObj, nil
+			}
+		}
+	)
+
+	testCases := []struct {
+		name                  string
+		region                string
+		newCloudFunc          func(string) (cloud.Cloud, error)
+		newMetadataFuncErrors bool
+		expectPanic           bool
+	}{
+		{
+			name:         "AWS_REGION variable set, newCloud does not error",
+			region:       "foo",
+			newCloudFunc: getNewCloudFunc("foo"),
+		},
+		{
+			name:   "AWS_REGION variable set, newCloud errors",
+			region: "foo",
+			newCloudFunc: func(region string) (cloud.Cloud, error) {
+				return nil, testErr
+			},
+			expectPanic: true,
+		},
+		{
+			name:         "AWS_REGION variable not set, newMetadata does not error",
+			newCloudFunc: getNewCloudFunc(testRegion),
+		},
+		{
+			name:                  "AWS_REGION variable not set, newMetadata errors",
+			newCloudFunc:          getNewCloudFunc(testRegion),
+			newMetadataFuncErrors: true,
+			expectPanic:           true,
+		},
+	}
+
+	driverOptions := &DriverOptions{
+		endpoint: "test",
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			oldNewCloudFunc := NewCloudFunc
+			defer func() { NewCloudFunc = oldNewCloudFunc }()
+			NewCloudFunc = tc.newCloudFunc
+
+			if tc.region == "" {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockMetadataService := mocks.NewMockMetadataService(mockCtl)
+
+				oldNewMetadataFunc := NewMetadataFunc
+				defer func() { NewMetadataFunc = oldNewMetadataFunc }()
+				NewMetadataFunc = func() (cloud.MetadataService, error) {
+					if tc.newMetadataFuncErrors {
+						return nil, testErr
+					}
+					return mockMetadataService, nil
+				}
+
+				if !tc.newMetadataFuncErrors {
+					mockMetadataService.EXPECT().GetRegion().Return(testRegion)
+				}
+			} else {
+				os.Setenv("AWS_REGION", tc.region)
+				defer os.Unsetenv("AWS_REGION")
+			}
+
+			if tc.expectPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("The code did not panic")
+					}
+				}()
+			}
+
+			controllerService := newControllerService(driverOptions)
+
+			if controllerService.cloud != cloudObj {
+				t.Fatalf("expected cloud attribute to be equal to instantiated cloud object")
+			}
+			if !reflect.DeepEqual(controllerService.driverOptions, driverOptions) {
+				t.Fatalf("expected driverOptions attribute to be equal to input")
+			}
+		})
+	}
+}
 
 func TestCreateVolume(t *testing.T) {
 	stdVolCap := []*csi.VolumeCapability{
@@ -93,6 +196,159 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "restore snapshot",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Snapshot{
+							Snapshot: &csi.VolumeContentSource_SnapshotSource{
+								SnapshotId: "snapshot-id",
+							},
+						},
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SnapshotID:       "snapshot-id",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				rsp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				snapshotID := ""
+				if rsp.Volume != nil && rsp.Volume.ContentSource != nil && rsp.Volume.ContentSource.GetSnapshot() != nil {
+					snapshotID = rsp.Volume.ContentSource.GetSnapshot().SnapshotId
+				}
+				if rsp.Volume.ContentSource.GetSnapshot().SnapshotId != "snapshot-id" {
+					t.Errorf("Unexpected snapshot ID: %q", snapshotID)
+				}
+			},
+		},
+		{
+			name: "restore snapshot, volume already exists",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Snapshot{
+							Snapshot: &csi.VolumeContentSource_SnapshotSource{
+								SnapshotId: "snapshot-id",
+							},
+						},
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SnapshotID:       "snapshot-id",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				rsp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				snapshotID := ""
+				if rsp.Volume != nil && rsp.Volume.ContentSource != nil && rsp.Volume.ContentSource.GetSnapshot() != nil {
+					snapshotID = rsp.Volume.ContentSource.GetSnapshot().SnapshotId
+				}
+				if rsp.Volume.ContentSource.GetSnapshot().SnapshotId != "snapshot-id" {
+					t.Errorf("Unexpected snapshot ID: %q", snapshotID)
+				}
+			},
+		},
+		{
+			name: "restore snapshot, volume already exists with different snapshot ID",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Snapshot{
+							Snapshot: &csi.VolumeContentSource_SnapshotSource{
+								SnapshotId: "snapshot-id",
+							},
+						},
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SnapshotID:       "another-snapshot-id",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err == nil {
+					t.Error("CreateVolume with invalid SnapshotID unexpectedly succeeded")
 				}
 			},
 		},
@@ -1487,6 +1743,34 @@ func TestControllerPublishVolume(t *testing.T) {
 				}
 
 				resp, err := awsDriver.ControllerPublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
+			},
+		},
+		{
+			name: "success when resource is not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+				expResp := &csi.ControllerUnpublishVolumeResponse{}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(cloud.ErrNotFound)
+
+				awsDriver := controllerService{cloud: mockCloud}
+				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
 				if err != nil {
 					t.Fatalf("Unexpected error: %v", err)
 				}

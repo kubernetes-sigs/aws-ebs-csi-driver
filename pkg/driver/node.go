@@ -121,9 +121,17 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if mount == nil {
 		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mount is nil within volume capability")
 	}
+
 	fsType := mount.GetFsType()
 	if len(fsType) == 0 {
 		fsType = defaultFsType
+	}
+
+	var mountOptions []string
+	for _, f := range mount.MountFlags {
+		if !hasMountOption(mountOptions, f) {
+			mountOptions = append(mountOptions, f)
+		}
 	}
 
 	if ok := d.inFlight.Insert(req); !ok {
@@ -181,7 +189,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	// FormatAndMount will format only if needed
 	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
-	err = d.mounter.FormatAndMount(source, target, fsType, nil)
+	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
 		return nil, status.Error(codes.Internal, msg)
@@ -420,16 +428,8 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	target := req.GetTargetPath()
 	source := req.GetStagingTargetPath()
 	if m := mode.Mount; m != nil {
-		hasOption := func(options []string, opt string) bool {
-			for _, o := range options {
-				if o == opt {
-					return true
-				}
-			}
-			return false
-		}
 		for _, f := range m.MountFlags {
-			if !hasOption(mountOptions, f) {
+			if !hasMountOption(mountOptions, f) {
 				mountOptions = append(mountOptions, f)
 			}
 		}
@@ -518,4 +518,16 @@ func (d *nodeService) getVolumesLimit() int64 {
 		return defaultMaxEBSNitroVolumes
 	}
 	return defaultMaxEBSVolumes
+}
+
+// hasMountOption returns a boolean indicating whether the given
+// slice already contains a mount option. This is used to prevent
+// passing duplicate option to the mount command.
+func hasMountOption(options []string, opt string) bool {
+	for _, o := range options {
+		if o == opt {
+			return true
+		}
+	}
+	return false
 }

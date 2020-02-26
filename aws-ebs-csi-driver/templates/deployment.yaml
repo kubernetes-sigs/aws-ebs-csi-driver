@@ -32,8 +32,7 @@ spec:
       affinity: {{ toYaml . | nindent 8 }}
       {{- end }}
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+        - operator: Exists
       {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
       {{- end }}
@@ -42,10 +41,11 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
+            - controller
             - --endpoint=$(CSI_ENDPOINT)
+            {{ include "aws-ebs-csi-driver.extra-volume-tags" . }}
             - --logtostderr
             - --v=5
-            {{ include "aws-ebs-csi-driver.extra-volume-tags" . }}
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -61,6 +61,10 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
+            {{- if .Values.region }}
+            - name: AWS_REGION
+              value: {{ .Values.region }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -80,7 +84,7 @@ spec:
           resources: {{ toYaml . | nindent 12 }}
           {{- end }}
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.3.0
+          image: {{ printf "%s:%s" .Values.sidecars.provisionerImage.repository .Values.sidecars.provisionerImage.tag }}
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -96,10 +100,12 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.2.0
+          image: {{ printf "%s:%s" .Values.sidecars.attacherImage.repository .Values.sidecars.attacherImage.tag }}
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
+            - --leader-election=true
+            - --leader-election-type=leases
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -108,10 +114,10 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
         {{- if .Values.enableVolumeSnapshot }}
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.1.0
+          image: {{ printf "%s:%s" .Values.sidecars.snapshotterImage.repository .Values.sidecars.snapshotterImage.tag }}
           args:
             - --csi-address=$(ADDRESS)
-            - --connection-timeout=15s
+            - --leader-election=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -121,7 +127,7 @@ spec:
         {{- end }}
         {{- if .Values.enableVolumeResizing }}
         - name: csi-resizer
-          image: quay.io/k8scsi/csi-resizer:v0.2.0
+          image: {{ printf "%s:%s" .Values.sidecars.resizerImage.repository .Values.sidecars.resizerImage.tag }}
           imagePullPolicy: Always
           args:
             - --csi-address=$(ADDRESS)
@@ -134,7 +140,7 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
         {{- end }}
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.1.0
+          image: {{ printf "%s:%s" .Values.sidecars.livenessProbeImage.repository .Values.sidecars.livenessProbeImage.tag }}
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:

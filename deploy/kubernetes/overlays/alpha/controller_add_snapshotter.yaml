@@ -8,10 +8,10 @@ spec:
     spec:
       containers:
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v1.1.0
+          image: quay.io/k8scsi/csi-snapshotter:v2.0.1
           args:
             - --csi-address=$(ADDRESS)
-            - --connection-timeout=15s
+            - --leader-election=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock

@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 
@@ -56,15 +57,28 @@ type controllerService struct {
 	driverOptions *DriverOptions
 }
 
+var (
+	// NewMetadataFunc is a variable for the cloud.NewMetadata function that can
+	// be overwritten in unit tests.
+	NewMetadataFunc = cloud.NewMetadata
+	// NewCloudFunc is a variable for the cloud.NewCloud function that can
+	// be overwritten in unit tests.
+	NewCloudFunc = cloud.NewCloud
+)
+
 // newControllerService creates a new controller service
 // it panics if failed to create the service
 func newControllerService(driverOptions *DriverOptions) controllerService {
-	metadata, err := cloud.NewMetadata()
-	if err != nil {
-		panic(err)
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		metadata, err := NewMetadataFunc()
+		if err != nil {
+			panic(err)
+		}
+		region = metadata.GetRegion()
 	}
-	region := metadata.GetRegion()
-	cloud, err := cloud.NewCloud(region)
+
+	cloud, err := NewCloudFunc(region)
 	if err != nil {
 		panic(err)
 	}
@@ -140,8 +154,24 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	snapshotID := ""
+	volumeSource := req.GetVolumeContentSource()
+	if volumeSource != nil {
+		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
+			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
+		}
+		sourceSnapshot := volumeSource.GetSnapshot()
+		if sourceSnapshot == nil {
+			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
+		}
+		snapshotID = sourceSnapshot.GetSnapshotId()
+	}
+
 	// volume exists already
 	if disk != nil {
+		if disk.SnapshotID != snapshotID {
+			return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
+		}
 		return newCreateVolumeResponse(disk), nil
 	}
 
@@ -163,18 +193,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AvailabilityZone: zone,
 		Encrypted:        isEncrypted,
 		KmsKeyID:         kmsKeyID,
-	}
-
-	volumeSource := req.GetVolumeContentSource()
-	if volumeSource != nil {
-		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
-			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
-		}
-		sourceSnapshot := volumeSource.GetSnapshot()
-		if sourceSnapshot == nil {
-			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
-		}
-		opts.SnapshotID = sourceSnapshot.GetSnapshotId()
+		SnapshotID:       snapshotID,
 	}
 
 	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
@@ -265,6 +284,9 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 	}
 
 	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
+		if err == cloud.ErrNotFound {
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 	klog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
@@ -496,6 +518,16 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 }
 
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
+	var src *csi.VolumeContentSource
+	if disk.SnapshotID != "" {
+		src = &csi.VolumeContentSource{
+			Type: &csi.VolumeContentSource_Snapshot{
+				Snapshot: &csi.VolumeContentSource_SnapshotSource{
+					SnapshotId: disk.SnapshotID,
+				},
+			},
+		}
+	}
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
@@ -506,6 +538,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 					Segments: map[string]string{TopologyKey: disk.AvailabilityZone},
 				},
 			},
+			ContentSource: src,
 		},
 	}
 }
