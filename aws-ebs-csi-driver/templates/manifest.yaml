@@ -123,7 +123,10 @@ rules:
     resources: ["volumesnapshots"]
     verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshots/status"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents/status"]
     verbs: ["update"]
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
@@ -142,6 +145,86 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: ebs-external-snapshotter-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# RBAC file for the snapshot controller.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ebs-snapshot-controller
+  namespace: kube-system
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-snapshot-controller-role
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots/status"]
+    verbs: ["update"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-csi-snapshot-controller-binding
+subjects:
+  - kind: ServiceAccount
+    name: ebs-snapshot-controller
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: ebs-snapshot-controller-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-snapshot-controller-leaderelection
+  namespace: kube-system 
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "watch", "list", "delete", "update", "create"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: snapshot-controller-leaderelection
+  namespace: kube-system 
+subjects:
+  - kind: ServiceAccount
+    name: ebs-snapshot-controller
+    namespace: kube-system 
+roleRef:
+  kind: Role
+  name: snapshot-controller-leaderelection
   apiGroup: rbac.authorization.k8s.io
 
 {{- end }}
@@ -282,6 +365,8 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
+            - --leader-election=true
+            - --leader-election-type=leases
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -293,7 +378,7 @@ spec:
           image: "{{ .Values.sidecars.snapshotterImage.repository }}:{{ .Values.sidecars.snapshotterImage.tag }}"
           args:
             - --csi-address=$(ADDRESS)
-            - --connection-timeout=15s
+            - --leader-election=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -429,6 +514,34 @@ spec:
           hostPath:
             path: /dev
             type: Directory
+
+{{- if .Values.enableVolumeSnapshot }}
+---
+#Snapshot controller
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: ebs-snapshot-controller
+  namespace: kube-system
+spec:
+  serviceName: ebs-snapshot-controller
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ebs-snapshot-controller
+  template:
+    metadata:
+      labels:
+        app: ebs-snapshot-controller
+    spec:
+      serviceAccount: ebs-snapshot-controller
+      containers:
+        - name: snapshot-controller
+          image: quay.io/k8scsi/snapshot-controller:v2.0.1
+          args:
+            - --v=5
+            - --leader-election=false
+{{- end }}
 
 ---
 

@@ -1,8 +1,9 @@
-apiVersion: snapshot.storage.k8s.io/v1alpha1
+apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshot
 metadata:
   name: static-snapshot-demo
   namespace: default 
 spec:
-  snapshotClassName: csi-aws-vsc 
-  snapshotContentName: static-snapshot-content
+  volumeSnapshotClassName: csi-aws-vsc
+  source:
+    volumeSnapshotContentName: static-snapshot-content

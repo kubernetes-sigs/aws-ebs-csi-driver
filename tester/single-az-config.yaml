@@ -86,6 +86,9 @@ install: |
   helm init --service-account tiller --history-max 200 --wait
   kubectl get po -n kube-system
 
+  # install snapshot CRD
+  kubectl apply -f deploy/kubernetes/cluster/
+
   helm install --name aws-ebs-csi-driver \
       --set enableVolumeScheduling=true \
       --set enableVolumeResizing=true \
