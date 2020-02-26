@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/local/bin/python3
 
 # Copyright 2019 The Kubernetes Authors.
 #
@@ -22,7 +22,7 @@ import requests
 
 def file_sha512(fileName, repoName):
     download(fileName, repoName)
-    with open(fileName) as file:
+    with open(fileName, 'rb') as file:
         m = hashlib.sha512()
         blob = file.read()
         m.update(blob)
@@ -94,8 +94,9 @@ class Github:
 
         for number in pr_numbers:
             pr = self.get_pr(repo, number)
-            user = pr['user']['login']
-            print('* {} ([#{}]({}), [@{}](https://github.com/{}))'.format(pr['title'], pr['number'], pr['html_url'], user, user))
+            if 'user' in pr:
+                user = pr['user']['login']
+                print('* {} ([#{}]({}), [@{}](https://github.com/{}))'.format(pr['title'], pr['number'], pr['html_url'], user, user))
 
 def print_sha(args):
     version = args.version
