@@ -1,12 +1,13 @@
-apiVersion: snapshot.storage.k8s.io/v1alpha1
+apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotContent
 metadata:
   name: static-snapshot-content
 spec:
-  csiVolumeSnapshotSource:
-    driver: ebs.csi.aws.com 
-    snapshotHandle: snap-0fba4d7649d765c50
   volumeSnapshotRef:
     kind: VolumeSnapshot
     name: static-snapshot-demo
     namespace: default 
+  source:
+    snapshotHandle: snap-0fba4d7649d765c50
+  driver: ebs.csi.aws.com
+  volumeSnapshotClassName: csi-aws-vsc

@@ -64,7 +64,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.3.1
+          image: quay.io/k8scsi/csi-provisioner:v1.5.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -82,6 +82,8 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
+            - --leader-election=true
+            - --leader-election-type=leases
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
