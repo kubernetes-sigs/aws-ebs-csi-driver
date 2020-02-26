@@ -80,4 +80,8 @@ node:
   tolerations: []
 
 serviceAccount:
-  annotations: {}
+  controller:
+    annotations: {}
+  snapshot:
+    annotations: {}
+  
