@@ -21,3 +21,6 @@ Vagrantfile
 
 # go
 vendor/
+
+# IntelliJ
+.idea/
