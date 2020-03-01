@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: amazon/aws-ebs-csi-driver
-  tag: "v0.4.0"
+  tag: "v0.5.0"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -84,4 +84,3 @@ serviceAccount:
     annotations: {}
   snapshot:
     annotations: {}
-  
