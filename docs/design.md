@@ -90,7 +90,7 @@ Blindly return:
 
 ```
   Name: ebs.csi.aws.com
-  VendorVersion: 0.4.0
+  VendorVersion: 0.x.y
 ```
 
 #### GetPluginCapabilities
