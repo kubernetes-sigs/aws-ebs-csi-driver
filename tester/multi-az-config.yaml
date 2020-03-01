@@ -102,4 +102,4 @@ test: |
   go get -u github.com/onsi/ginkgo/ginkgo
   export KUBECONFIG=$HOME/.kube/config
   export AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c
-  ginkgo -p -nodes=32 -v --focus="\[ebs-csi-e2e\] \[multi-az\]" tests/e2e -- -report-dir=$ARTIFACTS
+  $(go env GOBIN)/ginkgo -p -nodes=32 -v --focus="\[ebs-csi-e2e\] \[multi-az\]" tests/e2e -- -report-dir=$ARTIFACTS
