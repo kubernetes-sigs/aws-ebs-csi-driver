@@ -30,8 +30,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
 	"k8s.io/kubernetes/pkg/util/resizefs"
+	"k8s.io/utils/exec"
+	"k8s.io/utils/mount"
 )
 
 const (
@@ -141,6 +142,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	defer func() {
 		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
 		d.inFlight.Delete(req)
+		klog.V(4).Info("donedone")
 	}()
 
 	devicePath, ok := req.PublishContext[DevicePathKey]
@@ -248,7 +250,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	}
 
 	args := []string{"-o", "source", "--noheadings", "--target", req.GetVolumePath()}
-	output, err := d.mounter.Run("findmnt", args...)
+	output, err := d.mounter.Command("findmnt", args...).Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine device path: %v", err)
 
@@ -262,7 +264,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	// TODO: refactor Mounter to expose a mount.SafeFormatAndMount object
 	r := resizefs.NewResizeFs(&mount.SafeFormatAndMount{
 		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
+		Exec:      exec.New(),
 	})
 
 	// TODO: lock per volume ID to have some idempotency

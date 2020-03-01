@@ -1,30 +1,76 @@
-/*
-Copyright 2018 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package sanity
+package driver
 
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"path/filepath"
+	"testing"
 	"time"
 
+	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"k8s.io/utils/exec"
+	"k8s.io/utils/mount"
 )
+
+func TestSanity(t *testing.T) {
+	// Setup the full driver and its environment
+	dir, err := ioutil.TempDir("", "sanity-ebs-csi")
+	if err != nil {
+		t.Fatalf("error creating directory %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	targetPath := filepath.Join(dir, "target")
+	stagingPath := filepath.Join(dir, "staging")
+	endpoint := "unix://" + filepath.Join(dir, "csi.sock")
+
+	config := &sanity.Config{
+		TargetPath:  targetPath,
+		StagingPath: stagingPath,
+		Address:     endpoint,
+	}
+
+	driverOptions := &DriverOptions{
+		endpoint: endpoint,
+		mode:     AllMode,
+	}
+
+	drv := &Driver{
+		options: driverOptions,
+		controllerService: controllerService{
+			cloud:         newFakeCloudProvider(),
+			driverOptions: driverOptions,
+		},
+		nodeService: nodeService{
+			metadata: &cloud.Metadata{
+				InstanceID:       "instanceID",
+				Region:           "region",
+				AvailabilityZone: "az",
+			},
+			mounter:  newFakeMounter(),
+			inFlight: internal.NewInFlight(),
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("recover: %v", r)
+		}
+	}()
+	go func() {
+		if err := drv.Run(); err != nil {
+			panic(fmt.Sprintf("%v", err))
+		}
+	}()
+
+	// Now call the test suite
+	sanity.Test(t, config)
+}
 
 type fakeCloudProvider struct {
 	disks map[string]*fakeDisk
@@ -87,7 +133,7 @@ func (c *fakeCloudProvider) AttachDisk(ctx context.Context, volumeID, nodeID str
 		return "", cloud.ErrAlreadyExists
 	}
 	c.pub[volumeID] = nodeID
-	return "/dev/xvdbc", nil
+	return "/tmp", nil
 }
 
 func (c *fakeCloudProvider) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
@@ -221,4 +267,54 @@ func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, new
 		}
 	}
 	return 0, cloud.ErrNotFound
+}
+
+type fakeMounter struct {
+	exec.Interface
+}
+
+func newFakeMounter() *fakeMounter {
+	return &fakeMounter{
+		exec.New(),
+	}
+}
+
+func (f *fakeMounter) Mount(source string, target string, fstype string, options []string) error {
+	return nil
+}
+
+func (f *fakeMounter) Unmount(target string) error {
+	return nil
+}
+
+func (f *fakeMounter) List() ([]mount.MountPoint, error) {
+	return []mount.MountPoint{}, nil
+}
+
+func (f *fakeMounter) IsLikelyNotMountPoint(file string) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeMounter) GetMountRefs(pathname string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (f *fakeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+	return nil
+}
+
+func (f *fakeMounter) GetDeviceName(mountPath string) (string, int, error) {
+	return "", 0, nil
+}
+
+func (f *fakeMounter) MakeFile(pathname string) error {
+	return nil
+}
+
+func (f *fakeMounter) MakeDir(pathname string) error {
+	return nil
+}
+
+func (f *fakeMounter) ExistsPath(filename string) (bool, error) {
+	return true, nil
 }
