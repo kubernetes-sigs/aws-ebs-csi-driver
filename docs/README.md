@@ -90,7 +90,7 @@ kubectl apply -f secret.yaml
 ```
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-#### Deploy CRD (optinal)
+#### Deploy CRD (optional)
 If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
