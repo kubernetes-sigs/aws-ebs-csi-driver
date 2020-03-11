@@ -21,6 +21,6 @@ spec:
         - name: snapshot-controller
           image: quay.io/k8scsi/snapshot-controller:v2.0.1
           args:
-            - --v=5
+            - --v={{ .logLevel | deftaul "5" }
             - --leader-election=false
 {{- end }}
