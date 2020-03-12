@@ -2,7 +2,7 @@ module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
 	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191204032858-d97ad2e4255e // indirect
-	github.com/aws/aws-sdk-go v1.23.21
+	github.com/aws/aws-sdk-go v1.29.11
 	github.com/container-storage-interface/spec v1.2.0
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
