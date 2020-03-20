@@ -40,8 +40,11 @@ const (
 )
 
 const (
-	DriverName  = "ebs.csi.aws.com"
-	TopologyKey = "topology." + DriverName + "/zone"
+	TopologyKey = "topology." + "ebs.csi.aws.com" + "/zone"
+)
+
+var (
+	DriverName  string
 )
 
 type Driver struct {
@@ -54,13 +57,12 @@ type Driver struct {
 
 type DriverOptions struct {
 	endpoint        string
+	drivername      string
 	extraVolumeTags map[string]string
 	mode            Mode
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
-	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
-
 	driverOptions := DriverOptions{
 		endpoint: DefaultCSIEndpoint,
 		mode:     AllMode,
@@ -69,6 +71,9 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 		option(&driverOptions)
 	}
 
+	DriverName = driverOptions.drivername
+
+	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 	if err := ValidateDriverOptions(&driverOptions); err != nil {
 		return nil, fmt.Errorf("Invalid driver options: %v", err)
 	}
@@ -153,5 +158,11 @@ func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions)
 func WithMode(mode Mode) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.mode = mode
+	}
+}
+
+func WithDriverName(drivername string) func(*DriverOptions) {
+	return func(o *DriverOptions){
+		o.drivername = drivername
 	}
 }

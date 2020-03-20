@@ -26,8 +26,12 @@ import (
 type ServerOptions struct {
 	// Endpoint is the endpoint that the driver server should listen on.
 	Endpoint string
+
+	// DriverName for different account
+	DriverName string
 }
 
 func (s *ServerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.Endpoint, "endpoint", driver.DefaultCSIEndpoint, "Endpoint for the CSI driver server")
+	fs.StringVar(&s.DriverName, "drivername", driver.DefaultCSIDriverName, "DriverName for the CSI driver server")
 }
