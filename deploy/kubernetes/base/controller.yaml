@@ -17,6 +17,7 @@ spec:
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
+        beta.kubernetes.io/arch: amd64
       serviceAccount: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
