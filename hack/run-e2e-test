@@ -107,7 +107,7 @@ if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
     #   - NodeExpand for BlockVolumes not well-defined, need more investigation and possibly https://github.com/container-storage-interface/spec/issues/380
     # - should provision storage with mount options
     #   - Known bug, need https://github.com/kubernetes/kubernetes/pull/80191 but not yet in a patch release
-    pushd ./tests/e2e-migration
+    pushd ./tests/e2e-kubernetes
     go get -u github.com/onsi/ginkgo/ginkgo
     SKIP="\[Disruptive\]\
 |should.provision.storage.with.mount.options\
