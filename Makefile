@@ -63,6 +63,10 @@ test-e2e-single-az: bin/k8s-e2e-tester
 test-e2e-multi-az: bin/k8s-e2e-tester
 	TESTCONFIG=./tester/multi-az-config.yaml ${GOBIN}/k8s-e2e-tester
 
+.PHONY: test-e2e-external
+test-e2e-external: bin/k8s-e2e-tester
+	TESTCONFIG=./tester/external-config.yaml ${GOBIN}/k8s-e2e-tester
+
 .PHONY: test-e2e-migration
 test-e2e-migration:
 	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-migration\]" ./hack/run-e2e-test
