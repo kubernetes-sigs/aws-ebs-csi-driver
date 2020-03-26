@@ -25,11 +25,11 @@ GOBIN=$(shell pwd)/bin
 
 .EXPORT_ALL_VARIABLES:
 
-bin /tmp/helm:
-	@mkdir -p $@
-
 bin/aws-ebs-csi-driver: | bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
+
+bin /tmp/helm:
+	@mkdir -p $@
 
 bin/helm: | /tmp/helm bin
 	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.1.2-linux-amd64.tar.gz
