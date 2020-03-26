@@ -93,7 +93,7 @@ push:
 	docker push $(IMAGE):latest
 
 .PHONY: generate-kustomize
-generate-kustomize:
+generate-kustomize: bin/helm
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../deploy/kubernetes/base/clusterrole-attacher.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-provisioner.yaml > ../deploy/kubernetes/base/clusterrole-provisioner.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-attacher.yaml > ../deploy/kubernetes/base/clusterrolebinding-attacher.yaml
