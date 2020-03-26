@@ -1,18 +1,23 @@
 ---
+# Source: aws-ebs-csi-driver/templates/node.yaml
 # Node Service
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
   namespace: kube-system
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
   selector:
     matchLabels:
       app: ebs-csi-node
+      app.kubernetes.io/name: aws-ebs-csi-driver
   template:
     metadata:
       labels:
         app: ebs-csi-node
+        app.kubernetes.io/name: aws-ebs-csi-driver
     spec:
       affinity:
         nodeAffinity:
@@ -34,8 +39,9 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: amazon/aws-ebs-csi-driver:latest
+          image: "amazon/aws-ebs-csi-driver:latest"
           args:
+            - node
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=5
