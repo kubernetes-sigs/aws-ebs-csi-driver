@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,15 +18,25 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
+)
+
+// Mode is the operating mode of the CSI driver.
+type Mode string
+
+const (
+	// ControllerMode is the mode that only starts the controller service.
+	ControllerMode Mode = "controller"
+	// NodeMode is the mode that only starts the node service.
+	NodeMode Mode = "node"
+	// AllMode is the mode that only starts both the controller and the node service.
+	AllMode Mode = "all"
 )
 
 const (
@@ -35,36 +45,55 @@ const (
 )
 
 type Driver struct {
-	endpoint string
-	nodeID   string
+	controllerService
+	nodeService
 
-	cloud cloud.Cloud
-	srv   *grpc.Server
-
-	mounter  *mount.SafeFormatAndMount
-	inFlight *internal.InFlight
+	srv     *grpc.Server
+	options *DriverOptions
 }
 
-func NewDriver(endpoint string) (*Driver, error) {
+type DriverOptions struct {
+	endpoint        string
+	extraVolumeTags map[string]string
+	mode            Mode
+}
+
+func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
-	cloud, err := cloud.NewCloud()
-	if err != nil {
-		return nil, err
+	driverOptions := DriverOptions{
+		endpoint: DefaultCSIEndpoint,
+		mode:     AllMode,
+	}
+	for _, option := range options {
+		option(&driverOptions)
 	}
 
-	m := cloud.GetMetadata()
-	return &Driver{
-		endpoint: endpoint,
-		nodeID:   m.GetInstanceID(),
-		cloud:    cloud,
-		mounter:  newSafeMounter(),
-		inFlight: internal.NewInFlight(),
-	}, nil
+	if err := ValidateDriverOptions(&driverOptions); err != nil {
+		return nil, fmt.Errorf("Invalid driver options: %v", err)
+	}
+
+	driver := Driver{
+		options: &driverOptions,
+	}
+
+	switch driverOptions.mode {
+	case ControllerMode:
+		driver.controllerService = newControllerService(&driverOptions)
+	case NodeMode:
+		driver.nodeService = newNodeService()
+	case AllMode:
+		driver.controllerService = newControllerService(&driverOptions)
+		driver.nodeService = newNodeService()
+	default:
+		return nil, fmt.Errorf("unknown mode: %s", driverOptions.mode)
+	}
+
+	return &driver, nil
 }
 
 func (d *Driver) Run() error {
-	scheme, addr, err := util.ParseEndpoint(d.endpoint)
+	scheme, addr, err := util.ParseEndpoint(d.options.endpoint)
 	if err != nil {
 		return err
 	}
@@ -87,8 +116,18 @@ func (d *Driver) Run() error {
 	d.srv = grpc.NewServer(opts...)
 
 	csi.RegisterIdentityServer(d.srv, d)
-	csi.RegisterControllerServer(d.srv, d)
-	csi.RegisterNodeServer(d.srv, d)
+
+	switch d.options.mode {
+	case ControllerMode:
+		csi.RegisterControllerServer(d.srv, d)
+	case NodeMode:
+		csi.RegisterNodeServer(d.srv, d)
+	case AllMode:
+		csi.RegisterControllerServer(d.srv, d)
+		csi.RegisterNodeServer(d.srv, d)
+	default:
+		return fmt.Errorf("unknown mode: %s", d.options.mode)
+	}
 
 	klog.Infof("Listening for connections on address: %#v", listener.Addr())
 	return d.srv.Serve(listener)
@@ -99,9 +138,20 @@ func (d *Driver) Stop() {
 	d.srv.Stop()
 }
 
-func newSafeMounter() *mount.SafeFormatAndMount {
-	return &mount.SafeFormatAndMount{
-		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
+func WithEndpoint(endpoint string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.endpoint = endpoint
+	}
+}
+
+func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.extraVolumeTags = extraVolumeTags
+	}
+}
+
+func WithMode(mode Mode) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.mode = mode
 	}
 }

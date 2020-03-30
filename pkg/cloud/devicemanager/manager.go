@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ type DeviceManager interface {
 }
 
 type deviceManager struct {
-	// nameAllocators holds the state of a device allocator for each node.
-	nameAllocators map[string]NameAllocator
+	// nameAllocator assigns new device name
+	nameAllocator NameAllocator
 
 	// We keep an active list of devices we have assigned but not yet
 	// attached, to avoid a race condition where we assign a device mapping
@@ -101,36 +101,33 @@ func (i inFlightAttaching) GetVolume(nodeID, name string) string {
 
 func NewDeviceManager() DeviceManager {
 	return &deviceManager{
-		nameAllocators: make(map[string]NameAllocator),
-		inFlight:       make(inFlightAttaching),
+		nameAllocator: &nameAllocator{},
+		inFlight:      make(inFlightAttaching),
 	}
 }
 
 func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
-	nodeID, err := getInstanceID(instance)
-	if err != nil {
-		return nil, err
-	}
-
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
+	if instance == nil {
+		return nil, fmt.Errorf("instance is nil")
+	}
+
 	// Get device names being attached and already attached to this instance
-	inUse := d.getDeviceNamesInUse(instance, nodeID)
+	inUse := d.getDeviceNamesInUse(instance)
 
 	// Check if this volume is already assigned a device on this machine
 	if path := d.getPath(inUse, volumeID); path != "" {
 		return d.newBlockDevice(instance, volumeID, path, true), nil
 	}
 
-	// Find the next unused device name
-	nameAllocator := d.nameAllocators[nodeID]
-	if nameAllocator == nil {
-		nameAllocator = NewNameAllocator()
-		d.nameAllocators[nodeID] = nameAllocator
+	nodeID, err := getInstanceID(instance)
+	if err != nil {
+		return nil, err
 	}
 
-	name, err := nameAllocator.GetNext(inUse)
+	name, err := d.nameAllocator.GetNext(inUse)
 	if err != nil {
 		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
 	}
@@ -138,22 +135,14 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 	// Add the chosen device and volume to the "attachments in progress" map
 	d.inFlight.Add(nodeID, volumeID, name)
 
-	// Deprioritize this name so it's not picked again right away.
-	nameAllocator.Deprioritize(name)
-
 	return d.newBlockDevice(instance, volumeID, devPreffix+name, false), nil
 }
 
 func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
-	nodeID, err := getInstanceID(instance)
-	if err != nil {
-		return nil, err
-	}
-
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	inUse := d.getDeviceNamesInUse(instance, nodeID)
+	inUse := d.getDeviceNamesInUse(instance)
 
 	if path := d.getPath(inUse, volumeID); path != "" {
 		return d.newBlockDevice(instance, volumeID, path, true), nil
@@ -188,7 +177,7 @@ func (d *deviceManager) release(device *Device) error {
 
 	var name string
 	if len(device.Path) > 2 {
-		name = device.Path[len(device.Path)-2:]
+		name = strings.TrimPrefix(device.Path, devPreffix)
 	}
 
 	existingVolumeID := d.inFlight.GetVolume(nodeID, name)
@@ -205,13 +194,16 @@ func (d *deviceManager) release(device *Device) error {
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
-	klog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device, device.VolumeID)
+	klog.V(5).Infof("Releasing in-process attachment entry: %v -> volume %s", device.Path, device.VolumeID)
 	d.inFlight.Del(nodeID, name)
 
 	return nil
 }
 
-func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance, nodeID string) map[string]string {
+// getDeviceNamesInUse returns the device to volume ID mapping
+// the mapping includes both already attached and being attached volumes
+func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]string {
+	nodeID := aws.StringValue(instance.InstanceId)
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)

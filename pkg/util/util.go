@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ func RoundUpGiB(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB)
 }
 
-// BytesToGiB conversts Bytes to GiB
+// BytesToGiB converts Bytes to GiB
 func BytesToGiB(volumeSizeBytes int64) int64 {
 	return volumeSizeBytes / GiB
 }

@@ -1,0 +1,132 @@
+#!/usr/local/bin/python3
+
+# Copyright 2019 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import hashlib
+import json
+import os
+import requests
+
+def file_sha512(fileName, repoName):
+    download(fileName, repoName)
+    with open(fileName, 'rb') as file:
+        m = hashlib.sha512()
+        blob = file.read()
+        m.update(blob)
+        print("[{}](https://github.com/{}/archive/{}) | `{}`"
+                .format(fileName,repoName, fileName,m.hexdigest()))
+    os.remove(fileName)
+
+def download(fileName, repoName):
+    url = 'https://github.com/{}/archive/{}'.format(repoName, fileName)
+    r = requests.get(url, allow_redirects=True)
+    open(fileName, 'wb').write(r.content)
+
+def print_header(repo, version):
+    # Title
+    print('# {}'.format(version))
+
+    # documentation section
+    print('[Documentation](https://github.com/{}/blob/{}/docs/README.md)\n'
+            .format(repo,version))
+
+    # sha512
+    print('filename  | sha512 hash')
+    print('--------- | ------------')
+    file_sha512(version+".zip", repo)
+    file_sha512(version+".tar.gz", repo)
+
+class Github:
+    def __init__(self, user, token):
+        self._url = 'https://api.github.com'
+        self._user = user
+        self._token = token
+
+    def get_commits(self, repo, since):
+        resp = requests.get('{}/repos/{}/compare/{}...master'.format(self._url, repo, since),
+                auth=(self._user, self._token))
+        jsonResp = json.loads(resp.content)
+        return jsonResp['commits']
+
+    def to_pr_numbers(self, repo, commit):
+        sha = commit['sha']
+        resp = requests.get('{}/repos/{}/commits/{}/pulls'.format(self._url, repo, sha),
+                headers={'Accept': 'application/vnd.github.groot-preview+json'},
+                auth=(self._user, self._token))
+        jsonResp = json.loads(resp.content)
+        ret = []
+        for pr in jsonResp:
+            ret.append(pr['number'])
+
+        return ret
+
+    def get_pr(self, repo, pr_number):
+        resp = requests.get('{}/repos/{}/pulls/{}'.format(self._url, repo, pr_number),
+                auth=(self._user, self._token))
+        jsonResp = json.loads(resp.content)
+        return jsonResp
+
+    def print_release_note(self, repo, since):
+        # remove merge commits
+        commits = self.get_commits(repo, since)
+        commits = filter(lambda c: not c['commit']['message'].startswith('Merge pull request'), commits)
+        pr_numbers = set()
+        for commit in commits:
+            numbers = self.to_pr_numbers(repo, commit)
+            for pr in numbers:
+                pr_numbers.add(pr)
+
+        # dedupe pr numbers
+        pr_numbers = sorted(list(pr_numbers))
+
+        for number in pr_numbers:
+            pr = self.get_pr(repo, number)
+            if 'user' in pr:
+                user = pr['user']['login']
+                print('* {} ([#{}]({}), [@{}](https://github.com/{}))'.format(pr['title'], pr['number'], pr['html_url'], user, user))
+
+def print_sha(args):
+    version = args.version
+    repo = args.repo
+    print_header(repo, version)
+
+def print_notes(args):
+    repo = args.repo
+    since = args.since
+    user = args.github_user
+    token = args.github_token
+
+    g = Github(user, token)
+    g.print_release_note(repo, since)
+
+if __name__=="__main__":
+    parser = argparse.ArgumentParser(description='Generate release CHANGELOG')
+    parser.add_argument('--repo', metavar='repo', type=str, default='kubernetes-sigs/aws-ebs-csi-driver', help='the full github repository name')
+    parser.add_argument('--github-user', metavar='user', type=str, help='the github user for github api')
+    parser.add_argument('--github-token', metavar='token', type=str, help='the github token for github api')
+
+    subParsers = parser.add_subparsers(title='subcommands', description='[note|sha]')
+
+    noteParser = subParsers.add_parser('note', help='generate release notes')
+    noteParser.add_argument('--since', metavar='since', type=str, required=True, help='since version tag')
+    noteParser.set_defaults(func=print_notes)
+
+    shaParser = subParsers.add_parser('sha', help='generate SHA for released version tag')
+    shaParser.add_argument('--version', metavar='version', type=str, required=True, help='the version to release')
+    shaParser.set_defaults(func=print_sha)
+
+    args = parser.parse_args()
+    args.func(args)

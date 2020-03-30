@@ -17,16 +17,17 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"os"
+	"strings"
+
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	. "github.com/onsi/ginkgo"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"math/rand"
-	"os"
-	"strings"
 
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
@@ -43,24 +44,6 @@ const (
 var (
 	defaultDiskSizeBytes int64 = defaultDiskSize * 1024 * 1024 * 1024
 )
-
-type e2eMetdataService struct {
-	availabilityZone string
-}
-
-// GetInstanceID will always return an empty string as the test does not need to run on an EC2 machine
-func (s e2eMetdataService) GetInstanceID() string {
-	return ""
-}
-
-func (s e2eMetdataService) GetAvailabilityZone() string {
-	return s.availabilityZone
-}
-
-// GetRegion will try to determine the Region from the specified AZ, specifically trims the last character
-func (s e2eMetdataService) GetRegion() string {
-	return s.availabilityZone[0 : len(s.availabilityZone)-1]
-}
 
 // Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set
 var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
@@ -88,15 +71,16 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		}
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
+		region := availabilityZone[0 : len(availabilityZone)-1]
+
 		diskOptions := &awscloud.DiskOptions{
 			CapacityBytes:    defaultDiskSizeBytes,
 			VolumeType:       defaultVoluemType,
 			AvailabilityZone: availabilityZone,
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
 		}
-		metadata := e2eMetdataService{availabilityZone: availabilityZone}
 		var err error
-		cloud, err = awscloud.NewCloudWithMetadata(metadata)
+		cloud, err = awscloud.NewCloud(region)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

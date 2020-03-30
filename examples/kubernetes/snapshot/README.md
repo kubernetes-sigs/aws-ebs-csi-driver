@@ -1,42 +1,67 @@
-# Volume Snapshots with AWS EBS CSI Driver
+# Volume Snapshots
 
 ## Overview
 
-This driver implements basic volume snapshotting functionality, i.e. it is possible to use it along with the [external
-snapshotter](https://github.com/kubernetes-csi/external-snapshotter) sidecar and create snapshots of EBS volumes using
-the `VolumeSnapshot` custom resources.
+This driver implements basic volume snapshotting functionality using the [external snapshotter](https://github.com/kubernetes-csi/external-snapshotter) sidecar and creates snapshots of EBS volumes using the `VolumeSnapshot` custom resources.
 
 ## Prerequisites
 
-1. Kubernetes 1.13+ (CSI 1.0) is required
+1. Kubernetes 1.13+ (CSI 1.0).
 
-2. The `VolumeSnapshotDataSource` feature gate of Kubernetes API server and controller manager must be turned on.
+1. The `VolumeSnapshotDataSource` must be set in `--feature-gates=` in the `kube-apiserver`.
 
-## Usage
+1. The [aws-ebs-csi-driver driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) is installed.
 
-This directory contains example YAML files to test the feature. First, see the [deployment example](../../../deploy/kubernetes) and [volume scheduling example](../volume_scheduling)
-to set up the external provisioner:
+### Usage
 
-### Set up
+1. Create the `StorageClass` and `VolumeSnapshotClass`:
+```
+kubectl apply -f specs/classes/
+```
 
-1. Create the RBAC rules
+2. Create a sample app and the `PersistentVolumeClaim`: 
+```
+kubectl apply -f specs/app/
+```
 
-2. Start the contoller `StatefulSet`
+3. Validate the volume was created and `volumeHandle` contains an EBS volumeID: 
+```
+kubectl describe pv
+```
 
-3. Start the node `DaemonSet`
+4. Validate the pod successfully wrote data to the volume, taking note of the timestamp of the first entry:
+```
+kubectl exec -it app cat /data/out.txt
+```
 
-4. Create a `StorageClass` for dynamic provisioning of the AWS CSI volumes
+5. Create a `VolumeSnapshot` referencing the `PersistentVolumeClaim` name:
+```
+kubectl apply -f specs/snapshot/
+```
 
-5. Create a `SnapshotClass` to create `VolumeSnapshot`s using the AWS CSI external controller
+6. Wait for the `Ready To Use:  true` attribute of the `VolumeSnapshot`: 
+```
+kubectl describe volumesnapshot.snapshot.storage.k8s.io ebs-volume-snapshot
+```
 
-6. Create a `PersistentVolumeClaim` and a pod using it
+7. Delete the existing app:
+```
+kubectl delete -f specs/app/
+```
 
-### Taking and restoring volume snapshot
+8. Restore a volume from the snapshot with a `PersistentVolumeClaim` referencing the `VolumeSnapshot` in its `dataSource`:
+```
+kubectl apply -f specs/snapshot-restore/
+```
 
-7. Create a `VolumeSnapshot` referencing the `PersistentVolumeClaim`; the snapshot creation may take time to finish:
-   check the `ReadyToUse` attribute of the `VolumeSnapshot` object to find out when a new `PersistentVolume` can be
-   created from the snapshot
+9. Validate the new pod has the restored data by comparing the timestamp of the first entry to that of in step 4:
+```
+kubectl exec -it app cat /data/out.txt
+```
 
-8. To restore a volume from a snapshot use a `PersistentVolumeClaim` referencing the `VolumeSnapshot` in its `dataSource`; see the
-   [Kubernetes Persistent Volumes documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-snapshot-and-restore-volume-from-snapshot-support)
-   and the example [restore claim](./restore-claim.yaml)
+10. Cleanup resources:
+```
+kubectl delete -f specs/snapshot-restore
+kubectl delete -f specs/snapshot
+kubectl delete -f specs/classes
+```

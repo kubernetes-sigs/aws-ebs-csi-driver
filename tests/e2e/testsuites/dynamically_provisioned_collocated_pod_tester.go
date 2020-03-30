@@ -34,7 +34,6 @@ type DynamicallyProvisionedCollocatedPodTest struct {
 
 func (t *DynamicallyProvisionedCollocatedPodTest) Run(client clientset.Interface, namespace *v1.Namespace) {
 	nodeName := ""
-	podCleanup := make([]func(), 0)
 	for _, pod := range t.Pods {
 		tpod, cleanup := pod.SetupWithDynamicVolumes(client, namespace, t.CSIDriver)
 		if t.ColocatePods && nodeName != "" {
@@ -47,13 +46,11 @@ func (t *DynamicallyProvisionedCollocatedPodTest) Run(client clientset.Interface
 
 		By("deploying the pod")
 		tpod.Create()
-		podCleanup = append(podCleanup, tpod.Cleanup)
+		defer tpod.Cleanup()
+
 		By("checking that the pod is running")
 		tpod.WaitForRunning()
 		nodeName = tpod.pod.Spec.NodeName
 	}
-	// call Pod cleanup after all pods are up
-	for i := range podCleanup {
-		podCleanup[i]()
-	}
+
 }

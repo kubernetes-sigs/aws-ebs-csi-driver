@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2019 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,42 +14,59 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -uo pipefail
+set -euo pipefail
 
 OS_ARCH=$(go env GOOS)-amd64
 TEST_ID=$RANDOM
 CLUSTER_NAME=test-cluster-$TEST_ID
 TEST_DIR=/tmp/ebs-e2e-test
 BASE_DIR=$(dirname $0)
-REGION=${AWS_REGION-us-east-1}
-ZONES=${AWS_AVAILABILITY_ZONES-us-east-1a,us-east-1b,us-east-1c}
+REGION=${AWS_REGION-us-west-2}
+ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
-NODES=${GINKGO_NODES:-32}
+NODES=${GINKGO_NODES:-4}
+K8S_VERSION=${K8S_VERSION-1.16.1}
+INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
+
+source $(dirname "${BASH_SOURCE}")/utils/helm.sh
 
 echo "Testing in region: $REGION and zones: $ZONES"
 
-KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.11.0/kops-$OS_ARCH
+KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.16.0-alpha.1/kops-$OS_ARCH
 KOPS_PATH=$TEST_DIR/kops
 KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
 
 # Download kops if not yet
 if [[ ! -e $KOPS_PATH ]]; then
-    mkdir -p $TEST_DIR 
+    mkdir -p $TEST_DIR
     echo "Downloading KOPS from $KOPS_DOWNLOAD_URL to $KOPS_PATH"
     curl -L -X GET $KOPS_DOWNLOAD_URL -o $KOPS_PATH
 fi
 
 chmod +x $KOPS_PATH
 
+helm::install
+
+echo "Build and push test driver image"
+eval $(aws ecr get-login --region $REGION --no-include-email)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+IMAGE_TAG=$TEST_ID
+IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver
+docker build -t $IMAGE_NAME:$IMAGE_TAG .
+docker push $IMAGE_NAME:$IMAGE_TAG
+
+set +e
 echo "Creating cluster $CLUSTER_NAME"
 CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
 SSH_KEY_PATH=$TEST_DIR/id_rsa
 ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 
+K8S_VERSION=https://k8s-kops-csi-e2e.s3.amazonaws.com/kubernetes/dev/v1.17.0-dev/
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
-    --kubernetes-version=1.13.0 \
+    --node-size=$INSTANCE_TYPE \
+    --kubernetes-version=$K8S_VERSION \
     --ssh-public-key=$SSH_KEY_PATH.pub \
         $CLUSTER_NAME.k8s.local
 $KOPS_PATH get cluster --state $KOPS_STATE_FILE $CLUSTER_NAME.k8s.local -o yaml > $CLUSTER_YAML_PATH
@@ -70,35 +87,75 @@ while [[ 1 ]]; do
     fi
 done;
 
-# Push test driver image
-eval $(aws ecr get-login --region $REGION --no-include-email)
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-IMAGE_TAG=$TEST_ID
-IMAGE_NAME=$AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/aws-ebs-csi-driver:$IMAGE_TAG
-docker build -t $IMAGE_NAME .
-docker push $IMAGE_NAME
-
-# Update manifest files
-cp deploy/kubernetes/*.yaml $TEST_DIR
-sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/controller.yaml
-sed "s/image: amazon\/aws-ebs-csi-driver:.*/image: $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com\/aws-ebs-csi-driver:$IMAGE_TAG/g" -i $TEST_DIR/node.yaml
-
 echo "Deploying driver"
-kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
-kubectl apply -f $TEST_DIR/controller.yaml 
-kubectl apply -f $TEST_DIR/node.yaml 
-kubectl apply -f $TEST_DIR/secret.yaml
+helm::init
+
+helm install --name aws-ebs-csi-driver \
+    --set enableVolumeScheduling=true \
+    --set enableVolumeResizing=true \
+    --set enableVolumeSnapshot=true \
+    --set image.repository=$IMAGE_NAME \
+    --set image.tag=$IMAGE_TAG \
+    ./aws-ebs-csi-driver
 
 # Run the test
-go get -u github.com/onsi/ginkgo/ginkgo
-export KUBECONFIG=$HOME/.kube/config
-ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e
-TEST_PASS=$?
+if [[ "$GINKGO_FOCUS" == "\[ebs-csi-migration\]" ]]; then
+    # TODO known test failures to skip temporarily
+    # - should not allow expansion of pvcs without AllowVolumeExpansion property
+    #   - Test passes but cleanup fails, need https://github.com/kubernetes/kubernetes/pull/81107
+    # - (block volmode) Verify if offline PVC expansion works / should resize volume when PVC is edited while pod is using it
+    #   - NodeExpand for BlockVolumes not well-defined, need more investigation and possibly https://github.com/container-storage-interface/spec/issues/380
+    # - should provision storage with mount options
+    #   - Known bug, need https://github.com/kubernetes/kubernetes/pull/80191 but not yet in a patch release
+    pushd ./tests/e2e-migration
+    go get -u github.com/onsi/ginkgo/ginkgo
+    SKIP="\[Disruptive\]\
+|should.provision.storage.with.mount.options\
+|should.not.mount./.map.unused.volumes.in.a.pod"
+    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" --skip="$SKIP" --noColor ./... -- -kubeconfig=$HOME/.kube/config -report-dir=$ARTIFACTS -gce-zone=${ZONES%,*}
+    TEST_PASS=$?
+    popd
+
+    # There should have been no calls to the in-tree driver kubernetes.io/aws-ebs but many calls to ebs.csi.aws.com
+    # Find the controller-manager log and read its metrics to verify
+    NODE=$(kubectl get node -l kubernetes.io/role=master -o json | jq -r ".items[].metadata.name")
+    kubectl port-forward kube-controller-manager-$NODE 10252:10252 -n kube-system&
+
+    # Ensure port forwarding is succeeded
+    while true
+    do
+        HEALTHZ=$(curl -s 127.0.0.1:10252/healthz)
+        if [[ $HEALTHZ == "ok" ]]; then
+            echo "Port forwarding is succeeded"
+            break
+        else
+            echo "Port forwarding is not yet ready"
+        fi
+        sleep 1
+    done
+
+    curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="ebs.csi.aws.com"'
+    CSI_CALLED=$?
+    curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="kubernetes.io/aws-ebs"'
+    INTREE_CALLED=$?
+
+    echo "TEST_PASS: $TEST_PASS CSI_CALLED: $CSI_CALLED INTREE_CALLED: $INTREE_CALLED"
+
+    # TEST_PASS if tests passed, CSI was called, and In-tree was not called
+    if [ "$TEST_PASS" == 0 ] && [ "$CSI_CALLED" == 0 ] && [ "$INTREE_CALLED" == 1 ]; then
+        TEST_PASS=0
+    else
+        TEST_PASS=1
+    fi
+else
+    go get -u github.com/onsi/ginkgo/ginkgo
+    export KUBECONFIG=$HOME/.kube/config
+    ginkgo -p -nodes=$NODES -v --focus="$FOCUS" tests/e2e -- -report-dir=$ARTIFACTS
+    TEST_PASS=$?
+fi
 
 echo "Removing driver"
-kubectl delete -f $TEST_DIR/controller.yaml
-kubectl delete -f $TEST_DIR/node.yaml
-kubectl delete -f $TEST_DIR/secret.yaml
+helm del --purge aws-ebs-csi-driver
 
 echo "Deleting cluster $CLUSTER_NAME"
 $KOPS_PATH delete cluster --name $CLUSTER_NAME.k8s.local --state $KOPS_STATE_FILE --yes

@@ -16,20 +16,25 @@ package e2e
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	"k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
-	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/test/e2e/framework"
 	"math/rand"
 	"os"
 	"strings"
+
+	. "github.com/onsi/ginkgo"
+	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	clientset "k8s.io/client-go/kubernetes"
+	restclientset "k8s.io/client-go/rest"
+	"k8s.io/kubernetes/test/e2e/framework"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
@@ -38,7 +43,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	var (
 		cs        clientset.Interface
 		ns        *v1.Namespace
-		ebsDriver driver.DynamicPVTestDriver
+		ebsDriver driver.PVTestDriver
 	)
 
 	BeforeEach(func() {
@@ -51,7 +56,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		for _, fs := range ebscsidriver.ValidFSTypes {
 			volumeType := t
 			fsType := fs
-			It(fmt.Sprintf("should create a volume on demand with volumeType %q and fsType %q", volumeType, fsType), func() {
+			It(fmt.Sprintf("should create a volume on demand with volume type %q and fs type %q", volumeType, fsType), func() {
 				pods := []testsuites.PodDetails{
 					{
 						Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -358,8 +363,8 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		}
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
-		metadata := e2eMetdataService{availabilityZone: availabilityZone}
-		cloud, err := awscloud.NewCloudWithMetadata(metadata)
+		region := availabilityZone[0 : len(availabilityZone)-1]
+		cloud, err := awscloud.NewCloud(region)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
@@ -396,6 +401,66 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 			},
 		}
 		test.Run(cs, ns)
+	})
+})
+
+var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
+	f := framework.NewDefaultFramework("ebs")
+
+	var (
+		cs          clientset.Interface
+		snapshotrcs restclientset.Interface
+		ns          *v1.Namespace
+		ebsDriver   driver.PVTestDriver
+	)
+
+	BeforeEach(func() {
+		cs = f.ClientSet
+		var err error
+		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1beta1)
+		if err != nil {
+			Fail(fmt.Sprintf("could not get rest clientset: %v", err))
+		}
+		ns = f.Namespace
+		ebsDriver = driver.InitEbsCSIDriver()
+	})
+
+	It("should create a pod, write and read to it, take a volume snapshot, and create another pod from the snapshot", func() {
+		pod := testsuites.PodDetails{
+			// sync before taking a snapshot so that any cached data is written to the EBS volume
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && sync",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					VolumeType: awscloud.VolumeTypeGP2,
+					FSType:     ebscsidriver.FSTypeExt4,
+					ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		restoredPod := testsuites.PodDetails{
+			Cmd: "grep 'hello world' /mnt/test-1/data",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					VolumeType: awscloud.VolumeTypeGP2,
+					FSType:     ebscsidriver.FSTypeExt4,
+					ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         pod,
+			RestoredPod: restoredPod,
+		}
+		test.Run(cs, snapshotrcs, ns)
 	})
 })
 
@@ -472,3 +537,16 @@ var _ = Describe("[ebs-csi-e2e] [multi-az] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 })
+
+func restClient(group string, version string) (restclientset.Interface, error) {
+	// setup rest client
+	config, err := framework.LoadConfig()
+	if err != nil {
+		Fail(fmt.Sprintf("could not load config: %v", err))
+	}
+	gv := schema.GroupVersion{Group: group, Version: version}
+	config.GroupVersion = &gv
+	config.APIPath = "/apis"
+	config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: serializer.NewCodecFactory(runtime.NewScheme())}
+	return restclientset.RESTClientFor(config)
+}

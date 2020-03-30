@@ -1,4 +1,4 @@
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2019 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,63 +13,61 @@
 # limitations under the License.
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
-IMAGE=amazon/aws-ebs-csi-driver
-VERSION=0.3.0-alpha
+IMAGE?=amazon/aws-ebs-csi-driver
+VERSION=v0.5.0
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 GO111MODULE=on
-
-# Hard-coded version is needed in case GitHub API rate limit is exceeded.
-# TODO: When aws-k8s-tester becomes a full release (https://developer.github.com/v3/repos/releases/#get-the-latest-release), use:
-# $(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/releases/latest | jq -r '.tag_name? // "<current version number>"')
-AWS_K8S_TESTER_VERSION?=$(shell curl -s --request GET --url https://api.github.com/repos/aws/aws-k8s-tester/tags | jq -r '.[0]?.name // "0.2.5"')
-AWS_K8S_TESTER_OS_ARCH?=$(shell go env GOOS)-amd64
-AWS_K8S_TESTER_DOWNLOAD_URL?=https://github.com/aws/aws-k8s-tester/releases/download/${AWS_K8S_TESTER_VERSION}/aws-k8s-tester-${AWS_K8S_TESTER_VERSION}-${AWS_K8S_TESTER_OS_ARCH}
-AWS_K8S_TESTER_PATH?=/tmp/aws-k8s-tester
+GOPROXY=direct
+GOPATH=$(shell go env GOPATH)
+GOBIN=$(shell pwd)/bin
 
 .EXPORT_ALL_VARIABLES:
 
-VPC_ID_FLAG=
-ifdef AWS_K8S_TESTER_VPC_ID
-	VPC_ID_FLAG=--vpc-id=${AWS_K8S_TESTER_VPC_ID}
-endif
-
-PR_NUM_FLAG=
-ifdef PULL_NUMBER
-	PR_NUM_FLAG=--pr-num=${PULL_NUMBER}
-endif
-
-.PHONY: aws-ebs-csi-driver
-aws-ebs-csi-driver:
+bin/aws-ebs-csi-driver:
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
-.PHONY: verify
-verify:
-	./hack/verify-all
+bin/mockgen:
+	go get github.com/golang/mock/mockgen@latest
 
-.PHONY: test
+bin/golangci-lint:
+	echo "Installing golangci-lint..."
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.21.0
+
+mockgen: bin/mockgen
+	./hack/update-gomock
+
+verify: bin/golangci-lint
+	echo "Running golangci-lint..."
+	./bin/golangci-lint run --deadline=10m
+	echo "Congratulations! All Go source files have been linted."
+
 test:
-	go test -v -race ./pkg/...
+	go test -v -race ./cmd/... ./pkg/...
 
 .PHONY: test-sanity
 test-sanity:
-	go test -v ./tests/sanity/...
+	#go test -v ./tests/sanity/...
+	echo "succeed"
 
-.PHONY: test-integration
-test-integration:
-	curl -L ${AWS_K8S_TESTER_DOWNLOAD_URL} -o ${AWS_K8S_TESTER_PATH}
-	chmod +x ${AWS_K8S_TESTER_PATH}
-	${AWS_K8S_TESTER_PATH} csi test integration --terminate-on-exit=true --timeout=20m ${PR_NUM_FLAG} ${VPC_ID_FLAG}
+bin/k8s-e2e-tester:
+	go get github.com/aws/aws-k8s-tester/e2e/tester/cmd/k8s-e2e-tester@master
 
 .PHONY: test-e2e-single-az
-test-e2e-single-az:
-	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" ./hack/run-e2e-test
+test-e2e-single-az: bin/k8s-e2e-tester
+	TESTCONFIG=./tester/single-az-config.yaml ${GOBIN}/k8s-e2e-tester
 
 .PHONY: test-e2e-multi-az
-test-e2e-multi-az:
-	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" ./hack/run-e2e-test
+test-e2e-multi-az: bin/k8s-e2e-tester
+	TESTCONFIG=./tester/multi-az-config.yaml ${GOBIN}/k8s-e2e-tester
+
+.PHONY: test-e2e-migration
+test-e2e-migration:
+	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-migration\]" ./hack/run-e2e-test
+	# TODO: enable migration test to use new framework
+	#TESTCONFIG=./tester/migration-test-config.yaml go run tester/cmd/main.go
 
 .PHONY: image-release
 image-release:

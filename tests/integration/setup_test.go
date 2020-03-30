@@ -15,11 +15,11 @@ limitations under the License.
 package integration
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -53,7 +53,7 @@ func TestIntegration(t *testing.T) {
 var _ = BeforeSuite(func() {
 	// Run CSI Driver in its own goroutine
 	var err error
-	drv, err = driver.NewDriver(endpoint)
+	drv, err = driver.NewDriver(driver.WithEndpoint(endpoint))
 	Expect(err).To(BeNil())
 	go func() {
 		err := drv.Run()
@@ -84,8 +84,8 @@ func newCSIClient() (*CSIClient, error) {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
-		grpc.WithDialer(
-			func(string, time.Duration) (net.Conn, error) {
+		grpc.WithContextDialer(
+			func(context.Context, string) (net.Conn, error) {
 				scheme, addr, err := util.ParseEndpoint(endpoint)
 				if err != nil {
 					return nil, err

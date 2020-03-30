@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,31 +18,21 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+
 	"k8s.io/klog"
 )
 
 func main() {
-	var (
-		endpoint = flag.String("endpoint", "unix://tmp/csi.sock", "CSI Endpoint")
-		version  = flag.Bool("version", false, "Print the version and exit.")
+	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
+	options := GetOptions(fs)
+
+	drv, err := driver.NewDriver(
+		driver.WithEndpoint(options.ServerOptions.Endpoint),
+		driver.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
+		driver.WithMode(options.DriverMode),
 	)
-	klog.InitFlags(nil)
-	flag.Parse()
-
-	if *version {
-		info, err := driver.GetVersionJSON()
-		if err != nil {
-			klog.Fatalln(err)
-		}
-		fmt.Println(info)
-		os.Exit(0)
-	}
-
-	drv, err := driver.NewDriver(*endpoint)
 	if err != nil {
 		klog.Fatalln(err)
 	}

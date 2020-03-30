@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -172,6 +173,14 @@ func TestCreateDisk(t *testing.T) {
 			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
 			if len(tc.diskOptions.SnapshotID) > 0 {
 				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
+			}
+
+			if len(tc.diskOptions.AvailabilityZone) == 0 {
+				mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
+					AvailabilityZones: []*ec2.AvailabilityZone{
+						{ZoneName: aws.String(defaultZone)},
+					},
+				}, nil)
 			}
 
 			disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
@@ -593,6 +602,133 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 }
 
+func TestResizeDisk(t *testing.T) {
+	testCases := []struct {
+		name                string
+		volumeID            string
+		existingVolume      *ec2.Volume
+		existingVolumeError awserr.Error
+		modifiedVolume      *ec2.ModifyVolumeOutput
+		modifiedVolumeError awserr.Error
+		descModVolume       *ec2.DescribeVolumesModificationsOutput
+		reqSizeGiB          int64
+		expErr              error
+	}{
+		{
+			name:     "success: normal",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2),
+					ModificationState: aws.String(ec2.VolumeModificationStateOptimizing),
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+		{
+			name:     "success: normal modifying state",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2),
+					ModificationState: aws.String(ec2.VolumeModificationStateModifying),
+				},
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+		{
+			name:                "fail: volume doesn't exist",
+			volumeID:            "vol-test",
+			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
+			reqSizeGiB:          2,
+			expErr:              fmt.Errorf("ResizeDisk generic error"),
+		},
+		{
+			name:     "sucess: there is a resizing in progress",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			if tc.existingVolume != nil || tc.existingVolumeError != nil {
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+					&ec2.DescribeVolumesOutput{
+						Volumes: []*ec2.Volume{tc.existingVolume},
+					}, tc.existingVolumeError).AnyTimes()
+			}
+			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
+				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+			}
+			if tc.descModVolume != nil {
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+			}
+
+			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("ResizeDisk() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("ResizeDisk() failed: expected error, got nothing")
+				} else {
+					if tc.reqSizeGiB != newSize {
+						t.Fatalf("ResizeDisk() failed: expected capacity %d, got %d", tc.reqSizeGiB, newSize)
+					}
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestGetSnapshotByName(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -647,15 +783,275 @@ func TestGetSnapshotByName(t *testing.T) {
 	}
 }
 
+func TestGetSnapshotByID(t *testing.T) {
+	testCases := []struct {
+		name            string
+		snapshotName    string
+		snapshotOptions *SnapshotOptions
+		expSnapshot     *Snapshot
+		expErr          error
+	}{
+		{
+			name:         "success: normal",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+				},
+			},
+			expSnapshot: &Snapshot{
+				SourceVolumeID: "snap-test-volume",
+			},
+			expErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ec2snapshot := &ec2.Snapshot{
+				SnapshotId: aws.String(tc.snapshotOptions.Tags[SnapshotNameTagKey]),
+				VolumeId:   aws.String("snap-test-volume"),
+				State:      aws.String("completed"),
+			}
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil)
+
+			_, err := c.GetSnapshotByID(ctx, tc.snapshotOptions.Tags[SnapshotNameTagKey])
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("GetSnapshotByName() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("GetSnapshotByName() failed: expected error, got nothing")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+func TestListSnapshots(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success: normal",
+			testFunc: func(t *testing.T) {
+				expSnapshots := []*Snapshot{
+					{
+						SourceVolumeID: "snap-test-volume1",
+						SnapshotID:     "snap-test-name1",
+					},
+					{
+						SourceVolumeID: "snap-test-volume2",
+						SnapshotID:     "snap-test-name2",
+					},
+				}
+				ec2Snapshots := []*ec2.Snapshot{
+					{
+						SnapshotId: aws.String(expSnapshots[0].SnapshotID),
+						VolumeId:   aws.String("snap-test-volume1"),
+						State:      aws.String("completed"),
+					},
+					{
+						SnapshotId: aws.String(expSnapshots[1].SnapshotID),
+						VolumeId:   aws.String("snap-test-volume2"),
+						State:      aws.String("completed"),
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+
+				_, err := c.ListSnapshots(ctx, "", 0, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success: with volume ID",
+			testFunc: func(t *testing.T) {
+				sourceVolumeID := "snap-test-volume"
+				expSnapshots := []*Snapshot{
+					{
+						SourceVolumeID: sourceVolumeID,
+						SnapshotID:     "snap-test-name1",
+					},
+					{
+						SourceVolumeID: sourceVolumeID,
+						SnapshotID:     "snap-test-name2",
+					},
+				}
+				ec2Snapshots := []*ec2.Snapshot{
+					{
+						SnapshotId: aws.String(expSnapshots[0].SnapshotID),
+						VolumeId:   aws.String(sourceVolumeID),
+						State:      aws.String("completed"),
+					},
+					{
+						SnapshotId: aws.String(expSnapshots[1].SnapshotID),
+						VolumeId:   aws.String(sourceVolumeID),
+						State:      aws.String("completed"),
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+
+				resp, err := c.ListSnapshots(ctx, sourceVolumeID, 0, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+
+				if len(resp.Snapshots) != len(expSnapshots) {
+					t.Fatalf("Expected %d snapshots, got %d", len(expSnapshots), len(resp.Snapshots))
+				}
+
+				for _, snap := range resp.Snapshots {
+					if snap.SourceVolumeID != sourceVolumeID {
+						t.Fatalf("Unexpected source volume.  Expected %s, got %s", sourceVolumeID, snap.SourceVolumeID)
+					}
+				}
+			},
+		},
+		{
+			name: "success: max results, next token",
+			testFunc: func(t *testing.T) {
+				maxResults := 5
+				nextTokenValue := "nextTokenValue"
+				var expSnapshots []*Snapshot
+				for i := 0; i < maxResults*2; i++ {
+					expSnapshots = append(expSnapshots, &Snapshot{
+						SourceVolumeID: "snap-test-volume1",
+						SnapshotID:     fmt.Sprintf("snap-test-name%d", i),
+					})
+				}
+
+				var ec2Snapshots []*ec2.Snapshot
+				for i := 0; i < maxResults*2; i++ {
+					ec2Snapshots = append(ec2Snapshots, &ec2.Snapshot{
+						SnapshotId: aws.String(expSnapshots[i].SnapshotID),
+						VolumeId:   aws.String(fmt.Sprintf("snap-test-volume%d", i)),
+						State:      aws.String("completed"),
+					})
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				firstCall := mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+					Snapshots: ec2Snapshots[:maxResults],
+					NextToken: aws.String(nextTokenValue),
+				}, nil)
+				secondCall := mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+					Snapshots: ec2Snapshots[maxResults:],
+				}, nil)
+				gomock.InOrder(
+					firstCall,
+					secondCall,
+				)
+
+				firstSnapshotsResponse, err := c.ListSnapshots(ctx, "", 5, "")
+				if err != nil {
+					t.Fatalf("ListSnapshots() failed: expected no error, got: %v", err)
+				}
+
+				if len(firstSnapshotsResponse.Snapshots) != maxResults {
+					t.Fatalf("Expected %d snapshots, got %d", maxResults, len(firstSnapshotsResponse.Snapshots))
+				}
+
+				if firstSnapshotsResponse.NextToken != nextTokenValue {
+					t.Fatalf("Expected next token value '%s' got '%s'", nextTokenValue, firstSnapshotsResponse.NextToken)
+				}
+
+				secondSnapshotsResponse, err := c.ListSnapshots(ctx, "", 0, firstSnapshotsResponse.NextToken)
+				if err != nil {
+					t.Fatalf("CreateSnapshot() failed: expected no error, got: %v", err)
+				}
+
+				if len(secondSnapshotsResponse.Snapshots) != maxResults {
+					t.Fatalf("Expected %d snapshots, got %d", maxResults, len(secondSnapshotsResponse.Snapshots))
+				}
+
+				if secondSnapshotsResponse.NextToken != "" {
+					t.Fatalf("Expected next token value to be empty got %s", secondSnapshotsResponse.NextToken)
+				}
+			},
+		},
+		{
+			name: "fail: AWS DescribeSnapshotsWithContext error",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, errors.New("test error"))
+
+				if _, err := c.ListSnapshots(ctx, "", 0, ""); err == nil {
+					t.Fatalf("ListSnapshots() failed: expected an error, got none")
+				}
+			},
+		},
+		{
+			name: "fail: no snapshots ErrNotFound",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockEC2 := mocks.NewMockEC2(mockCtl)
+				c := newCloud(mockEC2)
+
+				ctx := context.Background()
+
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{}, nil)
+
+				if _, err := c.ListSnapshots(ctx, "", 0, ""); err != nil {
+					if err != ErrNotFound {
+						t.Fatalf("Expected error %v, got %v", ErrNotFound, err)
+					}
+				} else {
+					t.Fatalf("Expected error, got none")
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
 func newCloud(mockEC2 EC2) Cloud {
 	return &cloud{
-		metadata: &metadata{
-			instanceID:       "test-instance",
-			region:           "test-region",
-			availabilityZone: defaultZone,
-		},
-		dm:  dm.NewDeviceManager(),
-		ec2: mockEC2,
+		region: "test-region",
+		dm:     dm.NewDeviceManager(),
+		ec2:    mockEC2,
 	}
 }
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 
 var (
 	stdInstanceID       = "instance-1"
+	stdInstanceType     = "t2.medium"
 	stdRegion           = "instance-1"
 	stdAvailabilityZone = "az-1"
 )
@@ -44,6 +45,7 @@ func TestNewMetadataService(t *testing.T) {
 			isAvailable: true,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
@@ -54,6 +56,7 @@ func TestNewMetadataService(t *testing.T) {
 			isAvailable: false,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
@@ -64,6 +67,7 @@ func TestNewMetadataService(t *testing.T) {
 			isAvailable: true,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
@@ -75,6 +79,7 @@ func TestNewMetadataService(t *testing.T) {
 			isPartial:   true,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       "",
+				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
@@ -86,6 +91,7 @@ func TestNewMetadataService(t *testing.T) {
 			isPartial:   true,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
 				Region:           "",
 				AvailabilityZone: stdAvailabilityZone,
 			},
@@ -97,6 +103,7 @@ func TestNewMetadataService(t *testing.T) {
 			isPartial:   true,
 			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: "",
 			},
@@ -122,6 +129,10 @@ func TestNewMetadataService(t *testing.T) {
 
 				if m.GetInstanceID() != tc.identityDocument.InstanceID {
 					t.Fatalf("GetInstanceID() failed: expected %v, got %v", tc.identityDocument.InstanceID, m.GetInstanceID())
+				}
+
+				if m.GetInstanceType() != tc.identityDocument.InstanceType {
+					t.Fatalf("GetInstanceType() failed: expected %v, got %v", tc.identityDocument.InstanceType, m.GetInstanceType())
 				}
 
 				if m.GetRegion() != tc.identityDocument.Region {

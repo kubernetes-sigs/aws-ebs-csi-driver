@@ -1,152 +1,159 @@
 [![Build Status](https://travis-ci.org/kubernetes-sigs/aws-ebs-csi-driver.svg?branch=master)](https://travis-ci.org/kubernetes-sigs/aws-ebs-csi-driver)
 [![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/aws-ebs-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/aws-ebs-csi-driver?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-sigs/aws-ebs-csi-driver)](https://goreportcard.com/report/github.com/kubernetes-sigs/aws-ebs-csi-driver)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fd-nishi%2Faws-ebs-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fd-nishi%2Faws-ebs-csi-driver?ref=badge_shield)
 
-**WARNING**: This driver is in ALPHA currently. This means that there may potentially be backwards compatible breaking changes moving forward. Do NOT use this driver in a production environment in its current state.
-
-**DISCLAIMER**: This is not an officially supported Amazon product
-
-# Amazon Elastic Block Store CSI driver
+# Amazon Elastic Block Store (EBS) CSI driver
 
 ## Overview
 
 The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage Interface (CSI) Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes.
 
-This driver is in alpha stage. Basic volume operations that are functional include CreateVolume/DeleteVolume, ControllerPublishVolume/ControllerUnpublishVolume, NodeStageVolume/NodeUnstageVolume, NodePublishVolume/NodeUnpublishVolume and [Volume Scheduling](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
-
-## Container Images:
-
-|AWS EBS CSI Driver Version | Image                               |
-|---------------------------|-------------------------------------|
-|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
-|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
-|master branch              |amazon/aws-ebs-csi-driver:latest     |
-
 ## CSI Specification Compability Matrix
-| AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | 
-|----------------------------------------|-------|--------|
-| v0.1.0                                 | yes   | no     |
-| v0.2.0                                 | no    | yes    |
-| master branch                          | no    | yes    |
-
-## Kubernetes Version Compability Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | 
-|----------------------------------------|-------|-------|
-| v0.1.0                                 | yes   | yes   |
-| v0.2.0                                 | no    | yes   |
-| master branch                          | no    | yes   |
+| AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
+|----------------------------------------|-------|--------|--------|
+| master branch                          | no    | no     | yes    |
+| v0.4.0                                 | no    | no     | yes    |
+| v0.3.0                                 | no    | yes    | no     |
+| v0.2.0                                 | no    | yes    | no     |
+| v0.1.0                                 | yes   | no     | no     |
 
 ## Features
-### Capabilities
-The list of supported driver capabilities:
-* Identity Service: **CONTROLLER_SERVICE** and **ACCESSIBILITY_CONSTRAINTS**
-* Controller Service: **CREATE_DELETE_VOLUME** and **PUBLISH_UNPUBLISH_VOLUME**
-* Node Service: **STAGE_UNSTAGE_VOLUME**
+The following CSI gRPC calls are implemented:
+* **Controller Service**: CreateVolume, DeleteVolume, ControllerPublishVolume, ControllerUnpublishVolume, ControllerGetCapabilities, ValidateVolumeCapabilities, CreateSnapshot, DeleteSnapshot, ListSnapshots
+* **Node Service**: NodeStageVolume, NodeUnstageVolume, NodePublishVolume, NodeUnpublishVolume, NodeGetCapabilities, NodeGetInfo
+* **Identity Service**: GetPluginInfo, GetPluginCapabilities, Probe
 
 ### CreateVolume Parameters
 There are several optional parameters that could be passed into `CreateVolumeRequest.parameters` map:
 
-| Parameters        | Values           | Default  | Description         |
-|-------------------|------------------|----------|---------------------|
-| "type"            |io1, gp2, sc1, st1| gp2      | EBS volume type     |
-| "iopsPerGB"       |                  |          | I/O operations per second per GiB. Required when io1 volume type is specified |
-| "fsType"          | ext2, ext3, ext4 | ext4     | File system type that will be formatted during volume creation |
-| "encrypted"       |                  |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" | 
-| "kmsKeyId"        |                  |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
+| Parameters                  | Values                     | Default  | Description         |
+|-----------------------------|----------------------------|----------|---------------------|
+| "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4      | ext4     | File system type that will be formatted during volume creation |
+| "type"                      | io1, gp2, sc1, st1,standard| gp2      | EBS volume type     |
+| "iopsPerGB"                 |                            |          | I/O operations per second per GiB. Required when io1 volume type is specified |
+| "encrypted"                 |                            |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" |
+| "kmsKeyId"                  |                       |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
+
+**Notes**:
+* The parameters are case insensitive.
+
+# EBS CSI Driver on Kubernetes
+Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
+
+## Kubernetes Version Compability Matrix
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 |
+|----------------------------------------|-------|-------|-------|-------|
+| master branch                          | no    | no+   | yes   | yes   |
+| v0.4.0                                 | no    | no+   | yes   | yes   |
+| v0.3.0                                 | no    | no+   | yes   | no    |
+| v0.2.0                                 | no    | yes   | yes   | no    |
+| v0.1.0                                 | yes   | yes   | yes   | no    |
+
+**Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
+
+## Container Images:
+|AWS EBS CSI Driver Version | Image                               |
+|---------------------------|-------------------------------------|
+|master branch              |amazon/aws-ebs-csi-driver:latest     |
+|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0     |
+|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0     |
+|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
+|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
+
+## Features
+* **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
+* **Dynamic Provisioning** - uses persistence volume claim (PVC) to request the Kuberenetes to create the EBS volume on behalf of user and consumes the volume from inside container. Storage class's **allowedTopologies** could be used to restrict which AZ the volume should be provisioned in. The topology key should be **topology.ebs.csi.aws.com/zone**.
+* **Mount Option** - mount options could be specified in persistence volume (PV) to define how the volume should be mounted.
+* **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
+* **Block Volume** (beta since 1.14) - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
+* **Volume Snapshot** (alpha) - creating volume snapshots and restore volume from snapshot.
+* **Volume Resizing** (alpha) - expand the volume size.
 
 ## Prerequisites
-### Kubernetes
-1. Kubernetes 1.12+ is required. Although this driver should work with any other container orchestration system that implements the CSI specification, so far it has only been tested in Kubernetes.
+* If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
+* Get yourself familiar with how to setup Kubernetes on AWS and have a working Kubernetes cluster:
+  * Enable flag `--allow-privileged=true` for `kubelet` and `kube-apiserver`
+  * Enable `kube-apiserver` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true`
+  * Enable `kubelet` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true`
 
-2. Enable the flag `--allow-privileged=true` in the manifest entries of kubelet and kube-apiserver.
-
-3. Add `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,VolumeSnapshotDataSource=true` in the manifest entries of kubelet and kube-apiserver. This is required to enable topology support of EBS volumes in Kubernetes and restoring volumes from snapshots.
-
-4. Install the `CSINodeInfo` CRD on the cluster using the instructions provided here: [Enabling CSINodeInfo](https://kubernetes-csi.github.io/docs/csi-node-info-object.html#enabling-csinodeinfo).
-
-5. Please refer to [kubernetes CSI docs](https://kubernetes-csi.github.io/docs/) for general CSI driver setup instructions on kubernetes.
-
-## Setup
-### Kubernetes
-1. Use the manifest files under the directory [deploy/kubernetes](../deploy/kubernetes), needed to deploy the CSI driver and sidecar containers.
-
-2. The driver can use the EC2 instance roles, otherwise add AWS credentials of the IAM user to the [deploy/kubernetes/secret.yaml](../deploy/kubernetes/secret.yaml) file.
-
+## Installation
+#### Set up driver permission
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
+* Using secret object - create an IAM user with proper permission, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml) then deploy the secret.
+```sh
+curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
+# Edit the secret with user credentials
+kubectl apply -f secret.yaml
 ```
-apiVersion: v1
-kind: Secret
-metadata:
-  name: aws-secret
-stringData:
-  key_id: [aws_access_key_id]
-  access_key: [aws_secret_access_key]
+* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
+
+#### Deploy CRD (optinal)
+If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
+```sh
+kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
 
-3. Apply the secret using `kubectl apply -f deploy/kubernetes/secret.yaml` if required.
-
-4. Grant only required permissions to the CSI driver. Use this sample [IAM policy](example-iam-policy.json) and add it to the worker nodes in the cluster.
-
-5. Deploy the csi-provisioner, csi-attacher and csi-node manifests to the cluster in one step:
-
-```
-kubectl apply -f deploy/kubernetes
+#### Deploy driver
+If you want to deploy the stable driver without alpha features:
+```sh
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
 ```
 
-Now any user can start creating and using EBS volumes with the CSI driver. 
-
-6. Apply `examples/kubernetes/volume_scheduling` that uses the recently deployed driver:
-
+If you want to deploy the driver with alpha features:
+```sh
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/alpha/?ref=master"
 ```
-kubectl apply -f examples/kubernetes/volume_scheduling
+
+Verify driver is running:
+```sh
+kubectl get pods -n kube-system
 ```
+
+Alternatively, you could also install the driver using helm:
+```sh
+helm install --name aws-ebs-csi-driver \
+    --set enableVolumeScheduling=true \
+    --set enableVolumeResizing=true \
+    --set enableVolumeSnapshot=true \
+    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.4.0/helm-chart.tgz
+```
+
+## Examples
+Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
+* [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
+* [Block Volume](../examples/kubernetes/block-volume)
+* [Volume Snapshot](../examples/kubernetes/snapshot)
+* [Configure StorageClass](../examples/kubernetes/storageclass)
+* [Volume Resizing](../examples/kubernetes/resizing)
+
+## Migrating from in-tree EBS plugin
+Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
 
 ## Development
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.11.4+
+* Golang 1.12.7+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
+### Dependency
+Dependencies are managed through go module. To build the project, first turn on go mod using `export GO111MODULE=on`, then build the project using: `make`
+
 ### Testing
-
-To execute all unit tests, run: `make test`
-
-To execute sanity test run: `make test-sanity`
-
-**Notes**:
-* Sanity tests make sure that the driver complies with the CSI specification
-
-To execute integration tests, run: `make test-integration`
+* To execute all unit tests, run: `make test`
+* To execute sanity test run: `make test-sanity`
+* To execute integration tests, run: `make test-integration`
+* To execute e2e tests, run: `make test-e2e-single-az` and `make test-e2e-multi-az`
 
 **Notes**:
-* EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk.
-* See [Ingetration Testing](../tests/integration/README.md) for more details.
-
-To execute e2e tests, run:
-
-```
-make test-e2e-single-az // executes single az test suite
-make test-e2e-multi-az // executes multi az test suite
-```
-
-**Notes**:
-* See [E2E Testing](../tests/e2e/README.md) for more details.
+* Sanity tests make sure the driver complies with the CSI specification
+* EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk. See [Integration Testing](../tests/integration/README.md) for more details.
+* E2E tests exercises various driver functionalities in Kubernetes cluster. See [E2E Testing](../tests/e2e/README.md) for more details.
 
 ### Build and Publish Container Image
-
-Build image and push it with latest tag:
-
-```
-make image && make push
-```
-
-Build image and push it with release tag:
-
-```
-make image-release && make push-release
-```
+* Build image and push it with latest tag: `make image && make push`
+* Build image and push it with release tag: `make image-release && make push-release`
 
 ## Milestone
 [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones)

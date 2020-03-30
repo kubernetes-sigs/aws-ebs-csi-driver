@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,18 +25,20 @@ const (
 
 // constants of keys in volume parameters
 const (
-	// FsTypeKey represents key for filesystem type
-	FsTypeKey = "fsType"
-
 	// VolumeTypeKey represents key for volume type
 	VolumeTypeKey = "type"
 
 	// IopsPerGBKey represents key for IOPS per GB
-	IopsPerGBKey = "iopsPerGB"
+	IopsPerGBKey = "iopspergb"
 
 	// EncryptedKey represents key for whether filesystem is encrypted
 	EncryptedKey = "encrypted"
 
 	// KmsKeyId represents key for KMS encryption key
-	KmsKeyIdKey = "kmsKeyId"
+	KmsKeyIDKey = "kmskeyid"
+)
+
+// constants for default command line flag values
+const (
+	DefaultCSIEndpoint = "unix://tmp/csi.sock"
 )

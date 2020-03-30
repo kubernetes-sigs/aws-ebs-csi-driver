@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package cloud
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type EC2Metadata interface {
@@ -30,31 +32,44 @@ type EC2Metadata interface {
 // MetadataService represents AWS metadata service.
 type MetadataService interface {
 	GetInstanceID() string
+	GetInstanceType() string
 	GetRegion() string
 	GetAvailabilityZone() string
 }
 
-type metadata struct {
-	instanceID       string
-	region           string
-	availabilityZone string
+type Metadata struct {
+	InstanceID       string
+	InstanceType     string
+	Region           string
+	AvailabilityZone string
 }
 
-var _ MetadataService = &metadata{}
+var _ MetadataService = &Metadata{}
 
 // GetInstanceID returns the instance identification.
-func (m *metadata) GetInstanceID() string {
-	return m.instanceID
+func (m *Metadata) GetInstanceID() string {
+	return m.InstanceID
+}
+
+// GetInstanceID returns the instance type.
+func (m *Metadata) GetInstanceType() string {
+	return m.InstanceType
 }
 
 // GetRegion returns the region which the instance is in.
-func (m *metadata) GetRegion() string {
-	return m.region
+func (m *Metadata) GetRegion() string {
+	return m.Region
 }
 
 // GetAvailabilityZone returns the Availability Zone which the instance is in.
-func (m *metadata) GetAvailabilityZone() string {
-	return m.availabilityZone
+func (m *Metadata) GetAvailabilityZone() string {
+	return m.AvailabilityZone
+}
+
+func NewMetadata() (MetadataService, error) {
+	sess := session.Must(session.NewSession(&aws.Config{}))
+	svc := ec2metadata.New(sess)
+	return NewMetadataService(svc)
 }
 
 // NewMetadataService returns a new MetadataServiceImplementation.
@@ -72,6 +87,10 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 		return nil, fmt.Errorf("could not get valid EC2 instance ID")
 	}
 
+	if len(doc.InstanceType) == 0 {
+		return nil, fmt.Errorf("could not get valid EC2 instance type")
+	}
+
 	if len(doc.Region) == 0 {
 		return nil, fmt.Errorf("could not get valid EC2 region")
 	}
@@ -80,9 +99,10 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 		return nil, fmt.Errorf("could not get valid EC2 availavility zone")
 	}
 
-	return &metadata{
-		instanceID:       doc.InstanceID,
-		region:           doc.Region,
-		availabilityZone: doc.AvailabilityZone,
+	return &Metadata{
+		InstanceID:       doc.InstanceID,
+		InstanceType:     doc.InstanceType,
+		Region:           doc.Region,
+		AvailabilityZone: doc.AvailabilityZone,
 	}, nil
 }
