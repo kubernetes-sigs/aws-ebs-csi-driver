@@ -20,7 +20,7 @@ Vagrantfile
 *.swp
 
 # go
-vendor/
+#vendor/
 
 # IntelliJ
 .idea/
