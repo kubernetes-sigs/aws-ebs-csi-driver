@@ -20,6 +20,8 @@ Vagrantfile
 *.swp
 
 # go
+
+# Upstream does not have vendor checked in, but we need it downstream.
 #vendor/
 
 # IntelliJ
