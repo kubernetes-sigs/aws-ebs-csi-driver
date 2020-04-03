@@ -4,5 +4,5 @@ COPY . .
 RUN make
 
 FROM registry.svc.ci.openshift.org/ocp/4.0:base
-COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/aws-ebs-csi-driver /usr/bin/
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /usr/bin/
 ENTRYPOINT ["/usr/bin/aws-ebs-csi-driver"]
