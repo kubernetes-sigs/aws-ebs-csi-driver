@@ -4,5 +4,9 @@ COPY . .
 RUN make
 
 FROM registry.svc.ci.openshift.org/openshift/origin-v4.0:base
+# Get mkfs & blkid
+RUN yum update -y && \
+    yum install --setopt=tsflags=nodocs -y e2fsprogs xfsprogs util-linux && \
+    yum clean all && rm -rf /var/cache/yum/*
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /usr/bin/
 ENTRYPOINT ["/usr/bin/aws-ebs-csi-driver"]
