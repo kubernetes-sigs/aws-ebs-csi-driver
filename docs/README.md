@@ -136,7 +136,7 @@ Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If y
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.12.7+
+* Golang 1.14.+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
