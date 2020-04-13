@@ -415,10 +415,9 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	if snapshot != nil {
 		if snapshot.SourceVolumeID != volumeID {
 			return nil, status.Errorf(codes.AlreadyExists, "Snapshot %s already exists for different volume (%s)", snapshotName, snapshot.SourceVolumeID)
-		} else {
-			klog.V(4).Infof("Snapshot %s of volume %s already exists; nothing to do", snapshotName, volumeID)
-			return newCreateSnapshotResponse(snapshot)
 		}
+		klog.V(4).Infof("Snapshot %s of volume %s already exists; nothing to do", snapshotName, volumeID)
+		return newCreateSnapshotResponse(snapshot)
 	}
 	opts := &cloud.SnapshotOptions{
 		Tags: map[string]string{cloud.SnapshotNameTagKey: snapshotName},
