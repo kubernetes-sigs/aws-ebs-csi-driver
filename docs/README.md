@@ -114,7 +114,9 @@ kubectl get pods -n kube-system
 
 Alternatively, you could also install the driver using helm:
 ```sh
-helm install --name aws-ebs-csi-driver \
+helm install \
+    --namespace kube-system \
+    --name aws-ebs-csi-driver \
     --set enableVolumeScheduling=true \
     --set enableVolumeResizing=true \
     --set enableVolumeSnapshot=true \
