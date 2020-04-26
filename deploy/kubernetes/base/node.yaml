@@ -14,6 +14,15 @@ spec:
       labels:
         app: ebs-csi-node
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                - fargate
       nodeSelector:
         beta.kubernetes.io/os: linux
         beta.kubernetes.io/arch: amd64
