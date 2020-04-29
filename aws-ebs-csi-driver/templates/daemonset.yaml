@@ -30,7 +30,7 @@ spec:
                 values:
                 - fargate
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
