@@ -16,6 +16,8 @@ spec:
       app.kubernetes.io/name: aws-ebs-csi-driver
   template:
     metadata:
+      annotations:
+        eks.amazonaws.com/compute-type: ec2
       labels:
         app: ebs-csi-controller
         app.kubernetes.io/name: aws-ebs-csi-driver
