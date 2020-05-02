@@ -42,7 +42,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
