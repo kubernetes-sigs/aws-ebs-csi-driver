@@ -28,13 +28,18 @@ GOBIN=$(shell pwd)/bin
 bin/aws-ebs-csi-driver: | bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
-bin /tmp/helm:
+bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
 
 bin/helm: | /tmp/helm bin
 	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.1.2-linux-amd64.tar.gz
 	@tar -zxf /tmp/helm/helm.tar.gz -C bin --strip-components=1
 	@rm -rf /tmp/helm/*
+
+bin/kubeval: | /tmp/kubeval bin
+	@curl -o /tmp/kubeval/kubeval.tar.gz -sSL https://github.com/instrumenta/kubeval/releases/download/0.15.0/kubeval-linux-amd64.tar.gz
+	@tar -zxf /tmp/kubeval/kubeval.tar.gz -C bin --strip-components=1
+	@rm -rf /tmp/kubeval/*
 
 bin/mockgen: | bin
 	go get github.com/golang/mock/mockgen@latest
@@ -43,14 +48,20 @@ bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
 	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.21.0
 
+.PHONY: kubeval
+kubeval: bin/kubeval
+	bin/kubeval -d deploy/kubernetes/base,deploy/kubernetes/cluster,deploy/kubernetes/overlays -i kustomization.yaml,crd_.+\.yaml,controller_add
+
 mockgen: bin/mockgen
 	./hack/update-gomock
 
+.PHONY: verify
 verify: bin/golangci-lint
 	echo "Running golangci-lint..."
 	./bin/golangci-lint run --deadline=10m
 	echo "Congratulations! All Go source files have been linted."
 
+.PHONY: test
 test:
 	go test -v -race ./cmd/... ./pkg/...
 
