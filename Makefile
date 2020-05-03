@@ -38,7 +38,7 @@ bin/helm: | /tmp/helm bin
 
 bin/kubeval: | /tmp/kubeval bin
 	@curl -o /tmp/kubeval/kubeval.tar.gz -sSL https://github.com/instrumenta/kubeval/releases/download/0.15.0/kubeval-linux-amd64.tar.gz
-	@tar -zxf /tmp/kubeval/kubeval.tar.gz -C bin --strip-components=1
+	@tar -zxf /tmp/kubeval/kubeval.tar.gz -C bin kubeval
 	@rm -rf /tmp/kubeval/*
 
 bin/mockgen: | bin
