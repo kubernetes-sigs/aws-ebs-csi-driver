@@ -1,33 +1,38 @@
 ---
+# Source: aws-ebs-csi-driver/templates/controller.yaml
 # Controller Service
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
   namespace: kube-system
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: ebs-csi-controller
+      app.kubernetes.io/name: aws-ebs-csi-driver
   template:
     metadata:
       labels:
         app: ebs-csi-controller
+        app.kubernetes.io/name: aws-ebs-csi-driver
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-        beta.kubernetes.io/arch: amd64
-      serviceAccount: ebs-csi-controller-sa
+        kubernetes.io/arch: amd64
+      serviceAccountName: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+        - operator: Exists
       containers:
         - name: ebs-plugin
           image: amazon/aws-ebs-csi-driver:latest
-          args :
-          # - {all,controller,node} # specify the driver mode
+          imagePullPolicy: IfNotPresent
+          args:
+            # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=5
@@ -46,9 +51,6 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
-          # overwrite the AWS region instead of looking it up dynamically via the AWS EC2 metadata svc
-          # - name: AWS_REGION
-          #   value: us-east-1
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

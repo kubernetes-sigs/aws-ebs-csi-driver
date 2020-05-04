@@ -1,0 +1,4 @@
+image:
+  tag: latest
+
+enableVolumeScheduling: true
