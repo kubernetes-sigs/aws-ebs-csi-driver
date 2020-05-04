@@ -4,18 +4,18 @@ apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
   namespace: kube-system
+  labels:
+    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
       app: ebs-csi-node
-      app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         app: ebs-csi-node
-        app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
       {{- if .Values.node.podAnnotations }}
       annotations: {{ toYaml .Values.node.podAnnotations | nindent 8 }}
       {{- end }}
@@ -31,6 +31,7 @@ spec:
                 - fargate
       nodeSelector:
         kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
@@ -42,7 +43,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)

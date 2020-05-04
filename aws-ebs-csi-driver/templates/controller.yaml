@@ -4,25 +4,26 @@ apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
   namespace: kube-system
+  labels:
+    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: ebs-csi-controller
-      app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         app: ebs-csi-controller
-        app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
       {{- if .Values.podAnnotations }}
       annotations: {{ toYaml .Values.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
       nodeSelector:
         kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
         {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
         {{- end }}
@@ -38,12 +39,18 @@ spec:
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
+            {{- if ne .Release.Name "kustomize" }}
             - controller
+            {{ else }}
+            # - {all,controller,node} # specify the driver mode
+            {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
-            {{ include "aws-ebs-csi-driver.extra-volume-tags" . }}
+            {{- if .Values.extraVolumeTags }}
+              {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
+            {{- end }}
             - --logtostderr
             - --v=5
           env:

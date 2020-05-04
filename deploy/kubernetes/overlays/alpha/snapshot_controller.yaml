@@ -1,21 +1,27 @@
 ---
+# Source: aws-ebs-csi-driver/templates/statefulset.yaml
+#Snapshot controller
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: ebs-snapshot-controller
   namespace: kube-system
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
   serviceName: ebs-snapshot-controller
   replicas: 1
   selector:
     matchLabels:
       app: ebs-snapshot-controller
+      app.kubernetes.io/name: aws-ebs-csi-driver
   template:
     metadata:
       labels:
         app: ebs-snapshot-controller
+        app.kubernetes.io/name: aws-ebs-csi-driver
     spec:
-      serviceAccount: ebs-snapshot-controller
+      serviceAccountName: ebs-snapshot-controller
       containers:
         - name: snapshot-controller
           image: quay.io/k8scsi/snapshot-controller:v2.1.1

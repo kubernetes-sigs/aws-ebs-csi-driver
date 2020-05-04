@@ -15,3 +15,4 @@ script:
   - make
   - go test -covermode=count -coverprofile=profile.cov ./pkg/...
   - $GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
+  - make kubeval

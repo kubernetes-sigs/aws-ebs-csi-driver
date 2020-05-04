@@ -35,13 +35,24 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "aws-ebs-csi-driver.labels" -}}
-app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
+{{ include "aws-ebs-csi-driver.selectorLabels" . }}
+{{- if ne .Release.Name "kustomize" }}
 helm.sh/chart: {{ include "aws-ebs-csi-driver.chart" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Common selector labels
+*/}}
+{{- define "aws-ebs-csi-driver.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
+{{- if ne .Release.Name "kustomize" }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -53,6 +64,6 @@ Convert the `--extra-volume-tags` command line arg from a map.
 {{- $noop := printf "%s=%s" $key $value | append $result.pairs | set $result "pairs" -}}
 {{- end -}}
 {{- if gt (len $result.pairs) 0 -}}
-- --extra-volume-tags={{- join "," $result.pairs -}}
+{{- printf "%s=%s" "- --extra-volume-tags" (join "," $result.pairs) -}}
 {{- end -}}
 {{- end -}}
