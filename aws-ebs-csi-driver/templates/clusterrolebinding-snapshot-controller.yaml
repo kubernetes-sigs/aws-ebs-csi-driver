@@ -9,7 +9,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-snapshot-controller
-    namespace: kube-system
+    namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: ebs-snapshot-controller-role

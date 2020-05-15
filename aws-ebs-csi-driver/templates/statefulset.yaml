@@ -4,7 +4,7 @@ kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: ebs-snapshot-controller
-  namespace: kube-system
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:

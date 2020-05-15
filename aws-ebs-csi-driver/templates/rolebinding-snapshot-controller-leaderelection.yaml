@@ -4,13 +4,12 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: snapshot-controller-leaderelection
-  namespace: kube-system
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
     name: ebs-snapshot-controller
-    namespace: kube-system
 roleRef:
   kind: Role
   name: snapshot-controller-leaderelection
