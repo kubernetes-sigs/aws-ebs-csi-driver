@@ -8,7 +8,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-controller-sa
-    namespace: kube-system
+    namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: ebs-external-attacher-role
