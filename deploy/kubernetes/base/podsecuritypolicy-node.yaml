@@ -1,0 +1,28 @@
+---
+# Source: aws-ebs-csi-driver/templates/podsecuritypolicy-node.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: ebs-csi-node
+spec:
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  privileged: true
+  hostNetwork: true
+  hostPorts:
+    - min: 9808
+      max: 9808
+  volumes:
+    - "configMap"
+    - "emptyDir"
+    - "secret"
+    - "hostPath"
+  allowedHostPaths:
+    - pathPrefix: "/dev"
+    - pathPrefix: "/var/lib/kubelet"

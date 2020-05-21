@@ -39,6 +39,7 @@ spec:
         {{- with .Values.node.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
+      serviceAccountName: ebs-csi-node
       containers:
         - name: ebs-plugin
           securityContext:

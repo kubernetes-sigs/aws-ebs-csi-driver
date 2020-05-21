@@ -35,6 +35,7 @@ spec:
       priorityClassName: system-node-critical
       tolerations:
         - operator: Exists
+      serviceAccountName: ebs-csi-node
       containers:
         - name: ebs-plugin
           securityContext:

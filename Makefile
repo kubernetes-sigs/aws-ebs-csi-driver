@@ -113,6 +113,10 @@ generate-kustomize: bin/helm
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/csidriver.yaml > ../deploy/kubernetes/base/csidriver.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/node.yaml -f ../deploy/kubernetes/values/controller.yaml > ../deploy/kubernetes/base/node.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml > ../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
+	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-node.yaml > ../deploy/kubernetes/base/clusterrole-node.yaml
+	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-node.yaml > ../deploy/kubernetes/base/clusterrolebinding-node.yaml
+	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/podsecuritypolicy-node.yaml > ../deploy/kubernetes/base/podsecuritypolicy-node.yaml
+	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/serviceaccount-node.yaml > ../deploy/kubernetes/base/serviceaccount-node.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-resizer.yaml -f ../deploy/kubernetes/values/resizer.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_resizer_clusterrole.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-snapshot-controller.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_clusterrole.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-snapshotter.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshotter_clusterrole.yaml
