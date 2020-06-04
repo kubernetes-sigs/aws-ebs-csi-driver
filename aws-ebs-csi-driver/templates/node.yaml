@@ -29,6 +29,7 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+      serviceAccountName: ebs-csi-controller-sa
       nodeSelector:
         kubernetes.io/os: linux
         kubernetes.io/arch: amd64
