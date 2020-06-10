@@ -3,7 +3,6 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
-  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:

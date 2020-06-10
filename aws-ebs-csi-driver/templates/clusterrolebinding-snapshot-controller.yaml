@@ -9,7 +9,6 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-snapshot-controller
-    namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: ebs-snapshot-controller-role
