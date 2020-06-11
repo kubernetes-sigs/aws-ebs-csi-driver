@@ -3,7 +3,6 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
-  namespace: kube-system
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
@@ -54,7 +53,7 @@ spec:
               value: unix:/csi/csi.sock
           volumeMounts:
             - name: kubelet-dir
-              mountPath: /var/lib/kubelet
+              mountPath: {{ default "/var/lib/kubelet" .Values.node.kubeletPath }}
               mountPropagation: "Bidirectional"
             - name: plugin-dir
               mountPath: /csi
@@ -86,7 +85,7 @@ spec:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
+              value: {{ default "/var/lib/kubelet" .Values.node.kubeletPath }}/plugins/ebs.csi.aws.com/csi.sock
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -102,15 +101,15 @@ spec:
       volumes:
         - name: kubelet-dir
           hostPath:
-            path: /var/lib/kubelet
+            path: {{ default "/var/lib/kubelet" .Values.node.kubeletPath }}
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+            path: {{ default "/var/lib/kubelet" .Values.node.kubeletPath }}/plugins/ebs.csi.aws.com/
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/
+            path: {{ default "/var/lib/kubelet" .Values.node.kubeletPath }}/plugins_registry/
             type: Directory
         - name: device-dir
           hostPath:
