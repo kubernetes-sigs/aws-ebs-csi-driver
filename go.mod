@@ -14,6 +14,7 @@ require (
 	github.com/onsi/gomega v1.7.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	golang.org/x/net v0.0.0-20200226051749-491c5fce7268 // indirect
+	golang.org/x/sys v0.0.0-20191220220014-0732a990476f
 	google.golang.org/grpc v1.26.0
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3

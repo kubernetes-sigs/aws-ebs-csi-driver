@@ -66,6 +66,7 @@ var (
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 		csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 	}
 )
 
@@ -347,6 +348,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 }
 
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", *req)
 
 	if len(req.VolumeId) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume ID was empty")
@@ -610,7 +612,8 @@ func hasMountOption(options []string, opt string) bool {
 }
 
 func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
-	output, err := d.mounter.Run("blockdev", "--getsize64", devicePath)
+	cmd := d.mounter.Command("blockdev", "--getsize64", devicePath)
+	output, err := cmd.Output()
 	if err != nil {
 		return -1, fmt.Errorf("error when getting size of block volume at path %s: output: %s, err: %v", devicePath, string(output), err)
 	}
