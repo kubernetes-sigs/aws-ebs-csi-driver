@@ -235,3 +235,15 @@ Example 2: `AWS_REGION=us-west-1 /bin/aws-ebs-csi-driver controller --extra-volu
 
 - `node`: This will only start the node service of the CSI driver.\
 Example: `/bin/aws-ebs-csi-driver node --endpoint=unix://...`
+
+## Custom volume limits
+
+For the Kubernetes in-tree volume provisioners (including the `kubernetes.io/aws-ebs` provisioner) it was possible for administrators to provide a custom volume limit overwrite (see https://kubernetes.io/docs/concepts/storage/storage-limits/#custom-limits).
+This solution is not working with CSI any longer.
+As part of [#347](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/347) we discuss how we can implement a sophisticated computation of the volume attach limit per node (e.g., based on the used machine types and already attached network interfaces).
+However, it turns out that such optimal implementation is not easily achievable.
+Each AWS machine type has different volume limits.
+Today, the EBS CSI driver parses the machine type name and then decides the volume limit.
+Unfortunately, this is only a rough approximation and not good enough in most cases.
+In order to allow existing clusters that are leveraging/relying on this feature to migrate to CSI, the EBS CSI driver is supporting the `--volume-attach-limit` flag.
+Specifying the volume attach limit via command line is the alternative until a more sophisticated solution presents itself (dynamically discovering the maximum number of attachable volume per EC2 machine type).
