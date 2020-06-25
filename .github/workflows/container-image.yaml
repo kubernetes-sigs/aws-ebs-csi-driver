@@ -8,9 +8,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: crazy-max/ghaction-docker-buildx@v3
+      with:
+        buildx-version: latest
+        qemu-version: latest
     - name: Build container image
       run: |
-        docker build -t aws-ebs-csi-driver .
+        docker buildx build \
+          -t aws-ebs-csi-driver \
+          --platform=linux/arm64,linux/amd64 \
+          --output="type=image,push=false" .
     - name: Push to Github registry
       run: |
         USER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
@@ -22,6 +31,7 @@ jobs:
           TAG=$BRANCH
         fi
         docker login docker.pkg.github.com -u $USER -p ${{ secrets.REGISTRY_TOKEN }}
+        docker build -t aws-ebs-csi-driver .
         docker tag aws-ebs-csi-driver docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
         docker push docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
     - name: Push to Dockerhub registry
@@ -34,5 +44,8 @@ jobs:
           TAG=$BRANCH
         fi
         docker login -u ${{ secrets.DOCKERHUB_USER }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-        docker tag aws-ebs-csi-driver $REPO:$TAG
-        docker push $REPO:$TAG
+        docker buildx build \
+          -t $REPO:$TAG \
+          --platform=linux/arm64,linux/amd64 \
+          --output="type=image,push=true" .
+
