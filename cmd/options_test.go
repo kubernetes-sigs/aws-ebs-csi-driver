@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
@@ -45,6 +46,9 @@ func TestGetOptions(t *testing.T) {
 			extraVolumeTagKey: extraVolumeTagValue,
 		}
 
+		VolumeAttachLimitFlagName := "volume-attach-limit"
+		var VolumeAttachLimit int64 = 42
+
 		args := append([]string{
 			"aws-ebs-csi-driver",
 		}, additionalArgs...)
@@ -54,6 +58,9 @@ func TestGetOptions(t *testing.T) {
 		}
 		if withControllerOptions {
 			args = append(args, "-"+extraVolumeTagsFlagName+"="+extraVolumeTagKey+"="+extraVolumeTagValue)
+		}
+		if withNodeOptions {
+			args = append(args, "-"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
 		}
 
 		oldArgs := os.Args
@@ -79,6 +86,16 @@ func TestGetOptions(t *testing.T) {
 			}
 			if !reflect.DeepEqual(options.ControllerOptions.ExtraVolumeTags, extraVolumeTags) {
 				t.Fatalf("expected extra volume tags to be %q but it is %q", extraVolumeTags, options.ControllerOptions.ExtraVolumeTags)
+			}
+		}
+
+		if withNodeOptions {
+			VolumeAttachLimitFlag := flagSet.Lookup(VolumeAttachLimitFlagName)
+			if VolumeAttachLimitFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", VolumeAttachLimitFlagName)
+			}
+			if options.NodeOptions.VolumeAttachLimit != VolumeAttachLimit {
+				t.Fatalf("expected VolumeAttachLimit to be %d but it is %d", VolumeAttachLimit, options.NodeOptions.VolumeAttachLimit)
 			}
 		}
 
