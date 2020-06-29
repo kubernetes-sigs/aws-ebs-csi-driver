@@ -26,8 +26,7 @@ spec:
       serviceAccountName: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+        - operator: Exists
       containers:
         - name: ebs-plugin
           image: amazon/aws-ebs-csi-driver:latest

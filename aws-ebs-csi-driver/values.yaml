@@ -58,6 +58,7 @@ resources: {}
 
 nodeSelector: {}
 
+tolerateAllTaints: true
 tolerations: []
 
 affinity: {}
@@ -77,6 +78,7 @@ region: ""
 
 node:
   podAnnotations: {}
+  tolerateAllTaints: true
   tolerations: []
 
 serviceAccount:
