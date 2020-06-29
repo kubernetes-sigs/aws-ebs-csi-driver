@@ -53,9 +53,10 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint        string
-	extraVolumeTags map[string]string
-	mode            Mode
+	endpoint          string
+	extraVolumeTags   map[string]string
+	mode              Mode
+	volumeAttachLimit int64
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -81,10 +82,10 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	case ControllerMode:
 		driver.controllerService = newControllerService(&driverOptions)
 	case NodeMode:
-		driver.nodeService = newNodeService()
+		driver.nodeService = newNodeService(&driverOptions)
 	case AllMode:
 		driver.controllerService = newControllerService(&driverOptions)
-		driver.nodeService = newNodeService()
+		driver.nodeService = newNodeService(&driverOptions)
 	default:
 		return nil, fmt.Errorf("unknown mode: %s", driverOptions.mode)
 	}
@@ -153,5 +154,11 @@ func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions)
 func WithMode(mode Mode) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.mode = mode
+	}
+}
+
+func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.volumeAttachLimit = volumeAttachLimit
 	}
 }
