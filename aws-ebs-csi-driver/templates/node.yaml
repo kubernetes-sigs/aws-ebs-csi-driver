@@ -35,8 +35,9 @@ spec:
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
+        {{- if .Values.node.tolerateAllTaints }}
+        - operator: Exists
+        {{- end }}
         {{- with .Values.node.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
