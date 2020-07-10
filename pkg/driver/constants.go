@@ -38,6 +38,23 @@ const (
 	KmsKeyIDKey = "kmskeyid"
 )
 
+// constants for volume tags and their values
+const (
+	// ResourceLifecycleTagPrefix is prefix of tag for provisioned EBS volume that
+	// marks them as owned by the cluster. Used only when --cluster-id is set.
+	ResourceLifecycleTagPrefix = "kubernetes.io/cluster/"
+
+	// ResourceLifecycleOwned is the value we use when tagging resources to indicate
+	// that the resource is considered owned and managed by the cluster,
+	// and in particular that the lifecycle is tied to the lifecycle of the cluster.
+	// From k8s.io/legacy-cloud-providers/aws/tags.go.
+	ResourceLifecycleOwned = "owned"
+
+	// NameTag is tag for provisioned EBS volume for backward compatibility with
+	// in-tree volume plugin. Used only when --cluster-id is set.
+	NameTag = "Name"
+)
+
 // constants for default command line flag values
 const (
 	DefaultCSIEndpoint = "unix://tmp/csi.sock"

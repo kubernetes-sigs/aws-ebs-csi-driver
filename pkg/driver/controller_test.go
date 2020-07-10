@@ -1058,6 +1058,65 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "success with cluster-id",
+			testFunc: func(t *testing.T) {
+				const (
+					volumeName            = "random-vol-name"
+					clusterID             = "test-cluster-id"
+					expectedOwnerTag      = "kubernetes.io/cluster/test-cluster-id"
+					expectedOwnerTagValue = "owned"
+					expectedNameTag       = "Name"
+					expectedNameTagValue  = "test-cluster-id-dynamic-random-vol-name"
+				)
+				req := &csi.CreateVolumeRequest{
+					Name:               volumeName,
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				diskOptions := &cloud.DiskOptions{
+					CapacityBytes: stdVolSize,
+					Tags: map[string]string{
+						cloud.VolumeNameTagKey: volumeName,
+						expectedOwnerTag:       expectedOwnerTagValue,
+						expectedNameTag:        expectedNameTagValue,
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud: mockCloud,
+					driverOptions: &DriverOptions{
+						kubernetesClusterID: clusterID,
+					},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
