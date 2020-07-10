@@ -1117,6 +1117,70 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "success with legacy tags",
+			testFunc: func(t *testing.T) {
+				const (
+					volumeName              = "random-vol-name"
+					clusterID               = "test-cluster-id"
+					expectedPVCNameTag      = "kubernetes.io/created-for/pvc/name"
+					expectedPVCNamespaceTag = "kubernetes.io/created-for/pvc/namespace"
+					expectedPVNameTag       = "kubernetes.io/created-for/pv/name"
+					pvcNamespace            = "default"
+					pvcName                 = "my-pvc"
+					pvName                  = volumeName
+				)
+				req := &csi.CreateVolumeRequest{
+					Name:               volumeName,
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						"csi.storage.k8s.io/pvc/name":      pvcName,
+						"csi.storage.k8s.io/pvc/namespace": pvcNamespace,
+						"csi.storage.k8s.io/pv/name":       pvName,
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				diskOptions := &cloud.DiskOptions{
+					CapacityBytes: stdVolSize,
+					Tags: map[string]string{
+						cloud.VolumeNameTagKey:  volumeName,
+						expectedPVCNameTag:      pvcName,
+						expectedPVCNamespaceTag: pvcNamespace,
+						expectedPVNameTag:       pvName,
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
