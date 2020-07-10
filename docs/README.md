@@ -132,7 +132,12 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Volume Resizing](../examples/kubernetes/resizing)
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+
+To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
+* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
+* Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
+
 
 ## Development
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
