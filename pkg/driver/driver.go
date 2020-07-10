@@ -53,10 +53,11 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint          string
-	extraVolumeTags   map[string]string
-	mode              Mode
-	volumeAttachLimit int64
+	endpoint            string
+	extraVolumeTags     map[string]string
+	mode                Mode
+	volumeAttachLimit   int64
+	kubernetesClusterID string
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -160,5 +161,11 @@ func WithMode(mode Mode) func(*DriverOptions) {
 func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.volumeAttachLimit = volumeAttachLimit
+	}
+}
+
+func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.kubernetesClusterID = clusterID
 	}
 }

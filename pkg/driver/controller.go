@@ -178,8 +178,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
 
+	// fill volume tags
 	volumeTags := map[string]string{
 		cloud.VolumeNameTagKey: volName,
+	}
+	if d.driverOptions.kubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
 	}
 	for k, v := range d.driverOptions.extraVolumeTags {
 		volumeTags[k] = v

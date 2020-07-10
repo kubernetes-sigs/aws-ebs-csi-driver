@@ -56,3 +56,12 @@ func TestWithVolumeAttachLimit(t *testing.T) {
 		t.Fatalf("expected volumeAttachLimit option got set to %d but is set to %d", value, options.volumeAttachLimit)
 	}
 }
+
+func TestWithClusterID(t *testing.T) {
+	var id string = "test-cluster-id"
+	options := &DriverOptions{}
+	WithKubernetesClusterID(id)(options)
+	if options.kubernetesClusterID != id {
+		t.Fatalf("expected kubernetesClusterID option got set to %s but is set to %s", id, options.kubernetesClusterID)
+	}
+}
