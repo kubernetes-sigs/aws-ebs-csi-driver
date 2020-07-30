@@ -1243,25 +1243,44 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 func TestNodeGetInfo(t *testing.T) {
 	testCases := []struct {
-		name             string
-		instanceID       string
-		instanceType     string
-		availabilityZone string
-		expMaxVolumes    int64
+		name              string
+		instanceID        string
+		instanceType      string
+		availabilityZone  string
+		volumeAttachLimit int64
+		expMaxVolumes     int64
 	}{
 		{
-			name:             "success normal",
-			instanceID:       "i-123456789abcdef01",
-			instanceType:     "t2.medium",
-			availabilityZone: "us-west-2b",
-			expMaxVolumes:    39,
+			name:              "success normal",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t2.medium",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: -1,
+			expMaxVolumes:     39,
 		},
 		{
-			name:             "success normal with NVMe",
-			instanceID:       "i-123456789abcdef01",
-			instanceType:     "m5d.large",
-			availabilityZone: "us-west-2b",
-			expMaxVolumes:    25,
+			name:              "success normal with overwrite",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t2.medium",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: 42,
+			expMaxVolumes:     42,
+		},
+		{
+			name:              "success normal with NVMe",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5d.large",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: -1,
+			expMaxVolumes:     25,
+		},
+		{
+			name:              "success normal with NVMe and overwrite",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5d.large",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: 30,
+			expMaxVolumes:     30,
 		},
 	}
 	for _, tc := range testCases {
@@ -1269,17 +1288,25 @@ func TestNodeGetInfo(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := mocks.NewMockMetadataService(mockCtl)
-			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
-			mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
-			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
+			driverOptions := &DriverOptions{
+				volumeAttachLimit: tc.volumeAttachLimit,
+			}
 
 			mockMounter := mocks.NewMockMounter(mockCtl)
 
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
+			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
+
+			if tc.volumeAttachLimit < 0 {
+				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
+			}
+
 			awsDriver := &nodeService{
-				metadata: mockMetadata,
-				mounter:  mockMounter,
-				inFlight: internal.NewInFlight(),
+				metadata:      mockMetadata,
+				mounter:       mockMounter,
+				inFlight:      internal.NewInFlight(),
+				driverOptions: driverOptions,
 			}
 
 			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
