@@ -9,6 +9,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-snapshot-controller
+    namespace: {{ .Release.namespace }}
 roleRef:
   kind: Role
   name: snapshot-controller-leaderelection
