@@ -261,7 +261,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if zone == "" {
 		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 		var err error
-		zone, err = c.randomAvailabilityZone(ctx, c.region)
+		zone, err = c.randomAvailabilityZone(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get availability zone %s", err)
 		}
@@ -944,7 +944,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 
 // randomAvailabilityZone returns a random zone from the given region
 // the randomness relies on the response of DescribeAvailabilityZones
-func (c *cloud) randomAvailabilityZone(ctx context.Context, region string) (string, error) {
+func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
 	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
 	if err != nil {

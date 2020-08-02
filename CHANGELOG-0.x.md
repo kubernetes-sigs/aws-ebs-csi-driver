@@ -1,3 +1,31 @@
+# v0.6.0
+## Notable changes
+### New features
+* Allow volume attach limit overwrite via command line parameter ([#522](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/522), [@rfranzke](https://github.com/rfranzke))
+
+### Bug fixes
+* Adding amd64 as nodeSelector to avoid arm64 archtectures (#471) ([#472](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/472), [@hugoprudente](https://github.com/hugoprudente))
+* Update stable overlay to 0.5.0 ([#495](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/495), [@wongma7](https://github.com/wongma7))
+
+### Improvements
+* Update aws-sdk to v1.29.11 to get IMDSv2 support ([#463](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/463), [@msau42](https://github.com/msau42))
+* Fix e2e test ([#468](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/468), [@leakingtapan](https://github.com/leakingtapan))
+* Generate deployment manifests from helm chart ([#475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/475), [@krmichel](https://github.com/krmichel))
+* Correct golint warning ([#478](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/478), [@gliptak](https://github.com/gliptak))
+* Bump Go to 1.14.1 ([#479](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/479), [@gliptak](https://github.com/gliptak))
+* Add mount unittest ([#481](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/481), [@gliptak](https://github.com/gliptak))
+* Remove volume IOPS limit ([#483](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/483), [@jacobmarble](https://github.com/jacobmarble))
+* Additional mount unittest ([#484](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/484), [@gliptak](https://github.com/gliptak))
+* docs/README: add missing "--namespace" flag to "helm" command ([#486](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/486), [@gyuho](https://github.com/gyuho))
+* Add nodeAffinity to avoid Fargate worker nodes ([#488](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/488), [@bgsilvait](https://github.com/bgsilvait))
+* remove deprecated "beta.kubernetes.io/os" nodeSelector ([#489](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/489), [@gyuho](https://github.com/gyuho))
+* Update kubernetes-csi/external-snapshotter components to v2.1.1 ([#490](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/490), [@ialidzhikov](https://github.com/ialidzhikov))
+* Improve csi-snapshotter ClusterRole ([#491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/491), [@ialidzhikov](https://github.com/ialidzhikov))
+* Fix migration test ([#500](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/500), [@leakingtapan](https://github.com/leakingtapan))
+* Add missing IAM permissions ([#501](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/501), [@robbiet480](https://github.com/robbiet480))
+* Fixed resizing docs to refer the right path to example spec ([#504](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/504), [@amuraru](https://github.com/amuraru))
+* optimization: cache go mod during docker build ([#513](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/513), [@leakingtapan](https://github.com/leakingtapan))
+
 # v0.5.0
 [Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.5.0/docs/README.md)
 
