@@ -56,7 +56,7 @@ var _ = BeforeSuite(func() {
 	drv, err = driver.NewDriver(driver.WithEndpoint(endpoint))
 	Expect(err).To(BeNil())
 	go func() {
-		err := drv.Run()
+		err = drv.Run()
 		Expect(err).To(BeNil())
 	}()
 

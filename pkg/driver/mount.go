@@ -60,7 +60,9 @@ func (m *NodeMounter) MakeFile(pathname string) error {
 			return err
 		}
 	}
-	defer f.Close()
+	if err = f.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 
