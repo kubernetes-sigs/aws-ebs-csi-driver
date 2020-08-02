@@ -402,7 +402,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	if !exists {
-		if err := d.mounter.MakeDir(globalMountPath); err != nil {
+		if err = d.mounter.MakeDir(globalMountPath); err != nil {
 			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
