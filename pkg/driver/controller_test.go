@@ -129,12 +129,12 @@ func TestNewControllerService(t *testing.T) {
 				}()
 			}
 
-			controllerService := newControllerService(driverOptions)
+			controllerSvc := newControllerService(driverOptions)
 
-			if controllerService.cloud != cloudObj {
+			if controllerSvc.cloud != cloudObj {
 				t.Fatalf("expected cloud attribute to be equal to instantiated cloud object")
 			}
-			if !reflect.DeepEqual(controllerService.driverOptions, driverOptions) {
+			if !reflect.DeepEqual(controllerSvc.driverOptions, driverOptions) {
 				t.Fatalf("expected driverOptions attribute to be equal to input")
 			}
 		})

@@ -334,9 +334,9 @@ func TestNodeStageVolume(t *testing.T) {
 					inFlight: internal.NewInFlight(),
 				}
 
-				devicePath := "/dev/fake"
+				path := "/dev/fake"
 				req := &csi.NodeStageVolumeRequest{
-					PublishContext:   map[string]string{DevicePathKey: devicePath},
+					PublishContext:   map[string]string{DevicePathKey: path},
 					VolumeCapability: stdVolCap,
 					VolumeId:         "vol-test",
 				}
