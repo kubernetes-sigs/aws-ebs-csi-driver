@@ -5,25 +5,31 @@ apiVersion: apps/v1
 metadata:
   name: ebs-snapshot-controller
   namespace: kube-system
-  labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
   serviceName: ebs-snapshot-controller
   replicas: 1
   selector:
     matchLabels:
       app: ebs-snapshot-controller
-      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         app: ebs-snapshot-controller
-        {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
     spec:
-      serviceAccountName: ebs-snapshot-controller
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        {{- with .Values.nodeSelector }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      tolerations:
+        - operator: Exists
+      {{- with .Values.tolerations }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      serviceAccount: ebs-snapshot-controller
       containers:
         - name: snapshot-controller
-          image: quay.io/k8scsi/snapshot-controller:v2.1.1
+          image: quay.io/k8scsi/snapshot-controller:v2.0.1
           args:
             - --v=5
             - --leader-election=false
