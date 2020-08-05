@@ -33,6 +33,11 @@ func TestControllerOptions(t *testing.T) {
 			found: true,
 		},
 		{
+			name:  "lookup k8s-tag-cluster-id",
+			flag:  "k8s-tag-cluster-id",
+			found: true,
+		},
+		{
 			name:  "fail for non-desired flag",
 			flag:  "some-other-flag",
 			found: false,
