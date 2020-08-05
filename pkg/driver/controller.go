@@ -128,6 +128,9 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		iopsPerGB   int
 		isEncrypted bool
 		kmsKeyID    string
+		volumeTags  = map[string]string{
+			cloud.VolumeNameTagKey: volName,
+		}
 	)
 
 	for key, value := range req.GetParameters() {
@@ -149,6 +152,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 		case KmsKeyIDKey:
 			kmsKeyID = value
+		case PVCNameKey:
+			volumeTags[PVCNameTag] = value
+		case PVCNamespaceKey:
+			volumeTags[PVCNamespaceTag] = value
+		case PVNameKey:
+			volumeTags[PVNameTag] = value
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 		}
@@ -178,8 +187,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
 
-	volumeTags := map[string]string{
-		cloud.VolumeNameTagKey: volName,
+	// fill volume tags
+	if d.driverOptions.kubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
 	}
 	for k, v := range d.driverOptions.extraVolumeTags {
 		volumeTags[k] = v
