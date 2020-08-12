@@ -53,8 +53,9 @@ func TestSanity(t *testing.T) {
 				Region:           "region",
 				AvailabilityZone: "az",
 			},
-			mounter:  newFakeMounter(),
-			inFlight: internal.NewInFlight(),
+			mounter:       newFakeMounter(),
+			inFlight:      internal.NewInFlight(),
+			driverOptions: &DriverOptions{},
 		},
 	}
 	defer func() {

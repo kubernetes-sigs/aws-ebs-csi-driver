@@ -12,6 +12,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
+| v0.5.0                                 | no    | no     | yes    |
 | v0.4.0                                 | no    | no     | yes    |
 | v0.3.0                                 | no    | yes    | no     |
 | v0.2.0                                 | no    | yes    | no     |
@@ -41,13 +42,14 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compability Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 |
-|----------------------------------------|-------|-------|-------|-------|
-| master branch                          | no    | no+   | yes   | yes   |
-| v0.4.0                                 | no    | no+   | yes   | yes   |
-| v0.3.0                                 | no    | no+   | yes   | no    |
-| v0.2.0                                 | no    | yes   | yes   | no    |
-| v0.1.0                                 | yes   | yes   | yes   | no    |
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 |
+|----------------------------------------|-------|-------|-------|-------|-------|
+| master branch                          | no    | no+   | yes   | yes   | yes   |
+| v0.5.0                                 | no    | no+   | yes   | yes   | yes   |
+| v0.4.0                                 | no    | no+   | yes   | yes   | no    |
+| v0.3.0                                 | no    | no+   | yes   | no    | no    |
+| v0.2.0                                 | no    | yes   | yes   | no    | no    |
+| v0.1.0                                 | yes   | yes   | yes   | no    | no    |
 
 **Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
@@ -55,6 +57,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                               |
 |---------------------------|-------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest     |
+|v0.5.0                     |amazon/aws-ebs-csi-driver:v0.5.0     |
 |v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0     |
 |v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0     |
 |v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
@@ -65,9 +68,9 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 * **Dynamic Provisioning** - uses persistence volume claim (PVC) to request the Kuberenetes to create the EBS volume on behalf of user and consumes the volume from inside container. Storage class's **allowedTopologies** could be used to restrict which AZ the volume should be provisioned in. The topology key should be **topology.ebs.csi.aws.com/zone**.
 * **Mount Option** - mount options could be specified in persistence volume (PV) to define how the volume should be mounted.
 * **NVMe** - consume NVMe EBS volume from EC2 [Nitro instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances).
-* **Block Volume** (beta since 1.14) - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql
-* **Volume Snapshot** (alpha) - creating volume snapshots and restore volume from snapshot.
-* **Volume Resizing** (alpha) - expand the volume size.
+* **[Block Volume](https://kubernetes-csi.github.io/docs/raw-block.html)** - consumes the EBS volume as a raw block device for latency sensitive application eg. MySql. The corresponding CSI feature (`CSIBlockVolume`) is GA since Kubernetes 1.18.
+* **[Volume Snapshot](https://kubernetes-csi.github.io/docs/snapshot-restore-feature.html)** - creating volume snapshots and restore volume from snapshot. The corresponding CSI feature (`VolumeSnapshotDataSource`) is beta since Kubernetes 1.17.
+* **[Volume Resizing](https://kubernetes-csi.github.io/docs/volume-expansion.html)** - expand the volume size. The corresponding CSI feature (`ExpandCSIVolumes`) is beta since Kubernetes 1.16.
 
 ## Prerequisites
 * If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
@@ -87,7 +90,7 @@ kubectl apply -f secret.yaml
 ```
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-#### Deploy CRD (optinal)
+#### Deploy CRD (optional)
 If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
@@ -111,11 +114,13 @@ kubectl get pods -n kube-system
 
 Alternatively, you could also install the driver using helm:
 ```sh
-helm install --name aws-ebs-csi-driver \
+helm install \
+    --namespace kube-system \
+    --name aws-ebs-csi-driver \
     --set enableVolumeScheduling=true \
     --set enableVolumeResizing=true \
     --set enableVolumeSnapshot=true \
-    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.4.0/helm-chart.tgz
+    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.5.0/helm-chart.tgz
 ```
 
 ## Examples
@@ -127,13 +132,18 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Volume Resizing](../examples/kubernetes/resizing)
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.14, CSI migration is supported as alpha feature. If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+
+To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
+* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
+* Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
+
 
 ## Development
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/Development.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.12.7+
+* Golang 1.14.+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
@@ -154,6 +164,14 @@ Dependencies are managed through go module. To build the project, first turn on 
 ### Build and Publish Container Image
 * Build image and push it with latest tag: `make image && make push`
 * Build image and push it with release tag: `make image-release && make push-release`
+
+### Helm and manifests
+The helm chart for this project is in the `aws-ebs-csi-driver` directory.  The manifests for this project are in the `deploy/kubernetes` directory.  All of the manifests except kustomize patches are generated by running `helm template`.  This keeps the helm chart and the manifests in sync.
+
+When updating the helm chart:
+* Generate manifests: `make generate-kustomize`
+* There are values files in `deploy/kubernetes/values` used for generating some of the manifests
+* When adding a new resource template to the helm chart please update the `generate-kustomize` make target, the `deploy/kubernetes/values` files, and the appropriate kustomization.yaml file(s).
 
 ## Milestone
 [Milestones page](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/milestones)

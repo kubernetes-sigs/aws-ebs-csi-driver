@@ -6,7 +6,7 @@ This example shows how to resize EBS persistence volume using volume resizing fe
 2. EBS has a limit of one volume modification every 6 hours. Refer to [EBS documentation](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyVolume.html) for more details.
 
 ## Usage
-1. Add `allowVolumeExpansion: true` in the StorageClass spec in [example manifest](./specs/example.yaml) to enable volume expansion. You can only expand a PVC if its storage class’s allowVolumeExpansion field is set to true
+1. Add `allowVolumeExpansion: true` in the StorageClass spec in [example manifest](./spec/example.yaml) to enable volume expansion. You can only expand a PVC if its storage class’s allowVolumeExpansion field is set to true
 
 2. Deploy the example:
 ```sh
