@@ -1,4 +1,11 @@
 # v0.6.0
+[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.6.0/docs/README.md)
+
+filename  | sha512 hash
+--------- | ------------
+[v0.6.0.zip](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.6.0.zip) | `67dc79703c2d022cbc53a370e8ac7279bf4345030a3ecc5b2bdff2b722ec807b712f2cd6eae79598edb87e15d92e683e98dde7c25e52f705233bc3ece649c693`
+[v0.6.0.tar.gz](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.6.0.tar.gz) | `a3b5e95ec05ce6b4e6eb22ae00c7898cb876f21719354636dae5d323934c7a0bb32a7a8e89abdfcc6b0a0827c7169a349cba9dce32b7bf25e7287a2ec0387f21`
+
 ## Notable changes
 ### New features
 * Allow volume attach limit overwrite via command line parameter ([#522](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/522), [@rfranzke](https://github.com/rfranzke))
