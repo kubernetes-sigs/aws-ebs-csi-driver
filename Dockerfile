@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.12.7-stretch as builder
+FROM golang:1.14.1-stretch as builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+
+# Cache go modules
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
 ADD . .
 RUN make
 

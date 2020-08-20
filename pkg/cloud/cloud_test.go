@@ -667,7 +667,7 @@ func TestResizeDisk(t *testing.T) {
 			expErr:              fmt.Errorf("ResizeDisk generic error"),
 		},
 		{
-			name:     "sucess: there is a resizing in progress",
+			name:     "success: there is a resizing in progress",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),

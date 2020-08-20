@@ -70,23 +70,25 @@ var (
 
 // nodeService represents the node service of CSI driver
 type nodeService struct {
-	metadata cloud.MetadataService
-	mounter  Mounter
-	inFlight *internal.InFlight
+	metadata      cloud.MetadataService
+	mounter       Mounter
+	inFlight      *internal.InFlight
+	driverOptions *DriverOptions
 }
 
 // newNodeService creates a new node service
 // it panics if failed to create the service
-func newNodeService() nodeService {
+func newNodeService(driverOptions *DriverOptions) nodeService {
 	metadata, err := cloud.NewMetadata()
 	if err != nil {
 		panic(err)
 	}
 
 	return nodeService{
-		metadata: metadata,
-		mounter:  newNodeMounter(),
-		inFlight: internal.NewInFlight(),
+		metadata:      metadata,
+		mounter:       newNodeMounter(),
+		inFlight:      internal.NewInFlight(),
+		driverOptions: driverOptions,
 	}
 }
 
@@ -400,7 +402,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	if !exists {
-		if err := d.mounter.MakeDir(globalMountPath); err != nil {
+		if err = d.mounter.MakeDir(globalMountPath); err != nil {
 			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
@@ -514,6 +516,9 @@ func findNvmeVolume(findName string) (device string, err error) {
 
 // getVolumesLimit returns the limit of volumes that the node supports
 func (d *nodeService) getVolumesLimit() int64 {
+	if d.driverOptions.volumeAttachLimit >= 0 {
+		return d.driverOptions.volumeAttachLimit
+	}
 	ebsNitroInstanceTypeRegex := "^[cmr]5.*|t3|z1d"
 	instanceType := d.metadata.GetInstanceType()
 	if ok, _ := regexp.MatchString(ebsNitroInstanceTypeRegex, instanceType); ok {

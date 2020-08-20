@@ -18,7 +18,7 @@ sidecars:
     tag: "v1.2.0"
   snapshotterImage:
     repository: quay.io/k8scsi/csi-snapshotter
-    tag: "v2.0.1"
+    tag: "v2.1.1"
   livenessProbeImage:
     repository: quay.io/k8scsi/livenessprobe
     tag: "v1.1.0"

@@ -59,14 +59,9 @@ var (
 )
 
 // AWS provisioning limits.
-// Sources:
-//   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+// Source:
 //   https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
 const (
-	// MinTotalIOPS represents the minimum Input Output per second.
-	MinTotalIOPS = 100
-	// MaxTotalIOPS represents the maximum Input Output per second.
-	MaxTotalIOPS = 20000
 	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
 	MaxNumTagsPerResource = 50
 	// MaxTagKeyLength represents the maximum key length for a tag.
@@ -245,12 +240,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
 		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
-		if iops < MinTotalIOPS {
-			iops = MinTotalIOPS
-		}
-		if iops > MaxTotalIOPS {
-			iops = MaxTotalIOPS
-		}
 	case "":
 		createType = DefaultVolumeType
 	default:
@@ -272,7 +261,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if zone == "" {
 		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 		var err error
-		zone, err = c.randomAvailabilityZone(ctx, c.region)
+		zone, err = c.randomAvailabilityZone(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get availability zone %s", err)
 		}
@@ -955,7 +944,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 
 // randomAvailabilityZone returns a random zone from the given region
 // the randomness relies on the response of DescribeAvailabilityZones
-func (c *cloud) randomAvailabilityZone(ctx context.Context, region string) (string, error) {
+func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
 	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
 	if err != nil {
