@@ -1,9 +1,9 @@
-FROM registry.svc.ci.openshift.org/ocp/builder:golang-1.13 AS builder
+FROM registry.svc.ci.openshift.org/ocp/builder:rhel-8-golang-openshift-4.6 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 COPY . .
 RUN make
 
-FROM registry.svc.ci.openshift.org/ocp/4.0:base
+FROM registry.svc.ci.openshift.org/ocp/4.6:base
 # Get mkfs & blkid
 RUN yum update -y && \
     yum install --setopt=tsflags=nodocs -y e2fsprogs xfsprogs util-linux && \
