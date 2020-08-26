@@ -107,7 +107,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	if !isValidVolumeCapabilities(volCaps) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
+		modes := util.GetAccessModes(volCaps)
+		stringModes := strings.Join(*modes, ", ")
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
 	disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
@@ -256,7 +259,10 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 
 	caps := []*csi.VolumeCapability{volCap}
 	if !isValidVolumeCapabilities(caps) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		modes := util.GetAccessModes(caps)
+		stringModes := strings.Join(*modes, ", ")
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
 	if !d.cloud.IsExistInstance(ctx, nodeID) {
