@@ -15,6 +15,7 @@
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
 VERSION=v0.6.0
+VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
@@ -90,15 +91,21 @@ test-e2e-migration:
 
 .PHONY: image-release
 image-release:
-	docker build -t $(IMAGE):$(VERSION) .
+	docker build -t $(IMAGE):$(VERSION) . --target debian-base
+	docker build -t $(IMAGE):$(VERSION_AMAZONLINUX) . --target amazonlinux
 
 .PHONY: image
 image:
-	docker build -t $(IMAGE):latest .
+	docker build -t $(IMAGE):latest . --target debian-base
+
+.PHONY: image-amazonlinux
+image-amazonlinux:
+	docker build -t $(IMAGE):latest . --target amazonlinux
 
 .PHONY: push-release
 push-release:
 	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE):$(VERSION_AMAZONLINUX)
 
 .PHONY: push
 push:
