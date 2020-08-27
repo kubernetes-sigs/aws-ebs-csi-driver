@@ -30,7 +30,6 @@ spec:
                 - fargate
       nodeSelector:
         kubernetes.io/os: linux
-        kubernetes.io/arch: amd64
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
