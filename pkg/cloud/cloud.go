@@ -860,6 +860,20 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		return oldSizeGiB, nil
 	}
 
+	latestMod, err := c.getLatestVolumeModification(ctx, volumeID)
+	// if there are no errors fetching modifications
+	if err == nil && latestMod != nil {
+		state := aws.StringValue(latestMod.ModificationState)
+		targetSize := aws.Int64Value(latestMod.TargetSize)
+		if (state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing) && targetSize >= newSizeGiB {
+			return targetSize, nil
+		}
+
+		if state == ec2.VolumeModificationStateModifying {
+			return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to size %d", volumeID, targetSize)
+		}
+	}
+
 	req := &ec2.ModifyVolumeInput{
 		VolumeId: aws.String(volumeID),
 		Size:     aws.Int64(newSizeGiB),
@@ -893,10 +907,11 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 
 // waitForVolumeSize waits for a volume modification to finish and return its size.
 func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
+	// the default context is 10s and hence we should reduce this to more reasonable value and let external-resizer retry
 	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.8,
-		Steps:    20,
+		Steps:    3,
 	}
 
 	var modVolSizeGiB int64
