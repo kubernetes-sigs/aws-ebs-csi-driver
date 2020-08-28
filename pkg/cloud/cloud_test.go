@@ -660,6 +660,26 @@ func TestResizeDisk(t *testing.T) {
 			expErr:     nil,
 		},
 		{
+			name:     "success: with previous expansion",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     nil,
+		},
+		{
 			name:                "fail: volume doesn't exist",
 			volumeID:            "vol-test",
 			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
@@ -707,6 +727,9 @@ func TestResizeDisk(t *testing.T) {
 			}
 			if tc.descModVolume != nil {
 				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+			} else {
+				emptyOutput := &ec2.DescribeVolumesModificationsOutput{}
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(emptyOutput, nil).AnyTimes()
 			}
 
 			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
