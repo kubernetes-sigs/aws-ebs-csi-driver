@@ -648,7 +648,6 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
-
 	for {
 		response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
 		if err != nil {
@@ -865,8 +864,9 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	if err == nil && latestMod != nil {
 		state := aws.StringValue(latestMod.ModificationState)
 		targetSize := aws.Int64Value(latestMod.TargetSize)
-		if (state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing) && targetSize >= newSizeGiB {
-			return targetSize, nil
+		klog.Infof("volume %q is being modified to %d size and is in %s state", volumeID, targetSize, state)
+		if state == ec2.VolumeModificationStateCompleted && targetSize >= newSizeGiB {
+			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 		}
 
 		if state == ec2.VolumeModificationStateModifying {
@@ -878,7 +878,6 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		VolumeId: aws.String(volumeID),
 		Size:     aws.Int64(newSizeGiB),
 	}
-
 	var mod *ec2.VolumeModification
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
@@ -886,9 +885,9 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 			return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
 		}
 
-		m, err := c.getLatestVolumeModification(ctx, volumeID)
-		if err != nil {
-			return 0, err
+		m, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
+		if modFetchError != nil {
+			return 0, modFetchError
 		}
 		mod = m
 	}
@@ -898,11 +897,38 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	}
 
 	state := aws.StringValue(mod.ModificationState)
-	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
-		return aws.Int64Value(mod.TargetSize), nil
+	if state == ec2.VolumeModificationStateCompleted {
+		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 	}
 
-	return c.waitForVolumeSize(ctx, volumeID)
+	_, err = c.waitForVolumeSize(ctx, volumeID)
+	if err != nil {
+		return oldSizeGiB, err
+	}
+	return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+}
+
+// Checks for desired size on volume by also verifying volume size by describing volume.
+// This is to get around potential eventual consistency problems with describing volume modifications
+// objects and ensuring that we read two different objects to verify volume state.
+func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGiB int64) (int64, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return 0, err
+	}
+
+	// AWS resizes in chunks of GiB (not GB)
+	oldSizeGiB := aws.Int64Value(volume.Size)
+	klog.Infof("volume %q is of %d size and expected size is %d", volumeID, oldSizeGiB, newSizeGiB)
+	if oldSizeGiB >= newSizeGiB {
+		return oldSizeGiB, nil
+	}
+	return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, newSizeGiB)
 }
 
 // waitForVolumeSize waits for a volume modification to finish and return its size.
@@ -922,7 +948,8 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 		}
 
 		state := aws.StringValue(m.ModificationState)
-		if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+		klog.Infof("volume %q is being modified to %d size and is in %s state", volumeID, aws.Int64Value(m.TargetSize), state)
+		if state == ec2.VolumeModificationStateCompleted {
 			modVolSizeGiB = aws.Int64Value(m.TargetSize)
 			return true, nil
 		}
