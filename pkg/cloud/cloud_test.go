@@ -626,7 +626,7 @@ func TestResizeDisk(t *testing.T) {
 				VolumeModification: &ec2.VolumeModification{
 					VolumeId:          aws.String("vol-test"),
 					TargetSize:        aws.Int64(2),
-					ModificationState: aws.String(ec2.VolumeModificationStateOptimizing),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
 			reqSizeGiB: 2,
@@ -664,7 +664,7 @@ func TestResizeDisk(t *testing.T) {
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
-				Size:             aws.Int64(1),
+				Size:             aws.Int64(2),
 				AvailabilityZone: aws.String(defaultZone),
 			},
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
@@ -707,6 +707,26 @@ func TestResizeDisk(t *testing.T) {
 			reqSizeGiB: 2,
 			expErr:     nil,
 		},
+		{
+			name:     "failure: volume in modifying state",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateModifying),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     fmt.Errorf("ResizeDisk generic error"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -719,8 +739,24 @@ func TestResizeDisk(t *testing.T) {
 			if tc.existingVolume != nil || tc.existingVolumeError != nil {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
 					&ec2.DescribeVolumesOutput{
-						Volumes: []*ec2.Volume{tc.existingVolume},
-					}, tc.existingVolumeError).AnyTimes()
+						Volumes: []*ec2.Volume{
+							tc.existingVolume,
+						},
+					}, tc.existingVolumeError)
+
+				if tc.expErr == nil && aws.Int64Value(tc.existingVolume.Size) != tc.reqSizeGiB {
+					resizedVolume := &ec2.Volume{
+						VolumeId:         aws.String("vol-test"),
+						Size:             aws.Int64(tc.reqSizeGiB),
+						AvailabilityZone: aws.String(defaultZone),
+					}
+					mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+						&ec2.DescribeVolumesOutput{
+							Volumes: []*ec2.Volume{
+								resizedVolume,
+							},
+						}, tc.existingVolumeError)
+				}
 			}
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
 				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
