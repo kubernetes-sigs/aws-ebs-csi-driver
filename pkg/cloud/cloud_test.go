@@ -664,7 +664,7 @@ func TestResizeDisk(t *testing.T) {
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
-				Size:             aws.Int64(1),
+				Size:             aws.Int64(2),
 				AvailabilityZone: aws.String(defaultZone),
 			},
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
@@ -724,7 +724,7 @@ func TestResizeDisk(t *testing.T) {
 						},
 					}, tc.existingVolumeError)
 
-				if tc.expErr == nil {
+				if tc.expErr == nil && aws.Int64Value(tc.existingVolume.Size) != tc.reqSizeGiB {
 					resizedVolume := &ec2.Volume{
 						VolumeId:         aws.String("vol-test"),
 						Size:             aws.Int64(tc.reqSizeGiB),
