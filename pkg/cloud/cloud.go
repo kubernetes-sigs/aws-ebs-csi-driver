@@ -56,6 +56,7 @@ var (
 		VolumeTypeST1,
 		VolumeTypeStandard,
 	}
+	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
 )
 
 // AWS provisioning limits.
@@ -830,6 +831,12 @@ func isAWSErrorInvalidAttachmentNotFound(err error) bool {
 	return isAWSError(err, "InvalidAttachment.NotFound")
 }
 
+// isAWSErrorModificationNotFound returns a boolean indicating whether the given
+// error is an AWS InvalidVolumeModification.NotFound error
+func isAWSErrorModificationNotFound(err error) bool {
+	return isAWSError(err, "InvalidVolumeModification.NotFound")
+}
+
 // isAWSErrorSnapshotNotFound returns a boolean indicating whether the
 // given error is an AWS InvalidSnapshot.NotFound error. This error is
 // reported when the specified snapshot doesn't exist.
@@ -854,23 +861,42 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	newSizeGiB := util.RoundUpGiB(newSizeBytes)
 	oldSizeGiB := aws.Int64Value(volume.Size)
 
-	if oldSizeGiB >= newSizeGiB {
-		klog.V(5).Infof("Volume %q's current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
-		return oldSizeGiB, nil
+	latestMod, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
+
+	if latestMod != nil && modFetchError == nil {
+		state := aws.StringValue(latestMod.ModificationState)
+		if state == ec2.VolumeModificationStateModifying {
+			return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to size %d", volumeID, newSizeGiB)
+		}
 	}
 
-	latestMod, err := c.getLatestVolumeModification(ctx, volumeID)
-	// if there are no errors fetching modifications
-	if err == nil && latestMod != nil {
-		state := aws.StringValue(latestMod.ModificationState)
-		targetSize := aws.Int64Value(latestMod.TargetSize)
-		klog.Infof("volume %q is being modified to %d size and is in %s state", volumeID, targetSize, state)
-		if state == ec2.VolumeModificationStateCompleted && targetSize >= newSizeGiB {
-			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
+	// that means we have an API problem.
+	if modFetchError != nil && modFetchError != VolumeNotBeingModified {
+		klog.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
+		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
+	}
+
+	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
+	// volume modifications objects or volume has completed previously issued modification request.
+	if oldSizeGiB >= newSizeGiB {
+		klog.V(5).Infof("Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
+		modificationDone := false
+		if latestMod != nil {
+			state := aws.StringValue(latestMod.ModificationState)
+			targetSize := aws.Int64Value(latestMod.TargetSize)
+			if (state == ec2.VolumeModificationStateCompleted) && (targetSize >= newSizeGiB) {
+				modificationDone = true
+			}
+		}
+		if modFetchError == VolumeNotBeingModified {
+			modificationDone = true
 		}
 
-		if state == ec2.VolumeModificationStateModifying {
-			return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to size %d", volumeID, targetSize)
+		if modificationDone {
+			return oldSizeGiB, nil
+		} else {
+			return oldSizeGiB, fmt.Errorf("volume %q is still being expanded", volumeID)
 		}
 	}
 
@@ -878,6 +904,8 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		VolumeId: aws.String(volumeID),
 		Size:     aws.Int64(newSizeGiB),
 	}
+
+	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	var mod *ec2.VolumeModification
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
@@ -973,12 +1001,15 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 	}
 	mod, err := c.ec2.DescribeVolumesModificationsWithContext(ctx, request)
 	if err != nil {
+		if isAWSErrorModificationNotFound(err) {
+			return nil, VolumeNotBeingModified
+		}
 		return nil, fmt.Errorf("error describing modifications in volume %q: %v", volumeID, err)
 	}
 
 	volumeMods := mod.VolumesModifications
 	if len(volumeMods) == 0 {
-		return nil, fmt.Errorf("could not find any modifications for volume %q", volumeID)
+		return nil, VolumeNotBeingModified
 	}
 
 	return volumeMods[len(volumeMods)-1], nil
