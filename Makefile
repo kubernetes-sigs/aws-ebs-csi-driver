@@ -37,6 +37,7 @@ endef
 
 .EXPORT_ALL_VARIABLES:
 
+.PHONY: bin/aws-ebs-csi-driver
 bin/aws-ebs-csi-driver: | bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
@@ -128,6 +129,14 @@ push-release:
 .PHONY: push
 push:
 	docker push $(IMAGE):latest
+
+.PHONY: test-vendor
+test: test-vendor
+verify: test-vendor
+test-vendor:
+	@ echo; echo "### $@:"
+	@ ./hack/verify-vendor.sh
+
 
 .PHONY: generate-kustomize
 generate-kustomize: bin/helm
