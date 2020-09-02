@@ -130,10 +130,10 @@ push-release:
 push:
 	docker push $(IMAGE):latest
 
-.PHONY: test-vendor
-test: test-vendor
-verify: test-vendor
-test-vendor:
+.PHONY: verify-vendor
+test: verify-vendor
+verify: verify-vendor
+verify-vendor:
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
 
