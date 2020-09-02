@@ -14,13 +14,7 @@
 
 FROM golang:1.14.1-stretch AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-
-# Cache go modules
-COPY go.mod .
-COPY go.sum .
-RUN go mod download
-
-ADD . .
+COPY . .
 RUN make
 
 FROM amazonlinux:2 AS amazonlinux
