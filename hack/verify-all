@@ -20,4 +20,4 @@ PKG_ROOT=$(git rev-parse --show-toplevel)
 
 ${PKG_ROOT}/hack/verify-gofmt
 ${PKG_ROOT}/hack/verify-govet
-${PKG_ROOT}/hack/verify-golint
+${PKG_ROOT}/hack/verify-vendor.sh
