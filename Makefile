@@ -29,7 +29,7 @@ GOBIN=$(shell pwd)/bin
 
 .PHONY: bin/aws-ebs-csi-driver
 bin/aws-ebs-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
+	CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
 bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
