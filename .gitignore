@@ -19,8 +19,5 @@ Vagrantfile
 # vim
 *.swp
 
-# go
-vendor/
-
 # IntelliJ
 .idea/
