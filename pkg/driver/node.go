@@ -125,11 +125,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mount is nil within volume capability")
 	}
 
-	fsType := mount.GetFsType()
-	if len(fsType) == 0 {
-		fsType = defaultFsType
-	}
-
 	var mountOptions []string
 	for _, f := range mount.MountFlags {
 		if !hasMountOption(mountOptions, f) {
@@ -150,6 +145,19 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	devicePath, ok := req.PublishContext[DevicePathKey]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
+	}
+
+	devicePath, err := getPartitionedPath(devicePath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Failed to detect partition")
+	}
+
+	fsType := mount.GetFsType()
+	if len(fsType) == 0 {
+		fsType, err = getFileSystemType(devicePath, d.mounter.(*NodeMounter).Exec)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Failed to detect partition")
+		}
 	}
 
 	source, err := d.findDevicePath(devicePath, volumeID)
