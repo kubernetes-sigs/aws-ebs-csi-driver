@@ -70,8 +70,8 @@ mockgen: bin/mockgen
 
 .PHONY: verify
 verify: bin/golangci-lint
-	echo "Running golangci-lint..."
-	./bin/golangci-lint run --deadline=10m
+	echo "verifying and linting files ..."
+	./hack/verify-all
 	echo "Congratulations! All Go source files have been linted."
 
 .PHONY: verify-deps
