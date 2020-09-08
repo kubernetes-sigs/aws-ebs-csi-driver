@@ -43,7 +43,7 @@ spec:
           args:
             {{- if ne .Release.Name "kustomize" }}
             - controller
-            {{ else }}
+            {{- else }}
             # - {all,controller,node} # specify the driver mode
             {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
