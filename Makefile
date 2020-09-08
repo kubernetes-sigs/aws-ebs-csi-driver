@@ -23,6 +23,17 @@ GOPROXY=direct
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
+GO ?=go
+deps_diff := diff --no-dereference -N
+
+# $1 - temporary directory
+define restore-deps
+	ln -s $(abspath ./) "$(1)"/current
+	cp -R -H ./ "$(1)"/updated
+	rm -rf "$(1)"/updated/vendor
+	cd "$(1)"/updated && $(GO) mod vendor && $(GO) mod tidy && $(GO) mod verify
+	cd "$(1)" && $(deps_diff) -r {current,updated}/vendor/ > updated/deps.diff || true
+endef
 
 .EXPORT_ALL_VARIABLES:
 
@@ -61,6 +72,20 @@ verify: bin/golangci-lint
 	echo "Running golangci-lint..."
 	./bin/golangci-lint run --deadline=10m
 	echo "Congratulations! All Go source files have been linted."
+
+.PHONY: verify-deps
+verify-deps: tmp_dir:=$(shell mktemp -d)
+verify-deps:
+	$(call restore-deps,$(tmp_dir))
+	$(deps_diff) "$(tmp_dir)"/{current,updated}/go.mod || ( echo '`go.mod` content is incorrect - did you run `go mod tidy`?' && false )
+	$(deps_diff) "$(tmp_dir)"/{current,updated}/go.sum || ( echo '`go.sum` content is incorrect - did you run `go mod tidy`?' && false )
+	@echo $(deps_diff) '$(tmp_dir)'/{current,updated}/deps.diff
+	@     $(deps_diff) '$(tmp_dir)'/{current,updated}/deps.diff || ( \
+		echo "ERROR: Content of 'vendor/' directory doesn't match 'go.mod' configuration and the overrides in 'deps.diff'!" && \
+		echo 'Did you run `go mod vendor`?' && \
+		echo "If this is an intentional change (a carry patch) please update the 'deps.diff' using 'make update-deps-overrides'." && \
+		false \
+	)
 
 .PHONY: test
 test:
@@ -124,3 +149,4 @@ generate-kustomize: bin/helm
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
 	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/statefulset.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
+
