@@ -885,7 +885,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		if latestMod != nil {
 			state := aws.StringValue(latestMod.ModificationState)
 			targetSize := aws.Int64Value(latestMod.TargetSize)
-			if (state == ec2.VolumeModificationStateCompleted) && (targetSize >= newSizeGiB) {
+			if volumeModificationDone(state) && (targetSize >= newSizeGiB) {
 				modificationDone = true
 			}
 		}
@@ -925,7 +925,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	}
 
 	state := aws.StringValue(mod.ModificationState)
-	if state == ec2.VolumeModificationStateCompleted {
+	if volumeModificationDone(state) {
 		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 	}
 
@@ -964,8 +964,8 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 	// the default context is 10s and hence we should reduce this to more reasonable value and let external-resizer retry
 	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
-		Factor:   1.8,
-		Steps:    3,
+		Factor:   1.7,
+		Steps:    10,
 	}
 
 	var modVolSizeGiB int64
@@ -977,7 +977,7 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 
 		state := aws.StringValue(m.ModificationState)
 		klog.Infof("volume %q is being modified to %d size and is in %s state", volumeID, aws.Int64Value(m.TargetSize), state)
-		if state == ec2.VolumeModificationStateCompleted {
+		if volumeModificationDone(state) {
 			modVolSizeGiB = aws.Int64Value(m.TargetSize)
 			return true, nil
 		}
@@ -1030,4 +1030,11 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	}
 
 	return zones[0], nil
+}
+
+func volumeModificationDone(state string) bool {
+	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+		return true
+	}
+	return false
 }
