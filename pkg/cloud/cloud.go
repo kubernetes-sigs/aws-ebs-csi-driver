@@ -38,6 +38,8 @@ import (
 const (
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
+	// VolumeTypeIO2 represents a provisioned IOPS SSD type of volume.
+	VolumeTypeIO2 = "io2"
 	// VolumeTypeGP2 represents a general purpose SSD type of volume.
 	VolumeTypeGP2 = "gp2"
 	// VolumeTypeSC1 represents a cold HDD (sc1) type of volume.
@@ -51,6 +53,7 @@ const (
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
+		VolumeTypeIO2,
 		VolumeTypeGP2,
 		VolumeTypeSC1,
 		VolumeTypeST1,
@@ -237,7 +240,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
-	case VolumeTypeIO1:
+	case VolumeTypeIO1, VolumeTypeIO2:
 		createType = diskOptions.VolumeType
 		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
 	case "":
