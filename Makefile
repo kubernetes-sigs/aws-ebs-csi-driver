@@ -27,8 +27,9 @@ GOBIN=$(shell pwd)/bin
 
 .EXPORT_ALL_VARIABLES:
 
+.PHONY: bin/aws-ebs-csi-driver
 bin/aws-ebs-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
+	CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
 
 bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
@@ -59,8 +60,8 @@ mockgen: bin/mockgen
 
 .PHONY: verify
 verify: bin/golangci-lint
-	echo "Running golangci-lint..."
-	./bin/golangci-lint run --deadline=10m
+	echo "verifying and linting files ..."
+	./hack/verify-all
 	echo "Congratulations! All Go source files have been linted."
 
 .PHONY: test
@@ -110,6 +111,14 @@ push-release:
 .PHONY: push
 push:
 	docker push $(IMAGE):latest
+
+.PHONY: verify-vendor
+test: verify-vendor
+verify: verify-vendor
+verify-vendor:
+	@ echo; echo "### $@:"
+	@ ./hack/verify-vendor.sh
+
 
 .PHONY: generate-kustomize
 generate-kustomize: bin/helm
