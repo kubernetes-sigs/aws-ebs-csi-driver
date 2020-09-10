@@ -366,9 +366,21 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
-	topology := &csi.Topology{
-		Segments: map[string]string{TopologyKey: d.metadata.GetAvailabilityZone()},
+	segments := map[string]string{
+		TopologyKey: d.metadata.GetAvailabilityZone(),
 	}
+
+	outpostArn := d.metadata.GetOutpostArn()
+
+	// to my surprise ARN's string representation is not empty for empty ARN
+	if len(outpostArn.Resource) > 0 {
+		segments[AwsRegionKey] = outpostArn.Region
+		segments[AwsPartitionKey] = outpostArn.Partition
+		segments[AwsAccountIDKey] = outpostArn.AccountID
+		segments[AwsOutpostIDKey] = outpostArn.Resource
+	}
+
+	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
 		NodeId:             d.metadata.GetInstanceID(),

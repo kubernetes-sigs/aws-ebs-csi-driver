@@ -95,6 +95,39 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: outpost volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: empty outpost arn",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "",
+			},
+			expErr: nil,
+		},
+		{
 			name:       "fail: CreateVolume returned CreateVolume error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
@@ -162,6 +195,7 @@ func TestCreateDisk(t *testing.T) {
 				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
 				State:            aws.String(volState),
 				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+				OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
 			}
 			snapshot := &ec2.Snapshot{
 				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
@@ -202,6 +236,9 @@ func TestCreateDisk(t *testing.T) {
 					}
 					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
 						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+					if tc.expDisk.OutpostArn != disk.OutpostArn {
+						t.Fatalf("CreateDisk() failed: expected outpoustArn %q, got %q", tc.expDisk.OutpostArn, disk.OutpostArn)
 					}
 				}
 			}
@@ -380,6 +417,7 @@ func TestGetDiskByName(t *testing.T) {
 		volumeName       string
 		volumeCapacity   int64
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
@@ -387,6 +425,14 @@ func TestGetDiskByName(t *testing.T) {
 			volumeName:       "vol-test-1234",
 			volumeCapacity:   util.GiBToBytes(1),
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeName:       "vol-test-1234",
+			volumeCapacity:   util.GiBToBytes(1),
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -407,6 +453,7 @@ func TestGetDiskByName(t *testing.T) {
 				VolumeId:         aws.String(tc.volumeName),
 				Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
 				AvailabilityZone: aws.String(tc.availabilityZone),
+				OutpostArn:       aws.String(tc.outpostArn),
 			}
 
 			ctx := context.Background()
@@ -427,6 +474,9 @@ func TestGetDiskByName(t *testing.T) {
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
 				}
+				if tc.outpostArn != disk.OutpostArn {
+					t.Fatalf("GetDiskByName() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
+				}
 			}
 
 			mockCtrl.Finish()
@@ -439,12 +489,20 @@ func TestGetDiskByID(t *testing.T) {
 		name             string
 		volumeID         string
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
 			name:             "success: normal",
 			volumeID:         "vol-test-1234",
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeID:         "vol-test-1234",
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -467,6 +525,7 @@ func TestGetDiskByID(t *testing.T) {
 						{
 							VolumeId:         aws.String(tc.volumeID),
 							AvailabilityZone: aws.String(tc.availabilityZone),
+							OutpostArn:       aws.String(tc.outpostArn),
 						},
 					},
 				},
@@ -487,6 +546,9 @@ func TestGetDiskByID(t *testing.T) {
 				}
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+				}
+				if disk.OutpostArn != tc.outpostArn {
+					t.Fatalf("GetDisk() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
 				}
 			}
 
