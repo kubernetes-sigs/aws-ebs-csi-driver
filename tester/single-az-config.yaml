@@ -90,7 +90,7 @@ install: |
 
   kubectl get po -n kube-system
 
-uninstall: | 
+uninstall: |
   echo "Removing driver"
   bin/helm del --purge aws-ebs-csi-driver
 

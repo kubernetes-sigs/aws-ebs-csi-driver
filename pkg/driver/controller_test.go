@@ -23,9 +23,11 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -155,6 +157,8 @@ func TestCreateVolume(t *testing.T) {
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
+	rawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	strippedOutpostArn, _ := arn.Parse(strings.ReplaceAll(rawOutpostArn, "outpost/", ""))
 
 	testCases := []struct {
 		name     string
@@ -196,6 +200,96 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "success outposts",
+			testFunc: func(t *testing.T) {
+				outpostArn := strippedOutpostArn
+				req := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         map[string]string{},
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									TopologyKey:     expZone,
+									AwsAccountIDKey: outpostArn.AccountID,
+									AwsOutpostIDKey: outpostArn.Resource,
+									AwsRegionKey:    outpostArn.Region,
+									AwsPartitionKey: outpostArn.Partition,
+								},
+							},
+						},
+					},
+				}
+				expVol := &csi.Volume{
+					CapacityBytes: stdVolSize,
+					VolumeId:      "vol-test",
+					VolumeContext: map[string]string{},
+					AccessibleTopology: []*csi.Topology{
+						{
+							Segments: map[string]string{
+								TopologyKey:     expZone,
+								AwsAccountIDKey: outpostArn.AccountID,
+								AwsOutpostIDKey: outpostArn.Resource,
+								AwsRegionKey:    outpostArn.Region,
+								AwsPartitionKey: outpostArn.Partition,
+							},
+						},
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					OutpostArn:       outpostArn.String(),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				resp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				// mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
+				vol := resp.GetVolume()
+				if vol == nil {
+					t.Fatalf("Expected volume %v, got nil", expVol)
+				}
+
+				for expKey, expVal := range expVol.GetVolumeContext() {
+					ctx := vol.GetVolumeContext()
+					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
+						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
+					}
+				}
+
+				if expVol.GetAccessibleTopology() != nil {
+					if !reflect.DeepEqual(expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
+						t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
+					}
 				}
 			},
 		},
@@ -1350,7 +1444,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{TopologyKey: ""},
 					},
 				},
 				Preferred: []*csi.Topology{
@@ -1392,6 +1486,147 @@ func TestPickAvailabilityZone(t *testing.T) {
 			actual := pickAvailabilityZone(tc.requirement)
 			if actual != tc.expZone {
 				t.Fatalf("Expected zone %v, got zone: %v", tc.expZone, actual)
+			}
+		})
+	}
+}
+
+func TestGetOutpostArn(t *testing.T) {
+	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	outpostArn, _ := arn.Parse(strings.ReplaceAll(expRawOutpostArn, "outpost/", ""))
+	testCases := []struct {
+		name          string
+		requirement   *csi.TopologyRequirement
+		expZone       string
+		expOutpostArn string
+	}{
+		{
+			name: "Get from preferred",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{TopologyKey: expZone},
+					},
+				},
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							TopologyKey:     expZone,
+							AwsAccountIDKey: outpostArn.AccountID,
+							AwsOutpostIDKey: outpostArn.Resource,
+							AwsRegionKey:    outpostArn.Region,
+							AwsPartitionKey: outpostArn.Partition,
+						},
+					},
+				},
+			},
+			expZone:       expZone,
+			expOutpostArn: expRawOutpostArn,
+		},
+		{
+			name: "Get from requisite",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							TopologyKey:     expZone,
+							AwsAccountIDKey: outpostArn.AccountID,
+							AwsOutpostIDKey: outpostArn.Resource,
+							AwsRegionKey:    outpostArn.Region,
+							AwsPartitionKey: outpostArn.Partition,
+						},
+					},
+				},
+			},
+			expZone:       expZone,
+			expOutpostArn: expRawOutpostArn,
+		},
+		{
+			name: "Get from empty topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{{}},
+			},
+			expZone:       "",
+			expOutpostArn: "",
+		},
+		{
+			name:          "Topology Requirement is nil",
+			requirement:   nil,
+			expZone:       "",
+			expOutpostArn: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := getOutpostArn(tc.requirement)
+			if actual != tc.expOutpostArn {
+				t.Fatalf("Expected %v, got outpostArn: %v", tc.expOutpostArn, actual)
+			}
+		})
+	}
+}
+
+func TestBuildOutpostArn(t *testing.T) {
+	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	testCases := []struct {
+		name         string
+		awsPartition string
+		awsRegion    string
+		awsAccountID string
+		awsOutpostID string
+		expectedArn  string
+	}{
+		{
+			name:         "all fields are present",
+			awsPartition: "aws",
+			awsRegion:    "us-west-2",
+			awsOutpostID: "op-0aaa000a0aaaa00a0",
+			awsAccountID: "111111111111",
+			expectedArn:  expRawOutpostArn,
+		},
+		{
+			name:         "partition is missing",
+			awsRegion:    "us-west-2",
+			awsOutpostID: "op-0aaa000a0aaaa00a0",
+			awsAccountID: "111111111111",
+			expectedArn:  "",
+		},
+		{
+			name:         "region is missing",
+			awsPartition: "aws",
+			awsOutpostID: "op-0aaa000a0aaaa00a0",
+			awsAccountID: "111111111111",
+			expectedArn:  "",
+		},
+		{
+			name:         "account id is missing",
+			awsPartition: "aws",
+			awsRegion:    "us-west-2",
+			awsOutpostID: "op-0aaa000a0aaaa00a0",
+			expectedArn:  "",
+		},
+		{
+			name:         "outpost id is missing",
+			awsPartition: "aws",
+			awsRegion:    "us-west-2",
+			awsAccountID: "111111111111",
+			expectedArn:  "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			segment := map[string]string{
+				AwsRegionKey:    tc.awsRegion,
+				AwsPartitionKey: tc.awsPartition,
+				AwsAccountIDKey: tc.awsAccountID,
+				AwsOutpostIDKey: tc.awsOutpostID,
+			}
+			actual := BuildOutpostArn(segment)
+			if actual != tc.expectedArn {
+				t.Fatalf("Expected %v, got outpostArn: %v", tc.expectedArn, actual)
 			}
 		})
 	}

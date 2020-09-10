@@ -18,10 +18,12 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -186,6 +188,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
 
 	// fill volume tags
 	if d.driverOptions.kubernetesClusterID != "" {
@@ -203,6 +206,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,
+		OutpostArn:       outpostArn,
 		Encrypted:        isEncrypted,
 		KmsKeyID:         kmsKeyID,
 		SnapshotID:       snapshotID,
@@ -528,6 +532,26 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
+func getOutpostArn(requirement *csi.TopologyRequirement) string {
+	if requirement == nil {
+		return ""
+	}
+	for _, topology := range requirement.GetPreferred() {
+		_, exists := topology.GetSegments()[AwsOutpostIDKey]
+		if exists {
+			return BuildOutpostArn(topology.GetSegments())
+		}
+	}
+	for _, topology := range requirement.GetRequisite() {
+		_, exists := topology.GetSegments()[AwsOutpostIDKey]
+		if exists {
+			return BuildOutpostArn(topology.GetSegments())
+		}
+	}
+
+	return ""
+}
+
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
 	if disk.SnapshotID != "" {
@@ -539,6 +563,18 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 			},
 		}
 	}
+
+	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+
+	arn, err := arn.Parse(disk.OutpostArn)
+
+	if err == nil {
+		segments[AwsRegionKey] = arn.Region
+		segments[AwsPartitionKey] = arn.Partition
+		segments[AwsAccountIDKey] = arn.AccountID
+		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
+	}
+
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
@@ -546,7 +582,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 			VolumeContext: map[string]string{},
 			AccessibleTopology: []*csi.Topology{
 				{
-					Segments: map[string]string{TopologyKey: disk.AvailabilityZone},
+					Segments: segments,
 				},
 			},
 			ContentSource: src,
@@ -615,4 +651,29 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 		}
 	}
 	return volSizeBytes, nil
+}
+
+// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
+func BuildOutpostArn(segments map[string]string) string {
+
+	if len(segments[AwsPartitionKey]) <= 0 {
+		return ""
+	}
+
+	if len(segments[AwsRegionKey]) <= 0 {
+		return ""
+	}
+	if len(segments[AwsOutpostIDKey]) <= 0 {
+		return ""
+	}
+	if len(segments[AwsAccountIDKey]) <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("arn:%s:outposts:%s:%s:outpost/%s",
+		segments[AwsPartitionKey],
+		segments[AwsRegionKey],
+		segments[AwsAccountIDKey],
+		segments[AwsOutpostIDKey],
+	)
 }
