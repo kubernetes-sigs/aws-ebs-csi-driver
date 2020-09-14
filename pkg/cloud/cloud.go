@@ -869,14 +869,17 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	if latestMod != nil && modFetchError == nil {
 		state := aws.StringValue(latestMod.ModificationState)
 		if state == ec2.VolumeModificationStateModifying {
-			return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to size %d", volumeID, newSizeGiB)
+			_, err = c.waitForVolumeSize(ctx, volumeID)
+			if err != nil {
+				return oldSizeGiB, err
+			}
+			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 		}
 	}
 
 	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
 	// that means we have an API problem.
 	if modFetchError != nil && modFetchError != VolumeNotBeingModified {
-		klog.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
 		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
 	}
 
@@ -884,22 +887,11 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	// volume modifications objects or volume has completed previously issued modification request.
 	if oldSizeGiB >= newSizeGiB {
 		klog.V(5).Infof("Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
-		modificationDone := false
-		if latestMod != nil {
-			state := aws.StringValue(latestMod.ModificationState)
-			targetSize := aws.Int64Value(latestMod.TargetSize)
-			if volumeModificationDone(state) && (targetSize >= newSizeGiB) {
-				modificationDone = true
-			}
+		_, err = c.waitForVolumeSize(ctx, volumeID)
+		if err != nil && err != VolumeNotBeingModified {
+			return oldSizeGiB, err
 		}
-		if modFetchError == VolumeNotBeingModified {
-			modificationDone = true
-		}
-
-		if modificationDone {
-			return oldSizeGiB, nil
-		}
-		return oldSizeGiB, fmt.Errorf("volume %q is still being expanded", volumeID)
+		return oldSizeGiB, nil
 	}
 
 	req := &ec2.ModifyVolumeInput{
