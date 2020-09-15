@@ -12,6 +12,12 @@ import (
     "strings"
 )
 
+func appendMountOptions(opts []string) []string {
+    opts = append(opts, "nouuid")
+
+    return opts
+}
+
 func getFileSystemType(devicePath string, execer exec.Interface) (string, error) {
     args := []string{"-p", "-s", "TYPE", "-s", "PTTYPE", "-o", "export", devicePath}
     klog.V(4).Infof("Attempting to determine if disk %q is formatted using blkid with args: (%v)", devicePath, args)

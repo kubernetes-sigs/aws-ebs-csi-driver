@@ -139,7 +139,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	defer func() {
 		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
 		d.inFlight.Delete(req)
-		klog.V(4).Info("donedone")
 	}()
 
 	devicePath, ok := req.PublishContext[DevicePathKey]
@@ -159,6 +158,8 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 			return nil, status.Error(codes.Internal, "Failed to detect partition")
 		}
 	}
+
+	mountOptions = appendMountOptions(mountOptions)
 
 	source, err := d.findDevicePath(devicePath, volumeID)
 	if err != nil {
