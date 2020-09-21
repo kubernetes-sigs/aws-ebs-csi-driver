@@ -687,27 +687,6 @@ func TestResizeDisk(t *testing.T) {
 			expErr:              fmt.Errorf("ResizeDisk generic error"),
 		},
 		{
-			name:     "success: there is a resizing in progress",
-			volumeID: "vol-test",
-			existingVolume: &ec2.Volume{
-				VolumeId:         aws.String("vol-test"),
-				Size:             aws.Int64(1),
-				AvailabilityZone: aws.String(defaultZone),
-			},
-			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
-			descModVolume: &ec2.DescribeVolumesModificationsOutput{
-				VolumesModifications: []*ec2.VolumeModification{
-					{
-						VolumeId:          aws.String("vol-test"),
-						TargetSize:        aws.Int64(2),
-						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
-					},
-				},
-			},
-			reqSizeGiB: 2,
-			expErr:     nil,
-		},
-		{
 			name:     "failure: volume in modifying state",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
@@ -733,6 +712,8 @@ func TestResizeDisk(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			// reduce number of steps to reduce test time
+			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()

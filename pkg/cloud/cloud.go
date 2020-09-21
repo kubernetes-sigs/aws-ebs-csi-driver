@@ -59,7 +59,10 @@ var (
 		VolumeTypeST1,
 		VolumeTypeStandard,
 	}
-	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
+
+	volumeModificationDuration   = 1 * time.Second
+	volumeModificationWaitFactor = 1.7
+	volumeModificationWaitSteps  = 10
 )
 
 // AWS provisioning limits.
@@ -115,6 +118,9 @@ var (
 
 	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
 	ErrInvalidMaxResults = errors.New("MaxResults parameter must be 0 or greater than or equal to 5")
+
+	// VolumeNotBeingModified is returned if volume being described is not being modified
+	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
 )
 
 // Disk represents a EBS volume
@@ -799,13 +805,6 @@ func isAWSError(err error, code string) bool {
 	return false
 }
 
-// isAWSErrorIncorrectModification returns a boolean indicating whether the given error
-// is an AWS IncorrectModificationState error. This error means that a modification action
-// on an EBS volume cannot occur because the volume is currently being modified.
-func isAWSErrorIncorrectModification(err error) bool {
-	return isAWSError(err, "IncorrectModificationState")
-}
-
 // isAWSErrorInstanceNotFound returns a boolean indicating whether the
 // given error is an AWS InvalidInstanceID.NotFound error. This error is
 // reported when the specified instance doesn't exist.
@@ -900,23 +899,12 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	}
 
 	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
-	var mod *ec2.VolumeModification
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
-		if !isAWSErrorIncorrectModification(err) {
-			return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
-		}
-
-		m, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
-		if modFetchError != nil {
-			return 0, modFetchError
-		}
-		mod = m
+		return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
 	}
 
-	if mod == nil {
-		mod = response.VolumeModification
-	}
+	mod := response.VolumeModification
 
 	state := aws.StringValue(mod.ModificationState)
 	if volumeModificationDone(state) {
@@ -955,9 +943,9 @@ func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGi
 // waitForVolumeSize waits for a volume modification to finish and return its size.
 func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
 	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.7,
-		Steps:    10,
+		Duration: volumeModificationDuration,
+		Factor:   volumeModificationWaitFactor,
+		Steps:    volumeModificationWaitSteps,
 	}
 
 	var modVolSizeGiB int64
