@@ -4,7 +4,7 @@ cluster:
     zones: us-west-2a
     nodeCount: 3
     nodeSize: c5.large
-    kubernetesVersion: 1.16.0
+    kubernetesVersion: 1.18.9
     featureGates: |2
         kubeAPIServer:
           featureGates:
@@ -90,7 +90,7 @@ install: |
 
   kubectl get po -n kube-system
 
-uninstall: | 
+uninstall: |
   echo "Removing driver"
   bin/helm del --purge aws-ebs-csi-driver
 
