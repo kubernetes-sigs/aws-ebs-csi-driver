@@ -140,8 +140,8 @@ func MinimumSizeForVolumeType(volumeType string) string {
 func IOPSPerGBForVolumeType(volumeType string) string {
 	switch volumeType {
 	case "io1", "io2":
-		// Minimum disk size is 4, minimum IOPS is 100
-		return "25"
+		// Maximum IOPS/GB for io1 is 50
+		return "50"
 	default:
 		return ""
 	}
