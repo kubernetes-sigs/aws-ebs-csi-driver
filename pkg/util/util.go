@@ -23,6 +23,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (
@@ -77,4 +79,14 @@ func ParseEndpoint(endpoint string) (string, string, error) {
 // TODO: check division by zero and int overflow
 func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 	return (volumeSizeBytes + allocationUnitBytes - 1) / allocationUnitBytes
+}
+
+// GetAccessModes returns a slice containing all of the access modes defined
+// in the passed in VolumeCapabilities.
+func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
+	modes := []string{}
+	for _, c := range caps {
+		modes = append(modes, c.AccessMode.GetMode().String())
+	}
+	return &modes
 }

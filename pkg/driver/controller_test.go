@@ -152,6 +152,13 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 	}
+	invalidVolCap := []*csi.VolumeCapability{
+		{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_SINGLE_WRITER,
+			},
+		},
+	}
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
@@ -1220,6 +1227,45 @@ func TestCreateVolume(t *testing.T) {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "fail with invalid volume access modes",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: invalidVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeIO1,
+						"unknownKey":  "unknownValue",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
 				}
 			},
 		},
