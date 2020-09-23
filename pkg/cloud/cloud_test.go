@@ -626,7 +626,7 @@ func TestResizeDisk(t *testing.T) {
 				VolumeModification: &ec2.VolumeModification{
 					VolumeId:          aws.String("vol-test"),
 					TargetSize:        aws.Int64(2),
-					ModificationState: aws.String(ec2.VolumeModificationStateOptimizing),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
 			reqSizeGiB: 2,
@@ -660,21 +660,13 @@ func TestResizeDisk(t *testing.T) {
 			expErr:     nil,
 		},
 		{
-			name:                "fail: volume doesn't exist",
-			volumeID:            "vol-test",
-			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
-			reqSizeGiB:          2,
-			expErr:              fmt.Errorf("ResizeDisk generic error"),
-		},
-		{
-			name:     "success: there is a resizing in progress",
+			name:     "success: with previous expansion",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
-				Size:             aws.Int64(1),
+				Size:             aws.Int64(2),
 				AvailabilityZone: aws.String(defaultZone),
 			},
-			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
 				VolumesModifications: []*ec2.VolumeModification{
 					{
@@ -687,26 +679,74 @@ func TestResizeDisk(t *testing.T) {
 			reqSizeGiB: 2,
 			expErr:     nil,
 		},
+		{
+			name:                "fail: volume doesn't exist",
+			volumeID:            "vol-test",
+			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
+			reqSizeGiB:          2,
+			expErr:              fmt.Errorf("ResizeDisk generic error"),
+		},
+		{
+			name:     "failure: volume in modifying state",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateModifying),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     fmt.Errorf("ResizeDisk generic error"),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			// reduce number of steps to reduce test time
+			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
 			if tc.existingVolume != nil || tc.existingVolumeError != nil {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
 					&ec2.DescribeVolumesOutput{
-						Volumes: []*ec2.Volume{tc.existingVolume},
-					}, tc.existingVolumeError).AnyTimes()
+						Volumes: []*ec2.Volume{
+							tc.existingVolume,
+						},
+					}, tc.existingVolumeError)
+
+				if tc.expErr == nil && aws.Int64Value(tc.existingVolume.Size) != tc.reqSizeGiB {
+					resizedVolume := &ec2.Volume{
+						VolumeId:         aws.String("vol-test"),
+						Size:             aws.Int64(tc.reqSizeGiB),
+						AvailabilityZone: aws.String(defaultZone),
+					}
+					mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+						&ec2.DescribeVolumesOutput{
+							Volumes: []*ec2.Volume{
+								resizedVolume,
+							},
+						}, tc.existingVolumeError)
+				}
 			}
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
 				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
 			}
 			if tc.descModVolume != nil {
 				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+			} else {
+				emptyOutput := &ec2.DescribeVolumesModificationsOutput{}
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(emptyOutput, nil).AnyTimes()
 			}
 
 			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
