@@ -24,15 +24,19 @@ import (
 
 // ControllerOptions contains options and configuration settings for the controller service.
 type ControllerOptions struct {
+	// ExtraTags is a map of tags that will be attached to each dynamically provisioned
+	// resource.
+	ExtraTags map[string]string
 	// ExtraVolumeTags is a map of tags that will be attached to each dynamically provisioned
 	// volume.
+	// DEPRECATED: Use ExtraTags instead.
 	ExtraVolumeTags map[string]string
-	// ID of the kubernetes cluster. This is used only to create the same tags on volumes that
-	// in-tree volume volume plugin does.
+	// ID of the kubernetes cluster.
 	KubernetesClusterID string
 }
 
 func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
-	fs.Var(cliflag.NewMapStringString(&s.ExtraVolumeTags), "extra-volume-tags", "Extra volume tags to attach to each dynamically provisioned volume. It is a comma separated list of key value pairs like '<key1>=<value1>,<key2>=<value2>'")
+	fs.Var(cliflag.NewMapStringString(&s.ExtraTags), "extra-tags", "Extra tags to attach to each dynamically provisioned resource. It is a comma separated list of key value pairs like '<key1>=<value1>,<key2>=<value2>'")
+	fs.Var(cliflag.NewMapStringString(&s.ExtraVolumeTags), "extra-volume-tags", "DEPRECATED: Please use --extra-tags instead. Extra volume tags to attach to each dynamically provisioned volume. It is a comma separated list of key value pairs like '<key1>=<value1>,<key2>=<value2>'")
 	fs.StringVar(&s.KubernetesClusterID, "k8s-tag-cluster-id", "", "ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).")
 }

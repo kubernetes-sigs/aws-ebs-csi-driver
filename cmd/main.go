@@ -30,6 +30,7 @@ func main() {
 
 	drv, err := driver.NewDriver(
 		driver.WithEndpoint(options.ServerOptions.Endpoint),
+		driver.WithExtraTags(options.ControllerOptions.ExtraTags),
 		driver.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
