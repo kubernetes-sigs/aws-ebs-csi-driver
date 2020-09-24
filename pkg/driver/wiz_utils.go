@@ -12,8 +12,10 @@ import (
     "strings"
 )
 
-func appendMountOptions(opts []string) []string {
-    opts = append(opts, "nouuid")
+func appendMountOptions(fsType string, opts []string) []string {
+    if fsType == FSTypeXfs {
+        opts = append(opts, "nouuid")
+    }
 
     return opts
 }
@@ -134,8 +136,6 @@ func getPartitionId(diskPath string) (int, error) {
     var largestPartitionSize int64 = 0
 
     for i, partition := range partitionTable.GetPartitions() {
-        klog.V(4).Infof("Partition %v: size %v", i, partition.GetSize())
-
         if partition.GetSize() > largestPartitionSize {
             largestPartitionSize = partition.GetSize()
             largestPartitionId = i

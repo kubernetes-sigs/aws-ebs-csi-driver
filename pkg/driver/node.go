@@ -159,7 +159,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 	}
 
-	mountOptions = appendMountOptions(mountOptions)
+	mountOptions = appendMountOptions(fsType, mountOptions)
 
 	source, err := d.findDevicePath(devicePath, volumeID)
 	if err != nil {
