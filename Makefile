@@ -109,6 +109,8 @@ push:
 test: verify-vendor
 verify: verify-vendor
 verify-vendor:
+	echo "go:" `go version`
+	echo "git:" `git version`
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
 
