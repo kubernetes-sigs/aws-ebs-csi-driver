@@ -25,8 +25,7 @@ jobs:
             - run:
                 name: Push to ACR
                 command: |
-                  LOGIN_COMMAND=$(docker login wizio.azurecr.io --username $ACR_SP_ID --password $ACR_SP_PWD)
-                  $LOGIN_COMMAND
+                  docker login wizio.azurecr.io --username $ACR_SP_ID --password $ACR_SP_PWD
                   docker push $ACR_NAME.azurecr.io/ebs-csi-driver:${CIRCLE_SHA1:0:7}
 
 workflows:
