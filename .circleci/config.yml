@@ -27,7 +27,7 @@ jobs:
                 command: |
                   LOGIN_COMMAND=$(docker login wizio.azurecr.io --username $ACR_SP_ID --password $ACR_SP_PWD)
                   $LOGIN_COMMAND
-                  docker push $ACR_NAME.azurecr.io/<<parameters.package_name>>:${CIRCLE_SHA1:0:7}
+                  docker push $ACR_NAME.azurecr.io/ebs-csi-driver:${CIRCLE_SHA1:0:7}
 
 workflows:
   version: 2
