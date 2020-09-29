@@ -4,6 +4,7 @@ metadata:
   name: ebs-sc
 provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -19,7 +20,6 @@ spec:
   csi:
     driver: ebs.csi.aws.com
     volumeHandle: vol-025d1dd07d1f30aef
-#    fsType: xfs
   nodeAffinity:
     required:
       nodeSelectorTerms:
