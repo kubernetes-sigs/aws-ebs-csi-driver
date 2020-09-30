@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	arn "github.com/aws/aws-sdk-go/aws/arn"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -72,6 +73,20 @@ func (m *MockMetadataService) GetInstanceType() string {
 func (mr *MockMetadataServiceMockRecorder) GetInstanceType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceType", reflect.TypeOf((*MockMetadataService)(nil).GetInstanceType))
+}
+
+// GetOutpostArn mocks base method
+func (m *MockMetadataService) GetOutpostArn() arn.ARN {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOutpostArn")
+	ret0, _ := ret[0].(arn.ARN)
+	return ret0
+}
+
+// GetOutpostArn indicates an expected call of GetOutpostArn
+func (mr *MockMetadataServiceMockRecorder) GetOutpostArn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutpostArn", reflect.TypeOf((*MockMetadataService)(nil).GetOutpostArn))
 }
 
 // GetRegion mocks base method
