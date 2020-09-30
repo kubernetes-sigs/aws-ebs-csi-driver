@@ -1,7 +1,7 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: ebs-sc
+  name: ebs-sc3
 provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
@@ -9,17 +9,17 @@ reclaimPolicy: Delete
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: test-pv
+  name: test-pv3
 spec:
   capacity:
     storage: 100Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  storageClassName: ebs-sc
+  storageClassName: ebs-sc3
   csi:
     driver: ebs.csi.aws.com
-    volumeHandle: vol-0f68338d9475ec982
+    volumeHandle: vol-0d08ee026703d3b3d
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -32,11 +32,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ebs-claim
+  name: ebs-claim3
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: ebs-sc
+  storageClassName: ebs-sc3
   resources:
     requests:
       storage: 100Gi
@@ -44,7 +44,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test-linux-volume
+  name: test-linux-volume3
 spec:
   affinity:
     nodeAffinity:
@@ -67,4 +67,4 @@ spec:
   volumes:
     - name: persistent-storage
       persistentVolumeClaim:
-        claimName: ebs-claim
+        claimName: ebs-claim3
