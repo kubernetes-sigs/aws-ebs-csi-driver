@@ -129,6 +129,7 @@ type Disk struct {
 	CapacityGiB      int64
 	AvailabilityZone string
 	SnapshotID       string
+	OutpostArn       string
 }
 
 // DiskOptions represents parameters to create an EBS volume
@@ -138,6 +139,7 @@ type DiskOptions struct {
 	VolumeType       string
 	IOPSPerGB        int
 	AvailabilityZone string
+	OutpostArn       string
 	Encrypted        bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
@@ -284,6 +286,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
 		Encrypted:         aws.Bool(diskOptions.Encrypted),
 	}
+
+	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
+	if len(diskOptions.OutpostArn) > 0 {
+		request.OutpostArn = aws.String(diskOptions.OutpostArn)
+	}
+
 	if len(diskOptions.KmsKeyID) > 0 {
 		request.KmsKeyId = aws.String(diskOptions.KmsKeyID)
 		request.Encrypted = aws.Bool(true)
@@ -318,7 +326,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID}, nil
+	outpostArn := aws.StringValue(response.OutpostArn)
+
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -486,6 +496,7 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		CapacityGiB:      volSizeBytes,
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 		SnapshotID:       aws.StringValue(volume.SnapshotId),
+		OutpostArn:       aws.StringValue(volume.OutpostArn),
 	}, nil
 }
 
@@ -505,6 +516,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		VolumeID:         aws.StringValue(volume.VolumeId),
 		CapacityGiB:      aws.Int64Value(volume.Size),
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
+		OutpostArn:       aws.StringValue(volume.OutpostArn),
 	}, nil
 }
 
