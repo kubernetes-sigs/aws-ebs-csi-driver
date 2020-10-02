@@ -44,16 +44,16 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compability Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 |
-|----------------------------------------|-------|-------|-------|-------|-------|
-| master branch                          | no    | no+   | yes   | yes   | yes   |
-| v0.7.0                                 | no    | no+   | yes   | yes   | yes   |
-| v0.6.0                                 | no    | no+   | yes   | yes   | yes   |
-| v0.5.0                                 | no    | no+   | yes   | yes   | yes   |
-| v0.4.0                                 | no    | no+   | yes   | yes   | no    |
-| v0.3.0                                 | no    | no+   | yes   | no    | no    |
-| v0.2.0                                 | no    | yes   | yes   | no    | no    |
-| v0.1.0                                 | yes   | yes   | yes   | no    | no    |
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18 |
+|----------------------------------------|-------|-------|-------|-------|-------|----------------
+| master branch                          | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| v0.7.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| v0.5.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| v0.4.0                                 | no    | no+   | yes   | yes   | no    | no    | no    |
+| v0.3.0                                 | no    | no+   | yes   | no    | no    | no    | no    |
+| v0.2.0                                 | no    | yes   | yes   | no    | no    | no    | no    |
+| v0.1.0                                 | yes   | yes   | yes   | no    | no    | no    | no    |
 
 **Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
@@ -126,7 +126,7 @@ helm install \
     --set enableVolumeScheduling=true \
     --set enableVolumeResizing=true \
     --set enableVolumeSnapshot=true \
-    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.6.0/helm-chart.tgz
+    https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.7.0/helm-chart.tgz
 ```
 
 ## Examples
