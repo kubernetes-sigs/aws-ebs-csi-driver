@@ -19,7 +19,8 @@ jobs:
         docker buildx build \
           -t aws-ebs-csi-driver \
           --platform=linux/arm64,linux/amd64 \
-          --output="type=image,push=false" .
+          --output="type=image,push=false" . \
+          --target=amazonlinux
     - name: Push to Github registry
       run: |
         USER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
@@ -31,7 +32,7 @@ jobs:
           TAG=$BRANCH
         fi
         docker login docker.pkg.github.com -u $USER -p ${{ secrets.REGISTRY_TOKEN }}
-        docker build -t aws-ebs-csi-driver .
+        docker build -t aws-ebs-csi-driver . --target amazonlinux
         docker tag aws-ebs-csi-driver docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
         docker push docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
     - name: Push to Dockerhub registry
@@ -47,5 +48,6 @@ jobs:
         docker buildx build \
           -t $REPO:$TAG \
           --platform=linux/arm64,linux/amd64 \
-          --output="type=image,push=true" .
+          --output="type=image,push=true" . \
+          --target=amazonlinux
 
