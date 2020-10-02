@@ -1,3 +1,15 @@
+# v0.7.0
+
+## Notable changes
+### New features
+* Add arm support ([#527](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/527), [@leakingtapan](https://github.com/leakingtapan))
+* Add EBS IO2 support ([#558](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/558), [@ayberk](https://github.com/ayberk))
+* Create volumes in outpost for outpost instances ([#561](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/561), [@ayberk](https://github.com/ayberk))
+
+### Improvements
+* Make EBS controllerexpansion idempotent ([#552](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/552), [@gnufied](https://github.com/gnufied))
+* Add overlay for ECR images ([#570](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/570), [@ayberk](https://github.com/ayberk))
+
 # v0.6.0
 [Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.6.0/docs/README.md)
 
