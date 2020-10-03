@@ -12,7 +12,7 @@ image:
 sidecars:
   provisionerImage:
     repository: quay.io/k8scsi/csi-provisioner
-    tag: "v1.5.0"
+    tag: "v1.6.0"
   attacherImage:
     repository: quay.io/k8scsi/csi-attacher
     tag: "v1.2.0"
