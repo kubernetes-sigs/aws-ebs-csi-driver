@@ -8,7 +8,7 @@
 
 The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage Interface (CSI) Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes.
 
-## CSI Specification Compability Matrix
+## CSI Specification Compatibility Matrix
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
@@ -43,9 +43,9 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
-## Kubernetes Version Compability Matrix
+## Kubernetes Version Compatibility Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18 |
-|----------------------------------------|-------|-------|-------|-------|-------|----------------
+|----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
