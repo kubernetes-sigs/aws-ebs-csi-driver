@@ -45,7 +45,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 
 ## Kubernetes Version Compability Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18 |
-|----------------------------------------|-------|-------|-------|-------|-------|----------------
+|----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
