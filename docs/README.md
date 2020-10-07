@@ -33,7 +33,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 |-----------------------------|-----------------------------------|----------|---------------------|
 | "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4             | ext4     | File system type that will be formatted during volume creation |
 | "type"                      | io1, io2, gp2, sc1, st1,standard  | gp2      | EBS volume type     |
-| "iopsPerGB"                 |                                   |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified |
+| "iopsPerGB"                 |                                   |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified. If this value multiplied by the size of a requested volume produces a value below the minimum or above the maximum IOPs allowed for the volume type, as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), AWS will return an error and volume creation will fail |
 | "encrypted"                 |                                   |          | Whether the volume should be encrypted or not. Valid values are "true" or "false" |
 | "kmsKeyId"                  |                                   |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
