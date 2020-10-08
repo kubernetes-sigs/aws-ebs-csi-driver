@@ -69,6 +69,12 @@ affinity: {}
 #   key2: value2
 extraVolumeTags: {}
 
+# If set, add pv/pvc metadata to plugin create requests as parameters.
+extraCreateMetadata: false
+
+# ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
+k8sTagClusterId: ""
+
 # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
 # service.
 # ---
