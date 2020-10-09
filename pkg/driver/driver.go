@@ -54,7 +54,7 @@ type Driver struct {
 
 type DriverOptions struct {
 	endpoint            string
-	extraVolumeTags     map[string]string
+	extraTags           map[string]string
 	mode                Mode
 	volumeAttachLimit   int64
 	kubernetesClusterID string
@@ -146,9 +146,18 @@ func WithEndpoint(endpoint string) func(*DriverOptions) {
 	}
 }
 
+func WithExtraTags(extraTags map[string]string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.extraTags = extraTags
+	}
+}
+
 func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
-		o.extraVolumeTags = extraVolumeTags
+		if o.extraTags == nil && extraVolumeTags != nil {
+			klog.Warning("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
+			o.extraTags = extraVolumeTags
+		}
 	}
 }
 

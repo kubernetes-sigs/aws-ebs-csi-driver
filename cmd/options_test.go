@@ -39,11 +39,11 @@ func TestGetOptions(t *testing.T) {
 		endpointFlagName := "endpoint"
 		endpoint := "foo"
 
-		extraVolumeTagsFlagName := "extra-volume-tags"
-		extraVolumeTagKey := "bar"
-		extraVolumeTagValue := "baz"
-		extraVolumeTags := map[string]string{
-			extraVolumeTagKey: extraVolumeTagValue,
+		extraTagsFlagName := "extra-tags"
+		extraTagKey := "bar"
+		extraTagValue := "baz"
+		extraTags := map[string]string{
+			extraTagKey: extraTagValue,
 		}
 
 		VolumeAttachLimitFlagName := "volume-attach-limit"
@@ -57,7 +57,7 @@ func TestGetOptions(t *testing.T) {
 			args = append(args, "-"+endpointFlagName+"="+endpoint)
 		}
 		if withControllerOptions {
-			args = append(args, "-"+extraVolumeTagsFlagName+"="+extraVolumeTagKey+"="+extraVolumeTagValue)
+			args = append(args, "-"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
 		}
 		if withNodeOptions {
 			args = append(args, "-"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
@@ -80,12 +80,12 @@ func TestGetOptions(t *testing.T) {
 		}
 
 		if withControllerOptions {
-			extraVolumeTagsFlag := flagSet.Lookup(extraVolumeTagsFlagName)
-			if extraVolumeTagsFlag == nil {
-				t.Fatalf("expected %q flag to be added but it is not", extraVolumeTagsFlagName)
+			extraTagsFlag := flagSet.Lookup(extraTagsFlagName)
+			if extraTagsFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", extraTagsFlagName)
 			}
-			if !reflect.DeepEqual(options.ControllerOptions.ExtraVolumeTags, extraVolumeTags) {
-				t.Fatalf("expected extra volume tags to be %q but it is %q", extraVolumeTags, options.ControllerOptions.ExtraVolumeTags)
+			if !reflect.DeepEqual(options.ControllerOptions.ExtraTags, extraTags) {
+				t.Fatalf("expected extra tags to be %q but it is %q", extraTags, options.ControllerOptions.ExtraTags)
 			}
 		}
 

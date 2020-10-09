@@ -196,7 +196,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
 		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
 	}
-	for k, v := range d.driverOptions.extraVolumeTags {
+	for k, v := range d.driverOptions.extraTags {
 		volumeTags[k] = v
 	}
 
@@ -437,9 +437,22 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		klog.V(4).Infof("Snapshot %s of volume %s already exists; nothing to do", snapshotName, volumeID)
 		return newCreateSnapshotResponse(snapshot)
 	}
-	opts := &cloud.SnapshotOptions{
-		Tags: map[string]string{cloud.SnapshotNameTagKey: snapshotName},
+
+	snapshotTags := map[string]string{
+		cloud.SnapshotNameTagKey: snapshotName,
 	}
+	if d.driverOptions.kubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		snapshotTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + snapshotName
+	}
+	for k, v := range d.driverOptions.extraTags {
+		snapshotTags[k] = v
+	}
+	opts := &cloud.SnapshotOptions{
+		Tags: snapshotTags,
+	}
+
 	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
 
 	if err != nil {
