@@ -30,12 +30,32 @@ func TestWithEndpoint(t *testing.T) {
 	}
 }
 
+func TestWithExtraTags(t *testing.T) {
+	value := map[string]string{"foo": "bar"}
+	options := &DriverOptions{}
+	WithExtraTags(value)(options)
+	if !reflect.DeepEqual(options.extraTags, value) {
+		t.Fatalf("expected extraTags option got set to %+v but is set to %+v", value, options.extraTags)
+	}
+}
+
 func TestWithExtraVolumeTags(t *testing.T) {
 	value := map[string]string{"foo": "bar"}
 	options := &DriverOptions{}
 	WithExtraVolumeTags(value)(options)
-	if !reflect.DeepEqual(options.extraVolumeTags, value) {
-		t.Fatalf("expected extraVolumeTags option got set to %+v but is set to %+v", value, options.extraVolumeTags)
+	if !reflect.DeepEqual(options.extraTags, value) {
+		t.Fatalf("expected extraTags option got set to %+v but is set to %+v", value, options.extraTags)
+	}
+}
+
+func TestWithExtraVolumeTagsNoOverwrite(t *testing.T) {
+	extraTagsValue := map[string]string{"foo": "bar"}
+	options := &DriverOptions{}
+	WithExtraTags(extraTagsValue)(options)
+	extraVolumeTagsValue := map[string]string{"baz": "qux"}
+	WithExtraVolumeTags(extraVolumeTagsValue)(options)
+	if !reflect.DeepEqual(options.extraTags, extraTagsValue) {
+		t.Fatalf("expected extraTags option got set to %+v but is set to %+v", extraTagsValue, options.extraTags)
 	}
 }
 

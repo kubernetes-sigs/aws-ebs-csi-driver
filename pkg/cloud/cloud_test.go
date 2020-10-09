@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -500,6 +502,7 @@ func TestCreateSnapshot(t *testing.T) {
 		name            string
 		snapshotName    string
 		snapshotOptions *SnapshotOptions
+		expInput        *ec2.CreateSnapshotInput
 		expSnapshot     *Snapshot
 		expErr          error
 	}{
@@ -509,7 +512,28 @@ func TestCreateSnapshot(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
+			},
+			expInput: &ec2.CreateSnapshotInput{
+				VolumeId: aws.String("snap-test-volume"),
+				DryRun:   aws.Bool(false),
+				TagSpecifications: []*ec2.TagSpecification{
+					{
+						ResourceType: aws.String("snapshot"),
+						Tags: []*ec2.Tag{
+							{
+								Key:   aws.String(SnapshotNameTagKey),
+								Value: aws.String("snap-test-name"),
+							},
+							{
+								Key:   aws.String("extra-tag-key"),
+								Value: aws.String("extra-tag-value"),
+							},
+						},
+					},
+				},
+				Description: aws.String("Created by AWS EBS CSI driver for volume snap-test-volume"),
 			},
 			expSnapshot: &Snapshot{
 				SourceVolumeID: "snap-test-volume",
@@ -531,7 +555,7 @@ func TestCreateSnapshot(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			mockEC2.EXPECT().CreateSnapshotWithContext(gomock.Eq(ctx), gomock.Any()).Return(ec2snapshot, tc.expErr)
+			mockEC2.EXPECT().CreateSnapshotWithContext(gomock.Eq(ctx), eqCreateSnapshotInput(tc.expInput)).Return(ec2snapshot, tc.expErr)
 			mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil).AnyTimes()
 
 			snapshot, err := c.CreateSnapshot(ctx, tc.expSnapshot.SourceVolumeID, tc.snapshotOptions)
@@ -782,6 +806,7 @@ func TestGetSnapshotByName(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
 			},
 			expSnapshot: &Snapshot{
@@ -836,6 +861,7 @@ func TestGetSnapshotByID(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
 			},
 			expSnapshot: &Snapshot{
@@ -1102,4 +1128,35 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 			},
 		}},
 	}
+}
+
+type eqCreateSnapshotInputMatcher struct {
+	expected *ec2.CreateSnapshotInput
+}
+
+func eqCreateSnapshotInput(expected *ec2.CreateSnapshotInput) gomock.Matcher {
+	return &eqCreateSnapshotInputMatcher{expected}
+}
+
+func (m *eqCreateSnapshotInputMatcher) Matches(x interface{}) bool {
+	input, ok := x.(*ec2.CreateSnapshotInput)
+	if !ok {
+		return false
+	}
+
+	if input != nil {
+		for _, ts := range input.TagSpecifications {
+			// Because these tags are generated from a map
+			// which has a random order.
+			sort.SliceStable(ts.Tags, func(i, j int) bool {
+				return *ts.Tags[i].Key < *ts.Tags[j].Key
+			})
+		}
+	}
+
+	return reflect.DeepEqual(m.expected, input)
+}
+
+func (m *eqCreateSnapshotInputMatcher) String() string {
+	return m.expected.String()
 }

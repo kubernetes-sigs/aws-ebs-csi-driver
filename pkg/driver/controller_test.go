@@ -1049,7 +1049,7 @@ func TestCreateVolume(t *testing.T) {
 				awsDriver := controllerService{
 					cloud: mockCloud,
 					driverOptions: &DriverOptions{
-						extraVolumeTags: map[string]string{
+						extraTags: map[string]string{
 							extraVolumeTagKey: extraVolumeTagValue,
 						},
 					},
@@ -1435,6 +1435,118 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := controllerService{
 					cloud:         mockCloud,
 					driverOptions: &DriverOptions{},
+				}
+				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
+			name: "success with cluster-id",
+			testFunc: func(t *testing.T) {
+				const (
+					snapshotName          = "test-snapshot"
+					clusterID             = "test-cluster-id"
+					expectedOwnerTag      = "kubernetes.io/cluster/test-cluster-id"
+					expectedOwnerTagValue = "owned"
+					expectedNameTag       = "Name"
+					expectedNameTagValue  = "test-cluster-id-dynamic-test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name:           snapshotName,
+					Parameters:     nil,
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := context.Background()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.SourceVolumeId,
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				snapshotOptions := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: snapshotName,
+						expectedOwnerTag:         expectedOwnerTagValue,
+						expectedNameTag:          expectedNameTagValue,
+					},
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud: mockCloud,
+					driverOptions: &DriverOptions{
+						kubernetesClusterID: clusterID,
+					},
+				}
+				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
+			name: "success with extra tags",
+			testFunc: func(t *testing.T) {
+				const (
+					snapshotName        = "test-snapshot"
+					extraVolumeTagKey   = "extra-tag-key"
+					extraVolumeTagValue = "extra-tag-value"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name:           snapshotName,
+					Parameters:     nil,
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := context.Background()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.SourceVolumeId,
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				snapshotOptions := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: snapshotName,
+						extraVolumeTagKey:        extraVolumeTagValue,
+					},
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud: mockCloud,
+					driverOptions: &DriverOptions{
+						extraTags: map[string]string{
+							extraVolumeTagKey: extraVolumeTagValue,
+						},
+					},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
