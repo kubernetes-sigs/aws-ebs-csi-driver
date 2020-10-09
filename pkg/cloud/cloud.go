@@ -533,7 +533,9 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 
 	var tags []*ec2.Tag
 	for key, value := range snapshotOptions.Tags {
-		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
+		copiedKey := key
+		copiedValue := value
+		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
 	}
 	tagSpec := ec2.TagSpecification{
 		ResourceType: aws.String("snapshot"),
