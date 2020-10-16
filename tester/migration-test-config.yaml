@@ -13,6 +13,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             VolumeSnapshotDataSource: "true"
             CSIInlineVolume: "true"
@@ -23,6 +24,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             CSIInlineVolume: "true"
         kubelet:
@@ -32,6 +34,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             CSIInlineVolume: "true"
     iamPolicies: |2
