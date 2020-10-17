@@ -32,7 +32,8 @@ spec:
       affinity: {{ toYaml . | nindent 8 }}
       {{- end }}
       tolerations:
-        - operator: Exists
+        - key: CriticalAddonsOnly
+          operator: Exists
       {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
       {{- end }}

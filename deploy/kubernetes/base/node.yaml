@@ -33,7 +33,8 @@ spec:
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
-        - operator: Exists
+        - key: CriticalAddonsOnly
+          operator: Exists
       containers:
         - name: ebs-plugin
           securityContext:
