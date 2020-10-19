@@ -19,7 +19,7 @@ import (
 
 	"github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,6 +126,8 @@ func MinimumSizeForVolumeType(volumeType string) string {
 		return "1Gi"
 	case "io1":
 		return "4Gi"
+	case "io2":
+		return "4Gi"
 	case "standard":
 		return "10Gi"
 	default:
@@ -133,12 +135,14 @@ func MinimumSizeForVolumeType(volumeType string) string {
 	}
 }
 
-// IOPSPerGBForVolumeType returns 25 for io1 volumeType
+// IOPSPerGBForVolumeType returns 25 io1 and io2 volume types
 // Otherwise returns an empty string
 func IOPSPerGBForVolumeType(volumeType string) string {
-	if volumeType == "io1" {
-		// Minimum disk size is 4, minimum IOPS is 100
-		return "25"
+	switch volumeType {
+	case "io1", "io2":
+		// Maximum IOPS/GB for io1 is 50
+		return "50"
+	default:
+		return ""
 	}
-	return ""
 }

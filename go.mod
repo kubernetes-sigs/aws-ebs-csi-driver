@@ -1,7 +1,6 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
-	github.com/aws/aws-k8s-tester/e2e/tester v0.0.0-20191204032858-d97ad2e4255e // indirect
 	github.com/aws/aws-sdk-go v1.29.11
 	github.com/container-storage-interface/spec v1.2.0
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
@@ -9,7 +8,6 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/golang/mock v1.4.1
 	github.com/golang/protobuf v1.3.3
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/kubernetes-csi/csi-test v2.0.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.0.1
 	github.com/onsi/ginkgo v1.10.2
@@ -51,6 +49,7 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.17.3
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.17.3
 	k8s.io/sample-controller => k8s.io/sample-controller v0.17.3
+	vbom.ml/util => github.com/fvbommel/util v0.0.2 // Mitigate https://github.com/fvbommel/util/issues/6
 )
 
 go 1.13

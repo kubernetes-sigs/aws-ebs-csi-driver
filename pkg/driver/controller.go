@@ -18,10 +18,12 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -107,7 +109,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	if !isValidVolumeCapabilities(volCaps) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not supported")
+		modes := util.GetAccessModes(volCaps)
+		stringModes := strings.Join(*modes, ", ")
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
 	disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
@@ -128,6 +133,9 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		iopsPerGB   int
 		isEncrypted bool
 		kmsKeyID    string
+		volumeTags  = map[string]string{
+			cloud.VolumeNameTagKey: volName,
+		}
 	)
 
 	for key, value := range req.GetParameters() {
@@ -149,6 +157,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 		case KmsKeyIDKey:
 			kmsKeyID = value
+		case PVCNameKey:
+			volumeTags[PVCNameTag] = value
+		case PVCNamespaceKey:
+			volumeTags[PVCNamespaceTag] = value
+		case PVNameKey:
+			volumeTags[PVNameTag] = value
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 		}
@@ -177,11 +191,15 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
 
-	volumeTags := map[string]string{
-		cloud.VolumeNameTagKey: volName,
+	// fill volume tags
+	if d.driverOptions.kubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
 	}
-	for k, v := range d.driverOptions.extraVolumeTags {
+	for k, v := range d.driverOptions.extraTags {
 		volumeTags[k] = v
 	}
 
@@ -191,6 +209,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
 		AvailabilityZone: zone,
+		OutpostArn:       outpostArn,
 		Encrypted:        isEncrypted,
 		KmsKeyID:         kmsKeyID,
 		SnapshotID:       snapshotID,
@@ -244,7 +263,10 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 
 	caps := []*csi.VolumeCapability{volCap}
 	if !isValidVolumeCapabilities(caps) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		modes := util.GetAccessModes(caps)
+		stringModes := strings.Join(*modes, ", ")
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
 	if !d.cloud.IsExistInstance(ctx, nodeID) {
@@ -419,9 +441,22 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		klog.V(4).Infof("Snapshot %s of volume %s already exists; nothing to do", snapshotName, volumeID)
 		return newCreateSnapshotResponse(snapshot)
 	}
-	opts := &cloud.SnapshotOptions{
-		Tags: map[string]string{cloud.SnapshotNameTagKey: snapshotName},
+
+	snapshotTags := map[string]string{
+		cloud.SnapshotNameTagKey: snapshotName,
 	}
+	if d.driverOptions.kubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		snapshotTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + snapshotName
+	}
+	for k, v := range d.driverOptions.extraTags {
+		snapshotTags[k] = v
+	}
+	opts := &cloud.SnapshotOptions{
+		Tags: snapshotTags,
+	}
+
 	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
 
 	if err != nil {
@@ -516,6 +551,26 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
+func getOutpostArn(requirement *csi.TopologyRequirement) string {
+	if requirement == nil {
+		return ""
+	}
+	for _, topology := range requirement.GetPreferred() {
+		_, exists := topology.GetSegments()[AwsOutpostIDKey]
+		if exists {
+			return BuildOutpostArn(topology.GetSegments())
+		}
+	}
+	for _, topology := range requirement.GetRequisite() {
+		_, exists := topology.GetSegments()[AwsOutpostIDKey]
+		if exists {
+			return BuildOutpostArn(topology.GetSegments())
+		}
+	}
+
+	return ""
+}
+
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
 	if disk.SnapshotID != "" {
@@ -527,6 +582,18 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 			},
 		}
 	}
+
+	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+
+	arn, err := arn.Parse(disk.OutpostArn)
+
+	if err == nil {
+		segments[AwsRegionKey] = arn.Region
+		segments[AwsPartitionKey] = arn.Partition
+		segments[AwsAccountIDKey] = arn.AccountID
+		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
+	}
+
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
@@ -534,7 +601,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 			VolumeContext: map[string]string{},
 			AccessibleTopology: []*csi.Topology{
 				{
-					Segments: map[string]string{TopologyKey: disk.AvailabilityZone},
+					Segments: segments,
 				},
 			},
 			ContentSource: src,
@@ -603,4 +670,29 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 		}
 	}
 	return volSizeBytes, nil
+}
+
+// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
+func BuildOutpostArn(segments map[string]string) string {
+
+	if len(segments[AwsPartitionKey]) <= 0 {
+		return ""
+	}
+
+	if len(segments[AwsRegionKey]) <= 0 {
+		return ""
+	}
+	if len(segments[AwsOutpostIDKey]) <= 0 {
+		return ""
+	}
+	if len(segments[AwsAccountIDKey]) <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("arn:%s:outposts:%s:%s:outpost/%s",
+		segments[AwsPartitionKey],
+		segments[AwsRegionKey],
+		segments[AwsAccountIDKey],
+		segments[AwsOutpostIDKey],
+	)
 }

@@ -20,8 +20,10 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
@@ -334,9 +336,9 @@ func TestNodeStageVolume(t *testing.T) {
 					inFlight: internal.NewInFlight(),
 				}
 
-				devicePath := "/dev/fake"
+				path := "/dev/fake"
 				req := &csi.NodeStageVolumeRequest{
-					PublishContext:   map[string]string{DevicePathKey: devicePath},
+					PublishContext:   map[string]string{DevicePathKey: path},
 					VolumeCapability: stdVolCap,
 					VolumeId:         "vol-test",
 				}
@@ -1242,26 +1244,61 @@ func TestNodeGetCapabilities(t *testing.T) {
 }
 
 func TestNodeGetInfo(t *testing.T) {
+	validOutpostArn, _ := arn.Parse(strings.ReplaceAll("arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0", "outpost/", ""))
+	emptyOutpostArn := arn.ARN{}
 	testCases := []struct {
-		name             string
-		instanceID       string
-		instanceType     string
-		availabilityZone string
-		expMaxVolumes    int64
+		name              string
+		instanceID        string
+		instanceType      string
+		availabilityZone  string
+		volumeAttachLimit int64
+		expMaxVolumes     int64
+		outpostArn        arn.ARN
 	}{
 		{
-			name:             "success normal",
-			instanceID:       "i-123456789abcdef01",
-			instanceType:     "t2.medium",
-			availabilityZone: "us-west-2b",
-			expMaxVolumes:    39,
+			name:              "success normal",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t2.medium",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: -1,
+			expMaxVolumes:     39,
+			outpostArn:        emptyOutpostArn,
 		},
 		{
-			name:             "success normal with NVMe",
-			instanceID:       "i-123456789abcdef01",
-			instanceType:     "m5d.large",
-			availabilityZone: "us-west-2b",
-			expMaxVolumes:    25,
+			name:              "success normal with overwrite",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t2.medium",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: 42,
+			expMaxVolumes:     42,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "success normal with NVMe",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5d.large",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: -1,
+			expMaxVolumes:     25,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "success normal with NVMe and overwrite",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5d.large",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: 30,
+			expMaxVolumes:     30,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "success normal outposts",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5d.large",
+			availabilityZone:  "us-west-2b",
+			volumeAttachLimit: 30,
+			expMaxVolumes:     30,
+			outpostArn:        validOutpostArn,
 		},
 	}
 	for _, tc := range testCases {
@@ -1269,17 +1306,26 @@ func TestNodeGetInfo(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := mocks.NewMockMetadataService(mockCtl)
-			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
-			mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
-			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
+			driverOptions := &DriverOptions{
+				volumeAttachLimit: tc.volumeAttachLimit,
+			}
 
 			mockMounter := mocks.NewMockMounter(mockCtl)
 
+			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
+			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
+			mockMetadata.EXPECT().GetOutpostArn().Return(tc.outpostArn)
+
+			if tc.volumeAttachLimit < 0 {
+				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
+			}
+
 			awsDriver := &nodeService{
-				metadata: mockMetadata,
-				mounter:  mockMounter,
-				inFlight: internal.NewInFlight(),
+				metadata:      mockMetadata,
+				mounter:       mockMounter,
+				inFlight:      internal.NewInFlight(),
+				driverOptions: driverOptions,
 			}
 
 			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
@@ -1298,6 +1344,22 @@ func TestNodeGetInfo(t *testing.T) {
 			at := resp.GetAccessibleTopology()
 			if at.Segments[TopologyKey] != tc.availabilityZone {
 				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[TopologyKey])
+			}
+
+			if at.Segments[AwsAccountIDKey] != tc.outpostArn.AccountID {
+				t.Fatalf("Expected AwsAccountId %q, got %q", tc.outpostArn.AccountID, at.Segments[AwsAccountIDKey])
+			}
+
+			if at.Segments[AwsRegionKey] != tc.outpostArn.Region {
+				t.Fatalf("Expected AwsRegion %q, got %q", tc.outpostArn.Region, at.Segments[AwsRegionKey])
+			}
+
+			if at.Segments[AwsOutpostIDKey] != tc.outpostArn.Resource {
+				t.Fatalf("Expected AwsOutpostID %q, got %q", tc.outpostArn.Resource, at.Segments[AwsOutpostIDKey])
+			}
+
+			if at.Segments[AwsPartitionKey] != tc.outpostArn.Partition {
+				t.Fatalf("Expected AwsPartition %q, got %q", tc.outpostArn.Partition, at.Segments[AwsPartitionKey])
 			}
 
 			if resp.GetMaxVolumesPerNode() != tc.expMaxVolumes {

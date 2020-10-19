@@ -70,23 +70,25 @@ var (
 
 // nodeService represents the node service of CSI driver
 type nodeService struct {
-	metadata cloud.MetadataService
-	mounter  Mounter
-	inFlight *internal.InFlight
+	metadata      cloud.MetadataService
+	mounter       Mounter
+	inFlight      *internal.InFlight
+	driverOptions *DriverOptions
 }
 
 // newNodeService creates a new node service
 // it panics if failed to create the service
-func newNodeService() nodeService {
+func newNodeService(driverOptions *DriverOptions) nodeService {
 	metadata, err := cloud.NewMetadata()
 	if err != nil {
 		panic(err)
 	}
 
 	return nodeService{
-		metadata: metadata,
-		mounter:  newNodeMounter(),
-		inFlight: internal.NewInFlight(),
+		metadata:      metadata,
+		mounter:       newNodeMounter(),
+		inFlight:      internal.NewInFlight(),
+		driverOptions: driverOptions,
 	}
 }
 
@@ -364,9 +366,21 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
-	topology := &csi.Topology{
-		Segments: map[string]string{TopologyKey: d.metadata.GetAvailabilityZone()},
+	segments := map[string]string{
+		TopologyKey: d.metadata.GetAvailabilityZone(),
 	}
+
+	outpostArn := d.metadata.GetOutpostArn()
+
+	// to my surprise ARN's string representation is not empty for empty ARN
+	if len(outpostArn.Resource) > 0 {
+		segments[AwsRegionKey] = outpostArn.Region
+		segments[AwsPartitionKey] = outpostArn.Partition
+		segments[AwsAccountIDKey] = outpostArn.AccountID
+		segments[AwsOutpostIDKey] = outpostArn.Resource
+	}
+
+	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
 		NodeId:             d.metadata.GetInstanceID(),
@@ -400,7 +414,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	if !exists {
-		if err := d.mounter.MakeDir(globalMountPath); err != nil {
+		if err = d.mounter.MakeDir(globalMountPath); err != nil {
 			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
@@ -514,6 +528,9 @@ func findNvmeVolume(findName string) (device string, err error) {
 
 // getVolumesLimit returns the limit of volumes that the node supports
 func (d *nodeService) getVolumesLimit() int64 {
+	if d.driverOptions.volumeAttachLimit >= 0 {
+		return d.driverOptions.volumeAttachLimit
+	}
 	ebsNitroInstanceTypeRegex := "^[cmr]5.*|t3|z1d"
 	instanceType := d.metadata.GetInstanceType()
 	if ok, _ := regexp.MatchString(ebsNitroInstanceTypeRegex, instanceType); ok {

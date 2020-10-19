@@ -30,7 +30,6 @@ spec:
                 - fargate
       nodeSelector:
         kubernetes.io/os: linux
-        kubernetes.io/arch: amd64
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
@@ -43,6 +42,7 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+          # - --volume-attach-limit=42
             - --logtostderr
             - --v=5
           env:

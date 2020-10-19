@@ -4,9 +4,9 @@ bases:
 - ../../base
 images:
 - name: amazon/aws-ebs-csi-driver
-  newTag: v0.5.0
+  newTag: v0.7.0
 - name: quay.io/k8scsi/csi-provisioner
-  newTag: v1.3.0
+  newTag: v1.5.0
 - name: quay.io/k8scsi/csi-attacher
   newTag: v1.2.0
 - name: quay.io/k8scsi/livenessprobe
