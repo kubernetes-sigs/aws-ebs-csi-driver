@@ -38,3 +38,7 @@ func NewResizeFs(mounter *mount.SafeFormatAndMount) *ResizeFs {
 func (resizefs *ResizeFs) Resize(devicePath string, deviceMountPath string) (bool, error) {
 	return false, fmt.Errorf("Resize is not supported for this build")
 }
+
+func (resizefs *ResizeFs) ResizeIfNecessary(devicePath string, deviceMountPath string) (bool, error) {
+	return false, fmt.Errorf("Resize is not supported for this build")
+}
