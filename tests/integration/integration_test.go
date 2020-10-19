@@ -128,7 +128,7 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 
 	defer func() {
 		logf("Unstaging volume %q from path %q", volumeID, stageDir)
-		_, err := csiClient.node.NodeUnstageVolume(context.Background(), &csi.NodeUnstageVolumeRequest{VolumeId: volumeID, StagingTargetPath: stageDir})
+		_, err = csiClient.node.NodeUnstageVolume(context.Background(), &csi.NodeUnstageVolumeRequest{VolumeId: volumeID, StagingTargetPath: stageDir})
 		Expect(err).To(BeNil(), "NodeUnstageVolume failed with error")
 		err = os.RemoveAll(volDir)
 		Expect(err).To(BeNil(), "Failed to remove temp directory")

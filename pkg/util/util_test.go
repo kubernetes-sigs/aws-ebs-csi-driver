@@ -18,7 +18,10 @@ package util
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
+
+	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 func TestRoundUpBytes(t *testing.T) {
@@ -124,4 +127,27 @@ func TestParseEndpoint(t *testing.T) {
 		})
 	}
 
+}
+
+func TestGetAccessModes(t *testing.T) {
+	testVolCap := []*csi.VolumeCapability{
+		{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+		},
+		{
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+			},
+		},
+	}
+	expectedModes := []string{
+		"SINGLE_NODE_WRITER",
+		"SINGLE_NODE_READER_ONLY",
+	}
+	actualModes := GetAccessModes(testVolCap)
+	if !reflect.DeepEqual(expectedModes, *actualModes) {
+		t.Fatalf("Wrong values returned for volume capabilities. Expected %v, got %v", expectedModes, actualModes)
+	}
 }

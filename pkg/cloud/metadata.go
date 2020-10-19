@@ -18,14 +18,20 @@ package cloud
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	"k8s.io/klog"
 )
 
 type EC2Metadata interface {
 	Available() bool
+	// ec2 instance metadata endpoints: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+	GetMetadata(string) (string, error)
 	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
 }
 
@@ -35,6 +41,7 @@ type MetadataService interface {
 	GetInstanceType() string
 	GetRegion() string
 	GetAvailabilityZone() string
+	GetOutpostArn() arn.ARN
 }
 
 type Metadata struct {
@@ -42,7 +49,11 @@ type Metadata struct {
 	InstanceType     string
 	Region           string
 	AvailabilityZone string
+	OutpostArn       arn.ARN
 }
+
+// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
+const OutpostArnEndpoint string = "outpost-arn"
 
 var _ MetadataService = &Metadata{}
 
@@ -51,7 +62,7 @@ func (m *Metadata) GetInstanceID() string {
 	return m.InstanceID
 }
 
-// GetInstanceID returns the instance type.
+// GetInstanceType returns the instance type.
 func (m *Metadata) GetInstanceType() string {
 	return m.InstanceType
 }
@@ -64,6 +75,11 @@ func (m *Metadata) GetRegion() string {
 // GetAvailabilityZone returns the Availability Zone which the instance is in.
 func (m *Metadata) GetAvailabilityZone() string {
 	return m.AvailabilityZone
+}
+
+// GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.
+func (m *Metadata) GetOutpostArn() arn.ARN {
+	return m.OutpostArn
 }
 
 func NewMetadata() (MetadataService, error) {
@@ -99,10 +115,28 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 		return nil, fmt.Errorf("could not get valid EC2 availavility zone")
 	}
 
-	return &Metadata{
+	outpostArn, err := svc.GetMetadata(OutpostArnEndpoint)
+	// "outpust-arn" returns 404 for non-outpost instances. note that the request is made to a link-local address.
+	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
+	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
+	if err != nil && !strings.Contains(err.Error(), "404") {
+		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn")
+	}
+
+	metadata := Metadata{
 		InstanceID:       doc.InstanceID,
 		InstanceType:     doc.InstanceType,
 		Region:           doc.Region,
 		AvailabilityZone: doc.AvailabilityZone,
-	}, nil
+	}
+
+	outpostArn = strings.ReplaceAll(outpostArn, "outpost/", "")
+	parsedArn, err := arn.Parse(outpostArn)
+	if err != nil {
+		klog.Warningf("Failed to parse the outpost arn: %s", outpostArn)
+	} else {
+		metadata.OutpostArn = parsedArn
+	}
+
+	return &metadata, nil
 }

@@ -40,8 +40,12 @@ const (
 )
 
 const (
-	DriverName  = "ebs.csi.aws.com"
-	TopologyKey = "topology." + DriverName + "/zone"
+	DriverName      = "ebs.csi.aws.com"
+	TopologyKey     = "topology." + DriverName + "/zone"
+	AwsPartitionKey = "topology." + DriverName + "/partition"
+	AwsAccountIDKey = "topology." + DriverName + "/account-id"
+	AwsRegionKey    = "topology." + DriverName + "/region"
+	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
 )
 
 type Driver struct {
@@ -53,9 +57,11 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint        string
-	extraVolumeTags map[string]string
-	mode            Mode
+	endpoint            string
+	extraTags           map[string]string
+	mode                Mode
+	volumeAttachLimit   int64
+	kubernetesClusterID string
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -81,10 +87,10 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	case ControllerMode:
 		driver.controllerService = newControllerService(&driverOptions)
 	case NodeMode:
-		driver.nodeService = newNodeService()
+		driver.nodeService = newNodeService(&driverOptions)
 	case AllMode:
 		driver.controllerService = newControllerService(&driverOptions)
-		driver.nodeService = newNodeService()
+		driver.nodeService = newNodeService(&driverOptions)
 	default:
 		return nil, fmt.Errorf("unknown mode: %s", driverOptions.mode)
 	}
@@ -144,14 +150,35 @@ func WithEndpoint(endpoint string) func(*DriverOptions) {
 	}
 }
 
+func WithExtraTags(extraTags map[string]string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.extraTags = extraTags
+	}
+}
+
 func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
-		o.extraVolumeTags = extraVolumeTags
+		if o.extraTags == nil && extraVolumeTags != nil {
+			klog.Warning("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
+			o.extraTags = extraVolumeTags
+		}
 	}
 }
 
 func WithMode(mode Mode) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.mode = mode
+	}
+}
+
+func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.volumeAttachLimit = volumeAttachLimit
+	}
+}
+
+func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.kubernetesClusterID = clusterID
 	}
 }

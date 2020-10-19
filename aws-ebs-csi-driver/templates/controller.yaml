@@ -23,7 +23,6 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-        kubernetes.io/arch: amd64
         {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
         {{- end }}
@@ -46,12 +45,15 @@ spec:
           args:
             {{- if ne .Release.Name "kustomize" }}
             - controller
-            {{ else }}
+            {{- else }}
             # - {all,controller,node} # specify the driver mode
             {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
             {{- if .Values.extraVolumeTags }}
               {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.k8sTagClusterId }}
+            - --k8s-tag-cluster-id={{ .Values.k8sTagClusterId }}
             {{- end }}
             - --logtostderr
             - --v=5
@@ -99,6 +101,9 @@ spec:
             - --v=5
             {{- if .Values.enableVolumeScheduling }}
             - --feature-gates=Topology=true
+            {{- end}}
+            {{- if .Values.extraCreateMetadata }}
+            - --extra-create-metadata
             {{- end}}
             - --enable-leader-election
             - --leader-election-type=leases

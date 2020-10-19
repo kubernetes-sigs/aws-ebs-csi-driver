@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -95,6 +97,39 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: outpost volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: empty outpost arn",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "",
+			},
+			expErr: nil,
+		},
+		{
 			name:       "fail: CreateVolume returned CreateVolume error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
@@ -162,6 +197,7 @@ func TestCreateDisk(t *testing.T) {
 				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
 				State:            aws.String(volState),
 				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+				OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
 			}
 			snapshot := &ec2.Snapshot{
 				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
@@ -202,6 +238,9 @@ func TestCreateDisk(t *testing.T) {
 					}
 					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
 						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+					if tc.expDisk.OutpostArn != disk.OutpostArn {
+						t.Fatalf("CreateDisk() failed: expected outpoustArn %q, got %q", tc.expDisk.OutpostArn, disk.OutpostArn)
 					}
 				}
 			}
@@ -380,6 +419,7 @@ func TestGetDiskByName(t *testing.T) {
 		volumeName       string
 		volumeCapacity   int64
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
@@ -387,6 +427,14 @@ func TestGetDiskByName(t *testing.T) {
 			volumeName:       "vol-test-1234",
 			volumeCapacity:   util.GiBToBytes(1),
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeName:       "vol-test-1234",
+			volumeCapacity:   util.GiBToBytes(1),
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -407,6 +455,7 @@ func TestGetDiskByName(t *testing.T) {
 				VolumeId:         aws.String(tc.volumeName),
 				Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
 				AvailabilityZone: aws.String(tc.availabilityZone),
+				OutpostArn:       aws.String(tc.outpostArn),
 			}
 
 			ctx := context.Background()
@@ -427,6 +476,9 @@ func TestGetDiskByName(t *testing.T) {
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
 				}
+				if tc.outpostArn != disk.OutpostArn {
+					t.Fatalf("GetDiskByName() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
+				}
 			}
 
 			mockCtrl.Finish()
@@ -439,12 +491,20 @@ func TestGetDiskByID(t *testing.T) {
 		name             string
 		volumeID         string
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
 			name:             "success: normal",
 			volumeID:         "vol-test-1234",
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeID:         "vol-test-1234",
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -467,6 +527,7 @@ func TestGetDiskByID(t *testing.T) {
 						{
 							VolumeId:         aws.String(tc.volumeID),
 							AvailabilityZone: aws.String(tc.availabilityZone),
+							OutpostArn:       aws.String(tc.outpostArn),
 						},
 					},
 				},
@@ -488,6 +549,9 @@ func TestGetDiskByID(t *testing.T) {
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
 				}
+				if disk.OutpostArn != tc.outpostArn {
+					t.Fatalf("GetDisk() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
+				}
 			}
 
 			mockCtrl.Finish()
@@ -500,6 +564,7 @@ func TestCreateSnapshot(t *testing.T) {
 		name            string
 		snapshotName    string
 		snapshotOptions *SnapshotOptions
+		expInput        *ec2.CreateSnapshotInput
 		expSnapshot     *Snapshot
 		expErr          error
 	}{
@@ -509,7 +574,28 @@ func TestCreateSnapshot(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
+			},
+			expInput: &ec2.CreateSnapshotInput{
+				VolumeId: aws.String("snap-test-volume"),
+				DryRun:   aws.Bool(false),
+				TagSpecifications: []*ec2.TagSpecification{
+					{
+						ResourceType: aws.String("snapshot"),
+						Tags: []*ec2.Tag{
+							{
+								Key:   aws.String(SnapshotNameTagKey),
+								Value: aws.String("snap-test-name"),
+							},
+							{
+								Key:   aws.String("extra-tag-key"),
+								Value: aws.String("extra-tag-value"),
+							},
+						},
+					},
+				},
+				Description: aws.String("Created by AWS EBS CSI driver for volume snap-test-volume"),
 			},
 			expSnapshot: &Snapshot{
 				SourceVolumeID: "snap-test-volume",
@@ -531,7 +617,7 @@ func TestCreateSnapshot(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			mockEC2.EXPECT().CreateSnapshotWithContext(gomock.Eq(ctx), gomock.Any()).Return(ec2snapshot, tc.expErr)
+			mockEC2.EXPECT().CreateSnapshotWithContext(gomock.Eq(ctx), eqCreateSnapshotInput(tc.expInput)).Return(ec2snapshot, tc.expErr)
 			mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{ec2snapshot}}, nil).AnyTimes()
 
 			snapshot, err := c.CreateSnapshot(ctx, tc.expSnapshot.SourceVolumeID, tc.snapshotOptions)
@@ -626,7 +712,7 @@ func TestResizeDisk(t *testing.T) {
 				VolumeModification: &ec2.VolumeModification{
 					VolumeId:          aws.String("vol-test"),
 					TargetSize:        aws.Int64(2),
-					ModificationState: aws.String(ec2.VolumeModificationStateOptimizing),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
 			reqSizeGiB: 2,
@@ -660,21 +746,13 @@ func TestResizeDisk(t *testing.T) {
 			expErr:     nil,
 		},
 		{
-			name:                "fail: volume doesn't exist",
-			volumeID:            "vol-test",
-			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
-			reqSizeGiB:          2,
-			expErr:              fmt.Errorf("ResizeDisk generic error"),
-		},
-		{
-			name:     "success: there is a resizing in progress",
+			name:     "success: with previous expansion",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
-				Size:             aws.Int64(1),
+				Size:             aws.Int64(2),
 				AvailabilityZone: aws.String(defaultZone),
 			},
-			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
 				VolumesModifications: []*ec2.VolumeModification{
 					{
@@ -687,26 +765,74 @@ func TestResizeDisk(t *testing.T) {
 			reqSizeGiB: 2,
 			expErr:     nil,
 		},
+		{
+			name:                "fail: volume doesn't exist",
+			volumeID:            "vol-test",
+			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
+			reqSizeGiB:          2,
+			expErr:              fmt.Errorf("ResizeDisk generic error"),
+		},
+		{
+			name:     "failure: volume in modifying state",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			descModVolume: &ec2.DescribeVolumesModificationsOutput{
+				VolumesModifications: []*ec2.VolumeModification{
+					{
+						VolumeId:          aws.String("vol-test"),
+						TargetSize:        aws.Int64(2),
+						ModificationState: aws.String(ec2.VolumeModificationStateModifying),
+					},
+				},
+			},
+			reqSizeGiB: 2,
+			expErr:     fmt.Errorf("ResizeDisk generic error"),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			// reduce number of steps to reduce test time
+			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
 			if tc.existingVolume != nil || tc.existingVolumeError != nil {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
 					&ec2.DescribeVolumesOutput{
-						Volumes: []*ec2.Volume{tc.existingVolume},
-					}, tc.existingVolumeError).AnyTimes()
+						Volumes: []*ec2.Volume{
+							tc.existingVolume,
+						},
+					}, tc.existingVolumeError)
+
+				if tc.expErr == nil && aws.Int64Value(tc.existingVolume.Size) != tc.reqSizeGiB {
+					resizedVolume := &ec2.Volume{
+						VolumeId:         aws.String("vol-test"),
+						Size:             aws.Int64(tc.reqSizeGiB),
+						AvailabilityZone: aws.String(defaultZone),
+					}
+					mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+						&ec2.DescribeVolumesOutput{
+							Volumes: []*ec2.Volume{
+								resizedVolume,
+							},
+						}, tc.existingVolumeError)
+				}
 			}
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
 				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
 			}
 			if tc.descModVolume != nil {
 				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+			} else {
+				emptyOutput := &ec2.DescribeVolumesModificationsOutput{}
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(emptyOutput, nil).AnyTimes()
 			}
 
 			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
@@ -743,6 +869,7 @@ func TestGetSnapshotByName(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
 			},
 			expSnapshot: &Snapshot{
@@ -797,6 +924,7 @@ func TestGetSnapshotByID(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					"extra-tag-key":    "extra-tag-value",
 				},
 			},
 			expSnapshot: &Snapshot{
@@ -1063,4 +1191,35 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 			},
 		}},
 	}
+}
+
+type eqCreateSnapshotInputMatcher struct {
+	expected *ec2.CreateSnapshotInput
+}
+
+func eqCreateSnapshotInput(expected *ec2.CreateSnapshotInput) gomock.Matcher {
+	return &eqCreateSnapshotInputMatcher{expected}
+}
+
+func (m *eqCreateSnapshotInputMatcher) Matches(x interface{}) bool {
+	input, ok := x.(*ec2.CreateSnapshotInput)
+	if !ok {
+		return false
+	}
+
+	if input != nil {
+		for _, ts := range input.TagSpecifications {
+			// Because these tags are generated from a map
+			// which has a random order.
+			sort.SliceStable(ts.Tags, func(i, j int) bool {
+				return *ts.Tags[i].Key < *ts.Tags[j].Key
+			})
+		}
+	}
+
+	return reflect.DeepEqual(m.expected, input)
+}
+
+func (m *eqCreateSnapshotInputMatcher) String() string {
+	return m.expected.String()
 }

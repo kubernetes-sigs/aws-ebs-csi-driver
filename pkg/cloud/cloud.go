@@ -38,6 +38,8 @@ import (
 const (
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
+	// VolumeTypeIO2 represents a provisioned IOPS SSD type of volume.
+	VolumeTypeIO2 = "io2"
 	// VolumeTypeGP2 represents a general purpose SSD type of volume.
 	VolumeTypeGP2 = "gp2"
 	// VolumeTypeSC1 represents a cold HDD (sc1) type of volume.
@@ -51,22 +53,22 @@ const (
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
+		VolumeTypeIO2,
 		VolumeTypeGP2,
 		VolumeTypeSC1,
 		VolumeTypeST1,
 		VolumeTypeStandard,
 	}
+
+	volumeModificationDuration   = 1 * time.Second
+	volumeModificationWaitFactor = 1.7
+	volumeModificationWaitSteps  = 10
 )
 
 // AWS provisioning limits.
-// Sources:
-//   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+// Source:
 //   https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
 const (
-	// MinTotalIOPS represents the minimum Input Output per second.
-	MinTotalIOPS = 100
-	// MaxTotalIOPS represents the maximum Input Output per second.
-	MaxTotalIOPS = 20000
 	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
 	MaxNumTagsPerResource = 50
 	// MaxTagKeyLength represents the maximum key length for a tag.
@@ -116,6 +118,9 @@ var (
 
 	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
 	ErrInvalidMaxResults = errors.New("MaxResults parameter must be 0 or greater than or equal to 5")
+
+	// VolumeNotBeingModified is returned if volume being described is not being modified
+	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
 )
 
 // Disk represents a EBS volume
@@ -124,6 +129,7 @@ type Disk struct {
 	CapacityGiB      int64
 	AvailabilityZone string
 	SnapshotID       string
+	OutpostArn       string
 }
 
 // DiskOptions represents parameters to create an EBS volume
@@ -133,6 +139,7 @@ type DiskOptions struct {
 	VolumeType       string
 	IOPSPerGB        int
 	AvailabilityZone string
+	OutpostArn       string
 	Encrypted        bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
@@ -242,15 +249,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
-	case VolumeTypeIO1:
+	case VolumeTypeIO1, VolumeTypeIO2:
 		createType = diskOptions.VolumeType
 		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
-		if iops < MinTotalIOPS {
-			iops = MinTotalIOPS
-		}
-		if iops > MaxTotalIOPS {
-			iops = MaxTotalIOPS
-		}
 	case "":
 		createType = DefaultVolumeType
 	default:
@@ -272,7 +273,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if zone == "" {
 		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 		var err error
-		zone, err = c.randomAvailabilityZone(ctx, c.region)
+		zone, err = c.randomAvailabilityZone(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get availability zone %s", err)
 		}
@@ -285,6 +286,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
 		Encrypted:         aws.Bool(diskOptions.Encrypted),
 	}
+
+	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
+	if len(diskOptions.OutpostArn) > 0 {
+		request.OutpostArn = aws.String(diskOptions.OutpostArn)
+	}
+
 	if len(diskOptions.KmsKeyID) > 0 {
 		request.KmsKeyId = aws.String(diskOptions.KmsKeyID)
 		request.Encrypted = aws.Bool(true)
@@ -319,7 +326,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID}, nil
+	outpostArn := aws.StringValue(response.OutpostArn)
+
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -487,6 +496,7 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		CapacityGiB:      volSizeBytes,
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 		SnapshotID:       aws.StringValue(volume.SnapshotId),
+		OutpostArn:       aws.StringValue(volume.OutpostArn),
 	}, nil
 }
 
@@ -506,6 +516,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		VolumeID:         aws.StringValue(volume.VolumeId),
 		CapacityGiB:      aws.Int64Value(volume.Size),
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
+		OutpostArn:       aws.StringValue(volume.OutpostArn),
 	}, nil
 }
 
@@ -522,7 +533,9 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 
 	var tags []*ec2.Tag
 	for key, value := range snapshotOptions.Tags {
-		tags = append(tags, &ec2.Tag{Key: &key, Value: &value})
+		copiedKey := key
+		copiedValue := value
+		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
 	}
 	tagSpec := ec2.TagSpecification{
 		ResourceType: aws.String("snapshot"),
@@ -659,7 +672,6 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
-
 	for {
 		response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
 		if err != nil {
@@ -807,13 +819,6 @@ func isAWSError(err error, code string) bool {
 	return false
 }
 
-// isAWSErrorIncorrectModification returns a boolean indicating whether the given error
-// is an AWS IncorrectModificationState error. This error means that a modification action
-// on an EBS volume cannot occur because the volume is currently being modified.
-func isAWSErrorIncorrectModification(err error) bool {
-	return isAWSError(err, "IncorrectModificationState")
-}
-
 // isAWSErrorInstanceNotFound returns a boolean indicating whether the
 // given error is an AWS InvalidInstanceID.NotFound error. This error is
 // reported when the specified instance doesn't exist.
@@ -842,6 +847,12 @@ func isAWSErrorInvalidAttachmentNotFound(err error) bool {
 	return isAWSError(err, "InvalidAttachment.NotFound")
 }
 
+// isAWSErrorModificationNotFound returns a boolean indicating whether the given
+// error is an AWS InvalidVolumeModification.NotFound error
+func isAWSErrorModificationNotFound(err error) bool {
+	return isAWSError(err, "InvalidVolumeModification.NotFound")
+}
+
 // isAWSErrorSnapshotNotFound returns a boolean indicating whether the
 // given error is an AWS InvalidSnapshot.NotFound error. This error is
 // reported when the specified snapshot doesn't exist.
@@ -866,8 +877,33 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	newSizeGiB := util.RoundUpGiB(newSizeBytes)
 	oldSizeGiB := aws.Int64Value(volume.Size)
 
+	latestMod, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
+
+	if latestMod != nil && modFetchError == nil {
+		state := aws.StringValue(latestMod.ModificationState)
+		if state == ec2.VolumeModificationStateModifying {
+			_, err = c.waitForVolumeSize(ctx, volumeID)
+			if err != nil {
+				return oldSizeGiB, err
+			}
+			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+		}
+	}
+
+	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
+	// that means we have an API problem.
+	if modFetchError != nil && modFetchError != VolumeNotBeingModified {
+		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
+	}
+
+	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
+	// volume modifications objects or volume has completed previously issued modification request.
 	if oldSizeGiB >= newSizeGiB {
-		klog.V(5).Infof("Volume %q's current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
+		klog.V(5).Infof("Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
+		_, err = c.waitForVolumeSize(ctx, volumeID)
+		if err != nil && err != VolumeNotBeingModified {
+			return oldSizeGiB, err
+		}
 		return oldSizeGiB, nil
 	}
 
@@ -876,38 +912,54 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		Size:     aws.Int64(newSizeGiB),
 	}
 
-	var mod *ec2.VolumeModification
+	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
-		if !isAWSErrorIncorrectModification(err) {
-			return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
-		}
-
-		m, err := c.getLatestVolumeModification(ctx, volumeID)
-		if err != nil {
-			return 0, err
-		}
-		mod = m
+		return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
 	}
 
-	if mod == nil {
-		mod = response.VolumeModification
-	}
+	mod := response.VolumeModification
 
 	state := aws.StringValue(mod.ModificationState)
-	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
-		return aws.Int64Value(mod.TargetSize), nil
+	if volumeModificationDone(state) {
+		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 	}
 
-	return c.waitForVolumeSize(ctx, volumeID)
+	_, err = c.waitForVolumeSize(ctx, volumeID)
+	if err != nil {
+		return oldSizeGiB, err
+	}
+	return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+}
+
+// Checks for desired size on volume by also verifying volume size by describing volume.
+// This is to get around potential eventual consistency problems with describing volume modifications
+// objects and ensuring that we read two different objects to verify volume state.
+func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGiB int64) (int64, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return 0, err
+	}
+
+	// AWS resizes in chunks of GiB (not GB)
+	oldSizeGiB := aws.Int64Value(volume.Size)
+	if oldSizeGiB >= newSizeGiB {
+		return oldSizeGiB, nil
+	}
+	return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, newSizeGiB)
 }
 
 // waitForVolumeSize waits for a volume modification to finish and return its size.
 func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
 	backoff := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.8,
-		Steps:    20,
+		Duration: volumeModificationDuration,
+		Factor:   volumeModificationWaitFactor,
+		Steps:    volumeModificationWaitSteps,
 	}
 
 	var modVolSizeGiB int64
@@ -918,7 +970,7 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 		}
 
 		state := aws.StringValue(m.ModificationState)
-		if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+		if volumeModificationDone(state) {
 			modVolSizeGiB = aws.Int64Value(m.TargetSize)
 			return true, nil
 		}
@@ -942,12 +994,15 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 	}
 	mod, err := c.ec2.DescribeVolumesModificationsWithContext(ctx, request)
 	if err != nil {
+		if isAWSErrorModificationNotFound(err) {
+			return nil, VolumeNotBeingModified
+		}
 		return nil, fmt.Errorf("error describing modifications in volume %q: %v", volumeID, err)
 	}
 
 	volumeMods := mod.VolumesModifications
 	if len(volumeMods) == 0 {
-		return nil, fmt.Errorf("could not find any modifications for volume %q", volumeID)
+		return nil, VolumeNotBeingModified
 	}
 
 	return volumeMods[len(volumeMods)-1], nil
@@ -955,7 +1010,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 
 // randomAvailabilityZone returns a random zone from the given region
 // the randomness relies on the response of DescribeAvailabilityZones
-func (c *cloud) randomAvailabilityZone(ctx context.Context, region string) (string, error) {
+func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
 	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
 	if err != nil {
@@ -968,4 +1023,11 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context, region string) (stri
 	}
 
 	return zones[0], nil
+}
+
+func volumeModificationDone(state string) bool {
+	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
+		return true
+	}
+	return false
 }

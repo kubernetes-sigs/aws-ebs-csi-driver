@@ -20,4 +20,5 @@ PKG_ROOT=$(git rev-parse --show-toplevel)
 
 ${PKG_ROOT}/hack/verify-gofmt
 ${PKG_ROOT}/hack/verify-govet
-${PKG_ROOT}/hack/verify-golint
+${PKG_ROOT}/bin/golangci-lint run --deadline=10m
+${PKG_ROOT}/hack/verify-vendor.sh
