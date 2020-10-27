@@ -25,14 +25,14 @@ REGION=${AWS_REGION-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES-us-west-2a,us-west-2b,us-west-2c}
 FOCUS=${GINKGO_FOCUS-"[ebs-csi-e2e]"}
 NODES=${GINKGO_NODES:-4}
-K8S_VERSION=${K8S_VERSION-1.16.1}
+K8S_VERSION=${K8S_VERSION-1.18.10}
 INSTANCE_TYPE=${INSTANCE_TYPE-c4.large}
 
 source $(dirname "${BASH_SOURCE}")/utils/helm.sh
 
 echo "Testing in region: $REGION and zones: $ZONES"
 
-KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/1.16.0-alpha.1/kops-$OS_ARCH
+KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/v1.18.2/kops-$OS_ARCH
 KOPS_PATH=$TEST_DIR/kops
 KOPS_STATE_FILE=s3://k8s-kops-csi-e2e
 
@@ -61,7 +61,6 @@ CLUSTER_YAML_PATH=$TEST_DIR/$CLUSTER_NAME.yaml
 SSH_KEY_PATH=$TEST_DIR/id_rsa
 ssh-keygen -P csi-e2e -f $SSH_KEY_PATH
 
-K8S_VERSION=https://k8s-kops-csi-e2e.s3.amazonaws.com/kubernetes/dev/v1.17.0-dev/
 $KOPS_PATH create cluster --state $KOPS_STATE_FILE \
     --zones $ZONES \
     --node-count=3 \
