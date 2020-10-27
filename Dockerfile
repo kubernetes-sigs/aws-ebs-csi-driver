@@ -24,7 +24,12 @@ ADD . .
 RUN make
 
 FROM amazonlinux:2
+
+COPY --from=bitnami/kubectl:latest /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
+
 RUN yum install ca-certificates e2fsprogs xfsprogs util-linux -y
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
-ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
+RUN mv /bin/aws-ebs-csi-driver /bin/csi-driver
+
+ENTRYPOINT ["/bin/csi-driver"]
