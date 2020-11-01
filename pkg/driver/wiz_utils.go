@@ -41,7 +41,7 @@ func getFileSystemType(devicePath string, execer exec.Interface) (string, error)
         return "", err
     }
 
-    var fstype, pttype string
+    var fstype string
 
     lines := strings.Split(output, "\n")
     for _, l := range lines {
@@ -57,16 +57,11 @@ func getFileSystemType(devicePath string, execer exec.Interface) (string, error)
         // to https://www.kernel.org/pub/linux/utils/util-linux/v2.21/libblkid-docs/.
         if cs[0] == "TYPE" {
             fstype = cs[1]
-        } else if cs[0] == "PTTYPE" {
-            pttype = cs[1]
         }
     }
 
-    if len(pttype) > 0 {
-        klog.V(4).Infof("Disk %s detected partition table type: %s", devicePath, pttype)
-        // Returns a special non-empty string as filesystem type, then kubelet
-        // will not format it.
-        return "unknown data, probably partitions", nil
+    if fstype == "" {
+        return "", fmt.Errorf("unable to detect file system type, blkid output: %s", output)
     }
 
     return fstype, nil
