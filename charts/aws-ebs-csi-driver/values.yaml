@@ -92,3 +92,9 @@ serviceAccount:
     annotations: {}
   snapshot:
     annotations: {}
+
+storageClass:
+  # If true, StorageClass will be created with AWS EBS CSI driver as provisioner.
+  create: false
+  # If true, created StorageClass will be annotated as default one.
+  default: false
