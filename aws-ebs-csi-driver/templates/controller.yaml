@@ -36,6 +36,9 @@ spec:
       {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
       {{- end }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- end }}
       containers:
         - name: ebs-plugin
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}

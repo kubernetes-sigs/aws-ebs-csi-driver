@@ -38,6 +38,9 @@ spec:
         {{- with .Values.node.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- end }}
       containers:
         - name: ebs-plugin
           securityContext:
