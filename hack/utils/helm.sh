@@ -2,18 +2,14 @@
 
 set -uo pipefail
 
-OS_ARCH=$(go env GOOS)-amd64
-
 helm::install() {
-    declare -r helm_name=helm-v2.16.0-$OS_ARCH.tar.gz
-    wget https://get.helm.sh/$helm_name
-    tar xvzf $helm_name
-    mv $OS_ARCH/helm /usr/local/bin/helm
-}
-
-helm::init() {
-    declare -r rbac_file_path=$(dirname "${BASH_SOURCE}")/tiller-rbac.yaml
-    kubectl apply -f $rbac_file_path
-    helm init --service-account tiller --history-max 200 --wait
-    kubectl get po -n kube-system
+  INSTALL_PATH=${1}
+  if [[ ! -e ${INSTALL_PATH}/helm ]]; then
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    export USE_SUDO=false
+    export HELM_INSTALL_DIR=${INSTALL_PATH}
+    ./get_helm.sh
+    rm get_helm.sh
+  fi
 }
