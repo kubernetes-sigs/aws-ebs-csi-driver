@@ -1,3 +1,14 @@
+# v0.7.1
+[Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.7.1/docs/README.md)
+
+filename  | sha512 hash
+--------- | ------------
+[v0.7.1.zip](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.7.1.zip) | `0c8b1e539f5852e54b5f4ab48cb3054ac52145db3d692cdc6b3ac683c39ebf11951c5ff3823a83666605a56a30b38953d20f392397c16bf39a5727c66ddf0827`
+[v0.7.1.tar.gz](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/archive/v0.7.1.tar.gz) | `157ed2c7aa00635a61438a1574bd7e124676bcabd9e27cfe865c7bbb3194609894536b1eb38a12a8e5bfa71b540e0f1cde12000b02d90b390d17987fc913042e`
+
+## Notable changes
+This release includes a fix for the helm chart to point to the correct image.
+
 # v0.7.0
 [Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.7.0/docs/README.md)
 
