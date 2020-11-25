@@ -34,7 +34,9 @@ spec:
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
+        {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
+        {{- end }}
         {{- with .Values.node.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
