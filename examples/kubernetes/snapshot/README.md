@@ -8,10 +8,12 @@ This driver implements basic volume snapshotting functionality using the [extern
 
 1. Kubernetes 1.13+ (CSI 1.0).
 
-1. The `VolumeSnapshotDataSource` must be set in `--feature-gates=` in the `kube-apiserver`.
+1. The `VolumeSnapshotDataSource` must be set in `--feature-gates=` in the `kube-apiserver`. This feature is enabled by default from Kubernetes v1.17+. 
 
-1. The [aws-ebs-csi-driver driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) with alpha features is installed.
-1. If your cluster does not come pre-installed with Snapshot Beta CRDs, install the [Snapshot Beta CRDs](https://github.com/kubernetes-csi/external-snapshotter/tree/master/client/config/crd)
+1. Install Snapshot Beta CRDs, Common Snapshot Controller, & CSI Driver (with alpha features) per CSI Snapshotter [Doc](https://github.com/kubernetes-csi/external-snapshotter#usage)
+
+
+
 
 ### Usage
 
