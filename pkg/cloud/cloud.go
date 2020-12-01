@@ -912,6 +912,11 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		Size:     aws.Int64(newSizeGiB),
 	}
 
+	switch aws.StringValue(volume.VolumeType) {
+	case VolumeTypeIO1, VolumeTypeIO2:
+		req.Iops = volume.Iops
+	}
+
 	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
