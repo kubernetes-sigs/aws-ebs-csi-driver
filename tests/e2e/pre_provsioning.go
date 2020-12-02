@@ -34,7 +34,7 @@ import (
 
 const (
 	defaultDiskSize   = 4
-	defaultVoluemType = awscloud.VolumeTypeGP2
+	defaultVoluemType = awscloud.VolumeTypeGP3
 
 	awsAvailabilityZonesEnv = "AWS_AVAILABILITY_ZONES"
 
