@@ -80,7 +80,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		region = metadata.GetRegion()
 	}
 
-	cloud, err := NewCloudFunc(region)
+	cloud, err := NewCloudFunc(region, driverOptions.assumeRoleArn)
 	if err != nil {
 		panic(err)
 	}

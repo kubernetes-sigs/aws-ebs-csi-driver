@@ -1273,3 +1273,35 @@ func (m *eqCreateSnapshotInputMatcher) Matches(x interface{}) bool {
 func (m *eqCreateSnapshotInputMatcher) String() string {
 	return m.expected.String()
 }
+
+func TestNewEC2Cloud(t *testing.T) {
+	type args struct {
+		region        string
+		assumeRoleArn string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Cloud
+		wantErr error
+	}{
+		{
+			name:    "invalid ARN should error",
+			args:    args{region: "fake", assumeRoleArn: "Bogus ARN"},
+			want:    nil,
+			wantErr: fmt.Errorf("Provided ARN: 'Bogus ARN' isn't valid. Make sure it starts with 'arn:' and has the correct number of colons"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newEC2Cloud(tt.args.region, tt.args.assumeRoleArn)
+			if !reflect.DeepEqual(err, tt.wantErr) {
+				t.Errorf("newEC2Cloud() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("newEC2Cloud() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

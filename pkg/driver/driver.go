@@ -62,6 +62,7 @@ type DriverOptions struct {
 	mode                Mode
 	volumeAttachLimit   int64
 	kubernetesClusterID string
+	assumeRoleArn       string
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -180,5 +181,11 @@ func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.kubernetesClusterID = clusterID
+	}
+}
+
+func WithAssumeRoleArn(assumeRoleArn string) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.assumeRoleArn = assumeRoleArn
 	}
 }

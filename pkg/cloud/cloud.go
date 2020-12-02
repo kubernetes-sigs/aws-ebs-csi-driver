@@ -25,10 +25,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -227,14 +230,24 @@ var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string) (Cloud, error) {
-	return newEC2Cloud(region)
+func NewCloud(region string, assumeRoleArn string) (Cloud, error) {
+	return newEC2Cloud(region, assumeRoleArn)
 }
 
-func newEC2Cloud(region string) (Cloud, error) {
+func newEC2Cloud(region string, assumeRoleArn string) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+	}
+	sess := session.Must(session.NewSession(awsConfig))
+
+	if assumeRoleArn != "" {
+		if arn.IsARN(assumeRoleArn) {
+			klog.V(5).Infof("Assuming role into ARN %s", assumeRoleArn)
+			awsConfig.Credentials = stscreds.NewCredentials(sess, assumeRoleArn)
+		} else {
+			return nil, fmt.Errorf("Provided ARN: '%s' isn't valid. Make sure it starts with 'arn:' and has the correct number of colons", assumeRoleArn)
+		}
 	}
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
@@ -245,7 +258,7 @@ func newEC2Cloud(region string) (Cloud, error) {
 	return &cloud{
 		region: region,
 		dm:     dm.NewDeviceManager(),
-		ec2:    ec2.New(session.Must(session.NewSession(awsConfig))),
+		ec2:    ec2.New(sess, awsConfig),
 	}, nil
 }
 

@@ -35,6 +35,7 @@ func main() {
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
+		driver.WithAssumeRoleArn(options.ControllerOptions.AssumeRoleArn),
 	)
 	if err != nil {
 		klog.Fatalln(err)

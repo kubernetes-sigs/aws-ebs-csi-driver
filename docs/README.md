@@ -104,6 +104,7 @@ curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master
 kubectl apply -f secret.yaml
 ```
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
+* Using [STS AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) - Allows the driver to switch into a different AWS IAM, using a potentially different AWS account and/or user.
 
 #### Deploy CRD (optional)
 If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
