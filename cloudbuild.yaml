@@ -12,7 +12,7 @@ steps:
       - build
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG-amazonlinux
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest-amazonlinux
-      - --target=amazon
+      - --target=amazonlinux
       - .
 images:
   - "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG"
