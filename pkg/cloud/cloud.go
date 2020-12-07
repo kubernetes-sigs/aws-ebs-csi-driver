@@ -42,6 +42,8 @@ const (
 	VolumeTypeIO2 = "io2"
 	// VolumeTypeGP2 represents a general purpose SSD type of volume.
 	VolumeTypeGP2 = "gp2"
+	// VolumeTypeGP3 represents a general purpose SSD type of volume.
+	VolumeTypeGP3 = "gp3"
 	// VolumeTypeSC1 represents a cold HDD (sc1) type of volume.
 	VolumeTypeSC1 = "sc1"
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
@@ -55,6 +57,7 @@ var (
 		VolumeTypeIO1,
 		VolumeTypeIO2,
 		VolumeTypeGP2,
+		VolumeTypeGP3,
 		VolumeTypeSC1,
 		VolumeTypeST1,
 		VolumeTypeStandard,
@@ -82,7 +85,7 @@ const (
 	// DefaultVolumeSize represents the default volume size.
 	DefaultVolumeSize int64 = 100 * util.GiB
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.
-	DefaultVolumeType = VolumeTypeGP2
+	DefaultVolumeType = VolumeTypeGP3
 )
 
 // Tags
@@ -138,6 +141,8 @@ type DiskOptions struct {
 	Tags             map[string]string
 	VolumeType       string
 	IOPSPerGB        int
+	IOPS             int
+	Throughput       int
 	AvailabilityZone string
 	OutpostArn       string
 	Encrypted        bool
@@ -243,6 +248,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	var (
 		createType string
 		iops       int64
+		throughput int64
 	)
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
@@ -252,6 +258,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	case VolumeTypeIO1, VolumeTypeIO2:
 		createType = diskOptions.VolumeType
 		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
+	case VolumeTypeGP3:
+		createType = diskOptions.VolumeType
+		iops = int64(diskOptions.IOPS)
+		throughput = int64(diskOptions.Throughput)
 	case "":
 		createType = DefaultVolumeType
 	default:
@@ -298,6 +308,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 	if iops > 0 {
 		request.Iops = aws.Int64(iops)
+	}
+	if throughput > 0 && diskOptions.VolumeType == VolumeTypeGP3 {
+		request.Throughput = aws.Int64(throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {

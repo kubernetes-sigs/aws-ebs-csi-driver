@@ -131,6 +131,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	var (
 		volumeType  string
 		iopsPerGB   int
+		iops        int
+		throughput  int
 		isEncrypted bool
 		kmsKeyID    string
 		volumeTags  = map[string]string{
@@ -148,6 +150,16 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			iopsPerGB, err = strconv.Atoi(value)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
+			}
+		case IopsKey:
+			iops, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", err)
+			}
+		case ThroughputKey:
+			throughput, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", err)
 			}
 		case EncryptedKey:
 			if value == "true" {
@@ -208,6 +220,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		Tags:             volumeTags,
 		VolumeType:       volumeType,
 		IOPSPerGB:        iopsPerGB,
+		IOPS:             iops,
+		Throughput:       throughput,
 		AvailabilityZone: zone,
 		OutpostArn:       outpostArn,
 		Encrypted:        isEncrypted,

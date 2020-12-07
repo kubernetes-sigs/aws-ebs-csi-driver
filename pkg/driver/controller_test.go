@@ -759,6 +759,52 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with volume type gp3",
+			testFunc: func(t *testing.T) {
+				// iops 5000 requires at least 10GB
+				volSize := int64(20 * 1024 * 1024 * 1024)
+				capRange := &csi.CapacityRange{RequiredBytes: volSize}
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      capRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeGP3,
+						IopsKey:       "5000",
+						ThroughputKey: "250",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(volSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(volSize)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
 			name: "success with volume type io1",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
@@ -1017,6 +1063,86 @@ func TestCreateVolume(t *testing.T) {
 					Parameters: map[string]string{
 						VolumeTypeKey: cloud.VolumeTypeIO1,
 						"unknownKey":  "unknownValue",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "fail with invalid iops parameter",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeGP3,
+						IopsKey:       "aaa",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "fail with invalid throughput parameter",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeGP3,
+						ThroughputKey: "aaa",
 					},
 				}
 
