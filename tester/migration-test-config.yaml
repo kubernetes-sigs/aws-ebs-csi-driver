@@ -95,7 +95,7 @@ install: |
       --set enableVolumeSnapshot=true \
       --set image.repository=$IMAGE_NAME \
       --set image.tag=$IMAGE_TAG \
-      ./aws-ebs-csi-driver
+      ./charts/aws-ebs-csi-driver
 
 uninstall: |
   echo "Removing driver"
