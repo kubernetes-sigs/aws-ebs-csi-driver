@@ -1,3 +1,39 @@
+# v0.8.0
+
+## Notable changes
+- gp3 is now the default volume type.
+- Images will be built on a Debian base by default. Images built on Amazon Linux will still be available but with the tag suffix `-amazonlinux`.
+- Images will be published to k8s.gcr.io in addition to ECR, GitHub, and Docker Hub.
+
+### New features
+* Chart option to disable default toleration of all taints ([#526](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/526), [@risinger](https://github.com/risinger))
+* Apply extra volume tags to EBS snapshots ([#568](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/568), [@chrishenzie](https://github.com/chrishenzie))
+* [helm] add tag options and update csi-provisioner ([#577](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/577), [@kcking](https://github.com/kcking))
+* vendor: bump aws sdk for AssumeRoleWithWebIdentity support ([#614](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/614), [@abhinavdahiya](https://github.com/abhinavdahiya))
+* Add EBS gp3 support ([#633](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/633), [@samjo-nyang](https://github.com/samjo-nyang))
+* Apply resource constraints to all sidecar containers ([#640](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/640), [@tirumerla](https://github.com/tirumerla))
+
+### Bug fixes
+* Fix the name of the snapshot controller leader election RoleBinding ([#601](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/601), [@robbie-demuth](https://github.com/robbie-demuth))
+
+### Misc.
+* Post-release v0.7.0 ([#576](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/576), [@ayberk](https://github.com/ayberk))
+* Fixing Helm install command ([#578](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/578), [@danil-smirnov](https://github.com/danil-smirnov))
+* Fix markdown issue in README.md ([#579](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/579), [@ialidzhikov](https://github.com/ialidzhikov))
+* Document behavior wrt minimum and maximum iops ([#582](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/582), [@wongma7](https://github.com/wongma7))
+* Set CSIMigrationAWSComplete for migration tests ([#593](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/593), [@wongma7](https://github.com/wongma7))
+* Bump migration kops and k8s version ([#602](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/602), [@wongma7](https://github.com/wongma7))
+* Update hack/run-e2e-test to be more idempotent and pleasant to use ([#616](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/616), [@wongma7](https://github.com/wongma7))
+* Post-release v0.7.1 ([#619](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/619), [@ayberk](https://github.com/ayberk))
+* Move chart to charts directory and add workflow to publish new chart versions ([#624](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/624), [@krmichel](https://github.com/krmichel))
+* docs(readme): update link to developer documentation ([#629](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/629), [@BondAnthony](https://github.com/BondAnthony))
+* Update ecr overlay image tag ([#630](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/630), [@ayberk](https://github.com/ayberk))
+* Add cloudbuild.yaml for image pushing to gcr ([#632](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/632), [@wongma7](https://github.com/wongma7))
+* Add latest tags to cloudbuild ([#634](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/634), [@wongma7](https://github.com/wongma7))
+* Fix target name in cloudbuild.yaml from amazon to amazonlinux ([#636](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/636), [@wongma7](https://github.com/wongma7))
+* Suffix amazonlinux image with -amazonlinux and push debian image to GitHub ([#639](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/639), [@wongma7](https://github.com/wongma7))
+* Set up QEMU to build for arm64 ([#641](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/641), [@wongma7](https://github.com/wongma7))
+
 # v0.7.1
 [Documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.7.1/docs/README.md)
 
