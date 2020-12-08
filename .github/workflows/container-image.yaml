@@ -18,12 +18,14 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
       - name: Build debian target
         run: |
           docker buildx build \
             -t $DEB_BUILD_TAG \
             --platform=linux/arm64,linux/amd64 \
-            --output="type=image,push=false" .
+            --output="type=image,push=false" . \
             --target=debian-base
       - name: Build amazonlinux target
         run: |
