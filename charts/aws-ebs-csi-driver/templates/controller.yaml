@@ -113,6 +113,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
         - name: csi-attacher
           image: {{ printf "%s:%s" .Values.sidecars.attacherImage.repository .Values.sidecars.attacherImage.tag }}
           args:
@@ -126,6 +129,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
         {{- if .Values.enableVolumeSnapshot }}
         - name: csi-snapshotter
           image: {{ printf "%s:%s" .Values.sidecars.snapshotterImage.repository .Values.sidecars.snapshotterImage.tag }}
@@ -138,6 +144,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
         {{- end }}
         {{- if .Values.enableVolumeResizing }}
         - name: csi-resizer
@@ -152,6 +161,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
         {{- end }}
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbeImage.repository .Values.sidecars.livenessProbeImage.tag }}
@@ -160,6 +172,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
       volumes:
         - name: socket-dir
           emptyDir: {}
