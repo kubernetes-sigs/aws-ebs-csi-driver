@@ -31,6 +31,9 @@ spec:
                 - fargate
       nodeSelector:
         kubernetes.io/os: linux
+        {{- with .Values.node.nodeSelector }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
