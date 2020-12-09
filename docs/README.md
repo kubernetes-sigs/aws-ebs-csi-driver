@@ -12,6 +12,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
+| v0.8.0                                 | no    | no     | yes    |
 | v0.7.1                                 | no    | no     | yes    |
 | v0.6.0                                 | no    | no     | yes    |
 | v0.5.0                                 | no    | no     | yes    |
@@ -46,9 +47,10 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compatibility Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18 |
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| v0.8.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.5.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -60,16 +62,17 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 **Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
 ## Container Images:
-|AWS EBS CSI Driver Version | Image                               |
-|---------------------------|-------------------------------------|
-|master branch              |amazon/aws-ebs-csi-driver:latest     |
-|v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1     |
-|v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0     |
-|v0.5.0                     |amazon/aws-ebs-csi-driver:v0.5.0     |
-|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0     |
-|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0     |
-|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0      |
-|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha|
+|AWS EBS CSI Driver Version | Image                                            |
+|---------------------------|--------------------------------------------------|
+|master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.8.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.0 |
+|v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
+|v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0                  |
+|v0.5.0                     |amazon/aws-ebs-csi-driver:v0.5.0                  |
+|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0                  |
+|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0                  |
+|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0                   |
+|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha             |
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
