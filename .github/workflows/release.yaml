@@ -3,17 +3,12 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 jobs:
   build:
     name: Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
-      - name: Create Helm chart
-        run: |
-          tar cvzf helm-chart.tgz aws-ebs-csi-driver
       - name: Create Release
         id: create-release
         uses: actions/create-release@v1
