@@ -38,11 +38,10 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: amazon/aws-ebs-csi-driver:latest
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
-          # - --volume-attach-limit=42
             - --logtostderr
             - --v=5
           env:
