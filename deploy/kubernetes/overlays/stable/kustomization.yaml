@@ -8,8 +8,8 @@ images:
   - name: quay.io/k8scsi/csi-provisioner
     newTag: v1.5.0
   - name: quay.io/k8scsi/csi-attacher
-    newTag: v1.2.0
+    newTag: v2.2.0
   - name: quay.io/k8scsi/livenessprobe
-    newTag: v1.1.0
+    newTag: v2.1.0
   - name: quay.io/k8scsi/csi-node-driver-registrar
-    newTag: v1.1.0
+    newTag: v1.3.0
