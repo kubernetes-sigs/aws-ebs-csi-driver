@@ -1,15 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 bases:
-  - ../../base
+- ../../../base
 images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
     newTag: v0.8.0
   - name: quay.io/k8scsi/csi-provisioner
-    newTag: v1.5.0
+    newName: raspbernetes/csi-external-provisioner
+    newTag: "1.6.0"
   - name: quay.io/k8scsi/csi-attacher
-    newTag: v2.2.0
+    newName: raspbernetes/csi-external-attacher
+    newTag: "2.2.0"
   - name: quay.io/k8scsi/livenessprobe
-    newTag: v2.1.0
+    newName: k8s.gcr.io/sig-storage/livenessprobe
+    newTag: "v2.1.0"
   - name: quay.io/k8scsi/csi-node-driver-registrar
-    newTag: v1.3.0
+    newName: raspbernetes/csi-node-driver-registrar
+    newTag: "1.3.0"

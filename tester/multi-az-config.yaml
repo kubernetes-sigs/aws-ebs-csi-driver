@@ -89,7 +89,7 @@ install: |
 
 uninstall: |
   echo "Removing driver"
-  bin/helm del --purge aws-ebs-csi-driver
+  bin/helm delete aws-ebs-csi-driver
 
 test: |
   go get github.com/onsi/ginkgo/ginkgo
