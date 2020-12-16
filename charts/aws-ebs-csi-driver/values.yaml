@@ -84,6 +84,7 @@ k8sTagClusterId: ""
 region: ""
 
 node:
+  nodeSelector: {}
   podAnnotations: {}
   tolerateAllTaints: true
   tolerations: []
