@@ -2,28 +2,37 @@ timeout: 1200s
 steps:
   - name: gcr.io/cloud-builders/docker
     args:
+      - run
+      - --rm
+      - --privileged
+      - multiarch/qemu-user-static
+      - --reset
+      - -p
+      - "yes"
+  - name: gcr.io/cloud-builders/docker
+    env:
+      - DOCKER_CLI_EXPERIMENTAL=enabled
+      - HOME=/root
+    args:
       - buildx
       - build
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest
       - --platform=linux/arm64,linux/amd64
-      - --output="type=image,push=false"
+      - --output="type=image,push=true"
       - .
       - --target=debian-base
       - HOME=/root
   - name: gcr.io/cloud-builders/docker
+    env:
+      - DOCKER_CLI_EXPERIMENTAL=enabled
+      - HOME=/root
     args:
       - buildx
       - build
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG-amazonlinux
       - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest-amazonlinux
       - --platform=linux/arm64,linux/amd64
-      - --output="type=image,push=false"
+      - --output="type=image,push=true"
       - .
       - --target=amazonlinux
-      - HOME=/root
-images:
-  - "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG"
-  - "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest"
-  - "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG-amazonlinux"
-  - "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest-amazonlinux"
