@@ -22,7 +22,6 @@ steps:
       - --output="type=image,push=true"
       - .
       - --target=debian-base
-      - HOME=/root
   - name: gcr.io/cloud-builders/docker
     env:
       - DOCKER_CLI_EXPERIMENTAL=enabled
