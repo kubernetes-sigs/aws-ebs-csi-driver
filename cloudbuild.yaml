@@ -1,37 +1,9 @@
 timeout: 1200s
 steps:
-  - name: gcr.io/cloud-builders/docker
-    args:
-      - run
-      - --rm
-      - --privileged
-      - multiarch/qemu-user-static
-      - --reset
-      - -p
-      - "yes"
-  - name: gcr.io/cloud-builders/docker
+  - name: gcr.io/k8s-testimages/gcb-docker-gcloud:v20200421-a2bf5f8
+    entrypoint: ./hack/prow.sh
     env:
-      - DOCKER_CLI_EXPERIMENTAL=enabled
+      - GIT_TAG=${_GIT_TAG}
+      - PULL_BASE_REF=${_PULL_BASE_REF}
+      - REGISTRY_NAME=gcr.io/${_STAGING_PROJECT}
       - HOME=/root
-    args:
-      - buildx
-      - build
-      - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG
-      - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest
-      - --platform=linux/arm64,linux/amd64
-      - --output="type=image,push=true"
-      - .
-      - --target=debian-base
-  - name: gcr.io/cloud-builders/docker
-    env:
-      - DOCKER_CLI_EXPERIMENTAL=enabled
-      - HOME=/root
-    args:
-      - buildx
-      - build
-      - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:$_GIT_TAG-amazonlinux
-      - --tag=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver:latest-amazonlinux
-      - --platform=linux/arm64,linux/amd64
-      - --output="type=image,push=true"
-      - .
-      - --target=amazonlinux
