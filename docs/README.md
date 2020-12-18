@@ -33,7 +33,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | Parameters                  | Values                                 | Default  | Description         |
 |-----------------------------|----------------------------------------|----------|---------------------|
 | "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation |
-| "type"                      | io1, io2, gp2, gp3, sc1, st1,standard  | gp3      | EBS volume type     |
+| "type"                      | io1, io2, gp2, gp3, sc1, st1,standard  | gp3*     | EBS volume type     |
 | "iopsPerGB"                 |                                        |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified. If this value multiplied by the size of a requested volume produces a value below the minimum or above the maximum IOPs allowed for the volume type, as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), AWS will return an error and volume creation will fail |
 | "iops"                      |                                        | 3000     | I/O operations per second. Only effetive when gp3 volume type is specified. If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html). |
 | "throughput"                |                                        | 125      | Throughput in MiB/s. Only effective when gp3 volume type is specified. If empty, it will set to 125MiB/s as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html). |
@@ -41,6 +41,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 | "kmsKeyId"                  |                                        |          | The full ARN of the key to use when encrypting the volume. When not specified, the default KMS key is used |
 
 **Notes**:
+* `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
 * The parameters are case insensitive.
 
 # EBS CSI Driver on Kubernetes
