@@ -1,7 +1,7 @@
 # v0.8.0
 
 ## Notable changes
-- gp3 is now the default volume type.
+- gp3 is now the default volume type. gp3 is **not** supported on outposts. Outpost customers need to use a different type for their volumes.
 - Images will be built on a Debian base by default. Images built on Amazon Linux will still be available but with the tag suffix `-amazonlinux`.
 - Images will be published to k8s.gcr.io in addition to ECR, GitHub, and Docker Hub.
 
