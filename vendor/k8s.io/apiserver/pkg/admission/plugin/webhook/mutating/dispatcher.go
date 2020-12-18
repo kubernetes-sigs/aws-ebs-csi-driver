@@ -24,8 +24,9 @@ import (
 	"time"
 
 	jsonpatch "github.com/evanphx/json-patch"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -42,6 +43,7 @@ import (
 	webhookrequest "k8s.io/apiserver/pkg/admission/plugin/webhook/request"
 	auditinternal "k8s.io/apiserver/pkg/apis/audit"
 	webhookutil "k8s.io/apiserver/pkg/util/webhook"
+	"k8s.io/apiserver/pkg/warning"
 	utiltrace "k8s.io/utils/trace"
 )
 
@@ -235,7 +237,7 @@ func (a *mutatingDispatcher) callAttrMutatingHook(ctx context.Context, h *admiss
 		defer cancel()
 	}
 
-	r := client.Post().Context(ctx).Body(request)
+	r := client.Post().Body(request)
 
 	// if the context has a deadline, set it as a parameter to inform the backend
 	if deadline, hasDeadline := ctx.Deadline(); hasDeadline {
@@ -250,7 +252,7 @@ func (a *mutatingDispatcher) callAttrMutatingHook(ctx context.Context, h *admiss
 		}
 	}
 
-	if err := r.Do().Into(response); err != nil {
+	if err := r.Do(ctx).Into(response); err != nil {
 		return false, &webhookutil.ErrCallingWebhook{WebhookName: h.Name, Reason: err}
 	}
 	trace.Step("Request completed")
@@ -265,6 +267,9 @@ func (a *mutatingDispatcher) callAttrMutatingHook(ctx context.Context, h *admiss
 		if err := attr.Attributes.AddAnnotation(key, v); err != nil {
 			klog.Warningf("Failed to set admission audit annotation %s to %s for mutating webhook %s: %v", key, v, h.Name, err)
 		}
+	}
+	for _, w := range result.Warnings {
+		warning.AddWarning(ctx, "", w)
 	}
 
 	if !result.Allowed {
