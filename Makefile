@@ -75,6 +75,7 @@ test-sanity:
 
 bin/k8s-e2e-tester: | bin
 	go get github.com/aws/aws-k8s-tester/e2e/tester/cmd/k8s-e2e-tester@master
+	go mod vendor
 
 .PHONY: test-e2e-single-az
 test-e2e-single-az: bin/k8s-e2e-tester

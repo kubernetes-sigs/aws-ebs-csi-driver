@@ -96,6 +96,7 @@ uninstall: |
 
 test: |
   go get github.com/onsi/ginkgo/ginkgo
+  go mod vendor
   export KUBECONFIG=$HOME/.kube/config
   export AWS_AVAILABILITY_ZONES=us-west-2a
   ARTIFACTS=${ARTIFACTS-/tmp/ebs-csi/artifacts}
