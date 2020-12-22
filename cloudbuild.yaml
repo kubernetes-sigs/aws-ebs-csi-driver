@@ -7,3 +7,5 @@ steps:
       - PULL_BASE_REF=${_PULL_BASE_REF}
       - REGISTRY_NAME=gcr.io/${_STAGING_PROJECT}
       - HOME=/root
+substitutions:
+  _STAGING_PROJECT: "k8s-staging-provider-aws"
