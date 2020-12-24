@@ -8,6 +8,7 @@ spec:
     name: static-snapshot-demo
     namespace: default 
   source:
-    snapshotHandle: snap-0fba4d7649d765c50
+    snapshotHandle: snap-0644009a49add11ac
   driver: ebs.csi.aws.com
+  deletionPolicy: Delete
   volumeSnapshotClassName: csi-aws-vsc

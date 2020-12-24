@@ -17,6 +17,7 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"math/rand"
 	"time"
 
@@ -49,6 +50,9 @@ const (
 	slowPodStartTimeout = 15 * time.Minute
 	// Description that will printed during tests
 	failedConditionDescription = "Error status code"
+
+	volumeSnapshotNameStatic = "volume-snapshot-tester"
+	volumeSnapshotContenetNameStatic = "volume-snapshot-content-tester"
 )
 
 type TestStorageClass struct {
@@ -81,9 +85,9 @@ func (t *TestStorageClass) Cleanup() {
 }
 
 type TestVolumeSnapshotClass struct {
-	client              restclientset.Interface
-	volumeSnapshotClass *v1beta1.VolumeSnapshotClass
-	namespace           *v1.Namespace
+	client                restclientset.Interface
+	volumeSnapshotClass   *v1beta1.VolumeSnapshotClass
+	namespace             *v1.Namespace
 }
 
 func NewTestVolumeSnapshotClass(c restclientset.Interface, ns *v1.Namespace, vsc *v1beta1.VolumeSnapshotClass) *TestVolumeSnapshotClass {
@@ -124,6 +128,65 @@ func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) 
 	return snapshot
 }
 
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *v1beta1.VolumeSnapshotContent) *v1beta1.VolumeSnapshot {
+	By("creating a VolumeSnapshot from vsc " + vsc.Name)
+	snapshot := &v1beta1.VolumeSnapshot{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       VolumeSnapshotKind,
+			APIVersion: SnapshotAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      volumeSnapshotNameStatic,
+			Namespace: t.namespace.Name,
+		},
+		Spec: v1beta1.VolumeSnapshotSpec{
+			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
+			Source: v1beta1.VolumeSnapshotSource{
+				VolumeSnapshotContentName: &vsc.Name,
+			},
+		},
+	}
+	snapshotObj, err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshots(t.namespace.Name).Create(snapshot)
+	framework.ExpectNoError(err)
+	return snapshotObj
+}
+
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId string) *v1beta1.VolumeSnapshotContent {
+	By("creating a VolumeSnapshotContent from snapshotId: " + snapshotId)
+	snapshotContent := &v1beta1.VolumeSnapshotContent{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       VolumeSnapshotContentKind,
+			APIVersion: SnapshotAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      volumeSnapshotContenetNameStatic,
+			Namespace: t.namespace.Name,
+		},
+		Spec: v1beta1.VolumeSnapshotContentSpec{
+			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
+			DeletionPolicy:          "Delete",
+			VolumeSnapshotRef: v1.ObjectReference{
+				Kind:      VolumeSnapshotKind,
+				Name:      volumeSnapshotNameStatic,
+				Namespace: t.namespace.Name,
+			},
+			Driver: "ebs.csi.aws.com",
+			Source: v1beta1.VolumeSnapshotContentSource{
+				SnapshotHandle: aws.String(snapshotId),
+			},
+		},
+	}
+	volumeSnapshotContent, err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotContents().Create(snapshotContent)
+	framework.ExpectNoError(err)
+	return volumeSnapshotContent
+}
+
+func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapshot *v1beta1.VolumeSnapshot, volumeSnapshotContent *v1beta1.VolumeSnapshotContent) {
+	volumeSnapshotContent.Spec.VolumeSnapshotRef.Name = volumeSnapshot.Name
+	volumeSnapshotContent, err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotContents().Update(volumeSnapshotContent)
+	framework.ExpectNoError(err)
+
+}
 func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *v1beta1.VolumeSnapshot) {
 	By("waiting for VolumeSnapshot to be ready to use - " + snapshot.Name)
 	err := wait.Poll(15*time.Second, 5*time.Minute, func() (bool, error) {
@@ -149,6 +212,15 @@ func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *v1beta1.VolumeSnapshot) {
 	framework.ExpectNoError(err)
 }
 
+func (t *TestVolumeSnapshotClass) DeleteVolumeSnapshotContent(vsc *v1beta1.VolumeSnapshotContent) {
+	By("deleting a VolumeSnapshotContent " + vsc.Name)
+	err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotContents().Delete(vsc.Name, &metav1.DeleteOptions{})
+	//framework.ExpectNoError(err)
+
+	err = t.waitForVolumeSnapshotContentDeleted(vsc.Name, 5*time.Second, 5*time.Minute)
+	framework.ExpectNoError(err)
+}
+
 func (t *TestVolumeSnapshotClass) Cleanup() {
 	e2elog.Logf("deleting VolumeSnapshotClass %s", t.volumeSnapshotClass.Name)
 	err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotClasses().Delete(t.volumeSnapshotClass.Name, nil)
@@ -169,6 +241,22 @@ func (t *TestVolumeSnapshotClass) waitForSnapshotDeleted(ns string, snapshotName
 		}
 	}
 	return fmt.Errorf("VolumeSnapshot %s is not removed from the system within %v", snapshotName, timeout)
+}
+
+func (t *TestVolumeSnapshotClass) waitForVolumeSnapshotContentDeleted(vscName string, poll, timeout time.Duration) error {
+	e2elog.Logf("Waiting up to %v for VolumeSnapshotContent %s to be removed", timeout, vscName)
+	c := snapshotclientset.New(t.client).SnapshotV1beta1()
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
+		_, err := c.VolumeSnapshotContents().Get(vscName, metav1.GetOptions{})
+		if err != nil {
+			if apierrs.IsNotFound(err) {
+				e2elog.Logf("VolumeSnapshotContent %q doesn't exist in the system", vscName)
+				return nil
+			}
+			e2elog.Logf("Failed to get VolumeSnapshotContent %q, retrying in %v. Error: %v", vscName, poll, err)
+		}
+	}
+	return fmt.Errorf("VolumeSnapshot %s is not removed from the system within %v", vscName, timeout)
 }
 
 type TestPreProvisionedPersistentVolume struct {
@@ -223,6 +311,7 @@ func NewTestPersistentVolumeClaimWithDataSource(c clientset.Interface, ns *v1.Na
 	if volumeMode == Block {
 		mode = v1.PersistentVolumeBlock
 	}
+	By("Create tpvc with data source")
 	return &TestPersistentVolumeClaim{
 		client:       c,
 		claimSize:    claimSize,
@@ -334,7 +423,7 @@ func (t *TestPersistentVolumeClaim) Cleanup() {
 	// attempts may fail, as the volume is still attached to a node because
 	// kubelet is slowly cleaning up the previous pod, however it should succeed
 	// in a couple of minutes.
-	if t.persistentVolume.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete {
+	if t.persistentVolume != nil && t.persistentVolume.Spec.PersistentVolumeReclaimPolicy == v1.PersistentVolumeReclaimDelete {
 		By(fmt.Sprintf("waiting for claim's PV %q to be deleted", t.persistentVolume.Name))
 		err = framework.WaitForPersistentVolumeDeleted(t.client, t.persistentVolume.Name, 5*time.Second, 10*time.Minute)
 		framework.ExpectNoError(err)
