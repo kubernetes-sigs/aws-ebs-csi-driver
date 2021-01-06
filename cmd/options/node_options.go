@@ -34,5 +34,5 @@ type NodeOptions struct {
 }
 
 func (o *NodeOptions) AddFlags(fs *flag.FlagSet) {
-	fs.Int64Var(&o.VolumeAttachLimit, "volume-attach-limit", -1, "Value value for the maximum number of volumes attachable for all nodes. If the flag is not specified then the value is approximated from the instance type.")
+	fs.Int64Var(&o.VolumeAttachLimit, "volume-attach-limit", -1, "Value for the maximum number of volumes attachable per node. If specified, the limit applies to all nodes. If not specified, the value is approximated from the instance type.")
 }

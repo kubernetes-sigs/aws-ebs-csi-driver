@@ -4,7 +4,7 @@ cluster:
     zones: us-west-2a
     nodeCount: 3
     nodeSize: c5.large
-    kubernetesVersion: 1.15.3
+    kubernetesVersion: 1.18.9
     featureGates: |2
         kubeAPIServer:
           featureGates:
@@ -13,6 +13,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             VolumeSnapshotDataSource: "true"
             CSIInlineVolume: "true"
@@ -23,6 +24,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             CSIInlineVolume: "true"
         kubelet:
@@ -32,6 +34,7 @@ cluster:
             CSIBlockVolume: "true"
             CSIMigration: "true"
             CSIMigrationAWS: "true"
+            CSIMigrationAWSComplete: "true"
             ExpandCSIVolumes: "true"
             CSIInlineVolume: "true"
     iamPolicies: |2
@@ -92,9 +95,9 @@ install: |
       --set enableVolumeSnapshot=true \
       --set image.repository=$IMAGE_NAME \
       --set image.tag=$IMAGE_TAG \
-      ./aws-ebs-csi-driver
+      ./charts/aws-ebs-csi-driver
 
-uninstall: | 
+uninstall: |
   echo "Removing driver"
   helm del --purge aws-ebs-csi-driver
 

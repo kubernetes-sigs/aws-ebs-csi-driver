@@ -18,8 +18,10 @@ package cloud
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
@@ -33,12 +35,19 @@ var (
 )
 
 func TestNewMetadataService(t *testing.T) {
+
+	validRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	validOutpostArn, _ := arn.Parse(strings.ReplaceAll(validRawOutpostArn, "outpost/", ""))
+
 	testCases := []struct {
 		name             string
 		isAvailable      bool
 		isPartial        bool
 		identityDocument ec2metadata.EC2InstanceIdentityDocument
+		rawOutpostArn    string
+		outpostArn       arn.ARN
 		err              error
+		getOutpostArnErr error // We should keep this specific to outpost-arn until we need to use more endpoints
 	}{
 		{
 			name:        "success: normal",
@@ -50,6 +59,42 @@ func TestNewMetadataService(t *testing.T) {
 				AvailabilityZone: stdAvailabilityZone,
 			},
 			err: nil,
+		},
+		{
+			name:        "success: outpost-arn is available",
+			isAvailable: true,
+			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			rawOutpostArn: validRawOutpostArn,
+			outpostArn:    validOutpostArn,
+			err:           nil,
+		},
+		{
+			name:        "success: outpost-arn is invalid",
+			isAvailable: true,
+			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			err: nil,
+		},
+		{
+			name:        "success: outpost-arn is not found",
+			isAvailable: true,
+			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			err:              nil,
+			getOutpostArnErr: fmt.Errorf("404"),
 		},
 		{
 			name:        "fail: metadata not available",
@@ -109,6 +154,18 @@ func TestNewMetadataService(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name:        "fail: outpost-arn failed",
+			isAvailable: true,
+			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			err:              nil,
+			getOutpostArnErr: fmt.Errorf("405"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -121,8 +178,12 @@ func TestNewMetadataService(t *testing.T) {
 				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.identityDocument, tc.err)
 			}
 
-			m, err := NewMetadataService(mockEC2Metadata)
 			if tc.isAvailable && tc.err == nil && !tc.isPartial {
+				mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return(tc.rawOutpostArn, tc.getOutpostArnErr)
+			}
+
+			m, err := NewMetadataService(mockEC2Metadata)
+			if tc.isAvailable && tc.err == nil && tc.getOutpostArnErr == nil && !tc.isPartial {
 				if err != nil {
 					t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
 				}
@@ -142,8 +203,12 @@ func TestNewMetadataService(t *testing.T) {
 				if m.GetAvailabilityZone() != tc.identityDocument.AvailabilityZone {
 					t.Fatalf("GetAvailabilityZone() failed: expected %v, got %v", tc.identityDocument.AvailabilityZone, m.GetAvailabilityZone())
 				}
+
+				if m.GetOutpostArn() != tc.outpostArn {
+					t.Fatalf("GetOutpostArn() failed: expected %v, got %v", tc.outpostArn, m.GetOutpostArn())
+				}
 			} else {
-				if err == nil {
+				if err == nil && tc.getOutpostArnErr == nil {
 					t.Fatal("NewMetadataService() failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
 				}
 			}

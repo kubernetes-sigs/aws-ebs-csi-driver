@@ -19,7 +19,7 @@ import (
 
 	"github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,11 +106,17 @@ func GetParameters(volumeType string, fsType string, encrypted bool) map[string]
 		"type":                      volumeType,
 		"csi.storage.k8s.io/fstype": fsType,
 	}
-	if iops := IOPSPerGBForVolumeType(volumeType); iops != "" {
-		parameters["iopsPerGB"] = iops
+	if iopsPerGB := IOPSPerGBForVolumeType(volumeType); iopsPerGB != "" {
+		parameters[ebscsidriver.IopsPerGBKey] = iopsPerGB
+	}
+	if iops := IOPSForVolumeType(volumeType); iops != "" {
+		parameters[ebscsidriver.IopsKey] = iops
+	}
+	if throughput := ThroughputForVolumeType(volumeType); throughput != "" {
+		parameters[ebscsidriver.ThroughputKey] = throughput
 	}
 	if encrypted {
-		parameters["encrypted"] = True
+		parameters[ebscsidriver.EncryptedKey] = True
 	}
 	return parameters
 }
@@ -118,13 +124,11 @@ func GetParameters(volumeType string, fsType string, encrypted bool) map[string]
 // MinimumSizeForVolumeType returns the minimum disk size for each volumeType
 func MinimumSizeForVolumeType(volumeType string) string {
 	switch volumeType {
-	case "st1":
+	case "st1", "sc1":
 		return "500Gi"
-	case "sc1":
-		return "500Gi"
-	case "gp2":
+	case "gp2", "gp3":
 		return "1Gi"
-	case "io1":
+	case "io1", "io2":
 		return "4Gi"
 	case "standard":
 		return "10Gi"
@@ -133,12 +137,43 @@ func MinimumSizeForVolumeType(volumeType string) string {
 	}
 }
 
-// IOPSPerGBForVolumeType returns 25 for io1 volumeType
+// IOPSPerGBForVolumeType returns the maximum iops per GB for each volumeType
 // Otherwise returns an empty string
 func IOPSPerGBForVolumeType(volumeType string) string {
-	if volumeType == "io1" {
-		// Minimum disk size is 4, minimum IOPS is 100
-		return "25"
+	switch volumeType {
+	case "io1":
+		// Maximum IOPS/GB for io1 is 50
+		return "50"
+	case "io2":
+		// Maximum IOPS/GB for io2 is 500
+		return "500"
+	default:
+		return ""
 	}
-	return ""
+}
+
+// IOPSForVolumeType returns the maximum iops for each volumeType
+// Otherwise returns an empty string
+func IOPSForVolumeType(volumeType string) string {
+	switch volumeType {
+	case "gp3":
+		// Maximum IOPS for gp3 is 16000. However, maximum IOPS/GB for gp3 is 500.
+		// Since the tests will run using minimum volume capacity (1GB), set to 500.
+		return "500"
+	default:
+		return ""
+	}
+}
+
+// ThroughputPerVolumeType returns the maximum throughput for each volumeType
+// Otherwise returns an empty string
+func ThroughputForVolumeType(volumeType string) string {
+	switch volumeType {
+	case "gp3":
+		// Maximum throughput for gp3 is 1000. However, maximum throughput/iops for gp3 is 0.25
+		// Since the default iops is 3000, set to 750.
+		return "750"
+	default:
+		return ""
+	}
 }

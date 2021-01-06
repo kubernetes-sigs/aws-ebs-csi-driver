@@ -65,6 +65,39 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: normal with io2 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     100,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: normal with gp3 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeGP3,
+				IOPS:          3000,
+				Throughput:    125,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: normal with provided zone",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -93,6 +126,39 @@ func TestCreateDisk(t *testing.T) {
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: outpost volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: empty outpost arn",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				AvailabilityZone: expZone,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "",
 			},
 			expErr: nil,
 		},
@@ -164,6 +230,7 @@ func TestCreateDisk(t *testing.T) {
 				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
 				State:            aws.String(volState),
 				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+				OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
 			}
 			snapshot := &ec2.Snapshot{
 				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
@@ -204,6 +271,9 @@ func TestCreateDisk(t *testing.T) {
 					}
 					if tc.expDisk.AvailabilityZone != disk.AvailabilityZone {
 						t.Fatalf("CreateDisk() failed: expected availabilityZone %q, got %q", tc.expDisk.AvailabilityZone, disk.AvailabilityZone)
+					}
+					if tc.expDisk.OutpostArn != disk.OutpostArn {
+						t.Fatalf("CreateDisk() failed: expected outpoustArn %q, got %q", tc.expDisk.OutpostArn, disk.OutpostArn)
 					}
 				}
 			}
@@ -382,6 +452,7 @@ func TestGetDiskByName(t *testing.T) {
 		volumeName       string
 		volumeCapacity   int64
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
@@ -389,6 +460,14 @@ func TestGetDiskByName(t *testing.T) {
 			volumeName:       "vol-test-1234",
 			volumeCapacity:   util.GiBToBytes(1),
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeName:       "vol-test-1234",
+			volumeCapacity:   util.GiBToBytes(1),
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -409,6 +488,7 @@ func TestGetDiskByName(t *testing.T) {
 				VolumeId:         aws.String(tc.volumeName),
 				Size:             aws.Int64(util.BytesToGiB(tc.volumeCapacity)),
 				AvailabilityZone: aws.String(tc.availabilityZone),
+				OutpostArn:       aws.String(tc.outpostArn),
 			}
 
 			ctx := context.Background()
@@ -429,6 +509,9 @@ func TestGetDiskByName(t *testing.T) {
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
 				}
+				if tc.outpostArn != disk.OutpostArn {
+					t.Fatalf("GetDiskByName() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
+				}
 			}
 
 			mockCtrl.Finish()
@@ -441,12 +524,20 @@ func TestGetDiskByID(t *testing.T) {
 		name             string
 		volumeID         string
 		availabilityZone string
+		outpostArn       string
 		expErr           error
 	}{
 		{
 			name:             "success: normal",
 			volumeID:         "vol-test-1234",
 			availabilityZone: expZone,
+			expErr:           nil,
+		},
+		{
+			name:             "success: outpost volume",
+			volumeID:         "vol-test-1234",
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			expErr:           nil,
 		},
 		{
@@ -469,6 +560,7 @@ func TestGetDiskByID(t *testing.T) {
 						{
 							VolumeId:         aws.String(tc.volumeID),
 							AvailabilityZone: aws.String(tc.availabilityZone),
+							OutpostArn:       aws.String(tc.outpostArn),
 						},
 					},
 				},
@@ -489,6 +581,9 @@ func TestGetDiskByID(t *testing.T) {
 				}
 				if tc.availabilityZone != disk.AvailabilityZone {
 					t.Fatalf("GetDiskByName() failed: expected availabilityZone %q, got %q", tc.availabilityZone, disk.AvailabilityZone)
+				}
+				if disk.OutpostArn != tc.outpostArn {
+					t.Fatalf("GetDisk() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
 				}
 			}
 
@@ -711,25 +806,24 @@ func TestResizeDisk(t *testing.T) {
 			expErr:              fmt.Errorf("ResizeDisk generic error"),
 		},
 		{
-			name:     "success: there is a resizing in progress",
+			name:     "failure: volume in modifying state",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int64(1),
 				AvailabilityZone: aws.String(defaultZone),
 			},
-			modifiedVolumeError: awserr.New("IncorrectModificationState", "", nil),
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
 				VolumesModifications: []*ec2.VolumeModification{
 					{
 						VolumeId:          aws.String("vol-test"),
 						TargetSize:        aws.Int64(2),
-						ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+						ModificationState: aws.String(ec2.VolumeModificationStateModifying),
 					},
 				},
 			},
 			reqSizeGiB: 2,
-			expErr:     nil,
+			expErr:     fmt.Errorf("ResizeDisk generic error"),
 		},
 	}
 
@@ -737,6 +831,8 @@ func TestResizeDisk(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			// reduce number of steps to reduce test time
+			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
