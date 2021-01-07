@@ -1,9 +1,17 @@
+# v0.8.1
+
+## Notable changes
+- Images in k8s.gcr.io are multiarch.
+
+### Bug fixes
+* release-0.8: Use buildx in cloudbuild ([#670](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/670), [@wongma7](https://github.com/wongma7))
+
 # v0.8.0
 
 ## Notable changes
 - gp3 is now the default volume type.
 - Images will be built on a Debian base by default. Images built on Amazon Linux will still be available but with the tag suffix `-amazonlinux`.
-- Images will be published to k8s.gcr.io in addition to ECR, GitHub, and Docker Hub.
+- Images will be published to k8s.gcr.io in addition to ECR and Docker Hub.
 
 ### New features
 * Chart option to disable default toleration of all taints ([#526](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/526), [@risinger](https://github.com/risinger))
