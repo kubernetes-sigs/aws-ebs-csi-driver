@@ -13,6 +13,7 @@ require (
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
 	google.golang.org/grpc v1.26.0
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
