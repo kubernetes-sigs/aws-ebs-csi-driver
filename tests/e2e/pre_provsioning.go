@@ -17,6 +17,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	k8srestclient "k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"strings"
@@ -38,7 +39,8 @@ const (
 
 	awsAvailabilityZonesEnv = "AWS_AVAILABILITY_ZONES"
 
-	dummyVolumeName = "pre-provisioned"
+	dummyVolumeName   = "pre-provisioned"
+	dummySnapshotName = "pre-provisioned-snapshot"
 )
 
 var (
@@ -50,12 +52,15 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
 
 	var (
-		cs        clientset.Interface
-		ns        *v1.Namespace
-		ebsDriver driver.PreProvisionedVolumeTestDriver
-		cloud     awscloud.Cloud
-		volumeID  string
-		diskSize  string
+		cs           clientset.Interface
+		ns           *v1.Namespace
+		ebsDriver    driver.PreProvisionedVolumeTestDriver
+		pvTestDriver driver.PVTestDriver
+		snapshotrcs  k8srestclient.Interface
+		cloud        awscloud.Cloud
+		volumeID     string
+		snapshotID   string
+		diskSize     string
 		// Set to true if the volume should be deleted automatically after test
 		skipManuallyDeletingVolume bool
 	)
@@ -90,7 +95,21 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		}
 		volumeID = disk.VolumeID
 		diskSize = fmt.Sprintf("%dGi", defaultDiskSize)
+		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1beta1)
+		if err != nil {
+			Fail(fmt.Sprintf("could not get rest clientset: %v", err))
+		}
+		pvTestDriver = driver.InitEbsCSIDriver()
 		By(fmt.Sprintf("Successfully provisioned EBS volume: %q\n", volumeID))
+		snapshotOptions := &awscloud.SnapshotOptions{
+			Tags: map[string]string{awscloud.SnapshotNameTagKey: dummySnapshotName},
+		}
+		snapshot, err := cloud.CreateSnapshot(context.Background(), volumeID, snapshotOptions)
+		if err != nil {
+			Fail(fmt.Sprintf("could not provision a snapshot from volume: %v", volumeID))
+		}
+		snapshotID = snapshot.SnapshotID
+		By(fmt.Sprintf("Successfully provisioned EBS volume snapshot: %q\n", snapshotID))
 	})
 
 	AfterEach(func() {
@@ -128,6 +147,26 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Pods:      pods,
 		}
 		test.Run(cs, ns)
+	})
+
+	It("[env] should use a pre-defined snapshot and create pv from that", func() {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && sync",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: diskSize,
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		test := testsuites.PreProvisionedVolumeSnapshotTest{
+			CSIDriver: pvTestDriver,
+			Pod:       pod,
+		}
+		test.Run(cs, snapshotrcs, ns, snapshotID)
 	})
 
 	It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
