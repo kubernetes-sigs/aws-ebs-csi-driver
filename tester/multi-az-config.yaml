@@ -4,7 +4,7 @@ cluster:
     zones: us-west-2a,us-west-2b,us-west-2c
     nodeCount: 3
     nodeSize: c5.large
-    kubernetesVersion: 1.16.0
+    kubernetesVersion: 1.18.9
     featureGates: |2
         kubeAPIServer:
           featureGates:
@@ -83,11 +83,11 @@ install: |
       --set enableVolumeSnapshot=true \
       --set image.repository=$IMAGE_NAME \
       --set image.tag=$IMAGE_TAG \
-      ./aws-ebs-csi-driver
+      ./charts/aws-ebs-csi-driver
 
   kubectl get po -n kube-system
 
-uninstall: | 
+uninstall: |
   echo "Removing driver"
   bin/helm del --purge aws-ebs-csi-driver
 
@@ -95,4 +95,5 @@ test: |
   go get github.com/onsi/ginkgo/ginkgo
   export KUBECONFIG=$HOME/.kube/config
   export AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c
+  ARTIFACTS=${ARTIFACTS-/tmp/ebs-csi/artifacts}
   $(go env GOBIN)/ginkgo -p -nodes=32 -v --focus="\[ebs-csi-e2e\] \[multi-az\]" tests/e2e -- -report-dir=$ARTIFACTS

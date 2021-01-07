@@ -14,7 +14,8 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
-VERSION=v0.6.0
+VERSION=v0.8.0
+VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
@@ -91,15 +92,21 @@ test-e2e-migration:
 
 .PHONY: image-release
 image-release:
-	docker build -t $(IMAGE):$(VERSION) .
+	docker build -t $(IMAGE):$(VERSION) . --target debian-base
+	docker build -t $(IMAGE):$(VERSION_AMAZONLINUX) . --target amazonlinux
 
 .PHONY: image
 image:
-	docker build -t $(IMAGE):latest .
+	docker build -t $(IMAGE):latest . --target debian-base
+
+.PHONY: image-amazonlinux
+image-amazonlinux:
+	docker build -t $(IMAGE):latest . --target amazonlinux
 
 .PHONY: push-release
 push-release:
 	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE):$(VERSION_AMAZONLINUX)
 
 .PHONY: push
 push:
@@ -109,30 +116,27 @@ push:
 test: verify-vendor
 verify: verify-vendor
 verify-vendor:
-	echo "go:" `go version`
-	echo "git:" `git version`
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
 
 
 .PHONY: generate-kustomize
 generate-kustomize: bin/helm
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../deploy/kubernetes/base/clusterrole-attacher.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-provisioner.yaml > ../deploy/kubernetes/base/clusterrole-provisioner.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-attacher.yaml > ../deploy/kubernetes/base/clusterrolebinding-attacher.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-provisioner.yaml > ../deploy/kubernetes/base/clusterrolebinding-provisioner.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/controller.yaml -f ../deploy/kubernetes/values/controller.yaml > ../deploy/kubernetes/base/controller.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/csidriver.yaml > ../deploy/kubernetes/base/csidriver.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/node.yaml -f ../deploy/kubernetes/values/controller.yaml > ../deploy/kubernetes/base/node.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml > ../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-resizer.yaml -f ../deploy/kubernetes/values/resizer.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_resizer_clusterrole.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-snapshot-controller.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_clusterrole.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrole-snapshotter.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshotter_clusterrole.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-resizer.yaml -f ../deploy/kubernetes/values/resizer.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_resizer_clusterrolebinding.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-snapshot-controller.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_clusterrolebinding.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/clusterrolebinding-snapshotter.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshotter_clusterrolebinding.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/role-snapshot-controller-leaderelection.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_role.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
-	cd aws-ebs-csi-driver && ../bin/helm template kustomize . -s templates/statefulset.yaml -f ../deploy/kubernetes/values/snapshotter.yaml > ../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
-
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../../deploy/kubernetes/base/clusterrole-attacher.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-provisioner.yaml > ../../deploy/kubernetes/base/clusterrole-provisioner.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-attacher.yaml > ../../deploy/kubernetes/base/clusterrolebinding-attacher.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-provisioner.yaml > ../../deploy/kubernetes/base/clusterrolebinding-provisioner.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller.yaml -f ../../deploy/kubernetes/values/controller.yaml > ../../deploy/kubernetes/base/controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/csidriver.yaml > ../../deploy/kubernetes/base/csidriver.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/node.yaml -f ../../deploy/kubernetes/values/controller.yaml > ../../deploy/kubernetes/base/node.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-resizer.yaml -f ../../deploy/kubernetes/values/resizer.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_resizer_clusterrole.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_clusterrole.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-snapshotter.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshotter_clusterrole.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-resizer.yaml -f ../../deploy/kubernetes/values/resizer.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_resizer_clusterrolebinding.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_clusterrolebinding.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-snapshotter.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshotter_clusterrolebinding.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_role.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/statefulset.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml

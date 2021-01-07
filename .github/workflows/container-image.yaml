@@ -1,38 +1,59 @@
 name: Container Images
 
-on: push
+on:
+  push:
+
 jobs:
-  build:
+  buildx:
     # this is to prevent the job to run at forked projects
     if: github.repository == 'kubernetes-sigs/aws-ebs-csi-driver'
+    env:
+      IMAGE: aws-ebs-csi-driver
+      DEB_BUILD_TAG: aws-ebs-csi-driver:debian
+      AL2_BUILD_TAG: aws-ebs-csi-driver:amazonlinux
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Build container image
-      run: |
-        docker build -t aws-ebs-csi-driver .
-    - name: Push to Github registry
-      run: |
-        USER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
-        BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
-        IMAGE=aws-ebs-csi-driver
-        if [ "$BRANCH" = "master" ]; then
-          TAG="latest"
-        else
-          TAG=$BRANCH
-        fi
-        docker login docker.pkg.github.com -u $USER -p ${{ secrets.REGISTRY_TOKEN }}
-        docker tag aws-ebs-csi-driver docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
-        docker push docker.pkg.github.com/$GITHUB_REPOSITORY/$IMAGE:$TAG
-    - name: Push to Dockerhub registry
-      run: |
-        BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
-        REPO=amazon/aws-ebs-csi-driver
-        if [ "$BRANCH" = "master" ]; then
-          TAG="latest"
-        else
-          TAG=$BRANCH
-        fi
-        docker login -u ${{ secrets.DOCKERHUB_USER }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-        docker tag aws-ebs-csi-driver $REPO:$TAG
-        docker push $REPO:$TAG
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Build debian target
+        run: |
+          docker buildx build \
+            -t $DEB_BUILD_TAG \
+            --platform=linux/arm64,linux/amd64 \
+            --output="type=image,push=false" . \
+            --target=debian-base
+      - name: Build amazonlinux target
+        run: |
+          docker buildx build \
+            -t $AL2_BUILD_TAG \
+            --platform=linux/arm64,linux/amd64 \
+            --output="type=image,push=false" . \
+            --target=amazonlinux
+      - name: Set environment variables
+        run: |
+          BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          if [ "$BRANCH" = "master" ]; then
+            TAG="latest"
+          else
+            TAG=$BRANCH
+          fi
+          echo "TAG=$TAG" >> $GITHUB_ENV
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push amazonlinux target to Docker Hub
+        run: |
+          AL2_PUSH_TAG="amazon/$IMAGE:$TAG-amazonlinux"
+          docker buildx build \
+            -t $AL2_PUSH_TAG \
+            --platform=linux/arm64,linux/amd64 \
+            --output="type=image,push=true" . \
+            --target=amazonlinux

@@ -41,9 +41,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
 
 	var (
-		cs        clientset.Interface
-		ns        *v1.Namespace
-		ebsDriver driver.PVTestDriver
+		cs          clientset.Interface
+		ns          *v1.Namespace
+		ebsDriver   driver.PVTestDriver
+		volumeTypes = awscloud.ValidVolumeTypes
+		fsTypes     = []string{ebscsidriver.FSTypeXfs}
 	)
 
 	BeforeEach(func() {
@@ -52,8 +54,8 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		ebsDriver = driver.InitEbsCSIDriver()
 	})
 
-	for _, t := range awscloud.ValidVolumeTypes {
-		for _, fs := range ebscsidriver.ValidFSTypes {
+	for _, t := range volumeTypes {
+		for _, fs := range fsTypes {
 			volumeType := t
 			fsType := fs
 			It(fmt.Sprintf("should create a volume on demand with volume type %q and fs type %q", volumeType, fsType), func() {
@@ -82,7 +84,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		}
 	}
 
-	for _, t := range awscloud.ValidVolumeTypes {
+	for _, t := range volumeTypes {
 		volumeType := t
 		It(fmt.Sprintf("should create a volume on demand with volumeType %q and encryption", volumeType), func() {
 			pods := []testsuites.PodDetails{
