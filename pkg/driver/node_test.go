@@ -1182,7 +1182,6 @@ func TestNodeGetVolumeStats(t *testing.T) {
 	awsDriver := nodeService{
 		metadata: mockMetadata,
 		mounter:  mockMounter,
-		statter:  NewFakeStatter(),
 		inFlight: internal.NewInFlight(),
 	}
 

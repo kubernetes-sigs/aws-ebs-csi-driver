@@ -28,10 +28,12 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/util/resizefs"
+	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/utils/exec"
 	"k8s.io/utils/mount"
 )
@@ -74,7 +76,6 @@ var (
 type nodeService struct {
 	metadata      cloud.MetadataService
 	mounter       Mounter
-	statter       Statter
 	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
 }
@@ -90,7 +91,6 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 	return nodeService{
 		metadata:      metadata,
 		mounter:       newNodeMounter(),
-		statter:       NewStatter(),
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
@@ -365,12 +365,13 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		return nil, status.Errorf(codes.NotFound, "path %s does not exist", req.VolumePath)
 	}
 
-	isBlock, err := d.statter.IsBlockDevice(req.VolumePath)
+	isBlock, err := d.isBlockDevice(req.VolumePath)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to determine whether %s is block device: %v", req.VolumePath, err)
 	}
 	if isBlock {
-		bcap, err := d.getBlockSizeBytes(req.VolumePath)
+		var bcap int64
+		bcap, err = d.getBlockSizeBytes(req.VolumePath)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
 		}
@@ -384,7 +385,9 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		}, nil
 	}
 
-	available, capacity, used, inodesFree, inodes, inodesUsed, err := d.statter.StatFS(req.VolumePath)
+	metricsProvider := volume.NewMetricsStatFS(req.VolumePath)
+
+	metrics, err := metricsProvider.GetMetrics()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.VolumePath, err)
 	}
@@ -393,15 +396,15 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		Usage: []*csi.VolumeUsage{
 			{
 				Unit:      csi.VolumeUsage_BYTES,
-				Available: available,
-				Total:     capacity,
-				Used:      used,
+				Available: metrics.Available.AsDec().UnscaledBig().Int64(),
+				Total:     metrics.Capacity.AsDec().UnscaledBig().Int64(),
+				Used:      metrics.Used.AsDec().UnscaledBig().Int64(),
 			},
 			{
 				Unit:      csi.VolumeUsage_INODES,
-				Available: inodesFree,
-				Total:     inodes,
-				Used:      inodesUsed,
+				Available: metrics.InodesFree.AsDec().UnscaledBig().Int64(),
+				Total:     metrics.Inodes.AsDec().UnscaledBig().Int64(),
+				Used:      metrics.InodesUsed.AsDec().UnscaledBig().Int64(),
 			},
 		},
 	}, nil
@@ -609,6 +612,16 @@ func hasMountOption(options []string, opt string) bool {
 		}
 	}
 	return false
+}
+
+func (d *nodeService) isBlockDevice(fullPath string) (bool, error) {
+	var st unix.Stat_t
+	err := unix.Stat(fullPath, &st)
+	if err != nil {
+		return false, err
+	}
+
+	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
 }
 
 func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
