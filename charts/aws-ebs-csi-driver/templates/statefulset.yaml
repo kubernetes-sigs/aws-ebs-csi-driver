@@ -20,7 +20,7 @@ spec:
         app: ebs-snapshot-controller
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
     spec:
-      serviceAccountName: ebs-snapshot-controller
+      serviceAccountName: {{ .Values.serviceAccount.snapshot.name }}
       containers:
         - name: snapshot-controller
           image: quay.io/k8scsi/snapshot-controller:v2.1.1

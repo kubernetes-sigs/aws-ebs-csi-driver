@@ -26,7 +26,7 @@ spec:
         {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
         {{- end }}
-      serviceAccountName: ebs-csi-controller-sa
+      serviceAccountName: {{ .Values.serviceAccount.controller.name }}
       priorityClassName: system-cluster-critical
       {{- with .Values.affinity }}
       affinity: {{ toYaml . | nindent 8 }}
