@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -1162,6 +1163,31 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				expectErr(t, err, codes.InvalidArgument)
 			},
 		},
+		{
+			name: "fail error on unmount",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeUnpublishVolumeRequest{
+					TargetPath: targetPath,
+					VolumeId:   "vol-test",
+				}
+
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(errors.New("test Unmount error"))
+				_, err := awsDriver.NodeUnpublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.Internal)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1170,32 +1196,127 @@ func TestNodeUnpublishVolume(t *testing.T) {
 }
 
 func TestNodeGetVolumeStats(t *testing.T) {
-	mockCtl := gomock.NewController(t)
-	defer mockCtl.Finish()
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success normal",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
 
-	mockMetadata := mocks.NewMockMetadataService(mockCtl)
-	mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				VolumePath := "./test"
+				err := os.MkdirAll(VolumePath, 0644)
+				if err != nil {
+					t.Fatalf("fail to create dir: %v", err)
+				}
+				defer os.RemoveAll(VolumePath)
 
-	awsDriver := nodeService{
-		metadata: mockMetadata,
-		mounter:  mockMounter,
-		inFlight: internal.NewInFlight(),
+				mockMounter.EXPECT().ExistsPath(VolumePath).Return(true, nil)
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeGetVolumeStatsRequest{
+					VolumeId:   "vol-test",
+					VolumePath: VolumePath,
+				}
+				_, err = awsDriver.NodeGetVolumeStats(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "fail path not exist",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				VolumePath := "/test"
+
+				mockMounter.EXPECT().ExistsPath(VolumePath).Return(false, nil)
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeGetVolumeStatsRequest{
+					VolumeId:   "vol-test",
+					VolumePath: VolumePath,
+				}
+				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
+				expectErr(t, err, codes.NotFound)
+			},
+		},
+		{
+			name: "fail can't determine block device",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				VolumePath := "/test"
+
+				mockMounter.EXPECT().ExistsPath(VolumePath).Return(true, nil)
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeGetVolumeStatsRequest{
+					VolumeId:   "vol-test",
+					VolumePath: VolumePath,
+				}
+				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
+				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "fail error calling existsPath",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				VolumePath := "/test"
+
+				mockMounter.EXPECT().ExistsPath(VolumePath).Return(false, errors.New("get existsPath call fail"))
+
+				awsDriver := nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeGetVolumeStatsRequest{
+					VolumeId:   "vol-test",
+					VolumePath: VolumePath,
+				}
+				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
+				expectErr(t, err, codes.Internal)
+			},
+		},
 	}
 
-	expErrCode := codes.Unimplemented
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
 
-	req := &csi.NodeGetVolumeStatsRequest{}
-	_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
-	if err == nil {
-		t.Fatalf("Expected error code %d, got nil", expErrCode)
-	}
-	srvErr, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("Could not get error status code from error: %v", srvErr)
-	}
-	if srvErr.Code() != expErrCode {
-		t.Fatalf("Expected error code %d, got %d message %s", expErrCode, srvErr.Code(), srvErr.Message())
-	}
 }
 
 func TestNodeGetCapabilities(t *testing.T) {
@@ -1223,6 +1344,13 @@ func TestNodeGetCapabilities(t *testing.T) {
 			Type: &csi.NodeServiceCapability_Rpc{
 				Rpc: &csi.NodeServiceCapability_RPC{
 					Type: csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+				},
+			},
+		},
+		{
+			Type: &csi.NodeServiceCapability_Rpc{
+				Rpc: &csi.NodeServiceCapability_RPC{
+					Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 				},
 			},
 		},
