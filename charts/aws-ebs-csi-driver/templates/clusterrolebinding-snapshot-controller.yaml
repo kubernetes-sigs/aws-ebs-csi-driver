@@ -8,7 +8,7 @@ metadata:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
-    name: ebs-snapshot-controller
+    name: {{ .Values.serviceAccount.snapshot.name }}
     namespace: kube-system
 roleRef:
   kind: ClusterRole
