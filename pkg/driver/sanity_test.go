@@ -26,14 +26,16 @@ func TestSanity(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	targetPath := filepath.Join(dir, "target")
+	targetPath := filepath.Join(dir, "mount")
 	stagingPath := filepath.Join(dir, "staging")
 	endpoint := "unix://" + filepath.Join(dir, "csi.sock")
 
 	config := &sanity.Config{
-		TargetPath:  targetPath,
-		StagingPath: stagingPath,
-		Address:     endpoint,
+		TargetPath:       targetPath,
+		StagingPath:      stagingPath,
+		Address:          endpoint,
+		CreateTargetDir:  createDir,
+		CreateStagingDir: createDir,
 	}
 
 	driverOptions := &DriverOptions{
@@ -71,6 +73,15 @@ func TestSanity(t *testing.T) {
 
 	// Now call the test suite
 	sanity.Test(t, config)
+}
+
+func createDir(targetPath string) (string, error) {
+	if err := os.MkdirAll(targetPath, 0300); err != nil {
+		if os.IsNotExist(err) {
+			return "", err
+		}
+	}
+	return targetPath, nil
 }
 
 type fakeCloudProvider struct {
@@ -309,13 +320,33 @@ func (f *fakeMounter) GetDeviceName(mountPath string) (string, int, error) {
 }
 
 func (f *fakeMounter) MakeFile(pathname string) error {
+	file, err := os.OpenFile(pathname, os.O_CREATE, os.FileMode(0644))
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	}
+	if err = file.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (f *fakeMounter) MakeDir(pathname string) error {
+	err := os.MkdirAll(pathname, os.FileMode(0755))
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	}
 	return nil
 }
 
 func (f *fakeMounter) ExistsPath(filename string) (bool, error) {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
 	return true, nil
 }
