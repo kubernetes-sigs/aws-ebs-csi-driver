@@ -13,7 +13,8 @@ function ebs_check_migration() {
   kubectl port-forward kube-controller-manager-"${NODE}" 10252:10252 -n kube-system &
 
   # Ensure port forwarding succeeded
-  while true; do
+  n=0
+  until [ "$n" -ge 30 ]; do
     set +e
     HEALTHZ=$(curl -s 127.0.0.1:10252/healthz)
     set -e
@@ -23,8 +24,16 @@ function ebs_check_migration() {
     else
       loudecho "Port forwarding is not yet ready"
     fi
+    n=$((n + 1))
     sleep 1
   done
+  if [[ "$n" -eq 30 ]]; then
+    loudecho "Timed out waiting for port forward"
+    for PROC in $(jobs -p); do
+      kill "${PROC}"
+    done
+    return 1
+  fi
 
   set +e
   curl 127.0.0.1:10252/metrics -s | grep -a 'volume_operation_total_seconds_bucket{operation_name="provision",plugin_name="ebs.csi.aws.com"'

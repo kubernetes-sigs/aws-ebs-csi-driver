@@ -119,8 +119,8 @@ loudecho "TEST_PASSED: ${TEST_PASSED}"
 
 OVERALL_TEST_PASSED="${TEST_PASSED}"
 if [[ "${EBS_CHECK_MIGRATION}" == true ]]; then
-  OUTPUT=$(ebs_check_migration)
-  echo "${OUTPUT}"
+  exec 5>&1
+  OUTPUT=$(ebs_check_migration | tee /dev/fd/5)
   MIGRATION_PASSED=$(echo "${OUTPUT}" | tail -1)
   loudecho "MIGRATION_PASSED: ${MIGRATION_PASSED}"
   if [ "${TEST_PASSED}" == 0 ] && [ "${MIGRATION_PASSED}" == 0 ]; then
