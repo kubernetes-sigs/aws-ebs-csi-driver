@@ -54,6 +54,7 @@ GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]"}
 GINKGO_NODES=${GINKGO_NODES:-4}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
+EBS_SNAPSHOT_CRD=${EBS_SNAPSHOT_CRD:-"./deploy/kubernetes/cluster/crd_snapshotter.yaml"}
 EBS_CHECK_MIGRATION=${EBS_CHECK_MIGRATION:-"false"}
 
 CLEAN=${CLEAN:-"true"}
@@ -100,14 +101,20 @@ if [[ $? -ne 0 ]]; then
 fi
 
 loudecho "Deploying driver"
-${HELM_BIN} upgrade --install ${DRIVER_NAME} \
+"${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
   --namespace kube-system \
   --set enableVolumeScheduling=true \
   --set enableVolumeResizing=true \
   --set enableVolumeSnapshot=true \
   --set image.repository="${IMAGE_NAME}" \
   --set image.tag="${IMAGE_TAG}" \
-  ./charts/${DRIVER_NAME}
+  ./charts/"${DRIVER_NAME}"
+
+if [[ -n "${EBS_SNAPSHOT_CRD}" ]]; then
+  loudecho "Deploying snapshot CRD"
+  kubectl apply -f "$EBS_SNAPSHOT_CRD"
+  # TODO deploy snapshot controller too instead of including in helm chart
+fi
 
 loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
