@@ -101,3 +101,13 @@ serviceAccount:
     create: true
     name: ebs-snapshot-controller
     annotations: {}
+
+storageClasses: []
+# Add StorageClass resources like:
+# - name: ebs-sc
+#   # defaults to WaitForFirstConsumer
+#   volumeBindingMode: WaitForFirstConsumer
+#   # defaults to Delete
+#   reclaimPolicy: Retain
+#   parameters:
+#     encrypted: "true"
