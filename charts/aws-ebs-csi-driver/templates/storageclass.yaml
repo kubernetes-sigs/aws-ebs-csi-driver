@@ -1,0 +1,15 @@
+{{- range .Values.storageClasses }}
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .name }}
+provisioner: ebs.csi.aws.com
+volumeBindingMode: {{ default "WaitForFirstConsumer" .volumeBindingMode }}
+{{- if hasKey . "reclaimPolicy" }}
+reclaimPolicy: {{ .reclaimPolicy }}
+{{- end }}
+{{- with .parameters }}
+parameters:
+{{ toYaml . | indent 2 }}
+{{- end }}
+{{- end }}
