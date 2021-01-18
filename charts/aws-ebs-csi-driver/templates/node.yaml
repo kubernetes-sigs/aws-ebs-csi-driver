@@ -51,6 +51,9 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            {{- if .Values.volumeAttachLimit }}
+            - --volume-attach-limit={{ .Values.volumeAttachLimit }}
+            {{- end }}
             - --logtostderr
             - --v=5
           env:
