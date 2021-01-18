@@ -55,6 +55,9 @@ spec:
             {{- if .Values.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ .Values.k8sTagClusterId }}
             {{- end }}
+            {{- if .Values.volumeAttachLimit }}
+            - --volume-attach-limit={{ .Values.volumeAttachLimit }}
+            {{- end }}
             - --logtostderr
             - --v=5
           env:
