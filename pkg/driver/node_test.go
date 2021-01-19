@@ -1082,6 +1082,92 @@ func TestNodePublishVolume(t *testing.T) {
 		t.Run(tc.name, tc.testFunc)
 	}
 }
+func TestNodeExpandVolume(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	mockMetadata := mocks.NewMockMetadataService(mockCtl)
+	mockMounter := mocks.NewMockMounter(mockCtl)
+
+	awsDriver := &nodeService{
+		metadata: mockMetadata,
+		mounter:  mockMounter,
+		inFlight: internal.NewInFlight(),
+	}
+
+	tests := []struct {
+		name               string
+		request            csi.NodeExpandVolumeRequest
+		expectResponseCode codes.Code
+	}{
+		{
+			name:               "fail missing volumeId",
+			request:            csi.NodeExpandVolumeRequest{},
+			expectResponseCode: codes.InvalidArgument,
+		},
+		{
+			name: "fail missing volumePath",
+			request: csi.NodeExpandVolumeRequest{
+				StagingTargetPath: "/testDevice/Path",
+				VolumeId:          "test-volume-id",
+			},
+			expectResponseCode: codes.InvalidArgument,
+		},
+		{
+			name: "fail volume path not exist",
+			request: csi.NodeExpandVolumeRequest{
+				VolumePath: "./test",
+				VolumeId:   "test-volume-id",
+			},
+			expectResponseCode: codes.Internal,
+		},
+		{
+			name: "Fail validate VolumeCapability",
+			request: csi.NodeExpandVolumeRequest{
+				VolumePath: "./test",
+				VolumeId:   "test-volume-id",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
+					},
+				},
+			},
+			expectResponseCode: codes.InvalidArgument,
+		},
+		{
+			name: "Success [VolumeCapability is block]",
+			request: csi.NodeExpandVolumeRequest{
+				VolumePath: "./test",
+				VolumeId:   "test-volume-id",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			},
+			expectResponseCode: codes.OK,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := awsDriver.NodeExpandVolume(context.Background(), &test.request)
+			if err != nil {
+				if test.expectResponseCode != codes.OK {
+					expectErr(t, err, test.expectResponseCode)
+				} else {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			}
+		})
+	}
+}
 
 func TestNodeUnpublishVolume(t *testing.T) {
 	targetPath := "/test/path"
