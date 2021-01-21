@@ -35,6 +35,9 @@ spec:
 {{ toYaml . | indent 8 }}
         {{- end }}
       hostNetwork: true
+      {{- if .Values.serviceAccount.node.name }}
+      serviceAccountName: {{ .Values.serviceAccount.node.name }}
+      {{- end }}
       priorityClassName: system-node-critical
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
