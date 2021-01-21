@@ -101,6 +101,8 @@ serviceAccount:
     create: true
     name: ebs-snapshot-controller
     annotations: {}
+  node:
+    name: "" # Name of the service-account to be used
 
 storageClasses: []
 # Add StorageClass resources like:
