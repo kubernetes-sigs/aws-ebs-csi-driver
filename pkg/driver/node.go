@@ -254,14 +254,47 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
+	volumePath := req.GetVolumePath()
+	if len(volumePath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "volume path must be provided")
+	}
 
-	args := []string{"-o", "source", "--noheadings", "--target", req.GetVolumePath()}
+	volumeCapability := req.GetVolumeCapability()
+	// VolumeCapability is optional, if specified, use that as source of truth
+	if volumeCapability != nil {
+		caps := []*csi.VolumeCapability{volumeCapability}
+		if !isValidVolumeCapabilities(caps) {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("VolumeCapability is invalid: %v", volumeCapability))
+		}
+
+		if blk := volumeCapability.GetBlock(); blk != nil {
+			// Noop for Block NodeExpandVolume
+			klog.V(4).Infof("NodeExpandVolume called for %v at %s. Since it is a block device, ignoring...", volumeID, volumePath)
+			return &csi.NodeExpandVolumeResponse{}, nil
+		}
+	} else {
+		// VolumeCapability is nil, check if volumePath point to a block device
+		isBlock, err := d.IsBlockDevice(volumePath)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to determine device path for volumePath [%v]: %v", volumePath, err)
+		}
+		if isBlock {
+			// Skip resizing for Block NodeExpandVolume
+			bcap, err := d.getBlockSizeBytes(volumePath)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
+			}
+			klog.V(4).Infof("NodeExpandVolume called for %v at %s, since given volumePath is a block device, ignoring...", volumeID, volumePath)
+			return &csi.NodeExpandVolumeResponse{CapacityBytes: bcap}, nil
+		}
+	}
+
+	args := []string{"-o", "source", "--noheadings", "--target", volumePath}
 	output, err := d.mounter.Command("findmnt", args...).Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine device path: %v", err)
 
 	}
-
 	devicePath := strings.TrimSpace(string(output))
 	if len(devicePath) == 0 {
 		return nil, status.Errorf(codes.Internal, "Could not get valid device for mount path: %q", req.GetVolumePath())
@@ -274,11 +307,15 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	})
 
 	// TODO: lock per volume ID to have some idempotency
-	if _, err := r.Resize(devicePath, req.GetVolumePath()); err != nil {
+	if _, err := r.Resize(devicePath, volumePath); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, devicePath, err)
 	}
 
-	return &csi.NodeExpandVolumeResponse{}, nil
+	bcap, err := d.getBlockSizeBytes(devicePath)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
+	}
+	return &csi.NodeExpandVolumeResponse{CapacityBytes: bcap}, nil
 }
 
 func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
