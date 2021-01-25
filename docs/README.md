@@ -162,7 +162,7 @@ To make sure dynamically provisioned EBS volumes have all tags that the in-tree 
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/developing.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.14.+
+* Golang 1.15.+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
