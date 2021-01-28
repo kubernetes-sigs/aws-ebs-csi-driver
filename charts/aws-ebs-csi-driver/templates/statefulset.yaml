@@ -21,6 +21,22 @@ spec:
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.snapshot.name }}
+      nodeSelector:
+        kubernetes.io/os: linux
+        {{- with .Values.nodeSelector }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
+      priorityClassName: system-cluster-critical
+      {{- with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      tolerations:
+        {{- if .Values.tolerateAllTaints }}
+        - operator: Exists
+        {{- end }}
+        {{- with .Values.tolerations }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
       containers:
         - name: snapshot-controller
           image: k8s.gcr.io/sig-storage/snapshot-controller:v3.0.3
