@@ -8,10 +8,11 @@ spec:
     spec:
       containers:
         - name: csi-resizer
-          image: quay.io/k8scsi/csi-resizer:v0.3.0
+          image: k8s.gcr.io/sig-storage/csi-resizer:v1.0.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
+            - --handle-volume-inuse-error=false
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
