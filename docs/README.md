@@ -50,7 +50,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Kubernetes Version Compatibility Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
-| master branch                          | no    | no+   | yes   | yes   | yes   | yes   | yes   |
+| master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -109,6 +109,8 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1
 ```
 
 #### Deploy driver
+Please see the compatibility matrix above before you deploy the driver
+
 If you want to deploy the stable driver without alpha features:
 ```sh
 kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.8"
@@ -141,7 +143,6 @@ helm upgrade --install aws-ebs-csi-driver \
     --set enableVolumeSnapshot=true \
     aws-ebs-csi-driver/aws-ebs-csi-driver
 ```
-
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
 * [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
