@@ -39,6 +39,7 @@ type VolumeDetails struct {
 	MountOptions          []string
 	ClaimSize             string
 	ReclaimPolicy         *v1.PersistentVolumeReclaimPolicy
+	AllowVolumeExpansion  *bool
 	VolumeBindingMode     *storagev1.VolumeBindingMode
 	AllowedTopologyValues []string
 	VolumeMode            VolumeMode
@@ -119,7 +120,8 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 	cleanupFuncs := make([]func(), 0)
 	volume := pod.Volumes[0]
 	By("setting up the StorageClass")
-	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
+
+	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
@@ -139,7 +141,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPersistentVolumeClaim, []func()) {
 	cleanupFuncs := make([]func(), 0)
 	By("setting up the StorageClass")
-	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
+	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
