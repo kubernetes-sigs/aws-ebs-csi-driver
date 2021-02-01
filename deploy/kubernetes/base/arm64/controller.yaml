@@ -66,13 +66,12 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v2.0.2
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.0.2
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
             - --feature-gates=Topology=true
             - --leader-election=true
-            - --default-fstype=ext4
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -80,7 +79,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v3.0.0
+          image: k8s.gcr.io/sig-storage/csi-attacher:v3.0.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -92,7 +91,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v2.1.0
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
@@ -100,4 +99,4 @@ spec:
               mountPath: /csi
       volumes:
         - name: socket-dir
-          emptyDir: {}
+          emptyDir: { }
