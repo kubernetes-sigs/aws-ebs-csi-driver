@@ -404,6 +404,30 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		}
 		test.Run(cs, ns)
 	})
+
+	It("should create a volume on demand and resize it ", func() {
+		allowVolumeExpansion := true
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && sync",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					VolumeType: awscloud.VolumeTypeGP2,
+					FSType:     ebscsidriver.FSTypeExt4,
+					ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+					AllowVolumeExpansion: &allowVolumeExpansion,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedResizeVolumeTest{
+			CSIDriver: ebsDriver,
+			Pod:       pod,
+		}
+		test.Run(cs, ns)
+	})
 })
 
 var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
