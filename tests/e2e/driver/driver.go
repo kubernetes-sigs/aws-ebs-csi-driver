@@ -35,7 +35,7 @@ type PVTestDriver interface {
 // DynamicPVTestDriver represents an interface for a CSI driver that supports DynamicPV
 type DynamicPVTestDriver interface {
 	// GetDynamicProvisionStorageClass returns a StorageClass dynamic provision Persistent Volume
-	GetDynamicProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass
+	GetDynamicProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeExpansion *bool, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass
 }
 
 // PreProvisionedVolumeTestDriver represents an interface for a CSI driver that supports pre-provisioned volume
@@ -54,6 +54,7 @@ func getStorageClass(
 	parameters map[string]string,
 	mountOptions []string,
 	reclaimPolicy *v1.PersistentVolumeReclaimPolicy,
+	volumeExpansion *bool,
 	bindingMode *storagev1.VolumeBindingMode,
 	allowedTopologies []v1.TopologySelectorTerm,
 ) *storagev1.StorageClass {
@@ -69,12 +70,13 @@ func getStorageClass(
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: generateName,
 		},
-		Provisioner:       provisioner,
-		Parameters:        parameters,
-		MountOptions:      mountOptions,
-		ReclaimPolicy:     reclaimPolicy,
-		VolumeBindingMode: bindingMode,
-		AllowedTopologies: allowedTopologies,
+		Provisioner:          provisioner,
+		Parameters:           parameters,
+		MountOptions:         mountOptions,
+		ReclaimPolicy:        reclaimPolicy,
+		VolumeBindingMode:    bindingMode,
+		AllowedTopologies:    allowedTopologies,
+		AllowVolumeExpansion: volumeExpansion,
 	}
 }
 
