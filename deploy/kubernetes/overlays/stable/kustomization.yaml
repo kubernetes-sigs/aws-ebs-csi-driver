@@ -6,10 +6,10 @@ images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
     newTag: v0.8.1
   - name: quay.io/k8scsi/csi-provisioner
-    newTag: v1.5.0
+    newTag: v2.0.2
   - name: quay.io/k8scsi/csi-attacher
-    newTag: v2.2.0
+    newTag: v3.0.0
   - name: quay.io/k8scsi/livenessprobe
     newTag: v2.1.0
   - name: quay.io/k8scsi/csi-node-driver-registrar
-    newTag: v1.3.0
+    newTag: v2.0.1

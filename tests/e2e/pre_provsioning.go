@@ -17,6 +17,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	k8srestclient "k8s.io/client-go/rest"
 	"math/rand"
 	"os"
@@ -29,8 +30,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
-
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
 const (
