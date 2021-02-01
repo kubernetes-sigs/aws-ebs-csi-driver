@@ -44,6 +44,9 @@ enableVolumeResizing: false
 # True if enable volume snapshot
 enableVolumeSnapshot: false
 
+# The "maximum number of attachable volumes" per node
+volumeAttachLimit: ""
+
 resources:
   {}
   # We usually recommend not to specify default resources and to leave this as a conscious
