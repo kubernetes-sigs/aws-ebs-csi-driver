@@ -179,6 +179,9 @@ Dependencies are managed through go module. To build the project, first turn on 
 * To execute integration tests, run: `make test-integration`
 * To execute e2e tests, run: `make test-e2e-single-az` and `make test-e2e-multi-az`
 
+### Release Process
+Please see [Release Process](./RELEASE.md).
+
 **Notes**:
 * Sanity tests make sure the driver complies with the CSI specification
 * EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk. See [Integration Testing](../tests/integration/README.md) for more details.
