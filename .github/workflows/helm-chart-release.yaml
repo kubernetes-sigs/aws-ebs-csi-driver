@@ -24,4 +24,4 @@ jobs:
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
-          config: .github/workflows/cr.yaml
+          config: .github/cr.yaml
