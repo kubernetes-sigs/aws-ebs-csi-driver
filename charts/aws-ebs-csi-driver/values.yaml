@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v0.8.1"
+  tag: "v0.9.0"
   pullPolicy: IfNotPresent
 
 sidecars:
