@@ -94,9 +94,18 @@ test-e2e-multi-az:
 test-e2e-migration:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e-migration/... \
+	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="\[ebs-csi-migration\]" \
 	EBS_CHECK_MIGRATION=true \
+	./hack/e2e/run.sh
+
+.PHONY: test-e2e-external
+test-e2e-external:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
 .PHONY: image-release
