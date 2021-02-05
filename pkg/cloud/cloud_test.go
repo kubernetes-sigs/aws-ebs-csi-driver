@@ -525,12 +525,14 @@ func TestGetDiskByID(t *testing.T) {
 		volumeID         string
 		availabilityZone string
 		outpostArn       string
+		attachments      *ec2.VolumeAttachment
 		expErr           error
 	}{
 		{
 			name:             "success: normal",
 			volumeID:         "vol-test-1234",
 			availabilityZone: expZone,
+			attachments:      &ec2.VolumeAttachment{},
 			expErr:           nil,
 		},
 		{
@@ -538,7 +540,18 @@ func TestGetDiskByID(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			availabilityZone: expZone,
 			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			attachments:      &ec2.VolumeAttachment{},
 			expErr:           nil,
+		},
+		{
+			name:             "success: attached instance list",
+			volumeID:         "vol-test-1234",
+			availabilityZone: expZone,
+			outpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			attachments: &ec2.VolumeAttachment{
+				InstanceId: aws.String("test-instance"),
+				State:      aws.String("attached")},
+			expErr: nil,
 		},
 		{
 			name:     "fail: DescribeVolumes returned generic error",
@@ -561,6 +574,7 @@ func TestGetDiskByID(t *testing.T) {
 							VolumeId:         aws.String(tc.volumeID),
 							AvailabilityZone: aws.String(tc.availabilityZone),
 							OutpostArn:       aws.String(tc.outpostArn),
+							Attachments:      []*ec2.VolumeAttachment{tc.attachments},
 						},
 					},
 				},
@@ -584,6 +598,9 @@ func TestGetDiskByID(t *testing.T) {
 				}
 				if disk.OutpostArn != tc.outpostArn {
 					t.Fatalf("GetDisk() failed: expected outpostArn %q, got %q", tc.outpostArn, disk.OutpostArn)
+				}
+				if len(disk.Attachments) > 0 && disk.Attachments[0] != aws.StringValue(tc.attachments.InstanceId) {
+					t.Fatalf("GetDisk() failed: expected attachment instance %q, got %q", aws.StringValue(tc.attachments.InstanceId), disk.Attachments[0])
 				}
 			}
 

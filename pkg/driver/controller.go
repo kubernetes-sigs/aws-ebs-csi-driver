@@ -286,19 +286,21 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if !d.cloud.IsExistInstance(ctx, nodeID) {
 		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
 	}
-
-	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
+	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
+	if err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
+	// If given volumeId already assigned to given node, will directly return current device path
 	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
-		if err == cloud.ErrAlreadyExists {
-			return nil, status.Error(codes.AlreadyExists, err.Error())
+		if err == cloud.ErrVolumeInUse {
+			return nil, status.Error(codes.FailedPrecondition, strings.Join(disk.Attachments, ","))
 		}
+		// TODO: Check volume capability matches for ALREADY_EXISTS
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
