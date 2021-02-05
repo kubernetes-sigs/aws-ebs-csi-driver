@@ -792,6 +792,7 @@ k8s.io/kubernetes/test/e2e/framework/volume
 k8s.io/kubernetes/test/e2e/manifest
 k8s.io/kubernetes/test/e2e/perftype
 k8s.io/kubernetes/test/e2e/storage/drivers
+k8s.io/kubernetes/test/e2e/storage/external
 k8s.io/kubernetes/test/e2e/storage/testpatterns
 k8s.io/kubernetes/test/e2e/storage/testsuites
 k8s.io/kubernetes/test/e2e/storage/utils
