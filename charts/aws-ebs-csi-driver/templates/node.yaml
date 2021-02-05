@@ -20,6 +20,7 @@ spec:
       annotations: {{ toYaml .Values.node.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.snapshot.name }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
