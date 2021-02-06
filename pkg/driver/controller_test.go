@@ -2669,8 +2669,12 @@ func TestControllerPublishVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "fail attach disk with already exists error",
+			name: "fail attach disk with volume already in use error",
 			testFunc: func(t *testing.T) {
+				attachedInstancId := "test-instance-id-attached"
+				disk := &cloud.Disk{
+					Attachments: []string{attachedInstancId},
+				}
 				req := &csi.ControllerPublishVolumeRequest{
 					VolumeId:         "does-not-exist",
 					NodeId:           expInstanceID,
@@ -2684,8 +2688,8 @@ func TestControllerPublishVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(&cloud.Disk{}, nil)
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return("", cloud.ErrAlreadyExists)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(disk, nil)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return("", cloud.ErrVolumeInUse)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -2697,8 +2701,11 @@ func TestControllerPublishVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					if srvErr.Code() != codes.AlreadyExists {
-						t.Fatalf("Expected error code %d, got %d message %s", codes.AlreadyExists, srvErr.Code(), srvErr.Message())
+					if srvErr.Code() != codes.FailedPrecondition {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.FailedPrecondition, srvErr.Code(), srvErr.Message())
+					}
+					if srvErr.Message() != attachedInstancId {
+						t.Fatalf("Expected error message to contain previous attached instanceId %s, but get error message %s", attachedInstancId, srvErr.Message())
 					}
 				} else {
 					t.Fatalf("Expected error %v, got no error", codes.AlreadyExists)

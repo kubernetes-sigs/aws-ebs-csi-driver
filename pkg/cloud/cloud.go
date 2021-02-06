@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -115,6 +116,9 @@ var (
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("Resource already exists")
 
+	// ErrVolumeInUse is returned when a volume is already attached to an instance.
+	ErrVolumeInUse = errors.New("Request volume is already attached to an instance")
+
 	// ErrMultiSnapshots is returned when multiple snapshots are found
 	// with the same ID
 	ErrMultiSnapshots = errors.New("Multiple snapshots with the same name found")
@@ -133,6 +137,7 @@ type Disk struct {
 	AvailabilityZone string
 	SnapshotID       string
 	OutpostArn       string
+	Attachments      []string
 }
 
 // DiskOptions represents parameters to create an EBS volume
@@ -378,7 +383,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
 				if awsErr.Code() == "VolumeInUse" {
-					return "", ErrAlreadyExists
+					return "", ErrVolumeInUse
 				}
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
@@ -396,7 +401,9 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	// TODO: Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
 	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
 	// which could theoretically be against a different device (or even instance).
-
+	// TODO: Check volume capability matches for ALREADY_EXISTS
+	// This could happen when request volume already attached to request node,
+	// but is incompatible with the specified volume_capability or readonly flag
 	return device.Path, nil
 }
 
@@ -521,6 +528,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}
 
 	volume, err := c.getVolume(ctx, request)
+
 	if err != nil {
 		return nil, err
 	}
@@ -530,6 +538,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		CapacityGiB:      aws.Int64Value(volume.Size),
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 		OutpostArn:       aws.StringValue(volume.OutpostArn),
+		Attachments:      getVolumeAttachmentsList(volume),
 	}, nil
 }
 
@@ -1043,4 +1052,15 @@ func volumeModificationDone(state string) bool {
 		return true
 	}
 	return false
+}
+
+func getVolumeAttachmentsList(volume *ec2.Volume) []string {
+	var volumeAttachmentList []string
+	for _, attachment := range volume.Attachments {
+		if attachment.State != nil && strings.ToLower(aws.StringValue(attachment.State)) == "attached" {
+			volumeAttachmentList = append(volumeAttachmentList, aws.StringValue(attachment.InstanceId))
+		}
+	}
+
+	return volumeAttachmentList
 }
