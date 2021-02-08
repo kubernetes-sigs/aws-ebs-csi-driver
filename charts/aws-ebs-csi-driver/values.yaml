@@ -103,7 +103,7 @@ serviceAccount:
     annotations: {}
   node:
     create: true
-    name: "ebs-csi-node-sa"
+    name: ebs-csi-node-sa
     annotations: {}
 
 storageClasses: []
