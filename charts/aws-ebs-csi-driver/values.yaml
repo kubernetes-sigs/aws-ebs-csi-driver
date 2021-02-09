@@ -60,11 +60,10 @@ resources:
   #   cpu: 100m
   #   memory: 128Mi
 
+priorityClassName: ""
 nodeSelector: {}
-
 tolerateAllTaints: true
 tolerations: []
-
 affinity: {}
 
 # Extra volume tags to attach to each dynamically provisioned volume.
@@ -87,6 +86,7 @@ k8sTagClusterId: ""
 region: ""
 
 node:
+  priorityClassName: ""
   nodeSelector: {}
   podAnnotations: {}
   tolerateAllTaints: true
