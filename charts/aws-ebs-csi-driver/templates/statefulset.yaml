@@ -26,7 +26,7 @@ spec:
         {{- with .Values.nodeSelector }}
 {{ toYaml . | indent 8 }}
         {{- end }}
-      priorityClassName: system-cluster-critical
+      priorityClassName: {{ .Values.priorityClassName | default "system-cluster-critical" }}
       {{- with .Values.affinity }}
       affinity: {{ toYaml . | nindent 8 }}
       {{- end }}

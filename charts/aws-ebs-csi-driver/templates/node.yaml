@@ -36,7 +36,7 @@ spec:
         {{- end }}
       hostNetwork: true
       serviceAccountName: {{ .Values.serviceAccount.node.name }}
-      priorityClassName: system-node-critical
+      priorityClassName: {{ .Values.node.priorityClassName | default "system-cluster-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists

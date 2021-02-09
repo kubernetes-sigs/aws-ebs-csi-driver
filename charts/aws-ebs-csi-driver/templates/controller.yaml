@@ -27,7 +27,7 @@ spec:
 {{ toYaml . | indent 8 }}
         {{- end }}
       serviceAccountName: {{ .Values.serviceAccount.controller.name }}
-      priorityClassName: system-cluster-critical
+      priorityClassName: {{ .Values.priorityClassName | default "system-cluster-critical" }}
       {{- with .Values.affinity }}
       affinity: {{ toYaml . | nindent 8 }}
       {{- end }}
