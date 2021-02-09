@@ -91,6 +91,7 @@ node:
   podAnnotations: {}
   tolerateAllTaints: true
   tolerations: []
+  resources: {}
 
 serviceAccount:
   controller:
