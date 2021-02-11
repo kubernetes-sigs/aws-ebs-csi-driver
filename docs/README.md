@@ -116,7 +116,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 If you want to deploy the stable driver without alpha features:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.8"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.9"
 ```
 
 If you want to deploy the driver with alpha features:
