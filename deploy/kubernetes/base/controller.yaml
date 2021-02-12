@@ -28,7 +28,7 @@ spec:
         - operator: Exists
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -66,7 +66,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: csi-provisioner
-          image: k8s.gcr.io/provider-aws/csi-provisioner:v2.0.2
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.0.2
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -80,7 +80,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: k8s.gcr.io/provider-aws/csi-attacher:v3.0.0
+          image: k8s.gcr.io/sig-storage/csi-attacher:v3.0.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -92,7 +92,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
-          image: k8s.gcr.io/provider-aws/livenessprobe:v2.1.0
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
