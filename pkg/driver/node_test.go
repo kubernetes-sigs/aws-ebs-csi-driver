@@ -477,6 +477,40 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fail with in-flight request",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				req := &csi.NodeStageVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath},
+					StagingTargetPath: targetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          "vol-test",
+				}
+
+				inFlight := internal.NewInFlight()
+				inFlight.Insert(req)
+				defer inFlight.Delete(req)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: inFlight,
+				}
+
+				_, err := awsDriver.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatalf("Expect error but got no error")
+				}
+
+				expectErr(t, err, codes.Aborted)
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -143,12 +143,11 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	if ok := d.inFlight.Insert(req); !ok {
 		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
-		return nil, status.Error(codes.Internal, msg)
+		return nil, status.Error(codes.Aborted, msg)
 	}
 	defer func() {
 		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
 		d.inFlight.Delete(req)
-		klog.V(4).Info("donedone")
 	}()
 
 	devicePath, ok := req.PublishContext[DevicePathKey]
