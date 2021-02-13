@@ -29,6 +29,10 @@ sidecars:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     tag: "v2.0.1"
 
+snapshotController:
+  repository: k8s.gcr.io/sig-storage/snapshot-controller
+  tag: "v3.0.3"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
