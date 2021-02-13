@@ -39,7 +39,7 @@ spec:
         {{- end }}
       containers:
         - name: snapshot-controller
-          image: k8s.gcr.io/sig-storage/snapshot-controller:v3.0.3
+          image: {{ printf "%s:%s" .Values.snapshotController.repository .Values.snapshotController.tag }}
           args:
             - --v=5
             - --leader-election=false
