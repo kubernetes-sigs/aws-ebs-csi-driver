@@ -27,6 +27,7 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,6 +57,7 @@ var (
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
 	cloud         cloud.Cloud
+	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
 }
 
@@ -87,6 +89,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 
 	return controllerService{
 		cloud:         cloud,
+		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
 }
@@ -200,6 +203,13 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		return newCreateVolumeResponse(disk), nil
 	}
+
+	// check if a request is already in-flight because the CreateVolume API is not idempotent
+	if ok := d.inFlight.Insert(req); !ok {
+		msg := fmt.Sprintf("Create volume request for %s is already in progress", volName)
+		return nil, status.Error(codes.Aborted, msg)
+	}
+	defer d.inFlight.Delete(req)
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
