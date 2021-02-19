@@ -205,11 +205,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// check if a request is already in-flight because the CreateVolume API is not idempotent
-	if ok := d.inFlight.Insert(req); !ok {
+	if ok := d.inFlight.Insert(req.String()); !ok {
 		msg := fmt.Sprintf("Create volume request for %s is already in progress", volName)
 		return nil, status.Error(codes.Aborted, msg)
 	}
-	defer d.inFlight.Delete(req)
+	defer d.inFlight.Delete(req.String())
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
