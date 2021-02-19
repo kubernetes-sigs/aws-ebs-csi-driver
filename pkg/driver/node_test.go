@@ -494,8 +494,8 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 
 				inFlight := internal.NewInFlight()
-				inFlight.Insert(req)
-				defer inFlight.Delete(req)
+				inFlight.Insert(req.VolumeId)
+				defer inFlight.Delete(req.VolumeId)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -507,7 +507,6 @@ func TestNodeStageVolume(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expect error but got no error")
 				}
-
 				expectErr(t, err, codes.Aborted)
 			},
 		},
@@ -680,6 +679,31 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
 				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "fail another operation in-flight on given volumeId",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          "vol-test",
+				}
+
+				awsDriver.inFlight.Insert("vol-test")
+				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
+				expectErr(t, err, codes.Aborted)
 			},
 		},
 	}
@@ -1110,6 +1134,42 @@ func TestNodePublishVolume(t *testing.T) {
 
 			},
 		},
+		{
+			name: "fail another operation in-flight on given volumeId",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+					StagingTargetPath: "/test/staging/path",
+					TargetPath:        "/test/target/path",
+					VolumeId:          "vol-test",
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Block{
+							Block: &csi.VolumeCapability_BlockVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+				}
+				awsDriver.inFlight.Insert("vol-test")
+
+				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.Aborted)
+
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1306,6 +1366,31 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(errors.New("test Unmount error"))
 				_, err := awsDriver.NodeUnpublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "fail another operation in-flight on given volumeId",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodeUnpublishVolumeRequest{
+					TargetPath: targetPath,
+					VolumeId:   "vol-test",
+				}
+
+				awsDriver.inFlight.Insert("vol-test")
+				_, err := awsDriver.NodeUnpublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.Aborted)
 			},
 		},
 	}
