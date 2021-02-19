@@ -114,6 +114,12 @@ serviceAccount:
 storageClasses: []
 # Add StorageClass resources like:
 # - name: ebs-sc
+#   # annotation metadata
+#   annotations:
+#     storageclass.kubernetes.io/is-default-class: "true"
+#   # label metadata
+#   labels:
+#     my-label-is: supercool
 #   # defaults to WaitForFirstConsumer
 #   volumeBindingMode: WaitForFirstConsumer
 #   # defaults to Delete
