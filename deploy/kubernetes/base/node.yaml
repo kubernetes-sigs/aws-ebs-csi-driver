@@ -39,7 +39,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
@@ -69,7 +69,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v2.0.1
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.0.1
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -89,7 +89,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v2.1.0
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
