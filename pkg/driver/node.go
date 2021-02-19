@@ -57,6 +57,9 @@ const (
 
 	// defaultMaxEBSNitroVolumes is the limit of volumes for some smaller instances, like c5 and m5.
 	defaultMaxEBSNitroVolumes = 25
+
+	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
+	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 )
 
 var (
@@ -141,13 +144,12 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 	}
 
-	if ok := d.inFlight.Insert(req); !ok {
-		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
-		return nil, status.Error(codes.Aborted, msg)
+	if ok := d.inFlight.Insert(volumeID); !ok {
+		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
 	}
 	defer func() {
-		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
-		d.inFlight.Delete(req)
+		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", volumeID)
+		d.inFlight.Delete(volumeID)
 	}()
 
 	devicePath, ok := req.PublishContext[DevicePathKey]
@@ -216,6 +218,14 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	if len(target) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
+
+	if ok := d.inFlight.Insert(volumeID); !ok {
+		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
+	}
+	defer func() {
+		klog.V(4).Infof("NodeUnStageVolume: volume=%q operation finished", volumeID)
+		d.inFlight.Delete(volumeID)
+	}()
 
 	// Check if target directory is a mount point. GetDeviceNameFromMount
 	// given a mnt point, finds the device from /proc/mounts
@@ -343,6 +353,14 @@ func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
+	if ok := d.inFlight.Insert(volumeID); !ok {
+		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
+	}
+	defer func() {
+		klog.V(4).Infof("NodePublishVolume: volume=%q operation finished", volumeID)
+		d.inFlight.Delete(volumeID)
+	}()
+
 	mountOptions := []string{"bind"}
 	if req.GetReadonly() {
 		mountOptions = append(mountOptions, "ro")
@@ -373,6 +391,13 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	if len(target) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
+	if ok := d.inFlight.Insert(volumeID); !ok {
+		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
+	}
+	defer func() {
+		klog.V(4).Infof("NodeUnPublishVolume: volume=%q operation finished", volumeID)
+		d.inFlight.Delete(volumeID)
+	}()
 
 	klog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
 	err := d.mounter.Unmount(target)
