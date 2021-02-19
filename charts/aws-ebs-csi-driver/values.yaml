@@ -40,7 +40,7 @@ fullnameOverride: ""
 podAnnotations: {}
 
 # True if enable volume scheduling for dynamic volume provisioning
-enableVolumeScheduling: false
+enableVolumeScheduling: true
 
 # True if enable volume resizing
 enableVolumeResizing: false
