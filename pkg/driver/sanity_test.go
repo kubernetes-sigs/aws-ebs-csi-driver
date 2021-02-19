@@ -47,6 +47,7 @@ func TestSanity(t *testing.T) {
 		options: driverOptions,
 		controllerService: controllerService{
 			cloud:         newFakeCloudProvider(),
+			inFlight:      internal.NewInFlight(),
 			driverOptions: driverOptions,
 		},
 		nodeService: nodeService{

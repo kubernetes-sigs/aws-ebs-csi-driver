@@ -17,6 +17,7 @@ limitations under the License.
 package internal
 
 import (
+	"k8s.io/klog"
 	"sync"
 )
 
@@ -29,7 +30,7 @@ type Idempotent interface {
 	String() string
 }
 
-// InFlight is a struct used to manage in flight requests.
+// InFlight is a struct used to manage in flight requests per volumeId.
 type InFlight struct {
 	mux      *sync.Mutex
 	inFlight map[string]bool
@@ -43,28 +44,27 @@ func NewInFlight() *InFlight {
 	}
 }
 
-// Insert inserts the entry to the current list of inflight requests.
+// Insert inserts the entry to the current list of inflight request key is volumeId for node and req hash for controller .
 // Returns false when the key already exists.
-func (db *InFlight) Insert(entry Idempotent) bool {
+func (db *InFlight) Insert(key string) bool {
 	db.mux.Lock()
 	defer db.mux.Unlock()
 
-	hash := entry.String()
-
-	_, ok := db.inFlight[hash]
+	_, ok := db.inFlight[key]
 	if ok {
 		return false
 	}
 
-	db.inFlight[hash] = true
+	db.inFlight[key] = true
 	return true
 }
 
 // Delete removes the entry from the inFlight entries map.
 // It doesn't return anything, and will do nothing if the specified key doesn't exist.
-func (db *InFlight) Delete(h Idempotent) {
+func (db *InFlight) Delete(key string) {
 	db.mux.Lock()
 	defer db.mux.Unlock()
 
-	delete(db.inFlight, h.String())
+	delete(db.inFlight, key)
+	klog.V(4).Infof("Node Service: volume=%q operation finished", key)
 }
