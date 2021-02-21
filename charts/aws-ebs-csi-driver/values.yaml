@@ -21,7 +21,7 @@ sidecars:
     tag: "v3.0.3"
   livenessProbeImage:
     repository: k8s.gcr.io/sig-storage/livenessprobe
-    tag: "v2.1.0"
+    tag: "v2.2.0"
   resizerImage:
     repository: k8s.gcr.io/sig-storage/csi-resizer
     tag: "v1.0.0"
