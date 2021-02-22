@@ -40,7 +40,7 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${DRIVER_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
-K8S_VERSION=${K8S_VERSION:-1.18.10}
+K8S_VERSION=${K8S_VERSION:-1.18.16}
 KOPS_VERSION=${KOPS_VERSION:-1.18.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_FEATURE_GATES_FILE=${KOPS_FEATURE_GATES_FILE:-./hack/feature-gates.yaml}
