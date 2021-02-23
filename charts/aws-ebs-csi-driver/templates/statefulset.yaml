@@ -43,4 +43,10 @@ spec:
           args:
             - --v=5
             - --leader-election=false
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+      {{- end }}
 {{- end }}
