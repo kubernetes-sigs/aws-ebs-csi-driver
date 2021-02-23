@@ -134,6 +134,12 @@ spec:
           resources: {{ toYaml . | nindent 12 }}
           {{- end }}
           {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+      {{- end }}
       volumes:
         - name: kubelet-dir
           hostPath:
