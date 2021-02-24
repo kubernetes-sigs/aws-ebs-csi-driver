@@ -14,7 +14,7 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
-VERSION=v0.8.0
+VERSION=v0.9.0
 VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -73,22 +73,31 @@ test-sanity:
 	#go test -v ./tests/sanity/...
 	echo "succeed"
 
-bin/k8s-e2e-tester: | bin
-	go get github.com/aws/aws-k8s-tester/e2e/tester/cmd/k8s-e2e-tester@master
-
 .PHONY: test-e2e-single-az
-test-e2e-single-az: bin/k8s-e2e-tester
-	TESTCONFIG=./tester/single-az-config.yaml ${GOBIN}/k8s-e2e-tester
+test-e2e-single-az:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a \
+	TEST_PATH=./tests/e2e/... \
+	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
+	GINKGO_SKIP="\"sc1\"|\"st1\"" \
+	./hack/e2e/run.sh
 
 .PHONY: test-e2e-multi-az
-test-e2e-multi-az: bin/k8s-e2e-tester
-	TESTCONFIG=./tester/multi-az-config.yaml ${GOBIN}/k8s-e2e-tester
+test-e2e-multi-az:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
+	TEST_PATH=./tests/e2e/... \
+	GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" \
+	./hack/e2e/run.sh
 
 .PHONY: test-e2e-migration
 test-e2e-migration:
-	AWS_REGION=us-west-2 AWS_AVAILABILITY_ZONES=us-west-2a GINKGO_FOCUS="\[ebs-csi-migration\]" ./hack/run-e2e-test
-	# TODO: enable migration test to use new framework
-	#TESTCONFIG=./tester/migration-test-config.yaml go run tester/cmd/main.go
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a \
+	TEST_PATH=./tests/e2e-migration/... \
+	GINKGO_FOCUS="\[ebs-csi-migration\]" \
+	EBS_CHECK_MIGRATION=true \
+	./hack/e2e/run.sh
 
 .PHONY: image-release
 image-release:

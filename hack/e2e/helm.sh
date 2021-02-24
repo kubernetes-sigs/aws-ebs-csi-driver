@@ -2,7 +2,7 @@
 
 set -uo pipefail
 
-helm::install() {
+function helm_install() {
   INSTALL_PATH=${1}
   if [[ ! -e ${INSTALL_PATH}/helm ]]; then
     curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3

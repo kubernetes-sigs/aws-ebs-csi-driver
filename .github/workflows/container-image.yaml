@@ -49,6 +49,14 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push debian target to Docker Hub
+        run: |
+          DEB_PUSH_TAG="amazon/$IMAGE:$TAG"
+          docker buildx build \
+            -t $DEB_PUSH_TAG \
+            --platform=linux/arm64,linux/amd64 \
+            --output="type=image,push=true" . \
+            --target=debian-base
       - name: Push amazonlinux target to Docker Hub
         run: |
           AL2_PUSH_TAG="amazon/$IMAGE:$TAG-amazonlinux"

@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../../../base/arm64
+images:
+  - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
+    newTag: v0.9.0
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newTag: v2.0.2
+  - name: k8s.gcr.io/sig-storage/csi-attacher
+    newTag: v3.0.0
+  - name: k8s.gcr.io/sig-storage/livenessprobe
+    newTag: v2.1.0
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newTag: v2.0.1
