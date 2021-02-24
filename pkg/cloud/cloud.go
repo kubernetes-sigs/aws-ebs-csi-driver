@@ -235,6 +235,8 @@ func newEC2Cloud(region string) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+		// Set MaxRetries to a high value. It will be "ovewritten" if context deadline comes sooner.
+		MaxRetries: aws.Int(8),
 	}
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
