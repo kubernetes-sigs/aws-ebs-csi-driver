@@ -10,6 +10,6 @@ images:
   - name: k8s.gcr.io/sig-storage/csi-attacher
     newTag: v3.0.0
   - name: k8s.gcr.io/sig-storage/livenessprobe
-    newTag: v2.1.0
+    newTag: v2.2.0
   - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     newTag: v2.0.1
