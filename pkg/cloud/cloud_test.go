@@ -41,14 +41,15 @@ const (
 
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name               string
-		volumeName         string
-		volState           string
-		diskOptions        *DiskOptions
-		expDisk            *Disk
-		expErr             error
-		expCreateVolumeErr error
-		expDescVolumeErr   error
+		name                string
+		volumeName          string
+		volState            string
+		diskOptions         *DiskOptions
+		expDisk             *Disk
+		cleanUpFailedVolume bool
+		expErr              error
+		expCreateVolumeErr  error
+		expDescVolumeErr    error
 	}{
 		{
 			name:       "success: normal",
@@ -163,7 +164,7 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:       "fail: CreateVolume returned CreateVolume error",
+			name:       "fail: ec2.CreateVolume returned CreateVolume error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
@@ -174,7 +175,7 @@ func TestCreateDisk(t *testing.T) {
 			expCreateVolumeErr: fmt.Errorf("CreateVolume generic error"),
 		},
 		{
-			name:       "fail: CreateVolume returned a DescribeVolumes error",
+			name:       "fail: ec2.DescribeVolumes error after volume created",
 			volumeName: "vol-test-name-error",
 			volState:   "creating",
 			diskOptions: &DiskOptions{
@@ -182,11 +183,12 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			expErr:             fmt.Errorf("could not create volume in EC2: DescribeVolumes generic error"),
-			expCreateVolumeErr: fmt.Errorf("DescribeVolumes generic error"),
+			expErr:              fmt.Errorf("failed to get an available volume in EC2: DescribeVolumes generic error"),
+			expDescVolumeErr:    fmt.Errorf("DescribeVolumes generic error"),
+			cleanUpFailedVolume: true,
 		},
 		{
-			name:       "fail: CreateVolume returned a volume with wrong state",
+			name:       "fail: Volume is not ready to use, volume stuck in creating status and controller timed out waiting for the condition",
 			volumeName: "vol-test-name-error",
 			volState:   "creating",
 			diskOptions: &DiskOptions{
@@ -194,7 +196,8 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			expErr: fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
+			cleanUpFailedVolume: true,
+			expErr:              fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -243,7 +246,9 @@ func TestCreateDisk(t *testing.T) {
 			if len(tc.diskOptions.SnapshotID) > 0 {
 				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
 			}
-
+			if tc.cleanUpFailedVolume == true {
+				mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil)
+			}
 			if len(tc.diskOptions.AvailabilityZone) == 0 {
 				mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
 					AvailabilityZones: []*ec2.AvailabilityZone{
