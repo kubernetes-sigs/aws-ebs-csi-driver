@@ -183,6 +183,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	if volumeType == cloud.VolumeTypeIO1 {
+		if iopsPerGB == 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "The parameter IOPSPerGB must be specified for io1 volumes")
+		}
+	}
+
 	snapshotID := ""
 	volumeSource := req.GetVolumeContentSource()
 	if volumeSource != nil {
