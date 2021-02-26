@@ -60,6 +60,14 @@ spec:
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -104,6 +112,14 @@ spec:
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
