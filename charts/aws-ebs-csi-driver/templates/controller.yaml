@@ -38,6 +38,13 @@ spec:
         {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
+{{- if .Values.topologySpreadConstraints }}
+{{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( dict "app" "ebs-csi-controller" ) ) }}
+      topologySpreadConstraints:
+        {{- range .Values.topologySpreadConstraints }}
+        - {{ mergeOverwrite . $tscLabelSelector | toJson }}
+        {{- end }}
+{{- end }}
       containers:
         - name: ebs-plugin
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
