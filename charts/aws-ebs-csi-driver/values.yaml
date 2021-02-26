@@ -33,6 +33,10 @@ snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
   tag: "v3.0.3"
 
+proxy: {}
+#  http_proxy:
+#  no_proxy:
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
