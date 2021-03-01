@@ -1080,6 +1080,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: stdVolCap,
 					Parameters: map[string]string{
 						VolumeTypeKey: cloud.VolumeTypeIO1,
+						IopsPerGBKey:  "5",
 						"unknownKey":  "unknownValue",
 					},
 				}
@@ -1484,6 +1485,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeCapabilities: invalidVolCap,
 					Parameters: map[string]string{
 						VolumeTypeKey: cloud.VolumeTypeIO1,
+						IopsPerGBKey:  "5",
 						"unknownKey":  "unknownValue",
 					},
 				}
@@ -1554,6 +1556,46 @@ func TestCreateVolume(t *testing.T) {
 				}
 				if srvErr.Code() != codes.Aborted {
 					t.Fatalf("Expected Aborted but got: %s", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "fail with missing iopsPerGB parameter",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeIO1,
+					},
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
 				}
 			},
 		},
