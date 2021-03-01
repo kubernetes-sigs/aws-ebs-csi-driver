@@ -235,6 +235,8 @@ func newEC2Cloud(region string) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+		// Set MaxRetries to a high value. It will be "ovewritten" if context deadline comes sooner.
+		MaxRetries: aws.Int(8),
 	}
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
@@ -341,6 +343,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	if err := c.waitForVolume(ctx, volumeID); err != nil {
+		// To avoid leaking volume, we should delete the volume just created
+		// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
+		if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
+			klog.Errorf("%v failed to be deleted, this may cause volume leak", volumeID)
+		} else {
+			klog.V(5).Infof("%v is deleted because it is not in desired state within retry limit", volumeID)
+		}
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
 
