@@ -487,8 +487,11 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
+	zone := d.metadata.GetAvailabilityZone()
+
 	segments := map[string]string{
-		TopologyKey: d.metadata.GetAvailabilityZone(),
+		TopologyKey:          zone,
+		WellKnownTopologyKey: zone,
 	}
 
 	outpostArn := d.metadata.GetOutpostArn()
