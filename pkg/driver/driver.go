@@ -41,11 +41,14 @@ const (
 
 const (
 	DriverName      = "ebs.csi.aws.com"
-	TopologyKey     = "topology." + DriverName + "/zone"
 	AwsPartitionKey = "topology." + DriverName + "/partition"
 	AwsAccountIDKey = "topology." + DriverName + "/account-id"
 	AwsRegionKey    = "topology." + DriverName + "/region"
 	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
+
+	WellKnownTopologyKey = "topology.kubernetes.io/zone"
+	// DEPRECATED Use the WellKnownTopologyKey instead
+	TopologyKey = "topology." + DriverName + "/zone"
 )
 
 type Driver struct {

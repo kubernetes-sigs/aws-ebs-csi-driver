@@ -242,11 +242,12 @@ func TestCreateVolume(t *testing.T) {
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{
-								TopologyKey:     expZone,
-								AwsAccountIDKey: outpostArn.AccountID,
-								AwsOutpostIDKey: outpostArn.Resource,
-								AwsRegionKey:    outpostArn.Region,
-								AwsPartitionKey: outpostArn.Partition,
+								TopologyKey:          expZone,
+								WellKnownTopologyKey: expZone,
+								AwsAccountIDKey:      outpostArn.AccountID,
+								AwsOutpostIDKey:      outpostArn.Resource,
+								AwsRegionKey:         outpostArn.Region,
+								AwsPartitionKey:      outpostArn.Partition,
 							},
 						},
 					},
@@ -1230,7 +1231,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{TopologyKey: expZone},
+							Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: expZone},
 						},
 					},
 				}
@@ -1724,6 +1725,33 @@ func TestPickAvailabilityZone(t *testing.T) {
 		requirement *csi.TopologyRequirement
 		expZone     string
 	}{
+		{
+			name: "Return WellKnownTopologyKey if present from preferred",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{TopologyKey: ""},
+					},
+				},
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+					},
+				},
+			},
+			expZone: "foobar",
+		},
+		{
+			name: "Return WellKnownTopologyKey if present from requisite",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+					},
+				},
+			},
+			expZone: "foobar",
+		},
 		{
 			name: "Pick from preferred",
 			requirement: &csi.TopologyRequirement{
