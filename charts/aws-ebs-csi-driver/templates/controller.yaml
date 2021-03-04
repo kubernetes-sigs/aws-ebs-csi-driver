@@ -33,6 +33,12 @@ spec:
       tolerations:
         {{- if .Values.tolerateAllTaints }}
         - operator: Exists
+        {{- else }}
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
         {{- end }}
         {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
