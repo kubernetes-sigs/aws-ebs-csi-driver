@@ -53,6 +53,8 @@ func (m *NodeMounter) GetDeviceName(mountPath string) (string, int, error) {
 	return mount.GetDeviceNameFromMount(m, mountPath)
 }
 
+// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// Please mirror the change to func MakeFile in ./sanity_test.go
 func (m *NodeMounter) MakeFile(pathname string) error {
 	f, err := os.OpenFile(pathname, os.O_CREATE, os.FileMode(0644))
 	if err != nil {
@@ -66,6 +68,8 @@ func (m *NodeMounter) MakeFile(pathname string) error {
 	return nil
 }
 
+// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// Please mirror the change to func MakeFile in ./sanity_test.go
 func (m *NodeMounter) MakeDir(pathname string) error {
 	err := os.MkdirAll(pathname, os.FileMode(0755))
 	if err != nil {
@@ -76,6 +80,8 @@ func (m *NodeMounter) MakeDir(pathname string) error {
 	return nil
 }
 
+// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// Please mirror the change to func MakeFile in ./sanity_test.go
 func (m *NodeMounter) ExistsPath(filename string) (bool, error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return false, nil

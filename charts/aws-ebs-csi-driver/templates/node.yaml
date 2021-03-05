@@ -31,6 +31,9 @@ spec:
                 - fargate
       nodeSelector:
         kubernetes.io/os: linux
+        {{- with .Values.node.nodeSelector }}
+{{ toYaml . | indent 8 }}
+        {{- end }}
       hostNetwork: true
       priorityClassName: system-node-critical
       tolerations:
@@ -48,6 +51,9 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            {{- if .Values.volumeAttachLimit }}
+            - --volume-attach-limit={{ .Values.volumeAttachLimit }}
+            {{- end }}
             - --logtostderr
             - --v=5
           env:

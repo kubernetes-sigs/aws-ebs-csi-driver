@@ -1,9 +1,56 @@
+# v0.9.0
+
+## Notable changes
+- All images (including sidecars) are Multiarch
+- Enable volume stats metrics on Node service
+
+### New features
+* Feature: Add ability to customize node daemonset nodeselector ([#647](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/647), [@pliu](https://github.com/pliu))
+* add volume stats metrics - ([#677](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/677), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Add support for existing service accounts ([#688](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/688), [@ayberk](https://github.com/ayberk))
+* NodeExpandVolume no-op for raw block ([#695](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/695), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Allow specifying --volume-attach-limit in the helm chart ([#700](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/700), [@keznikl](https://github.com/keznikl))
+
+### Bug fixes
+* Fix outdated ecr login command ([#680](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/680), [@wongma7](https://github.com/wongma7))
+* Update sidecars to newer version ([#707](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/707), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
+### Misc.
+* Update README.md ([#607](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/607), [@robisoh88](https://github.com/robisoh88))
+* Add self to OWNERS ([#638](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/638), [@ayberk](https://github.com/ayberk))
+* Bring Go to 1.15.6 in Travis ([#648](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/648), [@gliptak](https://github.com/gliptak))
+* Fix overlays not being updated for gcr migration ([#649](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/649), [@wongma7](https://github.com/wongma7))
+* Arm overlay ([#653](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/653), [@ayberk](https://github.com/ayberk))
+* Use buildx in cloudbuild ([#658](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/658), [@wongma7](https://github.com/wongma7))
+* (Try to) fix cloudbuild ([#659](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/659), [@wongma7](https://github.com/wongma7))
+* Fix stray argument in cloudbuild.yaml ([#661](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/661), [@wongma7](https://github.com/wongma7))
+* Add note for gp3 on outposts ([#665](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/665), [@ayberk](https://github.com/ayberk))
+* Call hack/prow.sh from cloudbuild ([#666](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/666), [@wongma7](https://github.com/wongma7))
+* cloudbuild: Set _STAGING_PROJECT ([#668](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/668), [@wongma7](https://github.com/wongma7))
+* add import snapshot e2e test ([#678](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/678), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Prefix helm chart releases with "helm-chart-" ([#682](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/682), [@wongma7](https://github.com/wongma7))
+* Release 0.8.1 ([#683](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/683), [@wongma7](https://github.com/wongma7))
+* Push debian target to Docker Hub ([#686](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/686), [@wongma7](https://github.com/wongma7))
+* Adds patch for ebs-csi-controller-sa to volumeattachments/status ([#690](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/690), [@cuppett](https://github.com/cuppett))
+* Add a prerequisite to dynamic provisioning ([#691](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/691), [@ronenl1](https://github.com/ronenl1))
+* Refactor e2e testing scripts to be more reusable and use them instead… ([#694](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/694), [@wongma7](https://github.com/wongma7))
+* Update to golang@1.15.6 ([#699](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/699), [@ialidzhikov](https://github.com/ialidzhikov))
+* add e2e test for volume resizing ([#705](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/705), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
+# v0.8.1
+
+## Notable changes
+- Images in k8s.gcr.io are multiarch.
+
+### Bug fixes
+* release-0.8: Use buildx in cloudbuild ([#670](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/670), [@wongma7](https://github.com/wongma7))
+
 # v0.8.0
 
 ## Notable changes
-- gp3 is now the default volume type.
+- gp3 is now the default volume type. gp3 is **not** supported on outposts. Outpost customers need to use a different type for their volumes.
 - Images will be built on a Debian base by default. Images built on Amazon Linux will still be available but with the tag suffix `-amazonlinux`.
-- Images will be published to k8s.gcr.io in addition to ECR, GitHub, and Docker Hub.
+- Images will be published to k8s.gcr.io in addition to ECR and Docker Hub.
 
 ### New features
 * Chart option to disable default toleration of all taints ([#526](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/526), [@risinger](https://github.com/risinger))

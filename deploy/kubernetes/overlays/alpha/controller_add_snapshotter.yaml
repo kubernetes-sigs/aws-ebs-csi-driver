@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: csi-snapshotter
-          image: quay.io/k8scsi/csi-snapshotter:v2.1.1
+          image: k8s.gcr.io/sig-storage/csi-snapshotter:v3.0.3
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
