@@ -8,6 +8,12 @@
 
 The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage Interface (CSI) Driver provides a [CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md) interface used by Container Orchestrators to manage the lifecycle of Amazon EBS volumes.
 
+## Note for EKS customers
+
+Currently it's not possible to enable the EBS CSI driver on an EKS cluster. If you install the driver on an EKS cluster, the daemonset will register your worker nodes, but **all EBS related operations will still be handled by the in-tree plugin.**
+
+EKS will safely enable the CSIMigration for customer clusters at a later time.
+
 ## CSI Specification Compatibility Matrix
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
