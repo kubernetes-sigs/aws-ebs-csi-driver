@@ -17,6 +17,10 @@ package e2e
 import (
 	"flag"
 	"fmt"
+	"k8s.io/kubernetes/test/e2e/framework/testfiles"
+	"k8s.io/kubernetes/test/e2e/storage/drivers"
+	"k8s.io/kubernetes/test/e2e/storage/external"
+	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 	"log"
 	"math/rand"
 	"os"
@@ -30,9 +34,6 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"k8s.io/kubernetes/test/e2e/storage/drivers"
-	"k8s.io/kubernetes/test/e2e/storage/testsuites"
-
 	// ensure that cloud provider is loaded
 	_ "k8s.io/kubernetes/test/e2e/framework/providers/aws"
 )
@@ -54,6 +55,10 @@ func init() {
 	_ = flag.Set("provider", "aws")
 	flag.Parse()
 	framework.AfterReadingAllFlags(&framework.TestContext)
+
+	// Add e2e tests for the CSI driver (without migration)
+	testfiles.AddFileSource(testfiles.RootFileSource{Root: "."})
+	external.AddDriverDefinition("manifests.yaml")
 }
 
 func TestEBSCSI(t *testing.T) {

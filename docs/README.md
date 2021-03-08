@@ -12,7 +12,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.9.0                                 | no    | no     | yes    |
+| v0.9.x                                 | no    | no     | yes    |
 | v0.8.x                                 | no    | no     | yes    |
 | v0.7.1                                 | no    | no     | yes    |
 | v0.6.0                                 | no    | no     | yes    |
@@ -52,7 +52,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.9.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.9.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -68,6 +68,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
 |v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
 |v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
 |v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
@@ -110,6 +111,9 @@ If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
+
+#### Config node toleration settings
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` and `Value.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
