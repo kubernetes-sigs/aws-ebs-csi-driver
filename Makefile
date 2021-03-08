@@ -14,7 +14,7 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
-VERSION=v0.9.0
+VERSION=v0.9.1
 VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
