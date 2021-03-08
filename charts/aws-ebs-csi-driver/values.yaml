@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v0.9.0"
+  tag: "v0.9.1"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -61,8 +61,7 @@ resources:
   #   memory: 128Mi
 
 nodeSelector: {}
-
-tolerateAllTaints: true
+tolerateAllTaints: false
 tolerations: []
 
 affinity: {}
@@ -89,7 +88,7 @@ region: ""
 node:
   nodeSelector: {}
   podAnnotations: {}
-  tolerateAllTaints: true
+  tolerateAllTaints: false
   tolerations: []
 
 serviceAccount:
