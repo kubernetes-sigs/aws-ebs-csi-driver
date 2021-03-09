@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -59,13 +58,13 @@ func ParseEndpoint(endpoint string) (string, string, error) {
 		return "", "", fmt.Errorf("could not parse endpoint: %v", err)
 	}
 
-	addr := path.Join(u.Host, filepath.FromSlash(u.Path))
+	addr := filepath.Join(u.Host, filepath.FromSlash(u.Path))
 
 	scheme := strings.ToLower(u.Scheme)
 	switch scheme {
 	case "tcp":
 	case "unix":
-		addr = path.Join("/", addr)
+		addr = filepath.Join("/", addr)
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {
 			return "", "", fmt.Errorf("could not remove unix domain socket %q: %v", addr, err)
 		}
