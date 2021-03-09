@@ -14,8 +14,8 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"k8s.io/mount-utils"
 	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
 )
 
 func TestSanity(t *testing.T) {
@@ -296,6 +296,14 @@ func (f *fakeMounter) Mount(source string, target string, fstype string, options
 	return nil
 }
 
+func (f *fakeMounter) MountSensitive(source string, target string, fstype string, options []string, sensitiveOptions []string) error {
+	return nil
+}
+
+func (f *fakeMounter) MountSensitiveWithoutSystemd(source string, target string, fstype string, options []string, sensitiveOptions []string) error {
+	return nil
+}
+
 func (f *fakeMounter) Unmount(target string) error {
 	return nil
 }
@@ -316,7 +324,7 @@ func (f *fakeMounter) FormatAndMount(source string, target string, fstype string
 	return nil
 }
 
-func (f *fakeMounter) GetDeviceName(mountPath string) (string, int, error) {
+func (f *fakeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
 	return "", 0, nil
 }
 
@@ -343,7 +351,7 @@ func (f *fakeMounter) MakeDir(pathname string) error {
 	return nil
 }
 
-func (f *fakeMounter) ExistsPath(filename string) (bool, error) {
+func (f *fakeMounter) PathExists(filename string) (bool, error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return false, nil
 	} else if err != nil {
