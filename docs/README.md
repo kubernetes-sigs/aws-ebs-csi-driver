@@ -65,6 +65,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.8.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.2 |
 |v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
 |v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
 |v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0                  |
@@ -161,7 +162,7 @@ To make sure dynamically provisioned EBS volumes have all tags that the in-tree 
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/developing.html) to get some basic understanding of CSI driver before you start.
 
 ### Requirements
-* Golang 1.14.+
+* Golang 1.15.+
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 17.05+ for releasing
 
