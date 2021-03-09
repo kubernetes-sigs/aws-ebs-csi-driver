@@ -1,3 +1,15 @@
+# v0.8.2
+
+## Notable changes
+- delete leaked volume if driver don't know the volume status
+- Refactor e2e testing scripts to be more reusable and use them instead… ([#694](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/694), [@wongma7](https://github.com/wongma7))
+
+### Bug fixes
+* delete leaked volume if driver don't know the volume status ([#771](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/771), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Update test k8s version to 1.18.16 ([#759](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/759), [@ayberk](https://github.com/ayberk))
+* Bring Go to 1.15.6 in Travis ([#648](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/648), [@gliptak](https://github.com/gliptak))
+* Update to golang@1.15.6 ([#699](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/699), [@ialidzhikov](https://github.com/ialidzhikov))
+
 # v0.8.1
 
 ## Notable changes

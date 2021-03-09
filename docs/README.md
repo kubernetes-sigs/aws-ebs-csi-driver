@@ -65,6 +65,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.8.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.2 |
 |v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
 |v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
 |v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0                  |

@@ -4,7 +4,7 @@ bases:
   - ../../../base
 images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-    newTag: v0.8.1
+    newTag: v0.8.2
   - name: quay.io/k8scsi/csi-provisioner
     newName: raspbernetes/csi-external-provisioner
     newTag: "1.6.0"
