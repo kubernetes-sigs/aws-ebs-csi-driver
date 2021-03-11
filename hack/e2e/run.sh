@@ -46,6 +46,8 @@ KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_FEATURE_GATES_FILE=${KOPS_FEATURE_GATES_FILE:-./hack/feature-gates.yaml}
 KOPS_ADDITIONAL_POLICIES_FILE=${KOPS_ADDITIONAL_POLICIES_FILE:-./hack/additional-policies.yaml}
 
+HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
+
 TEST_PATH=${TEST_PATH:-"./tests/e2e/..."}
 KUBECONFIG=${KUBECONFIG:-"${HOME}/.kube/config"}
 ARTIFACTS=${ARTIFACTS:-"${TEST_DIR}/artifacts"}
@@ -103,14 +105,12 @@ fi
 loudecho "Deploying driver"
 "${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
   --namespace kube-system \
-  --set enableVolumeScheduling=true \
-  --set enableVolumeResizing=true \
-  --set enableVolumeSnapshot=true \
   --set image.repository="${IMAGE_NAME}" \
   --set image.tag="${IMAGE_TAG}" \
+  -f "${HELM_VALUES_FILE}" \
   ./charts/"${DRIVER_NAME}"
 
-if [[ -n "${EBS_SNAPSHOT_CRD}" ]]; then
+if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
   loudecho "Deploying snapshot CRD"
   kubectl apply -f "$EBS_SNAPSHOT_CRD"
   # TODO deploy snapshot controller too instead of including in helm chart
