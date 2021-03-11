@@ -6,25 +6,30 @@ require (
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
-	github.com/golang/mock v1.4.1
-	github.com/golang/protobuf v1.3.3
+	github.com/golang/mock v1.5.0
+	github.com/golang/protobuf v1.4.1
+	github.com/kubernetes-csi/csi-proxy/client v0.2.2
 	github.com/kubernetes-csi/csi-test v2.0.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.0.1
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.0
+	github.com/stretchr/testify v1.6.1
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
-	google.golang.org/grpc v1.26.0
+	google.golang.org/grpc v1.27.0
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
 	k8s.io/component-base v0.17.3
 	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.6.0
 	k8s.io/kubernetes v1.17.3
-	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
+	k8s.io/mount-utils v0.21.0-beta.0
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 replace (
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 	k8s.io/api => k8s.io/api v0.17.3
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4-beta.0
