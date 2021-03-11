@@ -52,8 +52,8 @@ function kops_create_cluster() {
 
   CLUSTER_YAML_PATH=${TEST_DIR}/${CLUSTER_NAME}.yaml
   ${KOPS_BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" -o yaml > "${CLUSTER_YAML_PATH}"
-  cat "${KOPS_FEATURE_GATES_FILE}" >> "${CLUSTER_YAML_PATH}"
-  cat "${KOPS_ADDITIONAL_POLICIES_FILE}" >> "${CLUSTER_YAML_PATH}"
+  [ -r "$KOPS_FEATURE_GATES_FILE" ] && cat "${KOPS_FEATURE_GATES_FILE}" >> "${CLUSTER_YAML_PATH}"
+  [ -r "$KOPS_ADDITIONAL_POLICIES_FILE" ] && cat "${KOPS_ADDITIONAL_POLICIES_FILE}" >> "${CLUSTER_YAML_PATH}"
   ${KOPS_BIN} replace --state "${KOPS_STATE_FILE}" -f "${CLUSTER_YAML_PATH}"
   ${KOPS_BIN} update cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --yes
 
