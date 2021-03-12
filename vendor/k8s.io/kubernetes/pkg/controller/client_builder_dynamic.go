@@ -17,14 +17,15 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
-
 	v1authenticationapi "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 	apiserverserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -32,7 +33,8 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/transport"
-	"k8s.io/klog"
+	"k8s.io/controller-manager/pkg/clientbuilder"
+	"k8s.io/klog/v2"
 	utilpointer "k8s.io/utils/pointer"
 )
 
@@ -71,7 +73,7 @@ type DynamicControllerClientBuilder struct {
 	clock clock.Clock
 }
 
-func NewDynamicClientBuilder(clientConfig *restclient.Config, coreClient v1core.CoreV1Interface, ns string) ControllerClientBuilder {
+func NewDynamicClientBuilder(clientConfig *restclient.Config, coreClient v1core.CoreV1Interface, ns string) clientbuilder.ControllerClientBuilder {
 	builder := &DynamicControllerClientBuilder{
 		ClientConfig:        clientConfig,
 		CoreClient:          coreClient,
@@ -85,7 +87,7 @@ func NewDynamicClientBuilder(clientConfig *restclient.Config, coreClient v1core.
 }
 
 // this function only for test purpose, don't call it
-func NewTestDynamicClientBuilder(clientConfig *restclient.Config, coreClient v1core.CoreV1Interface, ns string, expirationSeconds int64, leewayPercent int) ControllerClientBuilder {
+func NewTestDynamicClientBuilder(clientConfig *restclient.Config, coreClient v1core.CoreV1Interface, ns string, expirationSeconds int64, leewayPercent int) clientbuilder.ControllerClientBuilder {
 	builder := &DynamicControllerClientBuilder{
 		ClientConfig:        clientConfig,
 		CoreClient:          coreClient,
@@ -174,11 +176,11 @@ func (ts *tokenSourceImpl) Token() (*oauth2.Token, error) {
 			return false, nil
 		}
 
-		tr, inErr := ts.coreClient.ServiceAccounts(ts.namespace).CreateToken(ts.serviceAccountName, &v1authenticationapi.TokenRequest{
+		tr, inErr := ts.coreClient.ServiceAccounts(ts.namespace).CreateToken(context.TODO(), ts.serviceAccountName, &v1authenticationapi.TokenRequest{
 			Spec: v1authenticationapi.TokenRequestSpec{
 				ExpirationSeconds: utilpointer.Int64Ptr(ts.expirationSeconds),
 			},
-		})
+		}, metav1.CreateOptions{})
 		if inErr != nil {
 			klog.Warningf("get token failed: %v", inErr)
 			return false, nil
