@@ -24,6 +24,7 @@ source "${BASE_DIR}"/kops.sh
 source "${BASE_DIR}"/util.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
+CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
 
 TEST_ID=${TEST_ID:-$RANDOM}
 CLUSTER_NAME=test-cluster-${TEST_ID}.k8s.local
@@ -138,6 +139,15 @@ if [[ "${EBS_CHECK_MIGRATION}" == true ]]; then
     OVERALL_TEST_PASSED=1
   fi
 fi
+
+PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=${DRIVER_NAME},app.kubernetes.io/instance=${DRIVER_NAME}" -o json | jq -r .items[].metadata.name)
+
+while IFS= read -r POD; do
+  loudecho "Printing pod ${POD} ${CONTAINER_NAME} container logs"
+  set +e
+  kubectl logs "${POD}" -n kube-system "${CONTAINER_NAME}"
+  set -e
+done <<< "${PODS}"
 
 if [[ "${CLEAN}" == true ]]; then
   loudecho "Cleaning"
