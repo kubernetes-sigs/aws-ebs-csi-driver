@@ -1,5 +1,5 @@
 # Static Provisioning 
-This example shows how to create and consume persistence volume from exising EBS using static provisioning. 
+This example shows how to create and consume persistent volume from exising EBS using static provisioning.
 
 ## Usage
 1. Edit the PersistentVolume spec in [example manifest](./specs/example.yaml). Update `volumeHandle` with EBS volume ID that you are going to use, and update the `fsType` with the filesystem type of the volume. In this example, I have a pre-created EBS  volume in us-east-1c availability zone and it is formatted with xfs filesystem.
@@ -15,7 +15,6 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  storageClassName: ebs-sc
   csi:
     driver: ebs.csi.aws.com
     volumeHandle: {volumeId} 
@@ -29,7 +28,7 @@ spec:
           values:
           - us-east-1c 
 ```
-Note that node affinity is used here since EBS volume is created in us-east-1c, hence only node in the same AZ can consume this persisence volume. 
+Note that node affinity is used here since EBS volume is created in us-east-1c, hence only node in the same AZ can consume this persistent volume.
 
 2. Deploy the example:
 ```sh
