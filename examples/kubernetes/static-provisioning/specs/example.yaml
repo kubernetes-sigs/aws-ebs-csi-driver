@@ -1,11 +1,3 @@
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: ebs-sc
-provisioner: ebs.csi.aws.com
-volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Retain
----
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -16,7 +8,6 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
-  storageClassName: ebs-sc
   csi:
     driver: ebs.csi.aws.com
     volumeHandle: vol-05786ec9ec9526b67
@@ -24,11 +15,11 @@ spec:
   nodeAffinity:
     required:
       nodeSelectorTerms:
-      - matchExpressions:
-        - key: topology.ebs.csi.aws.com/zone
-          operator: In
-          values:
-          - us-east-1c 
+        - matchExpressions:
+            - key: topology.ebs.csi.aws.com/zone
+              operator: In
+              values:
+                - us-east-1c
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -37,7 +28,6 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: ebs-sc
   resources:
     requests:
       storage: 50Gi
@@ -48,14 +38,15 @@ metadata:
   name: app
 spec:
   containers:
-  - name: app
-    image: centos
-    command: ["/bin/sh"]
-    args: ["-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
-    volumeMounts:
-    - name: persistent-storage
-      mountPath: /data
+    - name: app
+      image: centos
+      command: ["/bin/sh"]
+      args:
+        ["-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"]
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: /data
   volumes:
-  - name: persistent-storage
-    persistentVolumeClaim:
-      claimName: ebs-claim
+    - name: persistent-storage
+      persistentVolumeClaim:
+        claimName: ebs-claim
