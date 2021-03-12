@@ -22,9 +22,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
-
-	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/v2/pkg/client/clientset/versioned"
+	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -87,11 +86,11 @@ func (t *TestStorageClass) Cleanup() {
 
 type TestVolumeSnapshotClass struct {
 	client              restclientset.Interface
-	volumeSnapshotClass *v1beta1.VolumeSnapshotClass
+	volumeSnapshotClass *volumesnapshotv1.VolumeSnapshotClass
 	namespace           *v1.Namespace
 }
 
-func NewTestVolumeSnapshotClass(c restclientset.Interface, ns *v1.Namespace, vsc *v1beta1.VolumeSnapshotClass) *TestVolumeSnapshotClass {
+func NewTestVolumeSnapshotClass(c restclientset.Interface, ns *v1.Namespace, vsc *volumesnapshotv1.VolumeSnapshotClass) *TestVolumeSnapshotClass {
 	return &TestVolumeSnapshotClass{
 		client:              c,
 		volumeSnapshotClass: vsc,
@@ -106,9 +105,9 @@ func (t *TestVolumeSnapshotClass) Create() {
 	framework.ExpectNoError(err)
 }
 
-func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) *v1beta1.VolumeSnapshot {
+func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) *volumesnapshotv1.VolumeSnapshot {
 	By("creating a VolumeSnapshot for " + pvc.Name)
-	snapshot := &v1beta1.VolumeSnapshot{
+	snapshot := &volumesnapshotv1.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       VolumeSnapshotKind,
 			APIVersion: SnapshotAPIVersion,
@@ -117,9 +116,9 @@ func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) 
 			GenerateName: "volume-snapshot-",
 			Namespace:    t.namespace.Name,
 		},
-		Spec: v1beta1.VolumeSnapshotSpec{
+		Spec: volumesnapshotv1.VolumeSnapshotSpec{
 			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
-			Source: v1beta1.VolumeSnapshotSource{
+			Source: volumesnapshotv1.VolumeSnapshotSource{
 				PersistentVolumeClaimName: &pvc.Name,
 			},
 		},
@@ -129,9 +128,9 @@ func (t *TestVolumeSnapshotClass) CreateSnapshot(pvc *v1.PersistentVolumeClaim) 
 	return snapshot
 }
 
-func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *v1beta1.VolumeSnapshotContent) *v1beta1.VolumeSnapshot {
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *volumesnapshotv1.VolumeSnapshotContent) *volumesnapshotv1.VolumeSnapshot {
 	By("creating a VolumeSnapshot from vsc " + vsc.Name)
-	snapshot := &v1beta1.VolumeSnapshot{
+	snapshot := &volumesnapshotv1.VolumeSnapshot{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       VolumeSnapshotKind,
 			APIVersion: SnapshotAPIVersion,
@@ -140,9 +139,9 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *v1beta1.Volume
 			Name:      volumeSnapshotNameStatic,
 			Namespace: t.namespace.Name,
 		},
-		Spec: v1beta1.VolumeSnapshotSpec{
+		Spec: volumesnapshotv1.VolumeSnapshotSpec{
 			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
-			Source: v1beta1.VolumeSnapshotSource{
+			Source: volumesnapshotv1.VolumeSnapshotSource{
 				VolumeSnapshotContentName: &vsc.Name,
 			},
 		},
@@ -152,9 +151,9 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *v1beta1.Volume
 	return snapshotObj
 }
 
-func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId string) *v1beta1.VolumeSnapshotContent {
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId string) *volumesnapshotv1.VolumeSnapshotContent {
 	By("creating a VolumeSnapshotContent from snapshotId: " + snapshotId)
-	snapshotContent := &v1beta1.VolumeSnapshotContent{
+	snapshotContent := &volumesnapshotv1.VolumeSnapshotContent{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       VolumeSnapshotContentKind,
 			APIVersion: SnapshotAPIVersion,
@@ -163,7 +162,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 			Name:      volumeSnapshotContenetNameStatic,
 			Namespace: t.namespace.Name,
 		},
-		Spec: v1beta1.VolumeSnapshotContentSpec{
+		Spec: volumesnapshotv1.VolumeSnapshotContentSpec{
 			VolumeSnapshotClassName: &t.volumeSnapshotClass.Name,
 			DeletionPolicy:          "Delete",
 			VolumeSnapshotRef: v1.ObjectReference{
@@ -172,7 +171,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 				Namespace: t.namespace.Name,
 			},
 			Driver: "ebs.csi.aws.com",
-			Source: v1beta1.VolumeSnapshotContentSource{
+			Source: volumesnapshotv1.VolumeSnapshotContentSource{
 				SnapshotHandle: aws.String(snapshotId),
 			},
 		},
@@ -182,13 +181,13 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 	return volumeSnapshotContent
 }
 
-func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapshot *v1beta1.VolumeSnapshot, volumeSnapshotContent *v1beta1.VolumeSnapshotContent) {
+func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapshot *volumesnapshotv1.VolumeSnapshot, volumeSnapshotContent *volumesnapshotv1.VolumeSnapshotContent) {
 	volumeSnapshotContent.Spec.VolumeSnapshotRef.Name = volumeSnapshot.Name
 	volumeSnapshotContent, err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotContents().Update(volumeSnapshotContent)
 	framework.ExpectNoError(err)
 
 }
-func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *v1beta1.VolumeSnapshot) {
+func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *volumesnapshotv1.VolumeSnapshot) {
 	By("waiting for VolumeSnapshot to be ready to use - " + snapshot.Name)
 	err := wait.Poll(15*time.Second, 5*time.Minute, func() (bool, error) {
 		vs, err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshots(t.namespace.Name).Get(snapshot.Name, metav1.GetOptions{})
@@ -204,7 +203,7 @@ func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *v1beta1.VolumeSnapshot) {
 	framework.ExpectNoError(err)
 }
 
-func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *v1beta1.VolumeSnapshot) {
+func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *volumesnapshotv1.VolumeSnapshot) {
 	By("deleting a VolumeSnapshot " + vs.Name)
 	err := snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshots(t.namespace.Name).Delete(vs.Name, &metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
@@ -213,7 +212,7 @@ func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *v1beta1.VolumeSnapshot) {
 	framework.ExpectNoError(err)
 }
 
-func (t *TestVolumeSnapshotClass) DeleteVolumeSnapshotContent(vsc *v1beta1.VolumeSnapshotContent) {
+func (t *TestVolumeSnapshotClass) DeleteVolumeSnapshotContent(vsc *volumesnapshotv1.VolumeSnapshotContent) {
 	By("deleting a VolumeSnapshotContent " + vsc.Name)
 	snapshotclientset.New(t.client).SnapshotV1beta1().VolumeSnapshotContents().Delete(vsc.Name, &metav1.DeleteOptions{})
 
