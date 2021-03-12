@@ -435,6 +435,11 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	}, nil
 }
 
+func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+	klog.V(4).Infof("ControllerGetVolume: called with args %+v", *req)
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	hasSupport := func(cap *csi.VolumeCapability) bool {
 		for _, c := range volumeCaps {
