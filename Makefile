@@ -35,7 +35,7 @@ bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
 
 bin/helm: | /tmp/helm bin
-	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.1.2-${GOOS}-amd64.tar.gz
+	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.5.3-${GOOS}-amd64.tar.gz
 	@tar -zxf /tmp/helm/helm.tar.gz -C bin --strip-components=1
 	@rm -rf /tmp/helm/*
 
@@ -157,5 +157,5 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_role.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/statefulset.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
