@@ -52,12 +52,15 @@ function kops_create_cluster() {
 
   CLUSTER_YAML_PATH=${TEST_DIR}/${CLUSTER_NAME}.yaml
   ${KOPS_BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" -o yaml > "${CLUSTER_YAML_PATH}"
+  # TODO this appends duplicate values
   [ -r "$KOPS_FEATURE_GATES_FILE" ] && cat "${KOPS_FEATURE_GATES_FILE}" >> "${CLUSTER_YAML_PATH}"
   [ -r "$KOPS_ADDITIONAL_POLICIES_FILE" ] && cat "${KOPS_ADDITIONAL_POLICIES_FILE}" >> "${CLUSTER_YAML_PATH}"
   ${KOPS_BIN} replace --state "${KOPS_STATE_FILE}" -f "${CLUSTER_YAML_PATH}"
   ${KOPS_BIN} update cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --yes
 
-  loudecho "Validating cluster $CLUSTER_NAME"
+  ${KOPS_BIN} export kubecfg --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --admin
+
+  loudecho "Validating cluster ${CLUSTER_NAME}"
   ${KOPS_BIN} validate cluster --state "${KOPS_STATE_FILE}" --wait 10m
   return $?
 }
