@@ -36,6 +36,7 @@ SSH_KEY_PATH=${TEST_DIR}/id_rsa
 
 REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
+FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 INSTANCE_TYPE=${INSTANCE_TYPE:-c4.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -133,7 +134,7 @@ loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
 set +e
-${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${ZONES%,*}" "${EXPANDED_TEST_EXTRA_FLAGS}"
+${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
 set -e
 set +x
