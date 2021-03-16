@@ -51,7 +51,8 @@ func init() {
 	}
 	framework.RegisterCommonFlags(flag.CommandLine)
 	framework.RegisterClusterFlags(flag.CommandLine)
-	_ = flag.Set("storage.migratedPlugins", "kubernetes.io/aws-ebs")
+	// TODO wongma7 set this when the metrics check bug has been fixed
+	// _ = flag.Set("storage.migratedPlugins", "kubernetes.io/aws-ebs")
 	_ = flag.Set("provider", "aws")
 	flag.Parse()
 	framework.AfterReadingAllFlags(&framework.TestContext)
@@ -78,18 +79,6 @@ func TestEBSCSI(t *testing.T) {
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "EBS CSI Migration Suite", r)
 }
 
-// List of testSuites to be executed in below loop
-var csiTestSuites = []func() testsuites.TestSuite{
-	testsuites.InitVolumesTestSuite,
-	testsuites.InitVolumeIOTestSuite,
-	testsuites.InitVolumeModeTestSuite,
-	testsuites.InitSubPathTestSuite,
-	testsuites.InitProvisioningTestSuite,
-	testsuites.InitSnapshottableTestSuite,
-	testsuites.InitVolumeExpandTestSuite,
-	testsuites.InitMultiVolumeTestSuite,
-}
-
 var _ = ginkgo.Describe("[ebs-csi-migration] EBS CSI Migration", func() {
 	// Init the *in-tree* driver.
 	// The CSIMigration & CSIMigrationAWS feature gates must be enabled on the cluster.
@@ -97,6 +86,6 @@ var _ = ginkgo.Describe("[ebs-csi-migration] EBS CSI Migration", func() {
 	// validate that CSI, not in-tree, operations are happening.
 	driver := drivers.InitAwsDriver()
 	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(driver), func() {
-		testsuites.DefineTestSuite(driver, csiTestSuites)
+		testsuites.DefineTestSuite(driver, testsuites.CSISuites)
 	})
 })
