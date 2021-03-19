@@ -120,8 +120,10 @@ fi
 loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
+set +e
 ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${ZONES%,*}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
+set -e
 set +x
 loudecho "TEST_PASSED: ${TEST_PASSED}"
 
