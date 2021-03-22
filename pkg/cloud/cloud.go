@@ -53,6 +53,17 @@ const (
 	VolumeTypeStandard = "standard"
 )
 
+// AWS provisioning limits.
+// Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+const (
+	io1MinTotalIOPS = 100
+	io1MaxTotalIOPS = 64000
+	io1MaxIOPSPerGB = 50
+	io2MinTotalIOPS = 100
+	io2MaxTotalIOPS = 64000
+	io2MaxIOPSPerGB = 500
+)
+
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
@@ -262,9 +273,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
-	case VolumeTypeIO1, VolumeTypeIO2:
+	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
+		iops = capIOPS(capacityGiB, int64(diskOptions.IOPSPerGB), io1MinTotalIOPS, io1MaxTotalIOPS, io1MaxIOPSPerGB)
+	case VolumeTypeIO2:
+		createType = diskOptions.VolumeType
+		iops = capIOPS(capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB)
 	case VolumeTypeGP3:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.IOPS)
@@ -1072,4 +1086,23 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 	}
 
 	return volumeAttachmentList
+}
+
+// Calculate actual IOPS for a volume and cap it at supported AWS limits.
+// Using requstedIOPSPerGB allows users to create a "fast" storage class
+// (requstedIOPSPerGB = 50 for io1), which can provide the maximum iops
+// that AWS supports for any requestedCapacityGiB.
+func capIOPS(requestedCapacityGiB int64, requstedIOPSPerGB, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64) int64 {
+	iops := requestedCapacityGiB * requstedIOPSPerGB
+
+	if iops < minTotalIOPS {
+		iops = minTotalIOPS
+	}
+	if iops > maxTotalIOPS {
+		iops = maxTotalIOPS
+	}
+	if iops > maxIOPSPerGB*requestedCapacityGiB {
+		iops = maxIOPSPerGB * requestedCapacityGiB
+	}
+	return iops
 }
