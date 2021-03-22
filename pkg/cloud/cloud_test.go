@@ -41,15 +41,16 @@ const (
 
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name                string
-		volumeName          string
-		volState            string
-		diskOptions         *DiskOptions
-		expDisk             *Disk
-		cleanUpFailedVolume bool
-		expErr              error
-		expCreateVolumeErr  error
-		expDescVolumeErr    error
+		name                 string
+		volumeName           string
+		volState             string
+		diskOptions          *DiskOptions
+		expDisk              *Disk
+		cleanUpFailedVolume  bool
+		expErr               error
+		expCreateVolumeErr   error
+		expDescVolumeErr     error
+		expCreateVolumeInput *ec2.CreateVolumeInput
 	}{
 		{
 			name:       "success: normal",
@@ -79,6 +80,9 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      1,
 				AvailabilityZone: defaultZone,
 			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
 			expErr: nil,
 		},
 		{
@@ -95,6 +99,9 @@ func TestCreateDisk(t *testing.T) {
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(3000),
 			},
 			expErr: nil,
 		},
@@ -215,6 +222,120 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: nil,
 		},
+		{
+			name:       "success: io1 with too low iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: small io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(200),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: large io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4000),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(64000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io2 with too low iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: small io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(2000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: large io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4000),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     100000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(64000),
+			},
+			expErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -241,7 +362,11 @@ func TestCreateDisk(t *testing.T) {
 				State:      aws.String("completed"),
 			}
 			ctx := context.Background()
-			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
+			matcher := gomock.Any()
+			if tc.expCreateVolumeInput != nil {
+				matcher = eqCreateVolume(tc.expCreateVolumeInput)
+			}
+			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), matcher).Return(vol, tc.expCreateVolumeErr)
 			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
 			if len(tc.diskOptions.SnapshotID) > 0 {
 				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
@@ -1276,5 +1401,31 @@ func (m *eqCreateSnapshotInputMatcher) Matches(x interface{}) bool {
 }
 
 func (m *eqCreateSnapshotInputMatcher) String() string {
+	return m.expected.String()
+}
+
+type eqCreateVolumeMatcher struct {
+	expected *ec2.CreateVolumeInput
+}
+
+func eqCreateVolume(expected *ec2.CreateVolumeInput) gomock.Matcher {
+	return &eqCreateVolumeMatcher{expected}
+}
+
+func (m *eqCreateVolumeMatcher) Matches(x interface{}) bool {
+	input, ok := x.(*ec2.CreateVolumeInput)
+	if !ok {
+		return false
+	}
+
+	if input == nil {
+		return false
+	}
+	// Compare only IOPS for now
+	ret := reflect.DeepEqual(m.expected.Iops, input.Iops)
+	return ret
+}
+
+func (m *eqCreateVolumeMatcher) String() string {
 	return m.expected.String()
 }
