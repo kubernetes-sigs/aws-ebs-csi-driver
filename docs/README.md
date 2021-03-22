@@ -33,7 +33,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 | Parameters                  | Values                                 | Default  | Description         |
 |-----------------------------|----------------------------------------|----------|---------------------|
-| "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation |
+| "csi.storage.k8s.io/fstype" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation. This parameter is case sensitive! |
 | "type"                      | io1, io2, gp2, gp3, sc1, st1,standard  | gp3*     | EBS volume type     |
 | "iopsPerGB"                 |                                        |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified. If this value multiplied by the size of a requested volume produces a value below the minimum or above the maximum IOPs allowed for the volume type, as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), AWS will return an error and volume creation will fail |
 | "iops"                      |                                        | 3000     | I/O operations per second. Only effetive when gp3 volume type is specified. If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html). |
@@ -43,7 +43,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 **Notes**:
 * `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
-* The parameters are case insensitive.
+* Unless explicitly noted, all parameters are case insensitive (e.g. "kmsKeyId", "kmskeyid" and any other combination of upper/lowercase characters can be used).
 
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
