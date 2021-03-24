@@ -46,8 +46,7 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 K8S_VERSION=${K8S_VERSION:-1.20.4}
 KOPS_VERSION=${KOPS_VERSION:-1.20.0-beta.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
-KOPS_FEATURE_GATES_FILE=${KOPS_FEATURE_GATES_FILE:-./hack/feature-gates.yaml}
-KOPS_ADDITIONAL_POLICIES_FILE=${KOPS_ADDITIONAL_POLICIES_FILE:-./hack/additional-policies.yaml}
+KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
@@ -99,8 +98,7 @@ kops_create_cluster \
   "$K8S_VERSION" \
   "$TEST_DIR" \
   "$BASE_DIR" \
-  "$KOPS_FEATURE_GATES_FILE" \
-  "$KOPS_ADDITIONAL_POLICIES_FILE"
+  "$KOPS_PATCH_FILE"
 if [[ $? -ne 0 ]]; then
   exit 1
 fi
