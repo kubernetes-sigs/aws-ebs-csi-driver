@@ -25,6 +25,7 @@ source "${BASE_DIR}"/util.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
 CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
+DRIVER_START_TIME_THRESHOLD_SECONDS=60
 
 TEST_ID=${TEST_ID:-$RANDOM}
 CLUSTER_NAME=test-cluster-${TEST_ID}.k8s.local
@@ -104,11 +105,13 @@ if [[ $? -ne 0 ]]; then
 fi
 
 loudecho "Deploying driver"
+startSec=$(date +'%s')
 "${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
   --namespace kube-system \
   --set image.repository="${IMAGE_NAME}" \
   --set image.tag="${IMAGE_TAG}" \
   -f "${HELM_VALUES_FILE}" \
+  --wait \
   ./charts/"${DRIVER_NAME}"
 
 if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
@@ -116,6 +119,15 @@ if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
   kubectl apply -f "$EBS_SNAPSHOT_CRD"
   # TODO deploy snapshot controller too instead of including in helm chart
 fi
+endSec=$(date +'%s')
+secondUsed=$(( (endSec-startSec)/1 ))
+# Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
+if [ $secondUsed -gt $DRIVER_START_TIME_THRESHOLD_SECONDS ]; then
+  loudecho "Driver start timeout, took $secondUsed but the threshold is $DRIVER_START_TIME_THRESHOLD_SECONDS. Fail the test."
+  exit 1
+fi
+loudecho "Driver deployment complete, time used: $secondUsed seconds"
+
 
 loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
