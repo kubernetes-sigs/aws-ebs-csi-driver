@@ -275,10 +275,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = capIOPS(capacityGiB, int64(diskOptions.IOPSPerGB), io1MinTotalIOPS, io1MaxTotalIOPS, io1MaxIOPSPerGB)
+		iops = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io1MinTotalIOPS, io1MaxTotalIOPS, io1MaxIOPSPerGB)
 	case VolumeTypeIO2:
 		createType = diskOptions.VolumeType
-		iops = capIOPS(capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB)
+		iops = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB)
 	case VolumeTypeGP3:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.IOPS)
@@ -1092,17 +1092,20 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 // Using requstedIOPSPerGB allows users to create a "fast" storage class
 // (requstedIOPSPerGB = 50 for io1), which can provide the maximum iops
 // that AWS supports for any requestedCapacityGiB.
-func capIOPS(requestedCapacityGiB int64, requstedIOPSPerGB, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64) int64 {
+func capIOPS(volumeType string, requestedCapacityGiB int64, requstedIOPSPerGB, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64) int64 {
 	iops := requestedCapacityGiB * requstedIOPSPerGB
 
 	if iops < minTotalIOPS {
 		iops = minTotalIOPS
+		klog.V(5).Infof("Increased IOPS for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, iops)
 	}
 	if iops > maxTotalIOPS {
 		iops = maxTotalIOPS
+		klog.V(5).Infof("Capped IOPS for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, iops)
 	}
 	if iops > maxIOPSPerGB*requestedCapacityGiB {
 		iops = maxIOPSPerGB * requestedCapacityGiB
+		klog.V(5).Infof("Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
 	}
 	return iops
 }
