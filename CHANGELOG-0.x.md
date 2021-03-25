@@ -1,3 +1,15 @@
+# v0.9.1
+
+## Notable changes
+- Change helm deploy settings: default tolerationAllTaints to false, NoExecute toleration time is 300s and will tolerate `CriticalAddonsOnly`
+
+### New features
+* Integrate external e2e test in the testsuits ([#726](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/726), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
+### Bug fixes
+* delete leaked volume if driver don't know the volume status ([#771](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/771), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Update test k8s version to 1.18.16 ([#759](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/759), [@ayberk](https://github.com/ayberk))
+
 # v0.9.0
 
 ## Notable changes
