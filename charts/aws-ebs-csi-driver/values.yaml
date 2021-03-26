@@ -107,6 +107,10 @@ k8sTagClusterId: ""
 # region: us-east-1
 region: ""
 
+# Additonal environment variables for the controller
+controller:
+  extraVars: {}
+
 node:
   priorityClassName: ""
   nodeSelector: {}
