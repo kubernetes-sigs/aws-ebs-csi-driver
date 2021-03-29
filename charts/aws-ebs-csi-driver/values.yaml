@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v0.9.0"
+  tag: "v0.10.0"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -70,7 +70,7 @@ resources:
 
 priorityClassName: ""
 nodeSelector: {}
-tolerateAllTaints: true
+tolerateAllTaints: false
 tolerations: []
 affinity: {}
 
@@ -107,11 +107,15 @@ k8sTagClusterId: ""
 # region: us-east-1
 region: ""
 
+# Additonal environment variables for the controller
+controller:
+  extraVars: {}
+
 node:
   priorityClassName: ""
   nodeSelector: {}
   podAnnotations: {}
-  tolerateAllTaints: true
+  tolerateAllTaints: false
   tolerations: []
   resources: {}
 

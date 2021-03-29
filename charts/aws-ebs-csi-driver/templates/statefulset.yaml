@@ -39,6 +39,9 @@ spec:
       containers:
         - name: snapshot-controller
           image: {{ printf "%s:%s" .Values.snapshotController.repository .Values.snapshotController.tag }}
+          {{- with .Values.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
           env:
 {{- if .Values.proxy.http_proxy }}
           - name: HTTP_PROXY

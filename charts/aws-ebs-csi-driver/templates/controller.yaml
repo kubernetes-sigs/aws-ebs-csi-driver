@@ -88,6 +88,12 @@ spec:
             - name: AWS_REGION
               value: {{ .Values.region }}
             {{- end }}
+            {{- if .Values.controller.extraVars }}
+            {{- range $key, $val :=  .Values.controller.extraVars }}
+            - name: {{ $key }}
+              value: "{{ $val }}"
+            {{- end }}
+            {{- end }}
 {{- if .Values.proxy.http_proxy }}
             - name: HTTP_PROXY
               value: {{ .Values.proxy.http_proxy | quote }}

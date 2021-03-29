@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	ec2metadata "github.com/aws/aws-sdk-go/aws/ec2metadata"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockEC2Metadata is a mock of EC2Metadata interface
+// MockEC2Metadata is a mock of EC2Metadata interface.
 type MockEC2Metadata struct {
 	ctrl     *gomock.Controller
 	recorder *MockEC2MetadataMockRecorder
 }
 
-// MockEC2MetadataMockRecorder is the mock recorder for MockEC2Metadata
+// MockEC2MetadataMockRecorder is the mock recorder for MockEC2Metadata.
 type MockEC2MetadataMockRecorder struct {
 	mock *MockEC2Metadata
 }
 
-// NewMockEC2Metadata creates a new mock instance
+// NewMockEC2Metadata creates a new mock instance.
 func NewMockEC2Metadata(ctrl *gomock.Controller) *MockEC2Metadata {
 	mock := &MockEC2Metadata{ctrl: ctrl}
 	mock.recorder = &MockEC2MetadataMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockEC2Metadata) EXPECT() *MockEC2MetadataMockRecorder {
 	return m.recorder
 }
 
-// Available mocks base method
+// Available mocks base method.
 func (m *MockEC2Metadata) Available() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Available")
@@ -41,13 +42,13 @@ func (m *MockEC2Metadata) Available() bool {
 	return ret0
 }
 
-// Available indicates an expected call of Available
+// Available indicates an expected call of Available.
 func (mr *MockEC2MetadataMockRecorder) Available() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Available", reflect.TypeOf((*MockEC2Metadata)(nil).Available))
 }
 
-// GetInstanceIdentityDocument mocks base method
+// GetInstanceIdentityDocument mocks base method.
 func (m *MockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInstanceIdentityDocument")
@@ -56,13 +57,13 @@ func (m *MockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2Instance
 	return ret0, ret1
 }
 
-// GetInstanceIdentityDocument indicates an expected call of GetInstanceIdentityDocument
+// GetInstanceIdentityDocument indicates an expected call of GetInstanceIdentityDocument.
 func (mr *MockEC2MetadataMockRecorder) GetInstanceIdentityDocument() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIdentityDocument", reflect.TypeOf((*MockEC2Metadata)(nil).GetInstanceIdentityDocument))
 }
 
-// GetMetadata mocks base method
+// GetMetadata mocks base method.
 func (m *MockEC2Metadata) GetMetadata(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMetadata", arg0)
@@ -71,7 +72,7 @@ func (m *MockEC2Metadata) GetMetadata(arg0 string) (string, error) {
 	return ret0, ret1
 }
 
-// GetMetadata indicates an expected call of GetMetadata
+// GetMetadata indicates an expected call of GetMetadata.
 func (mr *MockEC2MetadataMockRecorder) GetMetadata(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockEC2Metadata)(nil).GetMetadata), arg0)

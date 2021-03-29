@@ -12,7 +12,8 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.9.0                                 | no    | no     | yes    |
+| v0.10.0                                | no    | no     | yes    |
+| v0.9.x                                 | no    | no     | yes    |
 | v0.8.x                                 | no    | no     | yes    |
 | v0.7.1                                 | no    | no     | yes    |
 | v0.6.0                                 | no    | no     | yes    |
@@ -33,7 +34,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 | Parameters                  | Values                                 | Default  | Description         |
 |-----------------------------|----------------------------------------|----------|---------------------|
-| "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation |
+| "csi.storage.k8s.io/fstype" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation. This parameter is case sensitive! |
 | "type"                      | io1, io2, gp2, gp3, sc1, st1,standard  | gp3*     | EBS volume type     |
 | "iopsPerGB"                 |                                        |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified. If this value multiplied by the size of a requested volume produces a value below the minimum or above the maximum IOPs allowed for the volume type, as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), AWS will return an error and volume creation will fail |
 | "iops"                      |                                        | 3000     | I/O operations per second. Only effetive when gp3 volume type is specified. If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html). |
@@ -43,7 +44,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 **Notes**:
 * `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
-* The parameters are case insensitive.
+* Unless explicitly noted, all parameters are case insensitive (e.g. "kmsKeyId", "kmskeyid" and any other combination of upper/lowercase characters can be used).
 
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
@@ -52,7 +53,8 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.9.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.10.0                                | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.9.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -68,6 +70,8 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|
+|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
 |v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
 |v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
 |v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
@@ -111,7 +115,7 @@ If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
 #### Config node toleration settings
-By default, driver can be deployed on any nodes, to have driver tolerate taint `CriticalAddonsOnly`, please set helm `Value.node.tolerateAllTaints` and `Value.tolerateAllTaints` to false before deployment
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` and `Value.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver

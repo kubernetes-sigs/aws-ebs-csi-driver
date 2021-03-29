@@ -19,12 +19,9 @@ package driver
 import (
 	"context"
 	"fmt"
-	"golang.org/x/sys/unix"
-	"k8s.io/kubernetes/pkg/volume"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -33,9 +30,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/resizefs"
-	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
+	"k8s.io/kubernetes/pkg/volume"
+	mountutils "k8s.io/mount-utils"
 )
 
 const (
@@ -91,9 +87,14 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 		panic(err)
 	}
 
+	nodeMounter, err := newNodeMounter()
+	if err != nil {
+		panic(err)
+	}
+
 	return nodeService{
 		metadata:      metadata,
-		mounter:       newNodeMounter(),
+		mounter:       nodeMounter,
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
@@ -163,8 +164,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	klog.V(4).Infof("NodeStageVolume: find device path %s -> %s", devicePath, source)
-
-	exists, err := d.mounter.ExistsPath(target)
+	exists, err := d.mounter.PathExists(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if target %q exists: %v", target, err)
 		return nil, status.Error(codes.Internal, msg)
@@ -175,14 +175,14 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if !exists {
 		// If target path does not exist we need to create the directory where volume will be staged
 		klog.V(4).Infof("NodeStageVolume: creating target dir %q", target)
-		if err = d.mounter.MakeDir(target); err != nil {
+		if err := d.mounter.MakeDir(target); err != nil {
 			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
 			return nil, status.Error(codes.Internal, msg)
 		}
 	}
 
 	// Check if a device is mounted in target directory
-	device, _, err := d.mounter.GetDeviceName(target)
+	device, _, err := d.mounter.GetDeviceNameFromMount(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if volume is already mounted: %v", err)
 		return nil, status.Error(codes.Internal, msg)
@@ -200,10 +200,9 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
 	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
 	if err != nil {
-		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
+		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
 	}
-
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
@@ -230,7 +229,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	// Check if target directory is a mount point. GetDeviceNameFromMount
 	// given a mnt point, finds the device from /proc/mounts
 	// returns the device name, reference count, and error code
-	dev, refCount, err := d.mounter.GetDeviceName(target)
+	dev, refCount, err := d.mounter.GetDeviceNameFromMount(target)
 	if err != nil {
 		msg := fmt.Sprintf("failed to check if volume is mounted: %v", err)
 		return nil, status.Error(codes.Internal, msg)
@@ -282,6 +281,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 			return &csi.NodeExpandVolumeResponse{}, nil
 		}
 	} else {
+		// TODO use util.GenericResizeFS
 		// VolumeCapability is nil, check if volumePath point to a block device
 		isBlock, err := d.IsBlockDevice(volumePath)
 		if err != nil {
@@ -298,6 +298,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		}
 	}
 
+	// TODO this won't make sense on Windows with csi-proxy
 	args := []string{"-o", "source", "--noheadings", "--target", volumePath}
 	output, err := d.mounter.Command("findmnt", args...).Output()
 	if err != nil {
@@ -309,11 +310,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		return nil, status.Errorf(codes.Internal, "Could not get valid device for mount path: %q", req.GetVolumePath())
 	}
 
-	// TODO: refactor Mounter to expose a mount.SafeFormatAndMount object
-	r := resizefs.NewResizeFs(&mount.SafeFormatAndMount{
-		Interface: mount.New(""),
-		Exec:      exec.New(),
-	})
+	r := mountutils.NewResizeFs(d.mounter)
 
 	// TODO: lock per volume ID to have some idempotency
 	if _, err := r.Resize(devicePath, volumePath); err != nil {
@@ -417,7 +414,7 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		return nil, status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume path was empty")
 	}
 
-	exists, err := d.mounter.ExistsPath(req.VolumePath)
+	exists, err := d.mounter.PathExists(req.VolumePath)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unknown error when stat on %s: %v", req.VolumePath, err)
 	}
@@ -490,8 +487,11 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
+	zone := d.metadata.GetAvailabilityZone()
+
 	segments := map[string]string{
-		TopologyKey: d.metadata.GetAvailabilityZone(),
+		TopologyKey:          zone,
+		WellKnownTopologyKey: zone,
 	}
 
 	outpostArn := d.metadata.GetOutpostArn()
@@ -532,21 +532,20 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 
 	// create the global mount path if it is missing
 	// Path in the form of /var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/{volumeName}
-	exists, err = d.mounter.ExistsPath(globalMountPath)
+	exists, err = d.mounter.PathExists(globalMountPath)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if path exists %q: %v", globalMountPath, err)
 	}
 
 	if !exists {
-		if err = d.mounter.MakeDir(globalMountPath); err != nil {
+		if err := d.mounter.MakeDir(globalMountPath); err != nil {
 			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
 
 	// Create the mount point as a file since bind mount device node requires it to be a file
 	klog.V(5).Infof("NodePublishVolume [block]: making target file %s", target)
-	err = d.mounter.MakeFile(target)
-	if err != nil {
+	if err := d.mounter.MakeFile(target); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
 		}
@@ -596,60 +595,6 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	return nil
 }
 
-// findDevicePath finds path of device and verifies its existence
-// if the device is not nvme, return the path directly
-// if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
-func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error) {
-	exists, err := d.mounter.ExistsPath(devicePath)
-	if err != nil {
-		return "", err
-	}
-
-	// If the path exists, assume it is not nvme device
-	if exists {
-		return devicePath, nil
-	}
-
-	// Else find the nvme device path using volume ID
-	// This is the magic name on which AWS presents NVME devices under /dev/disk/by-id/
-	// For example, vol-0fab1d5e3f72a5e23 creates a symlink at
-	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
-	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
-
-	return findNvmeVolume(nvmeName)
-}
-
-// findNvmeVolume looks for the nvme volume with the specified name
-// It follows the symlink (if it exists) and returns the absolute path to the device
-func findNvmeVolume(findName string) (device string, err error) {
-	p := filepath.Join("/dev/disk/by-id/", findName)
-	stat, err := os.Lstat(p)
-	if err != nil {
-		if os.IsNotExist(err) {
-			klog.V(5).Infof("nvme path %q not found", p)
-			return "", fmt.Errorf("nvme path %q not found", p)
-		}
-		return "", fmt.Errorf("error getting stat of %q: %v", p, err)
-	}
-
-	if stat.Mode()&os.ModeSymlink != os.ModeSymlink {
-		klog.Warningf("nvme file %q found, but was not a symlink", p)
-		return "", fmt.Errorf("nvme file %q found, but was not a symlink", p)
-	}
-	// Find the target, resolving to an absolute path
-	// For example, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23 -> ../../nvme2n1
-	resolved, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return "", fmt.Errorf("error reading target of symlink %q: %v", p, err)
-	}
-
-	if !strings.HasPrefix(resolved, "/dev") {
-		return "", fmt.Errorf("resolved symlink for %q was unexpected: %q", p, resolved)
-	}
-
-	return resolved, nil
-}
-
 // getVolumesLimit returns the limit of volumes that the node supports
 func (d *nodeService) getVolumesLimit() int64 {
 	if d.driverOptions.volumeAttachLimit >= 0 {
@@ -673,29 +618,4 @@ func hasMountOption(options []string, opt string) bool {
 		}
 	}
 	return false
-}
-
-// IsBlock checks if the given path is a block device
-func (d *nodeService) IsBlockDevice(fullPath string) (bool, error) {
-	var st unix.Stat_t
-	err := unix.Stat(fullPath, &st)
-	if err != nil {
-		return false, err
-	}
-
-	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
-}
-
-func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
-	cmd := d.mounter.Command("blockdev", "--getsize64", devicePath)
-	output, err := cmd.Output()
-	if err != nil {
-		return -1, fmt.Errorf("error when getting size of block volume at path %s: output: %s, err: %v", devicePath, string(output), err)
-	}
-	strOut := strings.TrimSpace(string(output))
-	gotSizeBytes, err := strconv.ParseInt(strOut, 10, 64)
-	if err != nil {
-		return -1, fmt.Errorf("failed to parse size %s as int", strOut)
-	}
-	return gotSizeBytes, nil
 }
