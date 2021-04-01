@@ -1,3 +1,63 @@
+# v0.10.0
+
+## Notable changes
+- Prep for Windows support: Copy pkg/mounter and refactor to use k8s.io/mount-utils ([#786](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/786), [@wongma7](https://github.com/wongma7))
+- Add well-known topology label ([#773](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/773), [@ayberk](https://github.com/ayberk))
+- Update livenessprobe image version from 2.1.0 to 2.2.0 ([#756](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/756), [@mowangdk](https://github.com/mowangdk))
+- Remove arm overlay ([#719](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/719), [@ayberk](https://github.com/ayberk))
+- Add readiness probe so controller does not report "Ready" prematurely ([#751](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/751), [@vdhanan](https://github.com/vdhanan))
+- Add toleration time to NoExecute effect ([#776](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/776), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
+### New features
+* Add ability to specify topologySpreadConstraints ([#770](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/770), [@arcivanov](https://github.com/arcivanov))
+
+### Bug fixes
+* delete leaked volume if driver don't know the volume status ([#771](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/771), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* modify error message when request volume is in use with other node ([#698](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/698), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Make CreateVolume idempotent ([#744](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/744), [@chrishenzie](https://github.com/chrishenzie))
+
+### Misc.
+* Add documentation for release process ([#610](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/610), [@ayberk](https://github.com/ayberk))
+* feat: Add option to provision StorageClasses ([#697](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/697), [@gazal-k](https://github.com/gazal-k))
+* Refactor inFlight key to add lock per volumeId ([#702](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/702), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Add support for node existing service accounts ([#704](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/704), [@mper0003](https://github.com/mper0003))
+* More controll over snapshot-controller scheduling ([#708](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/708), [@alex-berger](https://github.com/alex-berger))
+* Remove hardcoded snapshot controller image references ([#711](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/711), [@ig0rsky](https://github.com/ig0rsky))
+* release 0.9.0 ([#718](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/718), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Move cr.yaml out of github workflows ([#720](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/720), [@ayberk](https://github.com/ayberk))
+* Bump chart version ([#724](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/724), [@ayberk](https://github.com/ayberk))
+* Integrate external e2e test in the testsuits ([#726](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/726), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Allow all fields to be set on StorageClasses ([#730](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/730), [@haines](https://github.com/haines))
+* [chart] Allow resources override for node DaemonSet + priorityClassName ([#732](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/732), [@dntosas](https://github.com/dntosas))
+* [chart]  Add storage class annotation and label handling ([#734](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/734), [@nicholasmhughes](https://github.com/nicholasmhughes))
+* Updated installation to use latest 0.9 release ([#735](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/735), [@PhilThurston](https://github.com/PhilThurston))
+* patch stable release to use gcr image ([#740](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/740), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* correct kustomization gcr image repo ([#742](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/742), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Update ECR overlay ([#745](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/745), [@ayberk](https://github.com/ayberk))
+* Set enableVolumeScheduling to true by default in the helm chart ([#752](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/752), [@mtougeron](https://github.com/mtougeron))
+* Sets the imagePullSecrets if the value is set in the chart ([#755](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/755), [@mtougeron](https://github.com/mtougeron))
+* Update test k8s version to 1.18.16 ([#759](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/759), [@ayberk](https://github.com/ayberk))
+* add a document separator for storageclass template file ([#762](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/762), [@nvnmandadhi](https://github.com/nvnmandadhi))
+* Allow setting http proxy and no proxy environment values ([#765](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/765), [@rubroboletus](https://github.com/rubroboletus))
+* Fix error message when IOPSPerGB is missing in io1 volumes ([#767](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/767), [@jsafrane](https://github.com/jsafrane))
+* removed harcoded NAMESPACE from helm chart ([#768](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/768), [@alexandrst88](https://github.com/alexandrst88))
+* Aws client config: increase MaxRetries ([#769](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/769), [@josselin-c](https://github.com/josselin-c))
+* Update chart version ([#772](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/772), [@ayberk](https://github.com/ayberk))
+* Add self as reviewer ([#774](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/774), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* go mod tidy ([#777](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/777), [@vdhanan](https://github.com/vdhanan))
+* Removing prestop hook for node-driver-registrar ([#778](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/778), [@tsunny](https://github.com/tsunny))
+* hack/e2e: Support passing helm values as values.yaml and make other similar files optional ([#787](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/787), [@wongma7](https://github.com/wongma7))
+* Print csi plugin logs at end of e2e test ([#789](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/789), [@wongma7](https://github.com/wongma7))
+* Update snapshot controller resources ([#791](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/791), [@tirumerla](https://github.com/tirumerla))
+* Remove storageclass from static example ([#794](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/794), [@wongma7](https://github.com/wongma7))
+* Don't exit script prematurely if test fails ([#802](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/802), [@wongma7](https://github.com/wongma7))
+* csi.storage.k8s.io/fstype is case sensitive ([#807](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/807), [@jsafrane](https://github.com/jsafrane))
+* fix deploy stable ecr error kustomization file ([#808](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/808), [@ABNER-1](https://github.com/ABNER-1))
+* release v0.9.1 ([#813](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/813), [@vdhanan](https://github.com/vdhanan))
+* Use the old topology key for e2e tests ([#814](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/814), [@ayberk](https://github.com/ayberk))
+* Track driver deploy time in e2e test pipeline ([#815](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/815), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* AWS EBS CSI Driver Helm chart to inject environment variables ([#817](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/817), [@tomdymond](https://github.com/tomdymond))
+
 # v0.9.1
 
 ## Notable changes
