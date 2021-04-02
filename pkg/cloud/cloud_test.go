@@ -371,7 +371,7 @@ func TestAttachDisk(t *testing.T) {
 
 			vol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("node-1234"), State: aws.String("attached")}},
 			}
 
 			ctx := context.Background()
@@ -417,6 +417,12 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "node-1234",
 			expErr:   fmt.Errorf("DetachVolume generic error"),
 		},
+		{
+			name:     "fail: DetachVolume returned not found error",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   fmt.Errorf("DetachVolume not found error"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -433,7 +439,12 @@ func TestDetachDisk(t *testing.T) {
 			ctx := context.Background()
 			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-			mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+			switch tc.name {
+			case "fail: DetachVolume returned not found error":
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, awserr.New("InvalidVolume.NotFound", "foo", fmt.Errorf("")))
+			default:
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+			}
 
 			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
 			if err != nil {
@@ -1227,6 +1238,166 @@ func TestListSnapshots(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestWaitForAttachmentState(t *testing.T) {
+	testCases := []struct {
+		name             string
+		volumeID         string
+		expectedState    string
+		expectedInstance string
+		expectedDevice   string
+		alreadyAssigned  bool
+		expectError      bool
+	}{
+		{
+			name:             "success: attached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "success: detached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeDetachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "success: disk not found, assumed detached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeDetachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "failure: disk not found, expected attached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: unexpected device",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdbb",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: unexpected instance",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1235",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: already assigned but wrong state",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  true,
+			expectError:      true,
+		},
+		{
+			name:             "success: multiple attachments",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "failure: disk still attaching",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+	}
+
+	volumeAttachmentStatePollSteps = 1
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			attachedVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+			}
+
+			attachingVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attaching")}},
+			}
+
+			detachedVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("detached")}},
+			}
+
+			multipleAttachmentsVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1235"), State: aws.String("attached")}, {Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+			}
+
+			ctx := context.Background()
+
+			switch tc.name {
+			case "success: detached", "failure: already assigned but wrong state":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{detachedVol}}, nil).AnyTimes()
+			case "success: disk not found, assumed detached", "failure: disk not found, expected attached":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, awserr.New("InvalidVolume.NotFound", "foo", fmt.Errorf(""))).AnyTimes()
+			case "success: multiple attachments":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
+			case "failure: disk still attaching":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachingVol}}, nil).AnyTimes()
+			default:
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachedVol}}, nil).AnyTimes()
+			}
+
+			attachment, err := c.WaitForAttachmentState(ctx, tc.volumeID, tc.expectedState, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
+			if tc.expectError {
+				if err == nil {
+					t.Fatal("WaitForAttachmentState() failed: expected error, got nothing")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("WaitForAttachmentState() failed: expected no error, got %v", err)
+				}
+
+				if tc.expectedState == volumeAttachedState {
+					if attachment == nil {
+						t.Fatal("WaiForAttachmentState() failed: expected attachment, got nothing")
+					}
+				} else {
+					if attachment != nil {
+						t.Fatalf("WaiForAttachmentState() failed: expected no attachment, got %v", attachment)
+					}
+				}
+			}
+		})
 	}
 }
 

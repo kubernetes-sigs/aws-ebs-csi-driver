@@ -17,11 +17,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	k8srestclient "k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"strings"
+
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	k8srestclient "k8s.io/client-go/rest"
 
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
@@ -113,7 +114,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 	AfterEach(func() {
 		if !skipManuallyDeletingVolume {
-			err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached")
+			_, err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached", "", "", false)
 			if err != nil {
 				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
 			}
