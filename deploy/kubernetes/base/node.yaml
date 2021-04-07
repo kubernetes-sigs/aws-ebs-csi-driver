@@ -5,7 +5,6 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-node
-  namespace: kube-system
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
@@ -32,7 +31,7 @@ spec:
         kubernetes.io/os: linux
       hostNetwork: true
       serviceAccountName: ebs-csi-node-sa
-      priorityClassName: system-node-critical
+      priorityClassName: system-cluster-critical
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -43,7 +42,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
