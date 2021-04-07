@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windows-server-iis
+spec:
+  selector:
+    matchLabels:
+      app: windows-server-iis
+      tier: backend
+      track: stable
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: windows-server-iis
+        tier: backend
+        track: stable
+    spec:
+      containers:
+        - name: windows-server-iis
+          image: mcr.microsoft.com/windows/servercore:1809
+          ports:
+            - name: http
+              containerPort: 80
+          imagePullPolicy: IfNotPresent
+          command:
+            - powershell.exe
+            - -command
+            - "Add-WindowsFeature Web-Server; Invoke-WebRequest -UseBasicParsing -Uri 'https://dotnetbinaries.blob.core.windows.net/servicemonitor/2.0.1.6/ServiceMonitor.exe' -OutFile 'C:\\ServiceMonitor.exe'; echo '<html><body><br/><br/><marquee><H1>Hello EKS!!!<H1><marquee></body><html>' > C:\\inetpub\\wwwroot\\default.html; C:\\ServiceMonitor.exe 'w3svc'; "
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: C:\data
+      nodeSelector:
+        kubernetes.io/os: windows
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: ebs-claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-claim
+spec:
+  storageClassName: windows
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: windows
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  fstype: ntfs
