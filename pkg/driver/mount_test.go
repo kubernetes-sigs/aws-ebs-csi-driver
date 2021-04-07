@@ -234,7 +234,7 @@ Journal checksum:         0xb7df3c6e
 				Interface: mount.New(""),
 				Exec:      &fexec,
 			}
-			fakeMounter := NodeMounter{safe, &fexec}
+			fakeMounter := NodeMounter{&safe}
 
 			var blockSize uint64
 			var fsSize uint64
@@ -296,9 +296,9 @@ func TestNeedResize(t *testing.T) {
 			}
 			safe := mount.SafeFormatAndMount{
 				Interface: mount.New(""),
-				Exec:      utilexec.New(),
+				Exec:      &fexec,
 			}
-			fakeMounter := NodeMounter{safe, &fexec}
+			fakeMounter := NodeMounter{&safe}
 
 			needResize, err := fakeMounter.NeedResize(test.devicePath, test.deviceMountPath)
 			if needResize != test.expectResult {
