@@ -450,6 +450,23 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	return foundAll
 }
 
+func isValidVolumeContext(volContext map[string]string) bool {
+	//There could be multiple volume attributes in the volumeContext map
+	//Validate here case by case
+	if partition, ok := volContext[VolumeAttributePartition]; ok {
+		partitionInt, err := strconv.ParseInt(partition, 10, 64)
+		if err != nil {
+			klog.Errorf("failed to parse partition %s as int", partition)
+			return false
+		}
+		if partitionInt < 0 {
+			klog.Errorf("invalid partition config, partition = %s", partition)
+			return false
+		}
+	}
+	return true
+}
+
 func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.V(4).Infof("CreateSnapshot: called with args %+v", req)
 	snapshotName := req.GetName()
