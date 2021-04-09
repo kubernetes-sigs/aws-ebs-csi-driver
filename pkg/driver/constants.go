@@ -23,6 +23,19 @@ const (
 	DevicePathKey = "devicePath"
 )
 
+// constants of keys in VolumeContext
+const (
+	// VolumeAttributePartition represents key for partition config in VolumeContext
+	// this represents the partition number on a device used to mount
+	VolumeAttributePartition = "partition"
+)
+
+// constants of disk partition suffix
+const (
+	diskPartitionSuffix     = ""
+	nvmeDiskPartitionSuffix = "p"
+)
+
 // constants of keys in volume parameters
 const (
 	// VolumeTypeKey represents key for volume type
