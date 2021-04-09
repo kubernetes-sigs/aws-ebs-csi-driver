@@ -32,7 +32,7 @@ import (
 // findDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
 // if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
-func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error) {
+func (d *nodeService) findDevicePath(devicePath, volumeID string, partition string) (string, error) {
 	exists, err := d.mounter.PathExists(devicePath)
 	if err != nil {
 		return "", err
@@ -40,6 +40,9 @@ func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error
 
 	// If the path exists, assume it is not nvme device
 	if exists {
+		if partition != "" {
+			devicePath = devicePath + diskPartitionSuffix + partition
+		}
 		return devicePath, nil
 	}
 
@@ -49,7 +52,14 @@ func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error
 	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
 	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
 
-	return findNvmeVolume(nvmeName)
+	nvmeDevicePath, err := findNvmeVolume(nvmeName)
+	if err != nil {
+		return "", err
+	}
+	if partition != "" {
+		nvmeDevicePath = nvmeDevicePath + nvmeDiskPartitionSuffix + partition
+	}
+	return nvmeDevicePath, nil
 }
 
 // findNvmeVolume looks for the nvme volume with the specified name

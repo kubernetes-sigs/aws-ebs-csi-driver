@@ -121,6 +121,10 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if !isValidVolumeCapabilities([]*csi.VolumeCapability{volCap}) {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
+	volumeContext := req.GetVolumeContext()
+	if isValidVolumeContext := isValidVolumeContext(volumeContext); !isValidVolumeContext {
+		return nil, status.Error(codes.InvalidArgument, "Volume Attribute is not valid")
+	}
 
 	// If the access type is block, do nothing for stage
 	switch volCap.GetAccessType().(type) {
@@ -158,7 +162,15 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
 
-	source, err := d.findDevicePath(devicePath, volumeID)
+	partition := ""
+	if part, ok := volumeContext[VolumeAttributePartition]; ok {
+		if part != "0" {
+			partition = part
+		} else {
+			klog.Warningf("NodeStageVolume: invalid partition config, will ignore. partition = %v", part)
+		}
+	}
+	source, err := d.findDevicePath(devicePath, volumeID, partition)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
@@ -516,12 +528,26 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
 	target := req.GetTargetPath()
 	volumeID := req.GetVolumeId()
+	volumeContext := req.GetVolumeContext()
 
 	devicePath, exists := req.PublishContext[DevicePathKey]
 	if !exists {
 		return status.Error(codes.InvalidArgument, "Device path not provided")
 	}
-	source, err := d.findDevicePath(devicePath, volumeID)
+	if isValidVolumeContext := isValidVolumeContext(volumeContext); !isValidVolumeContext {
+		return status.Error(codes.InvalidArgument, "Volume Attribute is invalid")
+	}
+
+	partition := ""
+	if part, ok := req.GetVolumeContext()[VolumeAttributePartition]; ok {
+		if part != "0" {
+			partition = part
+		} else {
+			klog.Warningf("NodePublishVolume: invalid partition config, will ignore. partition = %v", part)
+		}
+	}
+
+	source, err := d.findDevicePath(devicePath, volumeID, partition)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
