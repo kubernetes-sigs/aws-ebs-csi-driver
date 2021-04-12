@@ -1,3 +1,10 @@
+# v0.10.1
+## Notable changes
+* support volume partition, users can specify partition in the pv and driver will mount the device on the specified partition ([#824](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/824), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
+### Misc.
+* Warn users of migrating without draining ([#822](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/822), [@partcyborg](https://github.com/partcyborg))
+
 # v0.10.0
 
 ## Notable changes
