@@ -12,7 +12,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.10.0                                | no    | no     | yes    |
+| v0.10.x                                | no    | no     | yes    |
 | v0.9.x                                 | no    | no     | yes    |
 | v0.8.x                                 | no    | no     | yes    |
 | v0.7.1                                 | no    | no     | yes    |
@@ -53,7 +53,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.10.0                                | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.10.x                                | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.9.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -70,6 +70,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1|
 |v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|
 |v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
 |v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
@@ -161,12 +162,14 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Volume Resizing](../examples/kubernetes/resizing)
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, drain the node and set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
 
 To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
 * Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
 * Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
 
+**Warning**:
+* kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
 
 ## Development
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/developing.html) to get some basic understanding of CSI driver before you start.

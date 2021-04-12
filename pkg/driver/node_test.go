@@ -48,6 +48,8 @@ func TestNodeStageVolume(t *testing.T) {
 				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 			},
 		}
+		stdVolContext           = map[string]string{VolumeAttributePartition: "1"}
+		devicePathWithPartition = devicePath + "1"
 	)
 	testCases := []struct {
 		name         string
@@ -242,6 +244,17 @@ func TestNodeStageVolume(t *testing.T) {
 			expectedCode: codes.InvalidArgument,
 		},
 		{
+			name: "fail invalid volumeContext",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeContext:     map[string]string{VolumeAttributePartition: "partition1"},
+				VolumeId:          "vol-test",
+			},
+			expectedCode: codes.InvalidArgument,
+		},
+		{
 			name: "success device already mounted at target",
 			request: &csi.NodeStageVolumeRequest{
 				PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -258,6 +271,44 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return(devicePath, 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "success with partition",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeContext:     stdVolContext,
+				VolumeId:          "vol-test",
+			},
+			expectMock: func(mockMounter mocks.MockMounter) {
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
+				)
+				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
+				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+			},
+		},
+		{
+			name: "success with invalid partition config, will ignore partition",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeContext:     map[string]string{VolumeAttributePartition: "0"},
+				VolumeId:          "vol-test",
+			},
+			expectMock: func(mockMounter mocks.MockMounter) {
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
+				)
+				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
+				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
 			},
 		},
 		{
@@ -517,6 +568,8 @@ func TestNodePublishVolume(t *testing.T) {
 			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 		},
 	}
+	stdVolContext := map[string]string{"partition": "1"}
+	devicePathWithPartition := devicePath + "1"
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -714,6 +767,131 @@ func TestNodePublishVolume(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Expect no error but got: %v", err)
 				}
+			},
+		},
+		{
+			name: "success normal with partition [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockMounter.EXPECT().PathExists(gomock.Eq("/test")).Return(false, nil),
+				)
+				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
+				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Block{
+							Block: &csi.VolumeCapability_BlockVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeContext: stdVolContext,
+					VolumeId:      "vol-test",
+				}
+
+				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success normal with invalid partition config, will ignore the config [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockMounter.EXPECT().PathExists(gomock.Eq("/test")).Return(false, nil),
+				)
+				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
+				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
+				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Block{
+							Block: &csi.VolumeCapability_BlockVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeContext: map[string]string{VolumeAttributePartition: "0"},
+					VolumeId:      "vol-test",
+				}
+
+				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "Fail invalid volumeContext config [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMetadata := mocks.NewMockMetadataService(mockCtl)
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				awsDriver := &nodeService{
+					metadata: mockMetadata,
+					mounter:  mockMounter,
+					inFlight: internal.NewInFlight(),
+				}
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &csi.VolumeCapability_Block{
+							Block: &csi.VolumeCapability_BlockVolume{},
+						},
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+					},
+					VolumeContext: map[string]string{VolumeAttributePartition: "partition1"},
+					VolumeId:      "vol-test",
+				}
+
+				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
 			},
 		},
 		{
