@@ -6,36 +6,37 @@ package mocks
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	exec "k8s.io/utils/exec"
-	mount "k8s.io/utils/mount"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	mount "k8s.io/mount-utils"
+	exec "k8s.io/utils/exec"
 )
 
-// MockMounter is a mock of Mounter interface
+// MockMounter is a mock of Mounter interface.
 type MockMounter struct {
 	ctrl     *gomock.Controller
 	recorder *MockMounterMockRecorder
 }
 
-// MockMounterMockRecorder is the mock recorder for MockMounter
+// MockMounterMockRecorder is the mock recorder for MockMounter.
 type MockMounterMockRecorder struct {
 	mock *MockMounter
 }
 
-// NewMockMounter creates a new mock instance
+// NewMockMounter creates a new mock instance.
 func NewMockMounter(ctrl *gomock.Controller) *MockMounter {
 	mock := &MockMounter{ctrl: ctrl}
 	mock.recorder = &MockMounterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMounter) EXPECT() *MockMounterMockRecorder {
 	return m.recorder
 }
 
-// Command mocks base method
+// Command mocks base method.
 func (m *MockMounter) Command(arg0 string, arg1 ...string) exec.Cmd {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
@@ -47,14 +48,14 @@ func (m *MockMounter) Command(arg0 string, arg1 ...string) exec.Cmd {
 	return ret0
 }
 
-// Command indicates an expected call of Command
+// Command indicates an expected call of Command.
 func (mr *MockMounterMockRecorder) Command(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Command", reflect.TypeOf((*MockMounter)(nil).Command), varargs...)
 }
 
-// CommandContext mocks base method
+// CommandContext mocks base method.
 func (m *MockMounter) CommandContext(arg0 context.Context, arg1 string, arg2 ...string) exec.Cmd {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -66,29 +67,14 @@ func (m *MockMounter) CommandContext(arg0 context.Context, arg1 string, arg2 ...
 	return ret0
 }
 
-// CommandContext indicates an expected call of CommandContext
+// CommandContext indicates an expected call of CommandContext.
 func (mr *MockMounterMockRecorder) CommandContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommandContext", reflect.TypeOf((*MockMounter)(nil).CommandContext), varargs...)
 }
 
-// ExistsPath mocks base method
-func (m *MockMounter) ExistsPath(arg0 string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExistsPath", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ExistsPath indicates an expected call of ExistsPath
-func (mr *MockMounterMockRecorder) ExistsPath(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsPath", reflect.TypeOf((*MockMounter)(nil).ExistsPath), arg0)
-}
-
-// FormatAndMount mocks base method
+// FormatAndMount mocks base method.
 func (m *MockMounter) FormatAndMount(arg0, arg1, arg2 string, arg3 []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FormatAndMount", arg0, arg1, arg2, arg3)
@@ -96,29 +82,29 @@ func (m *MockMounter) FormatAndMount(arg0, arg1, arg2 string, arg3 []string) err
 	return ret0
 }
 
-// FormatAndMount indicates an expected call of FormatAndMount
+// FormatAndMount indicates an expected call of FormatAndMount.
 func (mr *MockMounterMockRecorder) FormatAndMount(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatAndMount", reflect.TypeOf((*MockMounter)(nil).FormatAndMount), arg0, arg1, arg2, arg3)
 }
 
-// GetDeviceName mocks base method
-func (m *MockMounter) GetDeviceName(arg0 string) (string, int, error) {
+// GetDeviceNameFromMount mocks base method.
+func (m *MockMounter) GetDeviceNameFromMount(arg0 string) (string, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDeviceName", arg0)
+	ret := m.ctrl.Call(m, "GetDeviceNameFromMount", arg0)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(int)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// GetDeviceName indicates an expected call of GetDeviceName
-func (mr *MockMounterMockRecorder) GetDeviceName(arg0 interface{}) *gomock.Call {
+// GetDeviceNameFromMount indicates an expected call of GetDeviceNameFromMount.
+func (mr *MockMounterMockRecorder) GetDeviceNameFromMount(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeviceName", reflect.TypeOf((*MockMounter)(nil).GetDeviceName), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeviceNameFromMount", reflect.TypeOf((*MockMounter)(nil).GetDeviceNameFromMount), arg0)
 }
 
-// GetMountRefs mocks base method
+// GetMountRefs mocks base method.
 func (m *MockMounter) GetMountRefs(arg0 string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMountRefs", arg0)
@@ -127,13 +113,13 @@ func (m *MockMounter) GetMountRefs(arg0 string) ([]string, error) {
 	return ret0, ret1
 }
 
-// GetMountRefs indicates an expected call of GetMountRefs
+// GetMountRefs indicates an expected call of GetMountRefs.
 func (mr *MockMounterMockRecorder) GetMountRefs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMountRefs", reflect.TypeOf((*MockMounter)(nil).GetMountRefs), arg0)
 }
 
-// IsLikelyNotMountPoint mocks base method
+// IsLikelyNotMountPoint mocks base method.
 func (m *MockMounter) IsLikelyNotMountPoint(arg0 string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsLikelyNotMountPoint", arg0)
@@ -142,13 +128,13 @@ func (m *MockMounter) IsLikelyNotMountPoint(arg0 string) (bool, error) {
 	return ret0, ret1
 }
 
-// IsLikelyNotMountPoint indicates an expected call of IsLikelyNotMountPoint
+// IsLikelyNotMountPoint indicates an expected call of IsLikelyNotMountPoint.
 func (mr *MockMounterMockRecorder) IsLikelyNotMountPoint(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLikelyNotMountPoint", reflect.TypeOf((*MockMounter)(nil).IsLikelyNotMountPoint), arg0)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockMounter) List() ([]mount.MountPoint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -157,13 +143,13 @@ func (m *MockMounter) List() ([]mount.MountPoint, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockMounterMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMounter)(nil).List))
 }
 
-// LookPath mocks base method
+// LookPath mocks base method.
 func (m *MockMounter) LookPath(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LookPath", arg0)
@@ -172,13 +158,13 @@ func (m *MockMounter) LookPath(arg0 string) (string, error) {
 	return ret0, ret1
 }
 
-// LookPath indicates an expected call of LookPath
+// LookPath indicates an expected call of LookPath.
 func (mr *MockMounterMockRecorder) LookPath(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookPath", reflect.TypeOf((*MockMounter)(nil).LookPath), arg0)
 }
 
-// MakeDir mocks base method
+// MakeDir mocks base method.
 func (m *MockMounter) MakeDir(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MakeDir", arg0)
@@ -186,13 +172,13 @@ func (m *MockMounter) MakeDir(arg0 string) error {
 	return ret0
 }
 
-// MakeDir indicates an expected call of MakeDir
+// MakeDir indicates an expected call of MakeDir.
 func (mr *MockMounterMockRecorder) MakeDir(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeDir", reflect.TypeOf((*MockMounter)(nil).MakeDir), arg0)
 }
 
-// MakeFile mocks base method
+// MakeFile mocks base method.
 func (m *MockMounter) MakeFile(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MakeFile", arg0)
@@ -200,13 +186,13 @@ func (m *MockMounter) MakeFile(arg0 string) error {
 	return ret0
 }
 
-// MakeFile indicates an expected call of MakeFile
+// MakeFile indicates an expected call of MakeFile.
 func (mr *MockMounterMockRecorder) MakeFile(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeFile", reflect.TypeOf((*MockMounter)(nil).MakeFile), arg0)
 }
 
-// Mount mocks base method
+// Mount mocks base method.
 func (m *MockMounter) Mount(arg0, arg1, arg2 string, arg3 []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Mount", arg0, arg1, arg2, arg3)
@@ -214,13 +200,56 @@ func (m *MockMounter) Mount(arg0, arg1, arg2 string, arg3 []string) error {
 	return ret0
 }
 
-// Mount indicates an expected call of Mount
+// Mount indicates an expected call of Mount.
 func (mr *MockMounterMockRecorder) Mount(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mount", reflect.TypeOf((*MockMounter)(nil).Mount), arg0, arg1, arg2, arg3)
 }
 
-// Unmount mocks base method
+// MountSensitive mocks base method.
+func (m *MockMounter) MountSensitive(arg0, arg1, arg2 string, arg3, arg4 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MountSensitive", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MountSensitive indicates an expected call of MountSensitive.
+func (mr *MockMounterMockRecorder) MountSensitive(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitive", reflect.TypeOf((*MockMounter)(nil).MountSensitive), arg0, arg1, arg2, arg3, arg4)
+}
+
+// MountSensitiveWithoutSystemd mocks base method.
+func (m *MockMounter) MountSensitiveWithoutSystemd(arg0, arg1, arg2 string, arg3, arg4 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MountSensitiveWithoutSystemd", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MountSensitiveWithoutSystemd indicates an expected call of MountSensitiveWithoutSystemd.
+func (mr *MockMounterMockRecorder) MountSensitiveWithoutSystemd(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitiveWithoutSystemd", reflect.TypeOf((*MockMounter)(nil).MountSensitiveWithoutSystemd), arg0, arg1, arg2, arg3, arg4)
+}
+
+// PathExists mocks base method.
+func (m *MockMounter) PathExists(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PathExists", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PathExists indicates an expected call of PathExists.
+func (mr *MockMounterMockRecorder) PathExists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PathExists", reflect.TypeOf((*MockMounter)(nil).PathExists), arg0)
+}
+
+// Unmount mocks base method.
 func (m *MockMounter) Unmount(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Unmount", arg0)
@@ -228,7 +257,7 @@ func (m *MockMounter) Unmount(arg0 string) error {
 	return ret0
 }
 
-// Unmount indicates an expected call of Unmount
+// Unmount indicates an expected call of Unmount.
 func (mr *MockMounterMockRecorder) Unmount(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmount", reflect.TypeOf((*MockMounter)(nil).Unmount), arg0)

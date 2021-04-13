@@ -4,12 +4,12 @@ bases:
   - ../../base
 images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-    newTag: v0.9.0
-  - name: quay.io/k8scsi/csi-provisioner
+    newTag: v0.10.1
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
     newTag: v2.0.2
-  - name: quay.io/k8scsi/csi-attacher
+  - name: k8s.gcr.io/sig-storage/csi-attacher
     newTag: v3.0.0
-  - name: quay.io/k8scsi/livenessprobe
-    newTag: v2.1.0
-  - name: quay.io/k8scsi/csi-node-driver-registrar
+  - name: k8s.gcr.io/sig-storage/livenessprobe
+    newTag: v2.2.0
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     newTag: v2.0.1

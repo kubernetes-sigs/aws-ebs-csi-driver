@@ -27,6 +27,7 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,6 +57,7 @@ var (
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
 	cloud         cloud.Cloud
+	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
 }
 
@@ -87,6 +89,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 
 	return controllerService{
 		cloud:         cloud,
+		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
 }
@@ -180,6 +183,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	if volumeType == cloud.VolumeTypeIO1 {
+		if iopsPerGB == 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "The parameter IOPSPerGB must be specified for io1 volumes")
+		}
+	}
+
 	snapshotID := ""
 	volumeSource := req.GetVolumeContentSource()
 	if volumeSource != nil {
@@ -200,6 +209,13 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		return newCreateVolumeResponse(disk), nil
 	}
+
+	// check if a request is already in-flight because the CreateVolume API is not idempotent
+	if ok := d.inFlight.Insert(req.String()); !ok {
+		msg := fmt.Sprintf("Create volume request for %s is already in progress", volName)
+		return nil, status.Error(codes.Aborted, msg)
+	}
+	defer d.inFlight.Delete(req.String())
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
@@ -286,19 +302,21 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if !d.cloud.IsExistInstance(ctx, nodeID) {
 		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
 	}
-
-	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
+	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
+	if err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
+	// If given volumeId already assigned to given node, will directly return current device path
 	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
-		if err == cloud.ErrAlreadyExists {
-			return nil, status.Error(codes.AlreadyExists, err.Error())
+		if err == cloud.ErrVolumeInUse {
+			return nil, status.Error(codes.FailedPrecondition, strings.Join(disk.Attachments, ","))
 		}
+		// TODO: Check volume capability matches for ALREADY_EXISTS
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
@@ -432,6 +450,23 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	return foundAll
 }
 
+func isValidVolumeContext(volContext map[string]string) bool {
+	//There could be multiple volume attributes in the volumeContext map
+	//Validate here case by case
+	if partition, ok := volContext[VolumeAttributePartition]; ok {
+		partitionInt, err := strconv.ParseInt(partition, 10, 64)
+		if err != nil {
+			klog.Errorf("failed to parse partition %s as int", partition)
+			return false
+		}
+		if partitionInt < 0 {
+			klog.Errorf("invalid partition config, partition = %s", partition)
+			return false
+		}
+	}
+	return true
+}
+
 func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.V(4).Infof("CreateSnapshot: called with args %+v", req)
 	snapshotName := req.GetName()
@@ -551,13 +586,22 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 		return ""
 	}
 	for _, topology := range requirement.GetPreferred() {
-		zone, exists := topology.GetSegments()[TopologyKey]
+		zone, exists := topology.GetSegments()[WellKnownTopologyKey]
+		if exists {
+			return zone
+		}
+
+		zone, exists = topology.GetSegments()[TopologyKey]
 		if exists {
 			return zone
 		}
 	}
 	for _, topology := range requirement.GetRequisite() {
-		zone, exists := topology.GetSegments()[TopologyKey]
+		zone, exists := topology.GetSegments()[WellKnownTopologyKey]
+		if exists {
+			return zone
+		}
+		zone, exists = topology.GetSegments()[TopologyKey]
 		if exists {
 			return zone
 		}
@@ -597,7 +641,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 		}
 	}
 
-	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+	segments := map[string]string{TopologyKey: disk.AvailabilityZone, WellKnownTopologyKey: disk.AvailabilityZone}
 
 	arn, err := arn.Parse(disk.OutpostArn)
 

@@ -19,44 +19,50 @@ package driver
 import (
 	"os"
 
-	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
+	mountutils "k8s.io/mount-utils"
+	utilexec "k8s.io/utils/exec"
 )
 
-// Mounter is an interface for mount operations
 type Mounter interface {
-	mount.Interface
-	exec.Interface
+	// Implemented by NodeMounter.SafeFormatAndMount
+	mountutils.Interface
 	FormatAndMount(source string, target string, fstype string, options []string) error
-	GetDeviceName(mountPath string) (string, int, error)
-	MakeFile(pathname string) error
-	MakeDir(pathname string) error
-	ExistsPath(filename string) (bool, error)
+
+	// Implemented by NodeMounter.SafeFormatAndMount.Exec
+	// TODO this won't make sense on Windows with csi-proxy
+	utilexec.Interface
+
+	// Implemented by NodeMounter below
+	GetDeviceNameFromMount(mountPath string) (string, int, error)
+	// TODO this won't make sense on Windows with csi-proxy
+	MakeFile(path string) error
+	MakeDir(path string) error
+	PathExists(path string) (bool, error)
 }
 
 type NodeMounter struct {
-	mount.SafeFormatAndMount
-	exec.Interface
+	mountutils.SafeFormatAndMount
+	utilexec.Interface
 }
 
-func newNodeMounter() Mounter {
-	return &NodeMounter{
-		mount.SafeFormatAndMount{
-			Interface: mount.New(""),
-			Exec:      exec.New(),
-		},
-		exec.New(),
+func newNodeMounter() (Mounter, error) {
+	safeMounter, err := mounter.NewSafeMounter()
+	if err != nil {
+		return nil, err
 	}
+	return &NodeMounter{*safeMounter, safeMounter.Exec}, nil
 }
 
-func (m *NodeMounter) GetDeviceName(mountPath string) (string, int, error) {
-	return mount.GetDeviceNameFromMount(m, mountPath)
+// GetDeviceNameFromMount returns the volume ID for a mount path.
+func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
+	return mountutils.GetDeviceNameFromMount(m, mountPath)
 }
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go
-func (m *NodeMounter) MakeFile(pathname string) error {
-	f, err := os.OpenFile(pathname, os.O_CREATE, os.FileMode(0644))
+func (m *NodeMounter) MakeFile(path string) error {
+	f, err := os.OpenFile(path, os.O_CREATE, os.FileMode(0644))
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -70,8 +76,8 @@ func (m *NodeMounter) MakeFile(pathname string) error {
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go
-func (m *NodeMounter) MakeDir(pathname string) error {
-	err := os.MkdirAll(pathname, os.FileMode(0755))
+func (m *NodeMounter) MakeDir(path string) error {
+	err := os.MkdirAll(path, os.FileMode(0755))
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -82,11 +88,6 @@ func (m *NodeMounter) MakeDir(pathname string) error {
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go
-func (m *NodeMounter) ExistsPath(filename string) (bool, error) {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-	return true, nil
+func (m *NodeMounter) PathExists(path string) (bool, error) {
+	return mountutils.PathExists(path)
 }

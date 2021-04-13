@@ -24,6 +24,8 @@ source "${BASE_DIR}"/kops.sh
 source "${BASE_DIR}"/util.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
+CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
+DRIVER_START_TIME_THRESHOLD_SECONDS=60
 
 TEST_ID=${TEST_ID:-$RANDOM}
 CLUSTER_NAME=test-cluster-${TEST_ID}.k8s.local
@@ -40,11 +42,13 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${DRIVER_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
-K8S_VERSION=${K8S_VERSION:-1.18.10}
+K8S_VERSION=${K8S_VERSION:-1.18.16}
 KOPS_VERSION=${KOPS_VERSION:-1.18.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_FEATURE_GATES_FILE=${KOPS_FEATURE_GATES_FILE:-./hack/feature-gates.yaml}
 KOPS_ADDITIONAL_POLICIES_FILE=${KOPS_ADDITIONAL_POLICIES_FILE:-./hack/additional-policies.yaml}
+
+HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e/..."}
 KUBECONFIG=${KUBECONFIG:-"${HOME}/.kube/config"}
@@ -101,26 +105,37 @@ if [[ $? -ne 0 ]]; then
 fi
 
 loudecho "Deploying driver"
+startSec=$(date +'%s')
 "${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
   --namespace kube-system \
-  --set enableVolumeScheduling=true \
-  --set enableVolumeResizing=true \
-  --set enableVolumeSnapshot=true \
   --set image.repository="${IMAGE_NAME}" \
   --set image.tag="${IMAGE_TAG}" \
+  -f "${HELM_VALUES_FILE}" \
+  --wait \
   ./charts/"${DRIVER_NAME}"
 
-if [[ -n "${EBS_SNAPSHOT_CRD}" ]]; then
+if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
   loudecho "Deploying snapshot CRD"
   kubectl apply -f "$EBS_SNAPSHOT_CRD"
   # TODO deploy snapshot controller too instead of including in helm chart
 fi
+endSec=$(date +'%s')
+secondUsed=$(( (endSec-startSec)/1 ))
+# Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
+if [ $secondUsed -gt $DRIVER_START_TIME_THRESHOLD_SECONDS ]; then
+  loudecho "Driver start timeout, took $secondUsed but the threshold is $DRIVER_START_TIME_THRESHOLD_SECONDS. Fail the test."
+  exit 1
+fi
+loudecho "Driver deployment complete, time used: $secondUsed seconds"
+
 
 loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
+set +e
 ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${ZONES%,*}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
+set -e
 set +x
 loudecho "TEST_PASSED: ${TEST_PASSED}"
 
@@ -138,6 +153,15 @@ if [[ "${EBS_CHECK_MIGRATION}" == true ]]; then
     OVERALL_TEST_PASSED=1
   fi
 fi
+
+PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=${DRIVER_NAME},app.kubernetes.io/instance=${DRIVER_NAME}" -o json | jq -r .items[].metadata.name)
+
+while IFS= read -r POD; do
+  loudecho "Printing pod ${POD} ${CONTAINER_NAME} container logs"
+  set +e
+  kubectl logs "${POD}" -n kube-system "${CONTAINER_NAME}"
+  set -e
+done <<< "${PODS}"
 
 if [[ "${CLEAN}" == true ]]; then
   loudecho "Cleaning"

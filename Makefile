@@ -14,7 +14,7 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
-VERSION=v0.9.0
+VERSION=v0.10.1
 VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -94,9 +94,18 @@ test-e2e-multi-az:
 test-e2e-migration:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e-migration/... \
+	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="\[ebs-csi-migration\]" \
 	EBS_CHECK_MIGRATION=true \
+	./hack/e2e/run.sh
+
+.PHONY: test-e2e-external
+test-e2e-external:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
 .PHONY: image-release
@@ -149,3 +158,4 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/statefulset.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml

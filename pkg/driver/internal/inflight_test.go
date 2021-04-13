@@ -18,36 +18,13 @@ package internal
 
 import (
 	"testing"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 )
 
 type testRequest struct {
-	request *csi.CreateVolumeRequest
-	expResp bool
-	delete  bool
+	volumeId string
+	expResp  bool
+	delete   bool
 }
-
-var stdVolCap = []*csi.VolumeCapability{
-	{
-		AccessType: &csi.VolumeCapability_Mount{
-			Mount: &csi.VolumeCapability_MountVolume{},
-		},
-		AccessMode: &csi.VolumeCapability_AccessMode{
-			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-		},
-	},
-}
-
-var (
-	stdVolSize  = int64(5 * util.GiB)
-	stdCapRange = &csi.CapacityRange{RequiredBytes: stdVolSize}
-	stdParams   = map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-	}
-)
 
 func TestInFlight(t *testing.T) {
 	testCases := []struct {
@@ -58,137 +35,54 @@ func TestInFlight(t *testing.T) {
 			name: "success normal",
 			requests: []testRequest{
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
+
+					volumeId: "random-vol-name",
+					expResp:  true,
 				},
 			},
 		},
 		{
-			name: "success adding request with different name",
+			name: "success adding request with different volumeId",
 			requests: []testRequest{
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
+					volumeId: "random-vol-foobar",
+					expResp:  true,
 				},
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
+					volumeId: "random-vol-name-foobar",
+					expResp:  true,
 				},
 			},
 		},
 		{
-			name: "success adding request with different parameters",
+			name: "failed adding request with same volumeId",
 			requests: []testRequest{
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         map[string]string{"foo": "bar"},
-					},
-					expResp: true,
+					volumeId: "random-vol-name-foobar",
+					expResp:  true,
 				},
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-					},
-					expResp: true,
+					volumeId: "random-vol-name-foobar",
+					expResp:  false,
 				},
 			},
 		},
-		{
-			name: "success adding request with different parameters",
-			requests: []testRequest{
-				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         map[string]string{"foo": "bar"},
-					},
-					expResp: true,
-				},
-				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name-foobar",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         map[string]string{"foo": "baz"},
-					},
-					expResp: true,
-				},
-			},
-		},
-		{
-			name: "failure adding copy of request",
-			requests: []testRequest{
-				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
-				},
-				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: false,
-				},
-			},
-		},
+
 		{
 			name: "success add, delete, add copy",
 			requests: []testRequest{
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
+					volumeId: "random-vol-name",
+					expResp:  true,
 				},
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: false,
-					delete:  true,
+					volumeId: "random-vol-name",
+					expResp:  false,
+					delete:   true,
 				},
 				{
-					request: &csi.CreateVolumeRequest{
-						Name:               "random-vol-name",
-						CapacityRange:      stdCapRange,
-						VolumeCapabilities: stdVolCap,
-						Parameters:         stdParams,
-					},
-					expResp: true,
+					volumeId: "random-vol-name",
+					expResp:  true,
 				},
 			},
 		},
@@ -200,9 +94,9 @@ func TestInFlight(t *testing.T) {
 			for _, r := range tc.requests {
 				var resp bool
 				if r.delete {
-					db.Delete(r.request)
+					db.Delete(r.volumeId)
 				} else {
-					resp = db.Insert(r.request)
+					resp = db.Insert(r.volumeId)
 				}
 				if r.expResp != resp {
 					t.Fatalf("expected insert to be %+v, got %+v", r.expResp, resp)

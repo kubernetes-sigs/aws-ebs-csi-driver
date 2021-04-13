@@ -3,7 +3,6 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
-  namespace: kube-system
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
@@ -27,17 +26,30 @@ spec:
 {{ toYaml . | indent 8 }}
         {{- end }}
       serviceAccountName: {{ .Values.serviceAccount.controller.name }}
-      priorityClassName: system-cluster-critical
+      priorityClassName: {{ .Values.priorityClassName | default "system-cluster-critical" }}
       {{- with .Values.affinity }}
       affinity: {{ toYaml . | nindent 8 }}
       {{- end }}
       tolerations:
         {{- if .Values.tolerateAllTaints }}
         - operator: Exists
+        {{- else }}
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
         {{- end }}
         {{- with .Values.tolerations }}
 {{ toYaml . | indent 8 }}
         {{- end }}
+{{- if .Values.topologySpreadConstraints }}
+{{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( dict "app" "ebs-csi-controller" ) ) }}
+      topologySpreadConstraints:
+        {{- range .Values.topologySpreadConstraints }}
+        - {{ mergeOverwrite . $tscLabelSelector | toJson }}
+        {{- end }}
+{{- end }}
       containers:
         - name: ebs-plugin
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -76,6 +88,20 @@ spec:
             - name: AWS_REGION
               value: {{ .Values.region }}
             {{- end }}
+            {{- if .Values.controller.extraVars }}
+            {{- range $key, $val :=  .Values.controller.extraVars }}
+            - name: {{ $key }}
+              value: "{{ $val }}"
+            {{- end }}
+            {{- end }}
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -84,6 +110,14 @@ spec:
               containerPort: 9808
               protocol: TCP
           livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
             httpGet:
               path: /healthz
               port: healthz
@@ -110,6 +144,14 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -125,6 +167,14 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -140,6 +190,14 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -157,6 +215,14 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+{{- if .Values.proxy.http_proxy }}
+            - name: HTTP_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.proxy.http_proxy | quote }}
+            - name: NO_PROXY
+              value: {{ .Values.proxy.no_proxy | quote }}
+{{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -174,6 +240,12 @@ spec:
           {{- with .Values.resources }}
           resources: {{ toYaml . | nindent 12 }}
           {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+      {{- end }}
       volumes:
         - name: socket-dir
           emptyDir: {}
