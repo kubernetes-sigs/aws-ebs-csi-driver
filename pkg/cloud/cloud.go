@@ -53,6 +53,17 @@ const (
 	VolumeTypeStandard = "standard"
 )
 
+// AWS provisioning limits.
+// Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
+const (
+	io1MinTotalIOPS = 100
+	io1MaxTotalIOPS = 64000
+	io1MaxIOPSPerGB = 50
+	io2MinTotalIOPS = 100
+	io2MaxTotalIOPS = 64000
+	io2MaxIOPSPerGB = 500
+)
+
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
@@ -142,15 +153,16 @@ type Disk struct {
 
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
-	CapacityBytes    int64
-	Tags             map[string]string
-	VolumeType       string
-	IOPSPerGB        int
-	IOPS             int
-	Throughput       int
-	AvailabilityZone string
-	OutpostArn       string
-	Encrypted        bool
+	CapacityBytes          int64
+	Tags                   map[string]string
+	VolumeType             string
+	IOPSPerGB              int
+	AllowIOPSPerGBIncrease bool
+	IOPS                   int
+	Throughput             int
+	AvailabilityZone       string
+	OutpostArn             string
+	Encrypted              bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -256,15 +268,25 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType string
 		iops       int64
 		throughput int64
+		err        error
 	)
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
 	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
-	case VolumeTypeIO1, VolumeTypeIO2:
+	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
-		iops = capacityGiB * int64(diskOptions.IOPSPerGB)
+		iops, err = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io1MinTotalIOPS, io1MaxTotalIOPS, io1MaxIOPSPerGB, diskOptions.AllowIOPSPerGBIncrease)
+		if err != nil {
+			return nil, err
+		}
+	case VolumeTypeIO2:
+		createType = diskOptions.VolumeType
+		iops, err = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB, diskOptions.AllowIOPSPerGBIncrease)
+		if err != nil {
+			return nil, err
+		}
 	case VolumeTypeGP3:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.IOPS)
@@ -1072,4 +1094,30 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 	}
 
 	return volumeAttachmentList
+}
+
+// Calculate actual IOPS for a volume and cap it at supported AWS limits.
+// Using requstedIOPSPerGB allows users to create a "fast" storage class
+// (requstedIOPSPerGB = 50 for io1), which can provide the maximum iops
+// that AWS supports for any requestedCapacityGiB.
+func capIOPS(volumeType string, requestedCapacityGiB int64, requstedIOPSPerGB, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) (int64, error) {
+	iops := requestedCapacityGiB * requstedIOPSPerGB
+
+	if iops < minTotalIOPS {
+		if allowIncrease {
+			iops = minTotalIOPS
+			klog.V(5).Infof("Increased IOPS for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, iops)
+		} else {
+			return 0, fmt.Errorf("invalid combination of volume size %d GB and iopsPerGB %d: the resulting IOPS %d is too low for AWS, it must be at least %d", requestedCapacityGiB, requstedIOPSPerGB, iops, minTotalIOPS)
+		}
+	}
+	if iops > maxTotalIOPS {
+		iops = maxTotalIOPS
+		klog.V(5).Infof("Capped IOPS for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, iops)
+	}
+	if iops > maxIOPSPerGB*requestedCapacityGiB {
+		iops = maxIOPSPerGB * requestedCapacityGiB
+		klog.V(5).Infof("Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
+	}
+	return iops, nil
 }

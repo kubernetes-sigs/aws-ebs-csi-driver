@@ -44,6 +44,9 @@ const (
 	// IopsPerGBKey represents key for IOPS per GB
 	IopsPerGBKey = "iopspergb"
 
+	// AllowAutoIOPSPerGBIncreaseKey represents key for allowing automatic increase of IOPS
+	AllowAutoIOPSPerGBIncreaseKey = "allowautoiopspergbincrease"
+
 	// Iops represents key for IOPS for volume
 	IopsKey = "iops"
 
