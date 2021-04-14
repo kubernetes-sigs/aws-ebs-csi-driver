@@ -12,7 +12,8 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.9.0                                 | no    | no     | yes    |
+| v0.10.x                                | no    | no     | yes    |
+| v0.9.x                                 | no    | no     | yes    |
 | v0.8.x                                 | no    | no     | yes    |
 | v0.7.1                                 | no    | no     | yes    |
 | v0.6.0                                 | no    | no     | yes    |
@@ -33,7 +34,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 | Parameters                  | Values                                 | Default  | Description         |
 |-----------------------------|----------------------------------------|----------|---------------------|
-| "csi.storage.k8s.io/fsType" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation |
+| "csi.storage.k8s.io/fstype" | xfs, ext2, ext3, ext4                  | ext4     | File system type that will be formatted during volume creation. This parameter is case sensitive! |
 | "type"                      | io1, io2, gp2, gp3, sc1, st1,standard  | gp3*     | EBS volume type     |
 | "iopsPerGB"                 |                                        |          | I/O operations per second per GiB. Required when io1 or io2 volume type is specified. If this value multiplied by the size of a requested volume produces a value below the minimum or above the maximum IOPs allowed for the volume type, as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), AWS will return an error and volume creation will fail |
 | "iops"                      |                                        | 3000     | I/O operations per second. Only effetive when gp3 volume type is specified. If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html). |
@@ -43,7 +44,7 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 
 **Notes**:
 * `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
-* The parameters are case insensitive.
+* Unless explicitly noted, all parameters are case insensitive (e.g. "kmsKeyId", "kmskeyid" and any other combination of upper/lowercase characters can be used).
 
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
@@ -52,7 +53,8 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.9.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.10.x                                | no    | no+   | no    | no    | no    | yes   | yes   |
+| v0.9.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
 | v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
@@ -68,6 +70,9 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 |AWS EBS CSI Driver Version | Image                                            |
 |---------------------------|--------------------------------------------------|
 |master branch              |amazon/aws-ebs-csi-driver:latest                  |
+|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1|
+|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|
+|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
 |v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
 |v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
 |v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
@@ -110,13 +115,15 @@ If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD
 ```sh
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
+#### Config node toleration settings
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` and `Value.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
 
 If you want to deploy the stable driver without alpha features:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.8"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.9"
 ```
 
 If you want to deploy the driver with alpha features:
@@ -155,12 +162,14 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Volume Resizing](../examples/kubernetes/resizing)
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, drain the node and set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
 
 To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
 * Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
 * Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
 
+**Warning**:
+* kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
 
 ## Development
 Please go through [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md) and [General CSI driver development guideline](https://kubernetes-csi.github.io/docs/developing.html) to get some basic understanding of CSI driver before you start.
@@ -178,6 +187,9 @@ Dependencies are managed through go module. To build the project, first turn on 
 * To execute sanity test run: `make test-sanity`
 * To execute integration tests, run: `make test-integration`
 * To execute e2e tests, run: `make test-e2e-single-az` and `make test-e2e-multi-az`
+
+### Release Process
+Please see [Release Process](./RELEASE.md).
 
 **Notes**:
 * Sanity tests make sure the driver complies with the CSI specification

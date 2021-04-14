@@ -24,3 +24,24 @@ GINKGO_FOCUS=Dynamic.\*xfs.\*should.store.data \
 GINKGO_NODES=1 \
 ./hack/e2e/run.sh
 ```
+
+# git read-tree
+
+Reference: https://stackoverflow.com/questions/23937436/add-subdirectory-of-remote-repo-with-git-subtree
+
+How to consume this directory by read-treeing the ebs repo:
+
+```
+git remote add ebs git@github.com:kubernetes-sigs/aws-ebs-csi-driver.git
+git fetch ebs
+git read-tree --prefix=hack/e2e/ -u ebs/master:hack/e2e
+```
+
+To commit changes and submit them as a PR back to the ebs repo:
+
+```
+git diff ebs/master:hack/e2e HEAD:hack/e2e > /tmp/hack_e2e.diff
+cd $GOPATH/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+git apply --reject --directory hack/e2e /tmp/hack_e2e.diff
+git commit
+```

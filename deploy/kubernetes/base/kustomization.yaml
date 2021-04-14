@@ -10,3 +10,4 @@ resources:
 - csidriver.yaml
 - node.yaml
 - serviceaccount-csi-controller.yaml
+- serviceaccount-csi-node.yaml

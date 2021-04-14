@@ -6,7 +6,7 @@ replicaCount: 2
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v0.9.0"
+  tag: "v0.10.1"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -21,13 +21,21 @@ sidecars:
     tag: "v3.0.3"
   livenessProbeImage:
     repository: k8s.gcr.io/sig-storage/livenessprobe
-    tag: "v2.1.0"
+    tag: "v2.2.0"
   resizerImage:
     repository: k8s.gcr.io/sig-storage/csi-resizer
     tag: "v1.0.0"
   nodeDriverRegistrarImage:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     tag: "v2.0.1"
+
+snapshotController:
+  repository: k8s.gcr.io/sig-storage/snapshot-controller
+  tag: "v3.0.3"
+
+proxy: {}
+#  http_proxy:
+#  no_proxy:
 
 imagePullSecrets: []
 nameOverride: ""
@@ -36,7 +44,7 @@ fullnameOverride: ""
 podAnnotations: {}
 
 # True if enable volume scheduling for dynamic volume provisioning
-enableVolumeScheduling: false
+enableVolumeScheduling: true
 
 # True if enable volume resizing
 enableVolumeResizing: false
@@ -60,12 +68,25 @@ resources:
   #   cpu: 100m
   #   memory: 128Mi
 
+priorityClassName: ""
 nodeSelector: {}
-
-tolerateAllTaints: true
+tolerateAllTaints: false
 tolerations: []
-
 affinity: {}
+
+# TSCs without the label selector stanza
+#
+# Example:
+#
+# topologySpreadConstraints:
+#  - maxSkew: 1
+#    topologyKey: topology.kubernetes.io/zone
+#    whenUnsatisfiable: ScheduleAnyway
+#  - maxSkew: 1
+#    topologyKey: kubernetes.io/hostname
+#    whenUnsatisfiable: ScheduleAnyway
+
+topologySpreadConstraints: []
 
 # Extra volume tags to attach to each dynamically provisioned volume.
 # ---
@@ -86,11 +107,17 @@ k8sTagClusterId: ""
 # region: us-east-1
 region: ""
 
+# Additonal environment variables for the controller
+controller:
+  extraVars: {}
+
 node:
+  priorityClassName: ""
   nodeSelector: {}
   podAnnotations: {}
-  tolerateAllTaints: true
+  tolerateAllTaints: false
   tolerations: []
+  resources: {}
 
 serviceAccount:
   controller:
@@ -101,3 +128,23 @@ serviceAccount:
     create: true
     name: ebs-snapshot-controller
     annotations: {}
+  node:
+    create: true
+    name: ebs-csi-node-sa
+    annotations: {}
+
+storageClasses: []
+# Add StorageClass resources like:
+# - name: ebs-sc
+#   # annotation metadata
+#   annotations:
+#     storageclass.kubernetes.io/is-default-class: "true"
+#   # label metadata
+#   labels:
+#     my-label-is: supercool
+#   # defaults to WaitForFirstConsumer
+#   volumeBindingMode: WaitForFirstConsumer
+#   # defaults to Delete
+#   reclaimPolicy: Retain
+#   parameters:
+#     encrypted: "true"
