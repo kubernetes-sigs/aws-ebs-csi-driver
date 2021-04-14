@@ -41,15 +41,16 @@ const (
 
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
-		name                string
-		volumeName          string
-		volState            string
-		diskOptions         *DiskOptions
-		expDisk             *Disk
-		cleanUpFailedVolume bool
-		expErr              error
-		expCreateVolumeErr  error
-		expDescVolumeErr    error
+		name                 string
+		volumeName           string
+		volState             string
+		diskOptions          *DiskOptions
+		expDisk              *Disk
+		cleanUpFailedVolume  bool
+		expErr               error
+		expCreateVolumeErr   error
+		expDescVolumeErr     error
+		expCreateVolumeInput *ec2.CreateVolumeInput
 	}{
 		{
 			name:       "success: normal",
@@ -58,6 +59,7 @@ func TestCreateDisk(t *testing.T) {
 				CapacityBytes: util.GiBToBytes(1),
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
 			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
@@ -79,6 +81,9 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      1,
 				AvailabilityZone: defaultZone,
 			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
 			expErr: nil,
 		},
 		{
@@ -96,6 +101,9 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      1,
 				AvailabilityZone: defaultZone,
 			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(3000),
+			},
 			expErr: nil,
 		},
 		{
@@ -111,7 +119,8 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
 			},
-			expErr: nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
 		},
 		{
 			name:       "success: normal with encrypted volume",
@@ -128,7 +137,8 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
 			},
-			expErr: nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
 		},
 		{
 			name:       "success: outpost volume",
@@ -145,7 +155,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: expZone,
 				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			},
-			expErr: nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
 		},
 		{
 			name:       "success: empty outpost arn",
@@ -161,7 +172,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: expZone,
 				OutpostArn:       "",
 			},
-			expErr: nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
 		},
 		{
 			name:       "fail: ec2.CreateVolume returned CreateVolume error",
@@ -171,8 +183,9 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: expZone,
 			},
-			expErr:             fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
-			expCreateVolumeErr: fmt.Errorf("CreateVolume generic error"),
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
+			expCreateVolumeErr:   fmt.Errorf("CreateVolume generic error"),
 		},
 		{
 			name:       "fail: ec2.DescribeVolumes error after volume created",
@@ -183,9 +196,10 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			expErr:              fmt.Errorf("failed to get an available volume in EC2: DescribeVolumes generic error"),
-			expDescVolumeErr:    fmt.Errorf("DescribeVolumes generic error"),
-			cleanUpFailedVolume: true,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               fmt.Errorf("failed to get an available volume in EC2: DescribeVolumes generic error"),
+			expDescVolumeErr:     fmt.Errorf("DescribeVolumes generic error"),
+			cleanUpFailedVolume:  true,
 		},
 		{
 			name:       "fail: Volume is not ready to use, volume stuck in creating status and controller timed out waiting for the condition",
@@ -196,8 +210,9 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
 				AvailabilityZone: "",
 			},
-			cleanUpFailedVolume: true,
-			expErr:              fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
+			cleanUpFailedVolume:  true,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               fmt.Errorf("failed to get an available volume in EC2: timed out waiting for the condition"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -212,6 +227,157 @@ func TestCreateDisk(t *testing.T) {
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: expZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
+		},
+		{
+			name:       "success: io1 with too low iopsPerGB and AllowIOPSPerGBIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:          util.GiBToBytes(4),
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:             VolumeTypeIO1,
+				IOPSPerGB:              1,
+				AllowIOPSPerGBIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "fail: io1 with too low iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: nil,
+			expErr:               fmt.Errorf("invalid combination of volume size 4 GB and iopsPerGB 1: the resulting IOPS 4 is too low for AWS, it must be at least 100"),
+		},
+		{
+			name:       "success: small io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(200),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: large io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4000),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(64000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io2 with too low iopsPerGB and AllowIOPSPerGBIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:          util.GiBToBytes(4),
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:             VolumeTypeIO2,
+				IOPSPerGB:              1,
+				AllowIOPSPerGBIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "fail: io2 with too low iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: nil,
+			expErr:               fmt.Errorf("invalid combination of volume size 4 GB and iopsPerGB 1: the resulting IOPS 4 is too low for AWS, it must be at least 100"),
+		},
+		{
+			name:       "success: small io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     10000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(2000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: large io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(4000),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+				IOPSPerGB:     100000,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int64(64000),
 			},
 			expErr: nil,
 		},
@@ -241,20 +407,24 @@ func TestCreateDisk(t *testing.T) {
 				State:      aws.String("completed"),
 			}
 			ctx := context.Background()
-			mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(vol, tc.expCreateVolumeErr)
-			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
-			if len(tc.diskOptions.SnapshotID) > 0 {
-				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
-			}
-			if tc.cleanUpFailedVolume == true {
-				mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil)
-			}
-			if len(tc.diskOptions.AvailabilityZone) == 0 {
-				mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
-					AvailabilityZones: []*ec2.AvailabilityZone{
-						{ZoneName: aws.String(defaultZone)},
-					},
-				}, nil)
+
+			if tc.expCreateVolumeInput != nil {
+				matcher := eqCreateVolume(tc.expCreateVolumeInput)
+				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), matcher).Return(vol, tc.expCreateVolumeErr)
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
+				if len(tc.diskOptions.SnapshotID) > 0 {
+					mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
+				}
+				if tc.cleanUpFailedVolume == true {
+					mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil)
+				}
+				if len(tc.diskOptions.AvailabilityZone) == 0 {
+					mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
+						AvailabilityZones: []*ec2.AvailabilityZone{
+							{ZoneName: aws.String(defaultZone)},
+						},
+					}, nil)
+				}
 			}
 
 			disk, err := c.CreateDisk(ctx, tc.volumeName, tc.diskOptions)
@@ -1276,5 +1446,31 @@ func (m *eqCreateSnapshotInputMatcher) Matches(x interface{}) bool {
 }
 
 func (m *eqCreateSnapshotInputMatcher) String() string {
+	return m.expected.String()
+}
+
+type eqCreateVolumeMatcher struct {
+	expected *ec2.CreateVolumeInput
+}
+
+func eqCreateVolume(expected *ec2.CreateVolumeInput) gomock.Matcher {
+	return &eqCreateVolumeMatcher{expected}
+}
+
+func (m *eqCreateVolumeMatcher) Matches(x interface{}) bool {
+	input, ok := x.(*ec2.CreateVolumeInput)
+	if !ok {
+		return false
+	}
+
+	if input == nil {
+		return false
+	}
+	// Compare only IOPS for now
+	ret := reflect.DeepEqual(m.expected.Iops, input.Iops)
+	return ret
+}
+
+func (m *eqCreateVolumeMatcher) String() string {
 	return m.expected.String()
 }
