@@ -17,10 +17,6 @@ package e2e
 import (
 	"flag"
 	"fmt"
-	"k8s.io/kubernetes/test/e2e/framework/testfiles"
-	"k8s.io/kubernetes/test/e2e/storage/drivers"
-	"k8s.io/kubernetes/test/e2e/storage/external"
-	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 	"log"
 	"math/rand"
 	"os"
@@ -29,11 +25,18 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/kubernetes/test/e2e/framework/testfiles"
+	"k8s.io/kubernetes/test/e2e/storage/drivers"
+	"k8s.io/kubernetes/test/e2e/storage/external"
+	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
+	"k8s.io/kubernetes/test/e2e/storage/testsuites"
+
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	"k8s.io/kubernetes/test/e2e/framework"
+
 	// ensure that cloud provider is loaded
 	_ "k8s.io/kubernetes/test/e2e/framework/providers/aws"
 )
@@ -85,7 +88,7 @@ var _ = ginkgo.Describe("[ebs-csi-migration] EBS CSI Migration", func() {
 	// The storage.migratedPlugins flag must be set to "kubernetes.io/aws-ebs". Then the tests will
 	// validate that CSI, not in-tree, operations are happening.
 	driver := drivers.InitAwsDriver()
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(driver), func() {
-		testsuites.DefineTestSuite(driver, testsuites.CSISuites)
+	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(driver), func() {
+		storageframework.DefineTestSuites(driver, testsuites.CSISuites)
 	})
 })
