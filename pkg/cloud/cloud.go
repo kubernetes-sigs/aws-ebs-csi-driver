@@ -239,11 +239,11 @@ var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string) (Cloud, error) {
-	return newEC2Cloud(region)
+func NewCloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+	return newEC2Cloud(region, awsSdkDebugLog)
 }
 
-func newEC2Cloud(region string) (Cloud, error) {
+func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
@@ -254,6 +254,10 @@ func newEC2Cloud(region string) (Cloud, error) {
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
 		awsConfig.Endpoint = aws.String(endpoint)
+	}
+
+	if awsSdkDebugLog {
+		awsConfig.WithLogLevel(aws.LogDebugWithRequestErrors)
 	}
 
 	return &cloud{
@@ -310,9 +314,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
-		klog.V(5).Infof("AZ is not provided. Using node AZ [%s]", zone)
 		var err error
 		zone, err = c.randomAvailabilityZone(ctx)
+		klog.V(5).Infof("[Debug] AZ is not provided. Using node AZ [%s]", zone)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get availability zone %s", err)
 		}
@@ -370,7 +374,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
 			klog.Errorf("%v failed to be deleted, this may cause volume leak", volumeID)
 		} else {
-			klog.V(5).Infof("%v is deleted because it is not in desired state within retry limit", volumeID)
+			klog.V(5).Infof("[Debug] %v is deleted because it is not in desired state within retry limit", volumeID)
 		}
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
 	}
@@ -419,7 +423,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
-		klog.V(5).Infof("AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
+		klog.V(5).Infof("[Debug] AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
 
 	}
 
@@ -952,7 +956,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
 	// volume modifications objects or volume has completed previously issued modification request.
 	if oldSizeGiB >= newSizeGiB {
-		klog.V(5).Infof("Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
+		klog.V(5).Infof("[Debug] Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
 		_, err = c.waitForVolumeSize(ctx, volumeID)
 		if err != nil && err != VolumeNotBeingModified {
 			return oldSizeGiB, err
@@ -965,7 +969,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		Size:     aws.Int64(newSizeGiB),
 	}
 
-	klog.Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
+	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
 		return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
@@ -1106,18 +1110,18 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requstedIOPSPerGB, m
 	if iops < minTotalIOPS {
 		if allowIncrease {
 			iops = minTotalIOPS
-			klog.V(5).Infof("Increased IOPS for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, iops)
+			klog.V(5).Infof("[Debug] Increased IOPS for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, iops)
 		} else {
 			return 0, fmt.Errorf("invalid combination of volume size %d GB and iopsPerGB %d: the resulting IOPS %d is too low for AWS, it must be at least %d", requestedCapacityGiB, requstedIOPSPerGB, iops, minTotalIOPS)
 		}
 	}
 	if iops > maxTotalIOPS {
 		iops = maxTotalIOPS
-		klog.V(5).Infof("Capped IOPS for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, iops)
+		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, iops)
 	}
 	if iops > maxIOPSPerGB*requestedCapacityGiB {
 		iops = maxIOPSPerGB * requestedCapacityGiB
-		klog.V(5).Infof("Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
+		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
 	}
 	return iops, nil
 }
