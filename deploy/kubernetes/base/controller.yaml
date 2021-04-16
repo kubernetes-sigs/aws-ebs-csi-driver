@@ -5,7 +5,6 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
-  namespace: kube-system
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
@@ -32,7 +31,7 @@ spec:
           tolerationSeconds: 300
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode

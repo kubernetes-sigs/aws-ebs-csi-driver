@@ -12,7 +12,7 @@ image:
 sidecars:
   provisionerImage:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
-    tag: "v2.0.2"
+    tag: "v2.1.1"
   attacherImage:
     repository: k8s.gcr.io/sig-storage/csi-attacher
     tag: "v3.0.0"
