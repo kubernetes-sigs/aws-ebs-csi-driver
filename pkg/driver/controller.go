@@ -54,6 +54,8 @@ var (
 	}
 )
 
+const isManagedByDriver = "true"
+
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
 	cloud         cloud.Cloud
@@ -141,7 +143,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		isEncrypted            bool
 		kmsKeyID               string
 		volumeTags             = map[string]string{
-			cloud.VolumeNameTagKey: volName,
+			cloud.VolumeNameTagKey:   volName,
+			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
 	)
 
@@ -503,6 +506,7 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	snapshotTags := map[string]string{
 		cloud.SnapshotNameTagKey: snapshotName,
+		cloud.AwsEbsDriverTagKey: isManagedByDriver,
 	}
 	if d.driverOptions.kubernetesClusterID != "" {
 		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
