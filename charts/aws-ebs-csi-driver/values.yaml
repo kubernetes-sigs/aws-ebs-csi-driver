@@ -15,7 +15,7 @@ sidecars:
     tag: "v2.1.1"
   attacherImage:
     repository: k8s.gcr.io/sig-storage/csi-attacher
-    tag: "v3.0.0"
+    tag: "v3.1.0"
   snapshotterImage:
     repository: k8s.gcr.io/sig-storage/csi-snapshotter
     tag: "v3.0.3"
@@ -27,7 +27,7 @@ sidecars:
     tag: "v1.0.0"
   nodeDriverRegistrarImage:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-    tag: "v2.0.1"
+    tag: "v2.1.0"
 
 snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
