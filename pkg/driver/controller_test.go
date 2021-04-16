@@ -1320,8 +1320,9 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey: volumeName,
-						extraVolumeTagKey:      extraVolumeTagValue,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						extraVolumeTagKey:        extraVolumeTagValue,
 					},
 				}
 
@@ -1381,9 +1382,10 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey: volumeName,
-						expectedOwnerTag:       expectedOwnerTagValue,
-						expectedNameTag:        expectedNameTagValue,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						expectedOwnerTag:         expectedOwnerTagValue,
+						expectedNameTag:          expectedNameTagValue,
 					},
 				}
 
@@ -1447,10 +1449,11 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey:  volumeName,
-						expectedPVCNameTag:      pvcName,
-						expectedPVCNamespaceTag: pvcNamespace,
-						expectedPVNameTag:       pvName,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						expectedPVCNameTag:       pvcName,
+						expectedPVCNamespaceTag:  pvcNamespace,
+						expectedPVNameTag:        pvName,
 					},
 				}
 
@@ -2021,6 +2024,7 @@ func TestCreateSnapshot(t *testing.T) {
 				snapshotOptions := &cloud.SnapshotOptions{
 					Tags: map[string]string{
 						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: "true",
 						expectedOwnerTag:         expectedOwnerTagValue,
 						expectedNameTag:          expectedNameTagValue,
 					},
@@ -2076,6 +2080,7 @@ func TestCreateSnapshot(t *testing.T) {
 				snapshotOptions := &cloud.SnapshotOptions{
 					Tags: map[string]string{
 						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: "true",
 						extraVolumeTagKey:        extraVolumeTagValue,
 					},
 				}
