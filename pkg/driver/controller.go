@@ -75,6 +75,7 @@ var (
 func newControllerService(driverOptions *DriverOptions) controllerService {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
+		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
 		metadata, err := NewMetadataFunc()
 		if err != nil {
 			panic(err)
@@ -82,13 +83,13 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		region = metadata.GetRegion()
 	}
 
-	cloud, err := NewCloudFunc(region)
+	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog)
 	if err != nil {
 		panic(err)
 	}
 
 	return controllerService{
-		cloud:         cloud,
+		cloud:         cloudSrv,
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
@@ -323,7 +324,7 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		// TODO: Check volume capability matches for ALREADY_EXISTS
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
+	klog.V(5).Infof("[Debug] ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
@@ -347,7 +348,7 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
+	klog.V(5).Infof("[Debug] ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }

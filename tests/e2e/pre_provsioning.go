@@ -84,7 +84,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region)
+		cloud, err = awscloud.NewCloud(region, false)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

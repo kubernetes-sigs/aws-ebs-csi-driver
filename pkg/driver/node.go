@@ -82,6 +82,7 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
+	klog.V(5).Infof("[Debug] Retrieving node info from metadata service")
 	metadata, err := cloud.NewMetadata()
 	if err != nil {
 		panic(err)
@@ -209,7 +210,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// FormatAndMount will format only if needed
-	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
+	klog.V(4).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
 	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
@@ -251,7 +252,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	// is not staged to the staging_target_path, the Plugin MUST
 	// reply 0 OK.
 	if refCount == 0 {
-		klog.V(5).Infof("NodeUnstageVolume: %s target not mounted", target)
+		klog.V(5).Infof("[Debug] NodeUnstageVolume: %s target not mounted", target)
 		return &csi.NodeUnstageVolumeResponse{}, nil
 	}
 
@@ -259,7 +260,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		klog.Warningf("NodeUnstageVolume: found %d references to device %s mounted at target path %s", refCount, dev, target)
 	}
 
-	klog.V(5).Infof("NodeUnstageVolume: unmounting %s", target)
+	klog.V(4).Infof("NodeUnstageVolume: unmounting %s", target)
 	err = d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
@@ -408,7 +409,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		d.inFlight.Delete(volumeID)
 	}()
 
-	klog.V(5).Infof("NodeUnpublishVolume: unmounting %s", target)
+	klog.V(4).Infof("NodeUnpublishVolume: unmounting %s", target)
 	err := d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
@@ -570,7 +571,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	// Create the mount point as a file since bind mount device node requires it to be a file
-	klog.V(5).Infof("NodePublishVolume [block]: making target file %s", target)
+	klog.V(4).Infof("NodePublishVolume [block]: making target file %s", target)
 	if err := d.mounter.MakeFile(target); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
@@ -578,7 +579,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		return status.Errorf(codes.Internal, "Could not create file %q: %v", target, err)
 	}
 
-	klog.V(5).Infof("NodePublishVolume [block]: mounting %s at %s", source, target)
+	klog.V(4).Infof("NodePublishVolume [block]: mounting %s at %s", source, target)
 	if err := d.mounter.Mount(source, target, "", mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
@@ -600,7 +601,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		}
 	}
 
-	klog.V(5).Infof("NodePublishVolume: creating dir %s", target)
+	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
 	if err := d.mounter.MakeDir(target); err != nil {
 		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
 	}
@@ -610,7 +611,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		fsType = defaultFsType
 	}
 
-	klog.V(5).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
+	klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
 	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)

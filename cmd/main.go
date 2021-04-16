@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 
 	"k8s.io/klog"
@@ -35,6 +34,7 @@ func main() {
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
+		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 	)
 	if err != nil {
 		klog.Fatalln(err)
