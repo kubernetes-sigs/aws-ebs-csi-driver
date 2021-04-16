@@ -65,10 +65,11 @@ type DriverOptions struct {
 	mode                Mode
 	volumeAttachLimit   int64
 	kubernetesClusterID string
+	awsSdkDebugLog      bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
-	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
+	klog.V(4).Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
 	driverOptions := DriverOptions{
 		endpoint: DefaultCSIEndpoint,
@@ -138,12 +139,11 @@ func (d *Driver) Run() error {
 		return fmt.Errorf("unknown mode: %s", d.options.mode)
 	}
 
-	klog.Infof("Listening for connections on address: %#v", listener.Addr())
+	klog.V(4).Infof("Listening for connections on address: %#v", listener.Addr())
 	return d.srv.Serve(listener)
 }
 
 func (d *Driver) Stop() {
-	klog.Infof("Stopping server")
 	d.srv.Stop()
 }
 
@@ -183,5 +183,11 @@ func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.kubernetesClusterID = clusterID
+	}
+}
+
+func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.awsSdkDebugLog = enableSdkDebugLog
 	}
 }

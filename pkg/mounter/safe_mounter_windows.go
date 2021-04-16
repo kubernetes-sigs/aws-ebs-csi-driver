@@ -171,7 +171,7 @@ func (mounter *CSIProxyMounter) MakeDir(pathname string) error {
 	}
 	_, err := mounter.FsClient.Mkdir(context.Background(), mkdirReq)
 	if err != nil {
-		klog.Infof("Error: %v", err)
+		klog.V(4).Infof("Error: %v", err)
 		return err
 	}
 

@@ -68,6 +68,22 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: normal with gp2 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				VolumeType:    VolumeTypeGP2,
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: normal with io2 options",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -530,6 +546,12 @@ func TestAttachDisk(t *testing.T) {
 			volumeID: "vol-test-1234",
 			nodeID:   "node-1234",
 			expErr:   fmt.Errorf(""),
+		},
+		{
+			name:     "fail: AttachVolume returned error volumeInUse",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   awserr.New("VolumeInUse", "Volume is in use", nil),
 		},
 	}
 
