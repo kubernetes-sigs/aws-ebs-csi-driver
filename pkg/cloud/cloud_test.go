@@ -57,7 +57,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expDisk: &Disk{
@@ -72,7 +72,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100,
 			},
@@ -91,7 +91,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeGP3,
 				IOPS:          3000,
 				Throughput:    125,
@@ -111,7 +111,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
@@ -127,7 +127,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				Encrypted:        true,
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
@@ -145,7 +145,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			},
@@ -163,7 +163,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
@@ -180,7 +180,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
@@ -193,7 +193,7 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
@@ -207,7 +207,7 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: "",
 			},
 			cleanUpFailedVolume:  true,
@@ -219,7 +219,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				SnapshotID:       "snapshot-test",
 			},
@@ -236,7 +236,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:          util.GiBToBytes(4),
-				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:             VolumeTypeIO1,
 				IOPSPerGB:              1,
 				AllowIOPSPerGBIncrease: true,
@@ -256,7 +256,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     1,
 			},
@@ -273,7 +273,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     10000,
 			},
@@ -292,7 +292,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4000),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     10000,
 			},
@@ -311,7 +311,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:          util.GiBToBytes(4),
-				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:             VolumeTypeIO2,
 				IOPSPerGB:              1,
 				AllowIOPSPerGBIncrease: true,
@@ -331,7 +331,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     1,
 			},
@@ -348,7 +348,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     10000,
 			},
@@ -367,7 +367,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4000),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100000,
 			},
@@ -799,6 +799,7 @@ func TestCreateSnapshot(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},
@@ -812,6 +813,10 @@ func TestCreateSnapshot(t *testing.T) {
 							{
 								Key:   aws.String(SnapshotNameTagKey),
 								Value: aws.String("snap-test-name"),
+							},
+							{
+								Key:   aws.String(AwsEbsDriverTagKey),
+								Value: aws.String("true"),
 							},
 							{
 								Key:   aws.String("extra-tag-key"),
@@ -1094,6 +1099,7 @@ func TestGetSnapshotByName(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},
@@ -1149,6 +1155,7 @@ func TestGetSnapshotByID(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},

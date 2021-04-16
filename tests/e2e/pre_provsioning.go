@@ -81,7 +81,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			CapacityBytes:    defaultDiskSizeBytes,
 			VolumeType:       defaultVoluemType,
 			AvailabilityZone: availabilityZone,
-			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
+			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
 		cloud, err = awscloud.NewCloud(region)
@@ -101,7 +101,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		pvTestDriver = driver.InitEbsCSIDriver()
 		By(fmt.Sprintf("Successfully provisioned EBS volume: %q\n", volumeID))
 		snapshotOptions := &awscloud.SnapshotOptions{
-			Tags: map[string]string{awscloud.SnapshotNameTagKey: dummySnapshotName},
+			Tags: map[string]string{awscloud.SnapshotNameTagKey: dummySnapshotName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		snapshot, err := cloud.CreateSnapshot(context.Background(), volumeID, snapshotOptions)
 		if err != nil {
