@@ -154,6 +154,11 @@ helm upgrade --install aws-ebs-csi-driver \
     --set enableVolumeSnapshot=true \
     aws-ebs-csi-driver/aws-ebs-csi-driver
 ```
+
+#### Deploy driver with debug mode
+To view driver debug logs, run the CSI driver with `-v=5` command line option
+To enable aws sdk debug logs, run the CSI driver with `--aws-sdk-debug-log=true` command line option.
+
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
 * [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
