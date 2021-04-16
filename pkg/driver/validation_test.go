@@ -79,6 +79,13 @@ func TestValidateExtraVolumeTags(t *testing.T) {
 			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey),
 		},
 		{
+			name: "invalid tag: reserved driver key",
+			tags: map[string]string{
+				cloud.AwsEbsDriverTagKey: "false",
+			},
+			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey),
+		},
+		{
 			name: "invalid tag: reserved Kubernetes key prefix",
 			tags: map[string]string{
 				cloud.KubernetesTagKeyPrefix + "/cluster": "extra-tag-value",

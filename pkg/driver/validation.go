@@ -50,8 +50,11 @@ func validateExtraTags(tags map[string]string) error {
 		if k == cloud.VolumeNameTagKey {
 			return fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey)
 		}
+		if k == cloud.AwsEbsDriverTagKey {
+			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)
+		}
 		if k == cloud.SnapshotNameTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey)
+			return fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey)
 		}
 		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
 			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
