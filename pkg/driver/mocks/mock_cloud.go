@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	ec2 "github.com/aws/aws-sdk-go/service/ec2"
 	gomock "github.com/golang/mock/gomock"
 	cloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
@@ -229,15 +230,16 @@ func (mr *MockCloudMockRecorder) ResizeDisk(arg0, arg1, arg2 interface{}) *gomoc
 }
 
 // WaitForAttachmentState mocks base method.
-func (m *MockCloud) WaitForAttachmentState(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockCloud) WaitForAttachmentState(arg0 context.Context, arg1, arg2, arg3, arg4 string, arg5 bool) (*ec2.VolumeAttachment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForAttachmentState", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "WaitForAttachmentState", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(*ec2.VolumeAttachment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WaitForAttachmentState indicates an expected call of WaitForAttachmentState.
-func (mr *MockCloudMockRecorder) WaitForAttachmentState(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockCloudMockRecorder) WaitForAttachmentState(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAttachmentState", reflect.TypeOf((*MockCloud)(nil).WaitForAttachmentState), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAttachmentState", reflect.TypeOf((*MockCloud)(nil).WaitForAttachmentState), arg0, arg1, arg2, arg3, arg4, arg5)
 }
