@@ -109,6 +109,7 @@ region: ""
 
 # Additonal environment variables for the controller
 controller:
+  httpEndpoint: ""
   extraVars: {}
 
 node:

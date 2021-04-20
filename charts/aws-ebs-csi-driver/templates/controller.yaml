@@ -67,6 +67,9 @@ spec:
             {{- if .Values.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ .Values.k8sTagClusterId }}
             {{- end }}
+            {{- if .Values.controller.httpEndpoint }}
+            - --http-endpoint={{ .Values.controller.httpEndpoint }}
+            {{- end }}
             - --logtostderr
             - --v=5
           env:
