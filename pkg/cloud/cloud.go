@@ -252,6 +252,7 @@ var _ Cloud = &cloud{}
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
 func NewCloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+	RegisterMetrics()
 	return newEC2Cloud(region, awsSdkDebugLog)
 }
 
@@ -272,10 +273,20 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 		awsConfig.WithLogLevel(aws.LogDebugWithRequestErrors)
 	}
 
+	svc := ec2.New(session.Must(session.NewSession(awsConfig)))
+	svc.Handlers.AfterRetry.PushFrontNamed(request.NamedHandler{
+		Name: "recordThrottledRequestsHandler",
+		Fn:   RecordThrottledRequestsHandler,
+	})
+	svc.Handlers.Complete.PushFrontNamed(request.NamedHandler{
+		Name: "recordRequestsHandler",
+		Fn:   RecordRequestsHandler,
+	})
+
 	return &cloud{
 		region: region,
 		dm:     dm.NewDeviceManager(),
-		ec2:    ec2.New(session.Must(session.NewSession(awsConfig))),
+		ec2:    svc,
 	}, nil
 }
 
