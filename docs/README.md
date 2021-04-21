@@ -29,8 +29,8 @@ The following CSI gRPC calls are implemented:
 * **Node Service**: NodeStageVolume, NodeUnstageVolume, NodePublishVolume, NodeUnpublishVolume, NodeGetCapabilities, NodeGetInfo
 * **Identity Service**: GetPluginInfo, GetPluginCapabilities, Probe
 
-### CreateVolume Parameters
-There are several optional parameters that could be passed into `CreateVolumeRequest.parameters` map:
+## CreateVolume Parameters
+There are several optional parameters that could be passed into `CreateVolumeRequest.parameters` map, these parameters can be configured in StorageClass, see [example](../examples/kubernetes/storageclass):
 
 | Parameters                  | Values                                 | Default  | Description         |
 |-----------------------------|----------------------------------------|----------|---------------------|
@@ -46,6 +46,28 @@ There are several optional parameters that could be passed into `CreateVolumeReq
 **Notes**:
 * `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
 * Unless explicitly noted, all parameters are case insensitive (e.g. "kmsKeyId", "kmskeyid" and any other combination of upper/lowercase characters can be used).
+
+## Tagging
+To help manage volumes in the aws account, CSI driver will automatically add tags to the volumes it manages.
+
+| TagKey                 | TagValue                  | sample                                                              | Description         |
+|------------------------|---------------------------|---------------------------------------------------------------------|---------------------|
+| CSIVolumeName          | pvcName                   | CSIVolumeName = pvc-a3ab0567-3a48-4608-8cb6-4e3b1485c808            | add to all volumes, for recording associated pvc id and checking if a given volume was already created so that ControllerPublish/CreateVolume is idempotent. |
+| CSISnapshotName        | volumeSnapshotContentName | CSISnapshotName = snapcontent-69477690-803b-4d3e-a61a-03c7b2592a76  | add to all snapshots, for recording associated VolumeSnapshot id and checking if a given snapshot was already created                                    |
+| ebs.csi.aws.com/cluster| true                      | ebs.csi.aws.com/cluster = true                                      | add to all volumes and snapshots, for allowing users to use a policy to limit csi driver's permission to just the resources it manages.                      |
+| kubernetes.io/cluster/X| owned                     | kubernetes.io/cluster/aws-cluster-id-1 = owned                      | add to all volumes and snapshots if k8s-tag-cluster-id argument is set to X.|
+| extra-key              | extra-value               | extra-key = extra-value                                             | add to all volumes and snapshots if extraTags argument is set|
+
+## Driver Options
+There are couple driver options that can be passed as arguments when starting driver container.
+
+| Option argument             | value sample                                      | default                                             | Description         |
+|-----------------------------|---------------------------------------------------|-----------------------------------------------------|---------------------|
+| endpoint                    | tcp://127.0.0.1:10000/                            | unix:///var/lib/csi/sockets/pluginproxy/csi.sock    | added to all volumes, for checking if a given volume was already created so that ControllerPublish/CreateVolume is idempotent. |
+| volume-attach-limit         | 1,2,3 ...                                         | -1                                                  | Value for the maximum number of volumes attachable per node. If specified, the limit applies to all nodes. If not specified, the value is approximated from the instance type.    |
+| extra-tags                  | key1=value1,key2=value2                           |                                                     | Extra tags to attach to each dynamically provisioned resource.|
+| k8s-tag-cluster-id          | aws-cluster-id-1                                  |                                                     | ID of the Kubernetes cluster used for tagging provisioned EBS volumes.|
+| aws-sdk-debug-log           | true                                              | false                                               | if true, driver will enable the aws sdk debug log level|
 
 # EBS CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
@@ -157,6 +179,7 @@ helm upgrade --install aws-ebs-csi-driver \
 
 #### Deploy driver with debug mode
 To view driver debug logs, run the CSI driver with `-v=5` command line option
+
 To enable aws sdk debug logs, run the CSI driver with `--aws-sdk-debug-log=true` command line option.
 
 ## Examples
@@ -166,6 +189,7 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 * [Volume Snapshot](../examples/kubernetes/snapshot)
 * [Configure StorageClass](../examples/kubernetes/storageclass)
 * [Volume Resizing](../examples/kubernetes/resizing)
+
 
 ## Migrating from in-tree EBS plugin
 Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, drain the node and set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
