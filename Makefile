@@ -45,7 +45,7 @@ bin/kubeval: | /tmp/kubeval bin
 	@rm -rf /tmp/kubeval/*
 
 bin/mockgen: | bin
-	go get github.com/golang/mock/mockgen@latest
+	go get github.com/golang/mock/mockgen@v1.5.0
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."

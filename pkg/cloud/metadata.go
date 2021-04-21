@@ -28,22 +28,6 @@ import (
 	"k8s.io/klog"
 )
 
-type EC2Metadata interface {
-	Available() bool
-	// ec2 instance metadata endpoints: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-	GetMetadata(string) (string, error)
-	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
-}
-
-// MetadataService represents AWS metadata service.
-type MetadataService interface {
-	GetInstanceID() string
-	GetInstanceType() string
-	GetRegion() string
-	GetAvailabilityZone() string
-	GetOutpostArn() arn.ARN
-}
-
 type Metadata struct {
 	InstanceID       string
 	InstanceType     string
