@@ -10,7 +10,7 @@ This example shows how to resize EBS persistence volume using volume resizing fe
 
 2. Deploy the example:
 ```sh
-kubectl apply -f specs/
+kubectl apply -f spec/
 ``` 
 
 3. Verify the volume is created and Pod is running:
