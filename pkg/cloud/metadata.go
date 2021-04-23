@@ -104,7 +104,9 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
 	if err != nil && !strings.Contains(err.Error(), "404") {
-		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn")
+		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn: %s", err.Error())
+	} else if err == nil {
+		klog.Infof("Running in an outpost environment with arn: %s", outpostArn)
 	}
 
 	metadata := Metadata{
@@ -119,6 +121,7 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 	if err != nil {
 		klog.Warningf("Failed to parse the outpost arn: %s", outpostArn)
 	} else {
+		klog.Infof("Using outpost arn: %v", parsedArn)
 		metadata.OutpostArn = parsedArn
 	}
 
