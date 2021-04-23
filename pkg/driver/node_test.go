@@ -74,6 +74,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -121,6 +122,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -149,6 +151,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -177,6 +180,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -290,6 +294,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -309,6 +314,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
