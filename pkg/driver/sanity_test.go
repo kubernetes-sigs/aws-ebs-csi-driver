@@ -360,3 +360,7 @@ func (f *fakeMounter) PathExists(filename string) (bool, error) {
 	}
 	return true, nil
 }
+
+func (f *fakeMounter) NeedResize(source string, path string) (bool, error) {
+	return false, nil
+}

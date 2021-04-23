@@ -133,18 +133,18 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	mount := volCap.GetMount()
-	if mount == nil {
+	mountVolume := volCap.GetMount()
+	if mountVolume == nil {
 		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mount is nil within volume capability")
 	}
 
-	fsType := mount.GetFsType()
+	fsType := mountVolume.GetFsType()
 	if len(fsType) == 0 {
 		fsType = defaultFsType
 	}
 
 	var mountOptions []string
-	for _, f := range mount.MountFlags {
+	for _, f := range mountVolume.MountFlags {
 		if !hasMountOption(mountOptions, f) {
 			mountOptions = append(mountOptions, f)
 		}
@@ -215,6 +215,19 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
+	}
+	//TODO: use the common function from vendor pkg kubernetes/mount-util
+
+	needResize, err := d.mounter.NeedResize(source, target)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if volume %q (%q) need to be resized:  %v", req.GetVolumeId(), source, err)
+	}
+	if needResize {
+		r := mountutils.NewResizeFs(d.mounter)
+		klog.V(2).Infof("Volume %s needs resizing", source)
+		if _, err := r.Resize(source, target); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, source, err)
+		}
 	}
 	return &csi.NodeStageVolumeResponse{}, nil
 }
