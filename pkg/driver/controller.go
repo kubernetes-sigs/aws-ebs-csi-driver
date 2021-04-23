@@ -132,13 +132,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	var (
-		volumeType  string
-		iopsPerGB   int
-		iops        int
-		throughput  int
-		isEncrypted bool
-		kmsKeyID    string
-		volumeTags  = map[string]string{
+		volumeType             string
+		iopsPerGB              int
+		allowIOPSPerGBIncrease bool
+		iops                   int
+		throughput             int
+		isEncrypted            bool
+		kmsKeyID               string
+		volumeTags             = map[string]string{
 			cloud.VolumeNameTagKey: volName,
 		}
 	)
@@ -154,6 +155,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
 			}
+		case AllowAutoIOPSPerGBIncreaseKey:
+			allowIOPSPerGBIncrease = value == "true"
 		case IopsKey:
 			iops, err = strconv.Atoi(value)
 			if err != nil {
@@ -232,17 +235,18 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		CapacityBytes:    volSizeBytes,
-		Tags:             volumeTags,
-		VolumeType:       volumeType,
-		IOPSPerGB:        iopsPerGB,
-		IOPS:             iops,
-		Throughput:       throughput,
-		AvailabilityZone: zone,
-		OutpostArn:       outpostArn,
-		Encrypted:        isEncrypted,
-		KmsKeyID:         kmsKeyID,
-		SnapshotID:       snapshotID,
+		CapacityBytes:          volSizeBytes,
+		Tags:                   volumeTags,
+		VolumeType:             volumeType,
+		IOPSPerGB:              iopsPerGB,
+		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
+		IOPS:                   iops,
+		Throughput:             throughput,
+		AvailabilityZone:       zone,
+		OutpostArn:             outpostArn,
+		Encrypted:              isEncrypted,
+		KmsKeyID:               kmsKeyID,
+		SnapshotID:             snapshotID,
 	}
 
 	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
