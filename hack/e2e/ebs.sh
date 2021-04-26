@@ -6,11 +6,13 @@ BASE_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 source "${BASE_DIR}"/util.sh
 
 function ebs_check_migration() {
+  KUBECONFIG=${1}
+
   loudecho "Checking migration"
   # There should have been no calls to the in-tree driver kubernetes.io/aws-ebs but many calls to ebs.csi.aws.com
   # Find the controller-manager log and read its metrics to verify
-  NODE=$(kubectl get node -l kubernetes.io/role=master -o json | jq -r ".items[].metadata.name")
-  kubectl port-forward kube-controller-manager-"${NODE}" 10252:10252 -n kube-system &
+  NODE=$(kubectl get node -l kubernetes.io/role=master -o json --kubeconfig "${KUBECONFIG}" | jq -r ".items[].metadata.name")
+  kubectl port-forward kube-controller-manager-"${NODE}" 10252:10252 -n kube-system --kubeconfig "${KUBECONFIG}" &
 
   # Ensure port forwarding succeeded
   n=0
