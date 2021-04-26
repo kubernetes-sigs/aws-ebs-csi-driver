@@ -19,33 +19,28 @@ function kops_install() {
 
 function kops_create_cluster() {
   SSH_KEY_PATH=${1}
-  KOPS_STATE_FILE=${2}
-  CLUSTER_NAME=${3}
-  KOPS_BIN=${4}
-  ZONES=${5}
-  INSTANCE_TYPE=${6}
-  K8S_VERSION=${7}
-  TEST_DIR=${8}
-  KOPS_PATCH_FILE=${10}
+  CLUSTER_NAME=${2}
+  BIN=${3}
+  ZONES=${4}
+  INSTANCE_TYPE=${5}
+  K8S_VERSION=${6}
+  CLUSTER_FILE=${7}
+  KUBECONFIG=${8}
+  KOPS_PATCH_FILE=${9}
+  KOPS_STATE_FILE=${10}
 
-  if [[ ! -e ${SSH_KEY_PATH} ]]; then
-    loudecho "Generating SSH key $SSH_KEY_PATH"
-    ssh-keygen -P csi-e2e -f "${SSH_KEY_PATH}"
-  else
-    loudecho "Reusing SSH key $SSH_KEY_PATH"
-  fi
-
-  CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.json
+  generate_ssh_key "${SSH_KEY_PATH}"
 
   set +e
-  if ${KOPS_BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}"; then
+  if ${BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}"; then
     set -e
     loudecho "Replacing cluster $CLUSTER_NAME with $CLUSTER_FILE"
-    ${KOPS_BIN} replace --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
+    ${BIN} replace --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
   else
     set -e
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
-    ${KOPS_BIN} create cluster --state "${KOPS_STATE_FILE}" \
+    ${BIN} create cluster --state "${KOPS_STATE_FILE}" \
+      --ssh-public-key="${SSH_KEY_PATH}".pub \
       --zones "${ZONES}" \
       --node-count=3 \
       --node-size="${INSTANCE_TYPE}" \
@@ -57,26 +52,27 @@ function kops_create_cluster() {
     kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
-    ${KOPS_BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
+    ${BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
+    kops create secret --state "${KOPS_STATE_FILE}" --name "${CLUSTER_NAME}" sshpublickey admin -i "${SSH_KEY_PATH}".pub
   fi
 
   loudecho "Updating cluster $CLUSTER_NAME with $CLUSTER_FILE"
-  ${KOPS_BIN} update cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" \
-    --ssh-public-key="${SSH_KEY_PATH}".pub --yes
+  ${BIN} update cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --yes
 
-  ${KOPS_BIN} export kubecfg --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --admin
+  loudecho "Exporting cluster ${CLUSTER_NAME} kubecfg to ${KUBECONFIG}"
+  ${BIN} export kubecfg --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --admin --kubeconfig "${KUBECONFIG}"
 
   loudecho "Validating cluster ${CLUSTER_NAME}"
-  ${KOPS_BIN} validate cluster --state "${KOPS_STATE_FILE}" --wait 10m
+  ${BIN} validate cluster --state "${KOPS_STATE_FILE}" --wait 10m --kubeconfig "${KUBECONFIG}"
   return $?
 }
 
 function kops_delete_cluster() {
-  KOPS_BIN=${1}
+  BIN=${1}
   CLUSTER_NAME=${2}
   KOPS_STATE_FILE=${3}
   loudecho "Deleting cluster ${CLUSTER_NAME}"
-  ${KOPS_BIN} delete cluster --name "${CLUSTER_NAME}" --state "${KOPS_STATE_FILE}" --yes
+  ${BIN} delete cluster --name "${CLUSTER_NAME}" --state "${KOPS_STATE_FILE}" --yes
 }
 
 # TODO switch this to python, all this hacking with jq stinks!
