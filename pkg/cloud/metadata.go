@@ -17,7 +17,10 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -25,6 +28,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
 
@@ -69,13 +75,73 @@ func (m *Metadata) GetOutpostArn() arn.ARN {
 func NewMetadata() (MetadataService, error) {
 	sess := session.Must(session.NewSession(&aws.Config{}))
 	svc := ec2metadata.New(sess)
-	return NewMetadataService(svc)
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil && !svc.Available() {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil && !svc.Available() {
+		return nil, err
+	}
+	metadataService, err := NewMetadataService(svc, clientset)
+	if err != nil {
+		return nil, fmt.Errorf("error getting information from metadata service or node object: %w", err)
+	}
+	return metadataService, err
 }
 
 // NewMetadataService returns a new MetadataServiceImplementation.
-func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
+func NewMetadataService(svc EC2Metadata, clientset kubernetes.Interface) (MetadataService, error) {
 	if !svc.Available() {
-		return nil, fmt.Errorf("EC2 instance metadata is not available")
+		klog.Warningf("EC2 instance metadata is not available")
+		nodeName := os.Getenv("CSI_NODE_NAME")
+		if nodeName == "" {
+			return nil, fmt.Errorf("instance metadata is unavailable and CSI_NODE_NAME env var not set")
+		}
+
+		// get node with k8s API
+		node, err := clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		providerID := node.Spec.ProviderID
+		if providerID == "" {
+			return nil, fmt.Errorf("node providerID empty, cannot parse")
+		}
+
+		awsRegionRegex := "([a-z]{2}(-gov)?)-(central|(north|south)?(east|west)?)-[0-9]"
+		awsAvailabilityZoneRegex := "([a-z]{2}(-gov)?)-(central|(north|south)?(east|west)?)-[0-9][a-z]"
+		awsInstanceIDRegex := "i-[a-z0-9]+$"
+
+		re := regexp.MustCompile(awsRegionRegex)
+		region := re.FindString(providerID)
+		if region == "" {
+			return nil, fmt.Errorf("did not find aws region in node providerID string")
+		}
+
+		re = regexp.MustCompile(awsAvailabilityZoneRegex)
+		availabilityZone := re.FindString(providerID)
+		if availabilityZone == "" {
+			return nil, fmt.Errorf("did not find aws availability zone in node providerID string")
+		}
+
+		re = regexp.MustCompile(awsInstanceIDRegex)
+		instanceID := re.FindString(providerID)
+		if instanceID == "" {
+			return nil, fmt.Errorf("did not find aws instance ID in node providerID string")
+		}
+
+		metadata := Metadata{
+			InstanceID:       instanceID,
+			InstanceType:     "", // we have no way to find this, so we leave it empty
+			Region:           region,
+			AvailabilityZone: availabilityZone,
+		}
+
+		return &metadata, nil
 	}
 
 	doc, err := svc.GetInstanceIdentityDocument()
@@ -96,7 +162,7 @@ func NewMetadataService(svc EC2Metadata) (MetadataService, error) {
 	}
 
 	if len(doc.AvailabilityZone) == 0 {
-		return nil, fmt.Errorf("could not get valid EC2 availavility zone")
+		return nil, fmt.Errorf("could not get valid EC2 availability zone")
 	}
 
 	outpostArn, err := svc.GetMetadata(OutpostArnEndpoint)

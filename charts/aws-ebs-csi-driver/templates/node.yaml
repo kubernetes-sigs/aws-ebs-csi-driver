@@ -65,6 +65,10 @@ spec:
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
 {{- if .Values.proxy.http_proxy }}
             - name: HTTP_PROXY
               value: {{ .Values.proxy.http_proxy | quote }}
