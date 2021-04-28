@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -109,7 +110,7 @@ func newMetadata() (cloud.MetadataService, error) {
 		return nil, err
 	}
 
-	return cloud.NewMetadataService(ec2metadata.New(s))
+	return cloud.NewMetadataService(ec2metadata.New(s), fake.NewSimpleClientset())
 }
 
 func newEC2Client() (*ec2.EC2, error) {
