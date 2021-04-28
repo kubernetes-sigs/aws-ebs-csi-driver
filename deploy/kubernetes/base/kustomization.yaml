@@ -7,6 +7,7 @@ resources:
 - clusterrolebinding-attacher.yaml
 - clusterrolebinding-provisioner.yaml
 - controller.yaml
+- controller-poddisruptionbudget.yaml
 - csidriver.yaml
 - node.yaml
 - serviceaccount-csi-controller.yaml
