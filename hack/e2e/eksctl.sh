@@ -25,13 +25,10 @@ function eksctl_create_cluster() {
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
-  set +e
-  if ${BIN} get cluster "${CLUSTER_NAME}"; then
-    set -e
+  if eksctl_cluster_exists "${CLUSTER_NAME}" "${BIN}"; then
     loudecho "Upgrading cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} upgrade cluster -f "${CLUSTER_FILE}"
   else
-    set -e
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
     ${BIN} create cluster \
       --managed \
@@ -55,6 +52,19 @@ function eksctl_create_cluster() {
   loudecho "Getting cluster ${CLUSTER_NAME}"
   ${BIN} get cluster "${CLUSTER_NAME}"
   return $?
+}
+
+function eksctl_cluster_exists() {
+  CLUSTER_NAME=${1}
+  BIN=${2}
+  set +e
+  if ${BIN} get cluster "${CLUSTER_NAME}"; then
+    set -e
+    return 0
+  else
+    set -e
+    return 1
+  fi
 }
 
 function eksctl_delete_cluster() {
