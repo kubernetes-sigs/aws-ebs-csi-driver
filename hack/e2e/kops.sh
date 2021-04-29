@@ -31,13 +31,10 @@ function kops_create_cluster() {
 
   generate_ssh_key "${SSH_KEY_PATH}"
 
-  set +e
-  if ${BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}"; then
-    set -e
+  if kops_cluster_exists "${CLUSTER_NAME}" "${BIN}" "${KOPS_STATE_FILE}"; then
     loudecho "Replacing cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} replace --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
   else
-    set -e
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
     ${BIN} create cluster --state "${KOPS_STATE_FILE}" \
       --ssh-public-key="${SSH_KEY_PATH}".pub \
@@ -65,6 +62,20 @@ function kops_create_cluster() {
   loudecho "Validating cluster ${CLUSTER_NAME}"
   ${BIN} validate cluster --state "${KOPS_STATE_FILE}" --wait 10m --kubeconfig "${KUBECONFIG}"
   return $?
+}
+
+function kops_cluster_exists() {
+  CLUSTER_NAME=${1}
+  BIN=${2}
+  KOPS_STATE_FILE=${3}
+  set +e
+  if ${BIN} get cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}"; then
+    set -e
+    return 0
+  else
+    set -e
+    return 1
+  fi
 }
 
 function kops_delete_cluster() {
