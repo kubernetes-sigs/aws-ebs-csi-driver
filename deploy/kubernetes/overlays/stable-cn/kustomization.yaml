@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../../base
+images:
+  - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
+    newName: 918309763551.dkr.ecr.cn-north-1.amazonaws.com.cn/eks/aws-ebs-csi-driver
+    newTag: v0.10.1
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newName: 918309763551.dkr.ecr.cn-north-1.amazonaws.com.cn/eks/csi-provisioner
+    newTag: v2.1.1
+  - name: k8s.gcr.io/sig-storage/csi-attacher
+    newName: 918309763551.dkr.ecr.cn-north-1.amazonaws.com.cn/eks/csi-attacher
+    newTag: v3.1.0
+  - name: k8s.gcr.io/sig-storage/livenessprobe
+    newName: 918309763551.dkr.ecr.cn-north-1.amazonaws.com.cn/eks/livenessprobe
+    newTag: v2.2.0
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newName: 918309763551.dkr.ecr.cn-north-1.amazonaws.com.cn/eks/csi-node-driver-registrar
+    newTag: v2.1.0
