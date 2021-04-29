@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -uo pipefail
+set -euo pipefail
 
 OS_ARCH=$(go env GOOS)-amd64
 

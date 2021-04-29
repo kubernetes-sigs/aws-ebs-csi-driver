@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -uo pipefail
+set -euo pipefail
 
 function eksctl_install() {
   INSTALL_PATH=${1}
