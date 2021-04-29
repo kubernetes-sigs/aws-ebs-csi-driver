@@ -1,3 +1,32 @@
+# v1.0.0
+## Notable changes
+- With this release, the EBS CSI Driver is now Generally Available!
+
+### New features
+* add options to enable aws sdk debug log and add more logs when driver… ([#830](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/830), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Emit AWS API operation duration/error/throttle metrics ([#842](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/842), [@wongma7](https://github.com/wongma7))
+* add pod disruption budget for csi controller ([#857](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/857), [@vdhanan](https://github.com/vdhanan))
+
+### Bug fixes
+* Resize filesystem when restore a snapshot to larger size volume ([#753](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/753), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* handling describe instances consistency issue ([#801](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/801), [@vdhanan](https://github.com/vdhanan))
+* Cap IOPS when calculating from iopsPerGB ([#809](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/809), [@jsafrane](https://github.com/jsafrane))
+* Fix broken gomocks ([#843](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/843), [@wongma7](https://github.com/wongma7))
+* Fix missing import ([#849](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/849), [@wongma7](https://github.com/wongma7))
+* instance metadata issue fix ([#855](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/855), [@vdhanan](https://github.com/vdhanan))
+
+### Misc.
+* release v0.10.0 ([#820](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/820), [@vdhanan](https://github.com/vdhanan))
+* release v0.10.1 ([#827](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/827), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Rebase 1.21 ([#828](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/828), [@jsafrane](https://github.com/jsafrane))
+* update installation command to use latest stable version ([#832](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/832), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Bump/reconcile sidecar versions in helm/kustomize ([#834](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/834), [@wongma7](https://github.com/wongma7))
+* update IAM policy sample and add new driver level tag ([#835](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/835), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Switch to non-deprecated apiVersion ([#836](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/836), [@dntosas](https://github.com/dntosas))
+* Update readme file to provide more info on driver options and tagging ([#844](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/844), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Add empty StorageClasses to static example ([#850](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/850), [@wongma7](https://github.com/wongma7))
+* Add additional logging for outpost arn handling ([#851](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/851), [@ayberk](https://github.com/ayberk))
+
 # v0.10.1
 ## Notable changes
 * support volume partition, users can specify partition in the pv and driver will mount the device on the specified partition ([#824](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/824), [@AndyXiangLi](https://github.com/AndyXiangLi))
