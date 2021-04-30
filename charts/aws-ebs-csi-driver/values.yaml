@@ -6,16 +6,16 @@ replicaCount: 2
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v0.10.1"
+  tag: "v1.0.0"
   pullPolicy: IfNotPresent
 
 sidecars:
   provisionerImage:
     repository: k8s.gcr.io/sig-storage/csi-provisioner
-    tag: "v2.0.2"
+    tag: "v2.1.1"
   attacherImage:
     repository: k8s.gcr.io/sig-storage/csi-attacher
-    tag: "v3.0.0"
+    tag: "v3.1.0"
   snapshotterImage:
     repository: k8s.gcr.io/sig-storage/csi-snapshotter
     tag: "v3.0.3"
@@ -27,7 +27,7 @@ sidecars:
     tag: "v1.0.0"
   nodeDriverRegistrarImage:
     repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-    tag: "v2.0.1"
+    tag: "v2.1.0"
 
 snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
@@ -61,6 +61,8 @@ resources:
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # Note that you will need to set resource requests if you want the cluster autoscaler to
+  # scale your nodes when you increase/decrease the number of ebs-csi-controller replicas.
   # limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -109,6 +111,7 @@ region: ""
 
 # Additonal environment variables for the controller
 controller:
+  httpEndpoint: ""
   extraVars: {}
 
 node:

@@ -14,7 +14,7 @@
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 IMAGE?=amazon/aws-ebs-csi-driver
-VERSION=v0.10.1
+VERSION=v1.0.0
 VERSION_AMAZONLINUX=$(VERSION)-amazonlinux
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -35,7 +35,7 @@ bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
 
 bin/helm: | /tmp/helm bin
-	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.1.2-${GOOS}-amd64.tar.gz
+	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.5.3-${GOOS}-amd64.tar.gz
 	@tar -zxf /tmp/helm/helm.tar.gz -C bin --strip-components=1
 	@rm -rf /tmp/helm/*
 
@@ -45,7 +45,7 @@ bin/kubeval: | /tmp/kubeval bin
 	@rm -rf /tmp/kubeval/*
 
 bin/mockgen: | bin
-	go get github.com/golang/mock/mockgen@latest
+	go get github.com/golang/mock/mockgen@v1.5.0
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
@@ -142,8 +142,10 @@ verify-vendor:
 generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../../deploy/kubernetes/base/clusterrole-attacher.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-provisioner.yaml > ../../deploy/kubernetes/base/clusterrole-provisioner.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-csi-node.yaml > ../../deploy/kubernetes/base/clusterrole-csi-node.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-attacher.yaml > ../../deploy/kubernetes/base/clusterrolebinding-attacher.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-provisioner.yaml > ../../deploy/kubernetes/base/clusterrolebinding-provisioner.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-csi-node.yaml > ../../deploy/kubernetes/base/clusterrolebinding-csi-node.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller.yaml -f ../../deploy/kubernetes/values/controller.yaml > ../../deploy/kubernetes/base/controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/csidriver.yaml > ../../deploy/kubernetes/base/csidriver.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/node.yaml -f ../../deploy/kubernetes/values/controller.yaml > ../../deploy/kubernetes/base/node.yaml
@@ -157,5 +159,6 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_role.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-snapshot-controller-leaderelection.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/rbac_add_snapshot_controller_leaderelection_rolebinding.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/serviceaccount-snapshot-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/statefulset.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/overlays/alpha/snapshot_controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller-poddisruptionbudget.yaml > ../../deploy/kubernetes/base/controller-poddisruptionbudget.yaml

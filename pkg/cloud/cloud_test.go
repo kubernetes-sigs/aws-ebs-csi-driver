@@ -57,6 +57,22 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: normal with gp2 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				VolumeType:    VolumeTypeGP2,
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
@@ -72,7 +88,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100,
 			},
@@ -91,7 +107,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeGP3,
 				IOPS:          3000,
 				Throughput:    125,
@@ -111,7 +127,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
@@ -127,7 +143,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				Encrypted:        true,
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
@@ -145,7 +161,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
 			},
@@ -163,7 +179,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expDisk: &Disk{
@@ -180,7 +196,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
@@ -193,7 +209,7 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
@@ -207,7 +223,7 @@ func TestCreateDisk(t *testing.T) {
 			volState:   "creating",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: "",
 			},
 			cleanUpFailedVolume:  true,
@@ -219,7 +235,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
 				SnapshotID:       "snapshot-test",
 			},
@@ -236,7 +252,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:          util.GiBToBytes(4),
-				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:             VolumeTypeIO1,
 				IOPSPerGB:              1,
 				AllowIOPSPerGBIncrease: true,
@@ -256,7 +272,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     1,
 			},
@@ -273,7 +289,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     10000,
 			},
@@ -292,7 +308,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4000),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO1,
 				IOPSPerGB:     10000,
 			},
@@ -311,7 +327,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:          util.GiBToBytes(4),
-				Tags:                   map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:             VolumeTypeIO2,
 				IOPSPerGB:              1,
 				AllowIOPSPerGBIncrease: true,
@@ -331,7 +347,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     1,
 			},
@@ -348,7 +364,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     10000,
 			},
@@ -367,7 +383,7 @@ func TestCreateDisk(t *testing.T) {
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(4000),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100000,
 			},
@@ -531,6 +547,12 @@ func TestAttachDisk(t *testing.T) {
 			nodeID:   "node-1234",
 			expErr:   fmt.Errorf(""),
 		},
+		{
+			name:     "fail: AttachVolume returned error volumeInUse",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   awserr.New("VolumeInUse", "Volume is in use", nil),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -541,7 +563,7 @@ func TestAttachDisk(t *testing.T) {
 
 			vol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{State: aws.String("attached")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("node-1234"), State: aws.String("attached")}},
 			}
 
 			ctx := context.Background()
@@ -587,6 +609,12 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "node-1234",
 			expErr:   fmt.Errorf("DetachVolume generic error"),
 		},
+		{
+			name:     "fail: DetachVolume returned not found error",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   fmt.Errorf("DetachVolume not found error"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -603,7 +631,12 @@ func TestDetachDisk(t *testing.T) {
 			ctx := context.Background()
 			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
 			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
-			mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+			switch tc.name {
+			case "fail: DetachVolume returned not found error":
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, awserr.New("InvalidVolume.NotFound", "foo", fmt.Errorf("")))
+			default:
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+			}
 
 			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
 			if err != nil {
@@ -799,6 +832,7 @@ func TestCreateSnapshot(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},
@@ -812,6 +846,10 @@ func TestCreateSnapshot(t *testing.T) {
 							{
 								Key:   aws.String(SnapshotNameTagKey),
 								Value: aws.String("snap-test-name"),
+							},
+							{
+								Key:   aws.String(AwsEbsDriverTagKey),
+								Value: aws.String("true"),
 							},
 							{
 								Key:   aws.String("extra-tag-key"),
@@ -1094,6 +1132,7 @@ func TestGetSnapshotByName(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},
@@ -1149,6 +1188,7 @@ func TestGetSnapshotByID(t *testing.T) {
 			snapshotOptions: &SnapshotOptions{
 				Tags: map[string]string{
 					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
 			},
@@ -1397,6 +1437,166 @@ func TestListSnapshots(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestWaitForAttachmentState(t *testing.T) {
+	testCases := []struct {
+		name             string
+		volumeID         string
+		expectedState    string
+		expectedInstance string
+		expectedDevice   string
+		alreadyAssigned  bool
+		expectError      bool
+	}{
+		{
+			name:             "success: attached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "success: detached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeDetachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "success: disk not found, assumed detached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeDetachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "failure: disk not found, expected attached",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: unexpected device",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdbb",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: unexpected instance",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1235",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+		{
+			name:             "failure: already assigned but wrong state",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  true,
+			expectError:      true,
+		},
+		{
+			name:             "success: multiple attachments",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      false,
+		},
+		{
+			name:             "failure: disk still attaching",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   "/dev/xvdba",
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
+	}
+
+	volumeAttachmentStatePollSteps = 1
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			attachedVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+			}
+
+			attachingVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attaching")}},
+			}
+
+			detachedVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("detached")}},
+			}
+
+			multipleAttachmentsVol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1235"), State: aws.String("attached")}, {Device: aws.String("/dev/xvdba"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+			}
+
+			ctx := context.Background()
+
+			switch tc.name {
+			case "success: detached", "failure: already assigned but wrong state":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{detachedVol}}, nil).AnyTimes()
+			case "success: disk not found, assumed detached", "failure: disk not found, expected attached":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, awserr.New("InvalidVolume.NotFound", "foo", fmt.Errorf(""))).AnyTimes()
+			case "success: multiple attachments":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
+			case "failure: disk still attaching":
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachingVol}}, nil).AnyTimes()
+			default:
+				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachedVol}}, nil).AnyTimes()
+			}
+
+			attachment, err := c.WaitForAttachmentState(ctx, tc.volumeID, tc.expectedState, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
+			if tc.expectError {
+				if err == nil {
+					t.Fatal("WaitForAttachmentState() failed: expected error, got nothing")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("WaitForAttachmentState() failed: expected no error, got %v", err)
+				}
+
+				if tc.expectedState == volumeAttachedState {
+					if attachment == nil {
+						t.Fatal("WaiForAttachmentState() failed: expected attachment, got nothing")
+					}
+				} else {
+					if attachment != nil {
+						t.Fatalf("WaiForAttachmentState() failed: expected no attachment, got %v", attachment)
+					}
+				}
+			}
+		})
 	}
 }
 

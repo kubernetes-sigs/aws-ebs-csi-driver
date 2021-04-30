@@ -22,9 +22,10 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/klog"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/klog/v2"
+	"k8s.io/mount-utils"
 	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
@@ -33,15 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	storagelistersv1 "k8s.io/client-go/listers/storage/v1"
-	storagelisters "k8s.io/client-go/listers/storage/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	cloudprovider "k8s.io/cloud-provider"
-	"k8s.io/kubernetes/pkg/features"
+	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/recyclerclient"
 	"k8s.io/kubernetes/pkg/volume/util/subpath"
@@ -118,6 +117,9 @@ type NodeResizeOptions struct {
 	// it would be location where volume was mounted for the pod
 	DeviceMountPath string
 
+	// DeviceStagingPath stores location where the volume is staged
+	DeviceStagePath string
+
 	NewSize resource.Quantity
 	OldSize resource.Quantity
 
@@ -162,7 +164,7 @@ type VolumePlugin interface {
 	// RequiresRemount returns true if this plugin requires mount calls to be
 	// reexecuted. Atomically updating volumes, like Downward API, depend on
 	// this to update the contents of the volume.
-	RequiresRemount() bool
+	RequiresRemount(spec *Spec) bool
 
 	// NewMounter creates a new volume.Mounter from an API specification.
 	// Ownership of the spec pointer in *not* transferred.
@@ -336,7 +338,7 @@ type KubeletVolumeHost interface {
 	// GetInformerFactory returns the informer factory for CSIDriverLister
 	GetInformerFactory() informers.SharedInformerFactory
 	// CSIDriverLister returns the informer lister for the CSIDriver API Object
-	CSIDriverLister() storagelisters.CSIDriverLister
+	CSIDriverLister() storagelistersv1.CSIDriverLister
 	// CSIDriverSynced returns the informer synced for the CSIDriver API Object
 	CSIDriversSynced() cache.InformerSynced
 	// WaitForCacheSync is a helper function that waits for cache sync for CSIDriverLister
@@ -352,8 +354,10 @@ type AttachDetachVolumeHost interface {
 	CSINodeLister() storagelistersv1.CSINodeLister
 
 	// CSIDriverLister returns the informer lister for the CSIDriver API Object
-	CSIDriverLister() storagelisters.CSIDriverLister
+	CSIDriverLister() storagelistersv1.CSIDriverLister
 
+	// VolumeAttachmentLister returns the informer lister for the VolumeAttachment API Object
+	VolumeAttachmentLister() storagelistersv1.VolumeAttachmentLister
 	// IsAttachDetachController is an interface marker to strictly tie AttachDetachVolumeHost
 	// to the attachDetachController
 	IsAttachDetachController() bool
@@ -448,15 +452,19 @@ type VolumeHost interface {
 
 	// Returns an interface that should be used to execute subpath operations
 	GetSubpather() subpath.Interface
+
+	// Returns options to pass for proxyutil filtered dialers.
+	GetFilteredDialOptions() *proxyutil.FilteredDialOptions
 }
 
 // VolumePluginMgr tracks registered plugins.
 type VolumePluginMgr struct {
-	mutex         sync.Mutex
-	plugins       map[string]VolumePlugin
-	prober        DynamicPluginProber
-	probedPlugins map[string]VolumePlugin
-	Host          VolumeHost
+	mutex                     sync.RWMutex
+	plugins                   map[string]VolumePlugin
+	prober                    DynamicPluginProber
+	probedPlugins             map[string]VolumePlugin
+	loggedDeprecationWarnings sets.String
+	Host                      VolumeHost
 }
 
 // Spec is an internal representation of a volume.  All API volume types translate to Spec.
@@ -465,6 +473,7 @@ type Spec struct {
 	PersistentVolume                *v1.PersistentVolume
 	ReadOnly                        bool
 	InlineVolumeSpecForCSIMigration bool
+	Migrated                        bool
 }
 
 // Name returns the name of either Volume or PersistentVolume, one of which must not be nil.
@@ -587,6 +596,7 @@ func (pm *VolumePluginMgr) InitPlugins(plugins []VolumePlugin, prober DynamicPlu
 	defer pm.mutex.Unlock()
 
 	pm.Host = host
+	pm.loggedDeprecationWarnings = sets.NewString()
 
 	if prober == nil {
 		// Use a dummy prober to prevent nil deference.
@@ -650,8 +660,8 @@ func (pm *VolumePluginMgr) initProbedPlugin(probedPlugin VolumePlugin) error {
 // specification.  If no plugins can support or more than one plugin can
 // support it, return error.
 func (pm *VolumePluginMgr) FindPluginBySpec(spec *Spec) (VolumePlugin, error) {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
 
 	if spec == nil {
 		return nil, fmt.Errorf("Could not find plugin because volume spec is nil")
@@ -683,17 +693,15 @@ func (pm *VolumePluginMgr) FindPluginBySpec(spec *Spec) (VolumePlugin, error) {
 	}
 
 	// Issue warning if the matched provider is deprecated
-	if detail, ok := deprecatedVolumeProviders[matches[0].GetPluginName()]; ok {
-		klog.Warningf("WARNING: %s built-in volume provider is now deprecated. %s", matches[0].GetPluginName(), detail)
-	}
+	pm.logDeprecation(matches[0].GetPluginName())
 	return matches[0], nil
 }
 
 // FindPluginByName fetches a plugin by name or by legacy name.  If no plugin
 // is found, returns error.
 func (pm *VolumePluginMgr) FindPluginByName(name string) (VolumePlugin, error) {
-	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
 
 	// Once we can get rid of legacy names we can reduce this to a map lookup.
 	matches := []VolumePlugin{}
@@ -707,7 +715,7 @@ func (pm *VolumePluginMgr) FindPluginByName(name string) (VolumePlugin, error) {
 	}
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("no volume plugin matched")
+		return nil, fmt.Errorf("no volume plugin matched name: %s", name)
 	}
 	if len(matches) > 1 {
 		matchedPluginNames := []string{}
@@ -718,10 +726,18 @@ func (pm *VolumePluginMgr) FindPluginByName(name string) (VolumePlugin, error) {
 	}
 
 	// Issue warning if the matched provider is deprecated
-	if detail, ok := deprecatedVolumeProviders[matches[0].GetPluginName()]; ok {
-		klog.Warningf("WARNING: %s built-in volume provider is now deprecated. %s", matches[0].GetPluginName(), detail)
-	}
+	pm.logDeprecation(matches[0].GetPluginName())
 	return matches[0], nil
+}
+
+// logDeprecation logs warning when a deprecated plugin is used.
+func (pm *VolumePluginMgr) logDeprecation(plugin string) {
+	if detail, ok := deprecatedVolumeProviders[plugin]; ok && !pm.loggedDeprecationWarnings.Has(plugin) {
+		klog.Warningf("WARNING: %s built-in volume provider is now deprecated. %s", plugin, detail)
+		// Make sure the message is logged only once. It has Warning severity
+		// and we don't want to spam the log too much.
+		pm.loggedDeprecationWarnings.Insert(plugin)
+	}
 }
 
 // Check if probedPlugin cache update is required.
@@ -753,6 +769,9 @@ func (pm *VolumePluginMgr) refreshProbedPlugins() {
 
 // ListVolumePluginWithLimits returns plugins that have volume limits on nodes
 func (pm *VolumePluginMgr) ListVolumePluginWithLimits() []VolumePluginWithAttachLimits {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
+
 	matchedPlugins := []VolumePluginWithAttachLimits{}
 	for _, v := range pm.plugins {
 		if plugin, ok := v.(VolumePluginWithAttachLimits); ok {
@@ -1019,10 +1038,9 @@ func (pm *VolumePluginMgr) Run(stopCh <-chan struct{}) {
 	kletHost, ok := pm.Host.(KubeletVolumeHost)
 	if ok {
 		// start informer for CSIDriver
-		if utilfeature.DefaultFeatureGate.Enabled(features.CSIDriverRegistry) {
-			informerFactory := kletHost.GetInformerFactory()
-			informerFactory.Start(stopCh)
-		}
+		informerFactory := kletHost.GetInformerFactory()
+		informerFactory.Start(stopCh)
+		informerFactory.WaitForCacheSync(stopCh)
 	}
 }
 

@@ -17,33 +17,33 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
+	storagehelpers "k8s.io/component-helpers/storage/volume"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
 
-	"k8s.io/klog"
+	"k8s.io/component-helpers/scheduling/corev1"
+	"k8s.io/klog/v2"
+	"k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
-	"k8s.io/utils/mount"
 	utilstrings "k8s.io/utils/strings"
 
 	v1 "k8s.io/api/core/v1"
 	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
-	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	"k8s.io/kubernetes/pkg/features"
+	"k8s.io/kubernetes/pkg/securitycontext"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util/types"
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
@@ -114,9 +114,9 @@ func SetReady(dir string) {
 func GetSecretForPod(pod *v1.Pod, secretName string, kubeClient clientset.Interface) (map[string]string, error) {
 	secret := make(map[string]string)
 	if kubeClient == nil {
-		return secret, fmt.Errorf("Cannot get kube client")
+		return secret, fmt.Errorf("cannot get kube client")
 	}
-	secrets, err := kubeClient.CoreV1().Secrets(pod.Namespace).Get(secretName, metav1.GetOptions{})
+	secrets, err := kubeClient.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return secret, err
 	}
@@ -132,12 +132,12 @@ func GetSecretForPV(secretNamespace, secretName, volumePluginName string, kubeCl
 	if kubeClient == nil {
 		return secret, fmt.Errorf("Cannot get kube client")
 	}
-	secrets, err := kubeClient.CoreV1().Secrets(secretNamespace).Get(secretName, metav1.GetOptions{})
+	secrets, err := kubeClient.CoreV1().Secrets(secretNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
 		return secret, err
 	}
 	if secrets.Type != v1.SecretType(volumePluginName) {
-		return secret, fmt.Errorf("Cannot get secret of type %s", volumePluginName)
+		return secret, fmt.Errorf("cannot get secret of type %s", volumePluginName)
 	}
 	for name, data := range secrets.Data {
 		secret[name] = string(data)
@@ -148,14 +148,14 @@ func GetSecretForPV(secretNamespace, secretName, volumePluginName string, kubeCl
 // GetClassForVolume locates storage class by persistent volume
 func GetClassForVolume(kubeClient clientset.Interface, pv *v1.PersistentVolume) (*storage.StorageClass, error) {
 	if kubeClient == nil {
-		return nil, fmt.Errorf("Cannot get kube client")
+		return nil, fmt.Errorf("cannot get kube client")
 	}
-	className := v1helper.GetPersistentVolumeClass(pv)
+	className := storagehelpers.GetPersistentVolumeClass(pv)
 	if className == "" {
-		return nil, fmt.Errorf("Volume has no storage class")
+		return nil, fmt.Errorf("volume has no storage class")
 	}
 
-	class, err := kubeClient.StorageV1().StorageClasses().Get(className, metav1.GetOptions{})
+	class, err := kubeClient.StorageV1().StorageClasses().Get(context.TODO(), className, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -165,19 +165,21 @@ func GetClassForVolume(kubeClient clientset.Interface, pv *v1.PersistentVolume) 
 // CheckNodeAffinity looks at the PV node affinity, and checks if the node has the same corresponding labels
 // This ensures that we don't mount a volume that doesn't belong to this node
 func CheckNodeAffinity(pv *v1.PersistentVolume, nodeLabels map[string]string) error {
-	return checkVolumeNodeAffinity(pv, nodeLabels)
+	return checkVolumeNodeAffinity(pv, &v1.Node{ObjectMeta: metav1.ObjectMeta{Labels: nodeLabels}})
 }
 
-func checkVolumeNodeAffinity(pv *v1.PersistentVolume, nodeLabels map[string]string) error {
+func checkVolumeNodeAffinity(pv *v1.PersistentVolume, node *v1.Node) error {
 	if pv.Spec.NodeAffinity == nil {
 		return nil
 	}
 
 	if pv.Spec.NodeAffinity.Required != nil {
-		terms := pv.Spec.NodeAffinity.Required.NodeSelectorTerms
+		terms := pv.Spec.NodeAffinity.Required
 		klog.V(10).Infof("Match for Required node selector terms %+v", terms)
-		if !v1helper.MatchNodeSelectorTerms(terms, labels.Set(nodeLabels), nil) {
-			return fmt.Errorf("No matching NodeSelectorTerms")
+		if matches, err := corev1.MatchNodeSelectorTerms(node, terms); err != nil {
+			return err
+		} else if !matches {
+			return fmt.Errorf("no matching NodeSelectorTerms")
 		}
 	}
 
@@ -241,7 +243,7 @@ func GenerateVolumeName(clusterName, pvName string, maxLength int) string {
 func GetPath(mounter volume.Mounter) (string, error) {
 	path := mounter.GetPath()
 	if path == "" {
-		return "", fmt.Errorf("Path is empty %s", reflect.TypeOf(mounter).String())
+		return "", fmt.Errorf("path is empty %s", reflect.TypeOf(mounter).String())
 	}
 	return path, nil
 }
@@ -435,14 +437,12 @@ func GetPersistentVolumeClaimQualifiedName(claim *v1.PersistentVolumeClaim) stri
 // CheckVolumeModeFilesystem checks VolumeMode.
 // If the mode is Filesystem, return true otherwise return false.
 func CheckVolumeModeFilesystem(volumeSpec *volume.Spec) (bool, error) {
-	if utilfeature.DefaultFeatureGate.Enabled(features.BlockVolume) {
-		volumeMode, err := GetVolumeMode(volumeSpec)
-		if err != nil {
-			return true, err
-		}
-		if volumeMode == v1.PersistentVolumeBlock {
-			return false, nil
-		}
+	volumeMode, err := GetVolumeMode(volumeSpec)
+	if err != nil {
+		return true, err
+	}
+	if volumeMode == v1.PersistentVolumeBlock {
+		return false, nil
 	}
 	return true, nil
 }
@@ -450,7 +450,7 @@ func CheckVolumeModeFilesystem(volumeSpec *volume.Spec) (bool, error) {
 // CheckPersistentVolumeClaimModeBlock checks VolumeMode.
 // If the mode is Block, return true otherwise return false.
 func CheckPersistentVolumeClaimModeBlock(pvc *v1.PersistentVolumeClaim) bool {
-	return utilfeature.DefaultFeatureGate.Enabled(features.BlockVolume) && pvc.Spec.VolumeMode != nil && *pvc.Spec.VolumeMode == v1.PersistentVolumeBlock
+	return pvc.Spec.VolumeMode != nil && *pvc.Spec.VolumeMode == v1.PersistentVolumeBlock
 }
 
 // IsWindowsUNCPath checks if path is prefixed with \\
@@ -583,10 +583,12 @@ func GetPluginMountDir(host volume.VolumeHost, name string) string {
 
 // IsLocalEphemeralVolume determines whether the argument is a local ephemeral
 // volume vs. some other type
+// Local means the volume is using storage from the local disk that is managed by kubelet.
+// Ephemeral means the lifecycle of the volume is the same as the Pod.
 func IsLocalEphemeralVolume(volume v1.Volume) bool {
 	return volume.GitRepo != nil ||
-		(volume.EmptyDir != nil && volume.EmptyDir.Medium != v1.StorageMediumMemory) ||
-		volume.ConfigMap != nil || volume.DownwardAPI != nil
+		(volume.EmptyDir != nil && volume.EmptyDir.Medium == v1.StorageMediumDefault) ||
+		volume.ConfigMap != nil
 }
 
 // GetPodVolumeNames returns names of volumes that are used in a pod,
@@ -595,15 +597,13 @@ func GetPodVolumeNames(pod *v1.Pod) (mounts sets.String, devices sets.String) {
 	mounts = sets.NewString()
 	devices = sets.NewString()
 
-	podutil.VisitContainers(&pod.Spec, func(container *v1.Container) bool {
+	podutil.VisitContainers(&pod.Spec, podutil.AllFeatureEnabledContainers(), func(container *v1.Container, containerType podutil.ContainerType) bool {
 		if container.VolumeMounts != nil {
 			for _, mount := range container.VolumeMounts {
 				mounts.Insert(mount.Name)
 			}
 		}
-		// TODO: remove feature gate check after no longer needed
-		if utilfeature.DefaultFeatureGate.Enabled(features.BlockVolume) &&
-			container.VolumeDevices != nil {
+		if container.VolumeDevices != nil {
 			for _, device := range container.VolumeDevices {
 				devices.Insert(device.Name)
 			}
@@ -611,6 +611,27 @@ func GetPodVolumeNames(pod *v1.Pod) (mounts sets.String, devices sets.String) {
 		return true
 	})
 	return
+}
+
+// FsUserFrom returns FsUser of pod, which is determined by the runAsUser
+// attributes.
+func FsUserFrom(pod *v1.Pod) *int64 {
+	var fsUser *int64
+	// Exclude ephemeral containers because SecurityContext is not allowed.
+	podutil.VisitContainers(&pod.Spec, podutil.InitContainers|podutil.Containers, func(container *v1.Container, containerType podutil.ContainerType) bool {
+		runAsUser, ok := securitycontext.DetermineEffectiveRunAsUser(pod, container)
+		// One container doesn't specify user or there are more than one
+		// non-root UIDs.
+		if !ok || (fsUser != nil && *fsUser != *runAsUser) {
+			fsUser = nil
+			return false
+		}
+		if fsUser == nil {
+			fsUser = runAsUser
+		}
+		return true
+	})
+	return fsUser
 }
 
 // HasMountRefs checks if the given mountPath has mountRefs.
@@ -643,4 +664,71 @@ func WriteVolumeCache(deviceMountPath string, exec utilexec.Interface) error {
 	}
 	// For linux runtime, it skips because unmount will automatically flush disk data
 	return nil
+}
+
+// IsMultiAttachAllowed checks if attaching this volume to multiple nodes is definitely not allowed/possible.
+// In its current form, this function can only reliably say for which volumes it's definitely forbidden. If it returns
+// false, it is not guaranteed that multi-attach is actually supported by the volume type and we must rely on the
+// attacher to fail fast in such cases.
+// Please see https://github.com/kubernetes/kubernetes/issues/40669 and https://github.com/kubernetes/kubernetes/pull/40148#discussion_r98055047
+func IsMultiAttachAllowed(volumeSpec *volume.Spec) bool {
+	if volumeSpec == nil {
+		// we don't know if it's supported or not and let the attacher fail later in cases it's not supported
+		return true
+	}
+
+	if volumeSpec.Volume != nil {
+		// Check for volume types which are known to fail slow or cause trouble when trying to multi-attach
+		if volumeSpec.Volume.AzureDisk != nil ||
+			volumeSpec.Volume.Cinder != nil {
+			return false
+		}
+	}
+
+	// Only if this volume is a persistent volume, we have reliable information on whether it's allowed or not to
+	// multi-attach. We trust in the individual volume implementations to not allow unsupported access modes
+	if volumeSpec.PersistentVolume != nil {
+		// Check for persistent volume types which do not fail when trying to multi-attach
+		if len(volumeSpec.PersistentVolume.Spec.AccessModes) == 0 {
+			// No access mode specified so we don't know for sure. Let the attacher fail if needed
+			return true
+		}
+
+		// check if this volume is allowed to be attached to multiple PODs/nodes, if yes, return false
+		for _, accessMode := range volumeSpec.PersistentVolume.Spec.AccessModes {
+			if accessMode == v1.ReadWriteMany || accessMode == v1.ReadOnlyMany {
+				return true
+			}
+		}
+		return false
+	}
+
+	// we don't know if it's supported or not and let the attacher fail later in cases it's not supported
+	return true
+}
+
+// IsAttachableVolume checks if the given volumeSpec is an attachable volume or not
+func IsAttachableVolume(volumeSpec *volume.Spec, volumePluginMgr *volume.VolumePluginMgr) bool {
+	attachableVolumePlugin, _ := volumePluginMgr.FindAttachablePluginBySpec(volumeSpec)
+	if attachableVolumePlugin != nil {
+		volumeAttacher, err := attachableVolumePlugin.NewAttacher()
+		if err == nil && volumeAttacher != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsDeviceMountableVolume checks if the given volumeSpec is an device mountable volume or not
+func IsDeviceMountableVolume(volumeSpec *volume.Spec, volumePluginMgr *volume.VolumePluginMgr) bool {
+	deviceMountableVolumePlugin, _ := volumePluginMgr.FindDeviceMountablePluginBySpec(volumeSpec)
+	if deviceMountableVolumePlugin != nil {
+		volumeDeviceMounter, err := deviceMountableVolumePlugin.NewDeviceMounter()
+		if err == nil && volumeDeviceMounter != nil {
+			return true
+		}
+	}
+
+	return false
 }

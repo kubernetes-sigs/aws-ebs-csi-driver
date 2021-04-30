@@ -18,8 +18,11 @@ package main
 
 import (
 	"flag"
+	"net/http"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"k8s.io/component-base/metrics/legacyregistry"
 
 	"k8s.io/klog"
 )
@@ -28,6 +31,18 @@ func main() {
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
 	options := GetOptions(fs)
 
+	cloud.RegisterMetrics()
+	if options.ServerOptions.HttpEndpoint != "" {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", legacyregistry.HandlerWithReset())
+		go func() {
+			err := http.ListenAndServe(options.ServerOptions.HttpEndpoint, mux)
+			if err != nil {
+				klog.Fatalf("failed to listen & serve metrics from %q: %v", options.ServerOptions.HttpEndpoint, err)
+			}
+		}()
+	}
+
 	drv, err := driver.NewDriver(
 		driver.WithEndpoint(options.ServerOptions.Endpoint),
 		driver.WithExtraTags(options.ControllerOptions.ExtraTags),
@@ -35,6 +50,7 @@ func main() {
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
+		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 	)
 	if err != nil {
 		klog.Fatalln(err)

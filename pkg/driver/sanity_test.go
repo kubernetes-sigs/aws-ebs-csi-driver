@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
@@ -153,8 +154,8 @@ func (c *fakeCloudProvider) DetachDisk(ctx context.Context, volumeID, nodeID str
 	return nil
 }
 
-func (c *fakeCloudProvider) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
-	return nil
+func (c *fakeCloudProvider) WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*ec2.VolumeAttachment, error) {
+	return nil, nil
 }
 
 func (c *fakeCloudProvider) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*cloud.Disk, error) {
@@ -358,4 +359,8 @@ func (f *fakeMounter) PathExists(filename string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (f *fakeMounter) NeedResize(source string, path string) (bool, error) {
+	return false, nil
 }

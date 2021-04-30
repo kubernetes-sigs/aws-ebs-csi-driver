@@ -17,11 +17,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	k8srestclient "k8s.io/client-go/rest"
 	"math/rand"
 	"os"
 	"strings"
+
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	k8srestclient "k8s.io/client-go/rest"
 
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
@@ -81,10 +82,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			CapacityBytes:    defaultDiskSizeBytes,
 			VolumeType:       defaultVoluemType,
 			AvailabilityZone: availabilityZone,
-			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName},
+			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region)
+		cloud, err = awscloud.NewCloud(region, false)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
@@ -94,14 +95,14 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		}
 		volumeID = disk.VolumeID
 		diskSize = fmt.Sprintf("%dGi", defaultDiskSize)
-		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1beta1)
+		snapshotrcs, err = restClient(testsuites.SnapshotAPIGroup, testsuites.APIVersionv1)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get rest clientset: %v", err))
 		}
 		pvTestDriver = driver.InitEbsCSIDriver()
 		By(fmt.Sprintf("Successfully provisioned EBS volume: %q\n", volumeID))
 		snapshotOptions := &awscloud.SnapshotOptions{
-			Tags: map[string]string{awscloud.SnapshotNameTagKey: dummySnapshotName},
+			Tags: map[string]string{awscloud.SnapshotNameTagKey: dummySnapshotName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		snapshot, err := cloud.CreateSnapshot(context.Background(), volumeID, snapshotOptions)
 		if err != nil {
@@ -113,7 +114,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 	AfterEach(func() {
 		if !skipManuallyDeletingVolume {
-			err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached")
+			_, err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached", "", "", false)
 			if err != nil {
 				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
 			}

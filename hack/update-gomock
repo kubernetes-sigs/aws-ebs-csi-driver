@@ -16,11 +16,6 @@
 
 set -euo pipefail
 
-IMPORT_PATH=github.com/kubernetes-sigs/aws-ebs-csi-driver
-
-./bin/mockgen -package=mocks -destination=./pkg/cloud/mocks/mock_ec2.go ${IMPORT_PATH}/pkg/cloud EC2 
-./bin/mockgen -package=mocks -destination=./pkg/cloud/mocks/mock_ec2metadata.go ${IMPORT_PATH}/pkg/cloud EC2Metadata 
-./bin/mockgen -package=mocks -destination=./pkg/driver/mocks/mock_cloud.go ${IMPORT_PATH}/pkg/cloud Cloud
-./bin/mockgen -package=mocks -destination=./pkg/driver/mocks/mock_metadata_service.go ${IMPORT_PATH}/pkg/cloud MetadataService 
-./bin/mockgen -package=mocks -destination=./pkg/driver/mocks/mock_mounter.go ${IMPORT_PATH}/pkg/driver Mounter
-
+./bin/mockgen -package mocks -destination=./pkg/cloud/mocks/mock_ec2.go -source pkg/cloud/ec2_interface.go
+./bin/mockgen -package mocks -destination=./pkg/driver/mocks/mock_cloud.go -source pkg/cloud/cloud_interface.go
+./bin/mockgen -package mocks -destination=./pkg/driver/mocks/mock_mount.go -source pkg/driver/mount.go
