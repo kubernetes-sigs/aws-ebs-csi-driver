@@ -1,11 +1,10 @@
 ---
-# Source: aws-ebs-csi-driver/templates/statefulset.yaml
+# Source: aws-ebs-csi-driver/templates/snapshot-controller.yaml
 #Snapshot controller
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: ebs-snapshot-controller
-  namespace: kube-system
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
@@ -22,9 +21,19 @@ spec:
         app.kubernetes.io/name: aws-ebs-csi-driver
     spec:
       serviceAccountName: ebs-snapshot-controller
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-cluster-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 300
       containers:
         - name: snapshot-controller
           image: k8s.gcr.io/sig-storage/snapshot-controller:v3.0.3
+          env:
           args:
             - --v=5
             - --leader-election=false

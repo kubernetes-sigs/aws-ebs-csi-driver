@@ -15,6 +15,7 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"fmt"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
@@ -44,7 +45,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 	defer tpvc.Cleanup()
 
 	pvcName := tpvc.persistentVolumeClaim.Name
-	pvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(pvcName, metav1.GetOptions{})
+	pvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), pvcName, metav1.GetOptions{})
 	By(fmt.Sprintf("Get pvc name: %v", pvc.Name))
 	originalSize := pvc.Spec.Resources.Requests["storage"]
 	delta := resource.Quantity{}
@@ -53,7 +54,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 	pvc.Spec.Resources.Requests["storage"] = originalSize
 
 	By("resizing the pvc")
-	updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(pvc)
+	updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 	if err != nil {
 		framework.ExpectNoError(err, fmt.Sprintf("fail to resize pvc(%s): %v", pvcName, err))
 	}
@@ -81,7 +82,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, desiredSize resource.Quantity, timeout time.Duration, interval time.Duration) error {
 	By(fmt.Sprintf("Waiting up to %v for pv in namespace %q to be complete", timeout, ns.Name))
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(interval) {
-		newPv, _ := c.CoreV1().PersistentVolumes().Get(pvName, metav1.GetOptions{})
+		newPv, _ := c.CoreV1().PersistentVolumes().Get(context.TODO(), pvName, metav1.GetOptions{})
 		newPvSize := newPv.Spec.Capacity["storage"]
 		if desiredSize.Equal(newPvSize) {
 			By(fmt.Sprintf("Pv size is updated to %v", newPvSize.String()))

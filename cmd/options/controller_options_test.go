@@ -38,6 +38,11 @@ func TestControllerOptions(t *testing.T) {
 			found: true,
 		},
 		{
+			name:  "lookup aws-sdk-debug-log",
+			flag:  "aws-sdk-debug-log",
+			found: true,
+		},
+		{
 			name:  "fail for non-desired flag",
 			flag:  "some-other-flag",
 			found: false,

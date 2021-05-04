@@ -50,8 +50,8 @@ func TestNewControllerService(t *testing.T) {
 		testErr    = errors.New("test error")
 		testRegion = "test-region"
 
-		getNewCloudFunc = func(expectedRegion string) func(region string) (cloud.Cloud, error) {
-			return func(region string) (cloud.Cloud, error) {
+		getNewCloudFunc = func(expectedRegion string, awsSdkDebugLog bool) func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
+			return func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
 				if region != expectedRegion {
 					t.Fatalf("expected region %q but got %q", expectedRegion, region)
 				}
@@ -63,30 +63,30 @@ func TestNewControllerService(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		region                string
-		newCloudFunc          func(string) (cloud.Cloud, error)
+		newCloudFunc          func(string, bool) (cloud.Cloud, error)
 		newMetadataFuncErrors bool
 		expectPanic           bool
 	}{
 		{
 			name:         "AWS_REGION variable set, newCloud does not error",
 			region:       "foo",
-			newCloudFunc: getNewCloudFunc("foo"),
+			newCloudFunc: getNewCloudFunc("foo", false),
 		},
 		{
 			name:   "AWS_REGION variable set, newCloud errors",
 			region: "foo",
-			newCloudFunc: func(region string) (cloud.Cloud, error) {
+			newCloudFunc: func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
 				return nil, testErr
 			},
 			expectPanic: true,
 		},
 		{
 			name:         "AWS_REGION variable not set, newMetadata does not error",
-			newCloudFunc: getNewCloudFunc(testRegion),
+			newCloudFunc: getNewCloudFunc(testRegion, false),
 		},
 		{
 			name:                  "AWS_REGION variable not set, newMetadata errors",
-			newCloudFunc:          getNewCloudFunc(testRegion),
+			newCloudFunc:          getNewCloudFunc(testRegion, false),
 			newMetadataFuncErrors: true,
 			expectPanic:           true,
 		},
@@ -1320,8 +1320,9 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey: volumeName,
-						extraVolumeTagKey:      extraVolumeTagValue,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						extraVolumeTagKey:        extraVolumeTagValue,
 					},
 				}
 
@@ -1381,9 +1382,10 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey: volumeName,
-						expectedOwnerTag:       expectedOwnerTagValue,
-						expectedNameTag:        expectedNameTagValue,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						expectedOwnerTag:         expectedOwnerTagValue,
+						expectedNameTag:          expectedNameTagValue,
 					},
 				}
 
@@ -1447,10 +1449,11 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey:  volumeName,
-						expectedPVCNameTag:      pvcName,
-						expectedPVCNamespaceTag: pvcNamespace,
-						expectedPVNameTag:       pvName,
+						cloud.VolumeNameTagKey:   volumeName,
+						cloud.AwsEbsDriverTagKey: "true",
+						expectedPVCNameTag:       pvcName,
+						expectedPVCNamespaceTag:  pvcNamespace,
+						expectedPVNameTag:        pvName,
 					},
 				}
 
@@ -2021,6 +2024,7 @@ func TestCreateSnapshot(t *testing.T) {
 				snapshotOptions := &cloud.SnapshotOptions{
 					Tags: map[string]string{
 						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: "true",
 						expectedOwnerTag:         expectedOwnerTagValue,
 						expectedNameTag:          expectedNameTagValue,
 					},
@@ -2076,6 +2080,7 @@ func TestCreateSnapshot(t *testing.T) {
 				snapshotOptions := &cloud.SnapshotOptions{
 					Tags: map[string]string{
 						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: "true",
 						extraVolumeTagKey:        extraVolumeTagValue,
 					},
 				}

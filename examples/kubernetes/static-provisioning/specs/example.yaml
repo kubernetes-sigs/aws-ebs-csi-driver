@@ -8,6 +8,7 @@ spec:
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
+  storageClassName: ""
   csi:
     driver: ebs.csi.aws.com
     volumeHandle: vol-05786ec9ec9526b67
@@ -28,6 +29,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: ""
   resources:
     requests:
       storage: 50Gi

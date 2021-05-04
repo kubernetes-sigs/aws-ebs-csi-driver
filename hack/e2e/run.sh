@@ -36,17 +36,17 @@ SSH_KEY_PATH=${TEST_DIR}/id_rsa
 
 REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
+FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 INSTANCE_TYPE=${INSTANCE_TYPE:-c4.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${DRIVER_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
-K8S_VERSION=${K8S_VERSION:-1.18.16}
-KOPS_VERSION=${KOPS_VERSION:-1.18.2}
+K8S_VERSION=${K8S_VERSION:-1.20.4}
+KOPS_VERSION=${KOPS_VERSION:-1.20.0-beta.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
-KOPS_FEATURE_GATES_FILE=${KOPS_FEATURE_GATES_FILE:-./hack/feature-gates.yaml}
-KOPS_ADDITIONAL_POLICIES_FILE=${KOPS_ADDITIONAL_POLICIES_FILE:-./hack/additional-policies.yaml}
+KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
@@ -98,8 +98,7 @@ kops_create_cluster \
   "$K8S_VERSION" \
   "$TEST_DIR" \
   "$BASE_DIR" \
-  "$KOPS_FEATURE_GATES_FILE" \
-  "$KOPS_ADDITIONAL_POLICIES_FILE"
+  "$KOPS_PATCH_FILE"
 if [[ $? -ne 0 ]]; then
   exit 1
 fi
@@ -133,7 +132,7 @@ loudecho "Testing focus ${GINKGO_FOCUS}"
 eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
 set -x
 set +e
-${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${ZONES%,*}" "${EXPANDED_TEST_EXTRA_FLAGS}"
+${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
 TEST_PASSED=$?
 set -e
 set +x

@@ -69,7 +69,7 @@ func findNvmeVolume(findName string) (device string, err error) {
 	stat, err := os.Lstat(p)
 	if err != nil {
 		if os.IsNotExist(err) {
-			klog.V(5).Infof("nvme path %q not found", p)
+			klog.V(5).Infof("[Debug] nvme path %q not found", p)
 			return "", fmt.Errorf("nvme path %q not found", p)
 		}
 		return "", fmt.Errorf("error getting stat of %q: %v", p, err)

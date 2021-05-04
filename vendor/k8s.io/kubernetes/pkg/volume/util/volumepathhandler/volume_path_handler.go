@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
+	"k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
-	"k8s.io/utils/mount"
 
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -141,7 +141,7 @@ func mapBindMountDevice(v VolumePathHandler, devicePath string, mapPath string, 
 
 	// Bind mount file
 	mounter := &mount.SafeFormatAndMount{Interface: mount.New(""), Exec: utilexec.New()}
-	if err := mounter.Mount(devicePath, linkPath, "" /* fsType */, []string{"bind"}); err != nil {
+	if err := mounter.MountSensitiveWithoutSystemd(devicePath, linkPath, "" /* fsType */, []string{"bind"}, nil); err != nil {
 		return fmt.Errorf("failed to bind mount devicePath: %s to linkPath %s: %v", devicePath, linkPath, err)
 	}
 
@@ -283,7 +283,7 @@ func (v VolumePathHandler) GetDeviceBindMountRefs(devPath string, mapPath string
 	var refs []string
 	files, err := ioutil.ReadDir(mapPath)
 	if err != nil {
-		return nil, fmt.Errorf("directory cannot read %v", err)
+		return nil, err
 	}
 	for _, file := range files {
 		if file.Mode()&os.ModeDevice != os.ModeDevice {

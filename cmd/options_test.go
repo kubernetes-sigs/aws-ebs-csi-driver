@@ -46,6 +46,8 @@ func TestGetOptions(t *testing.T) {
 			extraTagKey: extraTagValue,
 		}
 
+		awsSdkDebugFlagName := "aws-sdk-debug-log"
+		awsSdkDebugFlagValue := true
 		VolumeAttachLimitFlagName := "volume-attach-limit"
 		var VolumeAttachLimit int64 = 42
 
@@ -58,6 +60,7 @@ func TestGetOptions(t *testing.T) {
 		}
 		if withControllerOptions {
 			args = append(args, "-"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
+			args = append(args, "-"+awsSdkDebugFlagName+"="+strconv.FormatBool(awsSdkDebugFlagValue))
 		}
 		if withNodeOptions {
 			args = append(args, "-"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
@@ -86,6 +89,13 @@ func TestGetOptions(t *testing.T) {
 			}
 			if !reflect.DeepEqual(options.ControllerOptions.ExtraTags, extraTags) {
 				t.Fatalf("expected extra tags to be %q but it is %q", extraTags, options.ControllerOptions.ExtraTags)
+			}
+			awsDebugLogFlag := flagSet.Lookup(awsSdkDebugFlagName)
+			if awsDebugLogFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", awsSdkDebugFlagName)
+			}
+			if options.ControllerOptions.AwsSdkDebugLog != awsSdkDebugFlagValue {
+				t.Fatalf("expected sdk debug flag to be %v but it is %v", awsSdkDebugFlagValue, options.ControllerOptions.AwsSdkDebugLog)
 			}
 		}
 

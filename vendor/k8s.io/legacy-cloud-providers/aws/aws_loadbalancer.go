@@ -32,7 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/elbv2"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,10 +56,15 @@ const (
 
 var (
 	// Defaults for ELB Healthcheck
-	defaultHCHealthyThreshold   = int64(2)
-	defaultHCUnhealthyThreshold = int64(6)
-	defaultHCTimeout            = int64(5)
-	defaultHCInterval           = int64(10)
+	defaultElbHCHealthyThreshold   = int64(2)
+	defaultElbHCUnhealthyThreshold = int64(6)
+	defaultElbHCTimeout            = int64(5)
+	defaultElbHCInterval           = int64(10)
+	defaultNlbHealthCheckInterval  = int64(30)
+	defaultNlbHealthCheckTimeout   = int64(10)
+	defaultNlbHealthCheckThreshold = int64(3)
+	defaultHealthCheckPort         = "traffic-port"
+	defaultHealthCheckPath         = "/"
 )
 
 func isNLB(annotations map[string]string) bool {
@@ -69,6 +74,23 @@ func isNLB(annotations map[string]string) bool {
 	return false
 }
 
+func isLBExternal(annotations map[string]string) bool {
+	if val := annotations[ServiceAnnotationLoadBalancerType]; val == "nlb-ip" || val == "external" {
+		return true
+	}
+	return false
+}
+
+type healthCheckConfig struct {
+	Port               string
+	Path               string
+	Protocol           string
+	Interval           int64
+	Timeout            int64
+	HealthyThreshold   int64
+	UnhealthyThreshold int64
+}
+
 type nlbPortMapping struct {
 	FrontendPort     int64
 	FrontendProtocol string
@@ -76,20 +98,16 @@ type nlbPortMapping struct {
 	TrafficPort     int64
 	TrafficProtocol string
 
-	HealthCheckPort     int64
-	HealthCheckPath     string
-	HealthCheckProtocol string
-
 	SSLCertificateARN string
 	SSLPolicy         string
+	HealthCheckConfig healthCheckConfig
 }
 
-// getLoadBalancerAdditionalTags converts the comma separated list of key-value
-// pairs in the ServiceAnnotationLoadBalancerAdditionalTags annotation and returns
-// it as a map.
-func getLoadBalancerAdditionalTags(annotations map[string]string) map[string]string {
+// getKeyValuePropertiesFromAnnotation converts the comma separated list of key-value
+// pairs from the specified annotation and returns it as a map.
+func getKeyValuePropertiesFromAnnotation(annotations map[string]string, annotation string) map[string]string {
 	additionalTags := make(map[string]string)
-	if additionalTagsList, ok := annotations[ServiceAnnotationLoadBalancerAdditionalTags]; ok {
+	if additionalTagsList, ok := annotations[annotation]; ok {
 		additionalTagsList = strings.TrimSpace(additionalTagsList)
 
 		// Break up list of "Key1=Val,Key2=Val2"
@@ -123,7 +141,7 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 	dirty := false
 
 	// Get additional tags set by the user
-	tags := getLoadBalancerAdditionalTags(annotations)
+	tags := getKeyValuePropertiesFromAnnotation(annotations, ServiceAnnotationLoadBalancerAdditionalTags)
 	// Add default tags
 	tags[TagNameKubernetesService] = namespacedName.String()
 	tags = c.tagging.buildTags(ResourceLifecycleOwned, tags)
@@ -171,6 +189,9 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 				return nil, fmt.Errorf("error creating listener: %q", err)
 			}
 		}
+		if err := c.reconcileLBAttributes(aws.StringValue(loadBalancer.LoadBalancerArn), annotations); err != nil {
+			return nil, err
+		}
 	} else {
 		// TODO: Sync internal vs non-internal
 
@@ -186,9 +207,12 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 			}
 
 			// actual maps FrontendPort to an elbv2.Listener
-			actual := map[int64]*elbv2.Listener{}
+			actual := map[int64]map[string]*elbv2.Listener{}
 			for _, listener := range listenerDescriptions.Listeners {
-				actual[*listener.Port] = listener
+				if actual[*listener.Port] == nil {
+					actual[*listener.Port] = map[string]*elbv2.Listener{}
+				}
+				actual[*listener.Port][*listener.Protocol] = listener
 			}
 
 			actualTargetGroups, err := c.elbv2.DescribeTargetGroups(
@@ -208,10 +232,10 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 			// Handle additions/modifications
 			for _, mapping := range mappings {
 				frontendPort := mapping.FrontendPort
+				frontendProtocol := mapping.FrontendProtocol
 				nodePort := mapping.TrafficPort
-
 				// modifications
-				if listener, ok := actual[frontendPort]; ok {
+				if listener, ok := actual[frontendPort][frontendProtocol]; ok {
 					listenerNeedsModification := false
 
 					if aws.StringValue(listener.Protocol) != mapping.FrontendProtocol {
@@ -238,10 +262,17 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 						}
 					}
 
-					// recreate targetGroup if trafficPort or protocol changed
+					// recreate targetGroup if trafficPort, protocol or HealthCheckProtocol changed
+					healthCheckModified := false
 					targetGroupRecreated := false
 					targetGroup, ok := nodePortTargetGroup[nodePort]
-					if !ok || aws.StringValue(targetGroup.Protocol) != mapping.TrafficProtocol {
+
+					if targetGroup != nil && (!strings.EqualFold(mapping.HealthCheckConfig.Protocol, aws.StringValue(targetGroup.HealthCheckProtocol)) ||
+						mapping.HealthCheckConfig.Interval != aws.Int64Value(targetGroup.HealthCheckIntervalSeconds)) {
+						healthCheckModified = true
+					}
+
+					if !ok || aws.StringValue(targetGroup.Protocol) != mapping.TrafficProtocol || healthCheckModified {
 						// create new target group
 						targetGroup, err = c.ensureTargetGroup(
 							nil,
@@ -316,23 +347,27 @@ func (c *Cloud) ensureLoadBalancerv2(namespacedName types.NamespacedName, loadBa
 				dirty = true
 			}
 
-			frontEndPorts := map[int64]bool{}
+			frontEndPorts := map[int64]map[string]bool{}
 			for i := range mappings {
-				frontEndPorts[mappings[i].FrontendPort] = true
+				if frontEndPorts[mappings[i].FrontendPort] == nil {
+					frontEndPorts[mappings[i].FrontendPort] = map[string]bool{}
+				}
+				frontEndPorts[mappings[i].FrontendPort][mappings[i].FrontendProtocol] = true
 			}
 
 			// handle deletions
-			for port, listener := range actual {
-				if _, ok := frontEndPorts[port]; !ok {
-					err := c.deleteListenerV2(listener)
-					if err != nil {
-						return nil, err
+			for port := range actual {
+				for protocol := range actual[port] {
+					if _, ok := frontEndPorts[port][protocol]; !ok {
+						err := c.deleteListenerV2(actual[port][protocol])
+						if err != nil {
+							return nil, err
+						}
+						dirty = true
 					}
-					dirty = true
 				}
 			}
 		}
-
 		if err := c.reconcileLBAttributes(aws.StringValue(loadBalancer.LoadBalancerArn), annotations); err != nil {
 			return nil, err
 		}
@@ -452,15 +487,18 @@ var invalidELBV2NameRegex = regexp.MustCompile("[^[:alnum:]]")
 
 // buildTargetGroupName will build unique name for targetGroup of service & port.
 // the name is in format k8s-{namespace:8}-{name:8}-{uuid:10} (chosen to benefit most common use cases).
-// Note: targetProtocol & targetType are included since they cannot be modified on existing targetGroup.
-func (c *Cloud) buildTargetGroupName(serviceName types.NamespacedName, servicePort int64, targetProtocol string, targetType string) string {
+// Note: nodePort & targetProtocol & targetType are included since they cannot be modified on existing targetGroup.
+func (c *Cloud) buildTargetGroupName(serviceName types.NamespacedName, servicePort int64, nodePort int64, targetProtocol string, targetType string, mapping nlbPortMapping) string {
 	hasher := sha1.New()
 	_, _ = hasher.Write([]byte(c.tagging.clusterID()))
 	_, _ = hasher.Write([]byte(serviceName.Namespace))
 	_, _ = hasher.Write([]byte(serviceName.Name))
 	_, _ = hasher.Write([]byte(strconv.FormatInt(servicePort, 10)))
+	_, _ = hasher.Write([]byte(strconv.FormatInt(nodePort, 10)))
 	_, _ = hasher.Write([]byte(targetProtocol))
 	_, _ = hasher.Write([]byte(targetType))
+	_, _ = hasher.Write([]byte(mapping.HealthCheckConfig.Protocol))
+	_, _ = hasher.Write([]byte(strconv.FormatInt(mapping.HealthCheckConfig.Interval, 10)))
 	tgUUID := hex.EncodeToString(hasher.Sum(nil))
 
 	sanitizedNamespace := invalidELBV2NameRegex.ReplaceAllString(serviceName.Namespace, "")
@@ -527,7 +565,7 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
 	dirty := false
 	if targetGroup == nil {
 		targetType := "instance"
-		name := c.buildTargetGroupName(serviceName, mapping.FrontendPort, mapping.TrafficProtocol, targetType)
+		name := c.buildTargetGroupName(serviceName, mapping.FrontendPort, mapping.TrafficPort, mapping.TrafficProtocol, targetType, mapping)
 		klog.Infof("Creating load balancer target group for %v with name: %s", serviceName, name)
 		input := &elbv2.CreateTargetGroupInput{
 			VpcId:                      aws.String(vpcID),
@@ -535,21 +573,16 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
 			Port:                       aws.Int64(mapping.TrafficPort),
 			Protocol:                   aws.String(mapping.TrafficProtocol),
 			TargetType:                 aws.String(targetType),
-			HealthCheckIntervalSeconds: aws.Int64(30),
-			HealthCheckPort:            aws.String("traffic-port"),
-			HealthCheckProtocol:        aws.String("TCP"),
-			HealthyThresholdCount:      aws.Int64(3),
-			UnhealthyThresholdCount:    aws.Int64(3),
+			HealthCheckIntervalSeconds: aws.Int64(mapping.HealthCheckConfig.Interval),
+			HealthCheckPort:            aws.String(mapping.HealthCheckConfig.Port),
+			HealthCheckProtocol:        aws.String(mapping.HealthCheckConfig.Protocol),
+			HealthyThresholdCount:      aws.Int64(mapping.HealthCheckConfig.HealthyThreshold),
+			UnhealthyThresholdCount:    aws.Int64(mapping.HealthCheckConfig.UnhealthyThreshold),
+			// HealthCheckTimeoutSeconds:  Currently not configurable, 6 seconds for HTTP, 10 for TCP/HTTPS
 		}
 
-		input.HealthCheckProtocol = aws.String(mapping.HealthCheckProtocol)
-		if mapping.HealthCheckProtocol != elbv2.ProtocolEnumTcp {
-			input.HealthCheckPath = aws.String(mapping.HealthCheckPath)
-		}
-
-		// Account for externalTrafficPolicy = "Local"
-		if mapping.HealthCheckPort != mapping.TrafficPort {
-			input.HealthCheckPort = aws.String(strconv.Itoa(int(mapping.HealthCheckPort)))
+		if mapping.HealthCheckConfig.Protocol != elbv2.ProtocolEnumTcp {
+			input.HealthCheckPath = aws.String(mapping.HealthCheckConfig.Path)
 		}
 
 		result, err := c.elbv2.CreateTargetGroup(input)
@@ -603,7 +636,9 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
 		}
 		actualIDs := []string{}
 		for _, healthDescription := range healthResponse.TargetHealthDescriptions {
-			if healthDescription.TargetHealth.Reason != nil {
+			if aws.StringValue(healthDescription.TargetHealth.State) == elbv2.TargetHealthStateEnumHealthy {
+				actualIDs = append(actualIDs, *healthDescription.Target.Id)
+			} else if healthDescription.TargetHealth.Reason != nil {
 				switch aws.StringValue(healthDescription.TargetHealth.Reason) {
 				case elbv2.TargetHealthReasonEnumTargetDeregistrationInProgress:
 					// We don't need to count this instance in service if it is
@@ -664,18 +699,20 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
 		input := &elbv2.ModifyTargetGroupInput{
 			TargetGroupArn: targetGroup.TargetGroupArn,
 		}
-
-		if aws.StringValue(targetGroup.HealthCheckProtocol) != mapping.HealthCheckProtocol {
-			input.HealthCheckProtocol = aws.String(mapping.HealthCheckProtocol)
+		if mapping.HealthCheckConfig.Port != aws.StringValue(targetGroup.HealthCheckPort) {
+			input.HealthCheckPort = aws.String(mapping.HealthCheckConfig.Port)
 			dirtyHealthCheck = true
 		}
-		if aws.StringValue(targetGroup.HealthCheckPort) != strconv.Itoa(int(mapping.HealthCheckPort)) {
-			input.HealthCheckPort = aws.String(strconv.Itoa(int(mapping.HealthCheckPort)))
+		if mapping.HealthCheckConfig.HealthyThreshold != aws.Int64Value(targetGroup.HealthyThresholdCount) {
 			dirtyHealthCheck = true
+			input.HealthyThresholdCount = aws.Int64(mapping.HealthCheckConfig.HealthyThreshold)
+			input.UnhealthyThresholdCount = aws.Int64(mapping.HealthCheckConfig.UnhealthyThreshold)
 		}
-		if mapping.HealthCheckPath != "" && mapping.HealthCheckProtocol != elbv2.ProtocolEnumTcp {
-			input.HealthCheckPath = aws.String(mapping.HealthCheckPath)
-			dirtyHealthCheck = true
+		if !strings.EqualFold(mapping.HealthCheckConfig.Protocol, elbv2.ProtocolEnumTcp) {
+			if mapping.HealthCheckConfig.Path != aws.StringValue(input.HealthCheckPath) {
+				input.HealthCheckPath = aws.String(mapping.HealthCheckConfig.Path)
+				dirtyHealthCheck = true
+			}
 		}
 
 		if dirtyHealthCheck {
@@ -701,27 +738,9 @@ func (c *Cloud) ensureTargetGroup(targetGroup *elbv2.TargetGroup, serviceName ty
 	return targetGroup, nil
 }
 
-func (c *Cloud) getVpcCidrBlocks() ([]string, error) {
-	vpcs, err := c.ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
-		VpcIds: []*string{aws.String(c.vpcID)},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error querying VPC for ELB: %q", err)
-	}
-	if len(vpcs.Vpcs) != 1 {
-		return nil, fmt.Errorf("error querying VPC for ELB, got %d vpcs for %s", len(vpcs.Vpcs), c.vpcID)
-	}
-
-	cidrBlocks := make([]string, 0, len(vpcs.Vpcs[0].CidrBlockAssociationSet))
-	for _, cidr := range vpcs.Vpcs[0].CidrBlockAssociationSet {
-		cidrBlocks = append(cidrBlocks, aws.StringValue(cidr.CidrBlock))
-	}
-	return cidrBlocks, nil
-}
-
 // updateInstanceSecurityGroupsForNLB will adjust securityGroup's settings to allow inbound traffic into instances from clientCIDRs and portMappings.
 // TIP: if either instances or clientCIDRs or portMappings are nil, then the securityGroup rules for lbName are cleared.
-func (c *Cloud) updateInstanceSecurityGroupsForNLB(lbName string, instances map[InstanceID]*ec2.Instance, clientCIDRs []string, portMappings []nlbPortMapping) error {
+func (c *Cloud) updateInstanceSecurityGroupsForNLB(lbName string, instances map[InstanceID]*ec2.Instance, subnetCIDRs []string, clientCIDRs []string, portMappings []nlbPortMapping) error {
 	if c.cfg.Global.DisableSecurityGroupIngress {
 		return nil
 	}
@@ -758,31 +777,38 @@ func (c *Cloud) updateInstanceSecurityGroupsForNLB(lbName string, instances map[
 
 	{
 		clientPorts := sets.Int64{}
+		clientProtocol := "tcp"
 		healthCheckPorts := sets.Int64{}
 		for _, port := range portMappings {
 			clientPorts.Insert(port.TrafficPort)
-			healthCheckPorts.Insert(port.HealthCheckPort)
+			hcPort := port.TrafficPort
+			if port.HealthCheckConfig.Port != defaultHealthCheckPort {
+				var err error
+				if hcPort, err = strconv.ParseInt(port.HealthCheckConfig.Port, 10, 0); err != nil {
+					return fmt.Errorf("Invalid health check port %v", port.HealthCheckConfig.Port)
+				}
+			}
+			healthCheckPorts.Insert(hcPort)
+			if port.TrafficProtocol == string(v1.ProtocolUDP) {
+				clientProtocol = "udp"
+			}
 		}
 		clientRuleAnnotation := fmt.Sprintf("%s=%s", NLBClientRuleDescription, lbName)
 		healthRuleAnnotation := fmt.Sprintf("%s=%s", NLBHealthCheckRuleDescription, lbName)
-		vpcCIDRs, err := c.getVpcCidrBlocks()
-		if err != nil {
-			return err
-		}
 		for sgID, sg := range clusterSGs {
 			sgPerms := NewIPPermissionSet(sg.IpPermissions...).Ungroup()
 			if desiredSGIDs.Has(sgID) {
-				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, healthRuleAnnotation, "tcp", healthCheckPorts, vpcCIDRs); err != nil {
+				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, healthRuleAnnotation, "tcp", healthCheckPorts, subnetCIDRs); err != nil {
 					return err
 				}
-				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, clientRuleAnnotation, "tcp", clientPorts, clientCIDRs); err != nil {
+				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, clientRuleAnnotation, clientProtocol, clientPorts, clientCIDRs); err != nil {
 					return err
 				}
 			} else {
 				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, healthRuleAnnotation, "tcp", nil, nil); err != nil {
 					return err
 				}
-				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, clientRuleAnnotation, "tcp", nil, nil); err != nil {
+				if err := c.updateInstanceSecurityGroupForNLBTraffic(sgID, sgPerms, clientRuleAnnotation, clientProtocol, nil, nil); err != nil {
 					return err
 				}
 			}
@@ -931,7 +957,7 @@ func (c *Cloud) ensureLoadBalancer(namespacedName types.NamespacedName, loadBala
 		}
 
 		// Get additional tags set by the user
-		tags := getLoadBalancerAdditionalTags(annotations)
+		tags := getKeyValuePropertiesFromAnnotation(annotations, ServiceAnnotationLoadBalancerAdditionalTags)
 
 		// Add default tags
 		tags[TagNameKubernetesService] = namespacedName.String()
@@ -1120,7 +1146,7 @@ func (c *Cloud) ensureLoadBalancer(namespacedName types.NamespacedName, loadBala
 		{
 			// Add additional tags
 			klog.V(2).Infof("Creating additional load balancer tags for %s", loadBalancerName)
-			tags := getLoadBalancerAdditionalTags(annotations)
+			tags := getKeyValuePropertiesFromAnnotation(annotations, ServiceAnnotationLoadBalancerAdditionalTags)
 			if len(tags) > 0 {
 				err := c.addLoadBalancerTags(loadBalancerName, tags)
 				if err != nil {
@@ -1280,19 +1306,19 @@ func (c *Cloud) getExpectedHealthCheck(target string, annotations map[string]str
 		return &i64, nil
 	}
 	var err error
-	healthcheck.HealthyThreshold, err = getOrDefault(ServiceAnnotationLoadBalancerHCHealthyThreshold, defaultHCHealthyThreshold)
+	healthcheck.HealthyThreshold, err = getOrDefault(ServiceAnnotationLoadBalancerHCHealthyThreshold, defaultElbHCHealthyThreshold)
 	if err != nil {
 		return nil, err
 	}
-	healthcheck.UnhealthyThreshold, err = getOrDefault(ServiceAnnotationLoadBalancerHCUnhealthyThreshold, defaultHCUnhealthyThreshold)
+	healthcheck.UnhealthyThreshold, err = getOrDefault(ServiceAnnotationLoadBalancerHCUnhealthyThreshold, defaultElbHCUnhealthyThreshold)
 	if err != nil {
 		return nil, err
 	}
-	healthcheck.Timeout, err = getOrDefault(ServiceAnnotationLoadBalancerHCTimeout, defaultHCTimeout)
+	healthcheck.Timeout, err = getOrDefault(ServiceAnnotationLoadBalancerHCTimeout, defaultElbHCTimeout)
 	if err != nil {
 		return nil, err
 	}
-	healthcheck.Interval, err = getOrDefault(ServiceAnnotationLoadBalancerHCInterval, defaultHCInterval)
+	healthcheck.Interval, err = getOrDefault(ServiceAnnotationLoadBalancerHCInterval, defaultElbHCInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -1307,6 +1333,28 @@ func (c *Cloud) ensureLoadBalancerHealthCheck(loadBalancer *elb.LoadBalancerDesc
 	name := aws.StringValue(loadBalancer.LoadBalancerName)
 
 	actual := loadBalancer.HealthCheck
+	// Override healthcheck protocol, port and path based on annotations
+	if s, ok := annotations[ServiceAnnotationLoadBalancerHealthCheckProtocol]; ok {
+		protocol = s
+	}
+	if s, ok := annotations[ServiceAnnotationLoadBalancerHealthCheckPort]; ok && s != defaultHealthCheckPort {
+		p, err := strconv.ParseInt(s, 10, 0)
+		if err != nil {
+			return err
+		}
+		port = int32(p)
+	}
+	switch strings.ToUpper(protocol) {
+	case "HTTP", "HTTPS":
+		if path == "" {
+			path = defaultHealthCheckPath
+		}
+		if s := annotations[ServiceAnnotationLoadBalancerHealthCheckPath]; s != "" {
+			path = s
+		}
+	default:
+		path = ""
+	}
 	expectedTarget := protocol + ":" + strconv.FormatInt(int64(port), 10) + path
 	expected, err := c.getExpectedHealthCheck(expectedTarget, annotations)
 	if err != nil {
@@ -1513,9 +1561,12 @@ func proxyProtocolEnabled(backend *elb.BackendServerDescription) bool {
 // findInstancesForELB gets the EC2 instances corresponding to the Nodes, for setting up an ELB
 // We ignore Nodes (with a log message) where the instanceid cannot be determined from the provider,
 // and we ignore instances which are not found
-func (c *Cloud) findInstancesForELB(nodes []*v1.Node) (map[InstanceID]*ec2.Instance, error) {
+func (c *Cloud) findInstancesForELB(nodes []*v1.Node, annotations map[string]string) (map[InstanceID]*ec2.Instance, error) {
+
+	targetNodes := filterTargetNodes(nodes, annotations)
+
 	// Map to instance ids ignoring Nodes where we cannot find the id (but logging)
-	instanceIDs := mapToAWSInstanceIDsTolerant(nodes)
+	instanceIDs := mapToAWSInstanceIDsTolerant(targetNodes)
 
 	cacheCriteria := cacheCriteria{
 		// MaxAge not required, because we only care about security groups, which should not change
@@ -1530,4 +1581,36 @@ func (c *Cloud) findInstancesForELB(nodes []*v1.Node) (map[InstanceID]*ec2.Insta
 	// We ignore instances that cannot be found
 
 	return instances, nil
+}
+
+// filterTargetNodes uses node labels to filter the nodes that should be targeted by the ELB,
+// checking if all the labels provided in an annotation are present in the nodes
+func filterTargetNodes(nodes []*v1.Node, annotations map[string]string) []*v1.Node {
+
+	targetNodeLabels := getKeyValuePropertiesFromAnnotation(annotations, ServiceAnnotationLoadBalancerTargetNodeLabels)
+
+	if len(targetNodeLabels) == 0 {
+		return nodes
+	}
+
+	targetNodes := make([]*v1.Node, 0, len(nodes))
+
+	for _, node := range nodes {
+		if node.Labels != nil && len(node.Labels) > 0 {
+			allFiltersMatch := true
+
+			for targetLabelKey, targetLabelValue := range targetNodeLabels {
+				if nodeLabelValue, ok := node.Labels[targetLabelKey]; !ok || (nodeLabelValue != targetLabelValue && targetLabelValue != "") {
+					allFiltersMatch = false
+					break
+				}
+			}
+
+			if allFiltersMatch {
+				targetNodes = append(targetNodes, node)
+			}
+		}
+	}
+
+	return targetNodes
 }
