@@ -18,6 +18,9 @@ spec:
       labels:
         app: ebs-snapshot-controller
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
+      {{- if .Values.snapshotController.podAnnotations }}
+      annotations: {{ toYaml .Values.snapshotController.podAnnotations | nindent 8 }}
+      {{- end }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.snapshot.name }}
       nodeSelector:
