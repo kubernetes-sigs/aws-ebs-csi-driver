@@ -1,5 +1,6 @@
 ---
 # Source: aws-ebs-csi-driver/templates/csidriver.yaml
+# v1 is not supported for Kubernetes version < 1.18 Update to v1beta1 if version is not compatible
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver
 metadata:
