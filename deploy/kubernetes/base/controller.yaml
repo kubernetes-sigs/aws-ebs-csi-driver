@@ -37,7 +37,7 @@ spec:
             # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
-            - --v=5
+            - --v=2
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
