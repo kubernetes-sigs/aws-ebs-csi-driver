@@ -62,7 +62,7 @@ spec:
             - --volume-attach-limit={{ . }}
             {{- end }}
             - --logtostderr
-            - --v=5
+            - --v=2
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
