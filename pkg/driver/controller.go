@@ -66,7 +66,7 @@ type controllerService struct {
 var (
 	// NewMetadataFunc is a variable for the cloud.NewMetadata function that can
 	// be overwritten in unit tests.
-	NewMetadataFunc = cloud.NewMetadata
+	NewMetadataFunc = cloud.NewMetadataService
 	// NewCloudFunc is a variable for the cloud.NewCloud function that can
 	// be overwritten in unit tests.
 	NewCloudFunc = cloud.NewCloud
@@ -78,7 +78,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
-		metadata, err := NewMetadataFunc()
+		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
 		if err != nil {
 			panic(err)
 		}

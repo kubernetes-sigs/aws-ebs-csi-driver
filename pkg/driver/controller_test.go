@@ -109,7 +109,7 @@ func TestNewControllerService(t *testing.T) {
 
 				oldNewMetadataFunc := NewMetadataFunc
 				defer func() { NewMetadataFunc = oldNewMetadataFunc }()
-				NewMetadataFunc = func() (cloud.MetadataService, error) {
+				NewMetadataFunc = func(cloud.EC2MetadataClient, cloud.KubernetesAPIClient) (cloud.MetadataService, error) {
 					if tc.newMetadataFuncErrors {
 						return nil, testErr
 					}
