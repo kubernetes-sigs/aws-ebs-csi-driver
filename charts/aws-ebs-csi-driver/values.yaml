@@ -30,6 +30,7 @@ sidecars:
 snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
   tag: "v3.0.3"
+  podLabels: {}
 
 proxy:
   http_proxy:
@@ -80,6 +81,7 @@ controller:
   k8sTagClusterId:
   nodeSelector: {}
   podAnnotations: {}
+  podLabels: {}
   priorityClassName:
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
   # service.
@@ -134,6 +136,7 @@ node:
   priorityClassName:
   nodeSelector: {}
   podAnnotations: {}
+  podLabels: {}
   tolerateAllTaints: false
   tolerations: []
   resources: {}
