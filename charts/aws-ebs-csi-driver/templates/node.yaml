@@ -37,7 +37,6 @@ spec:
         {{- with .Values.node.nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      hostNetwork: true
       serviceAccountName: {{ .Values.serviceAccount.node.name }}
       priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
