@@ -78,6 +78,7 @@ controller:
   httpEndpoint:
   # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
   k8sTagClusterId:
+  logLevel: 2
   nodeSelector: {}
   podAnnotations: {}
   priorityClassName:
@@ -121,7 +122,6 @@ controller:
   #    whenUnsatisfiable: ScheduleAnyway
   topologySpreadConstraints: []
 
-
 # Moving to values under node
 # The "maximum number of attachable volumes" per node
 volumeAttachLimit:
@@ -131,6 +131,7 @@ node:
     ebsPlugin: []
     nodeDriverRegistrar: []
   kubeletPath: /var/lib/kubelet
+  logLevel: 2
   priorityClassName:
   nodeSelector: {}
   podAnnotations: {}
