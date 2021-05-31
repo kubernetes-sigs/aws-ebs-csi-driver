@@ -143,12 +143,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		fsType = defaultFsType
 	}
 
-	var mountOptions []string
-	for _, f := range mountVolume.MountFlags {
-		if !hasMountOption(mountOptions, f) {
-			mountOptions = append(mountOptions, f)
-		}
-	}
+	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
 
 	if ok := d.inFlight.Insert(volumeID); !ok {
 		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
@@ -624,6 +619,8 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		fsType = defaultFsType
 	}
 
+	mountOptions = collectMountOptions(fsType, mountOptions)
+
 	klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
 	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
@@ -658,4 +655,25 @@ func hasMountOption(options []string, opt string) bool {
 		}
 	}
 	return false
+}
+
+// collectMountOptions returns array of mount options from
+// VolumeCapability_MountVolume and special mount options for
+// given filesystem.
+func collectMountOptions(fsType string, mntFlags []string) []string {
+	var options []string
+	for _, opt := range mntFlags {
+		if !hasMountOption(options, opt) {
+			options = append(options, opt)
+		}
+	}
+
+	// By default, xfs does not allow mounting of two volumes with the same filesystem uuid.
+	// Force ignore this uuid to be able to mount volume + its clone / restored snapshot on the same node.
+	if fsType == FSTypeXfs {
+		if !hasMountOption(options, "nouuid") {
+			options = append(options, "nouuid")
+		}
+	}
+	return options
 }
