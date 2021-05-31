@@ -516,8 +516,7 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	zone := d.metadata.GetAvailabilityZone()
 
 	segments := map[string]string{
-		TopologyKey:          zone,
-		WellKnownTopologyKey: zone,
+		TopologyKey: zone,
 	}
 
 	outpostArn := d.metadata.GetOutpostArn()
