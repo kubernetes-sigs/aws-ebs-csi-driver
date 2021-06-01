@@ -111,7 +111,7 @@ test-e2e-external:
 .PHONY: test-e2e-external-eks
 test-e2e-external-eks:
 	CLUSTER_TYPE=eksctl \
-	K8S_VERSION="1.19" \
+	K8S_VERSION="1.20" \
 	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
