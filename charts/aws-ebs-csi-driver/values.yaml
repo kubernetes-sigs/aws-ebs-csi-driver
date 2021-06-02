@@ -30,6 +30,7 @@ sidecars:
 snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
   tag: "v3.0.3"
+  podAnnotations: {}
   podLabels: {}
 
 proxy:

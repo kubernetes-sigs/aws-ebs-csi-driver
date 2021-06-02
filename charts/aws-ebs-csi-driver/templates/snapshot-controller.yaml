@@ -21,6 +21,9 @@ spec:
         {{- if .Values.snapshotController.podLabels }}
         {{- toYaml .Values.snapshotController.podlabels | nindent 8 }}
         {{- end }}
+      {{- if .Values.snapshotController.podAnnotations }}
+      annotations: {{ toYaml .Values.snapshotController.podAnnotations | nindent 8 }}
+      {{- end }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.snapshot.name }}
       nodeSelector:
