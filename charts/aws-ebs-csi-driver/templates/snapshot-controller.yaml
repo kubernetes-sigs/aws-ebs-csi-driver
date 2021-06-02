@@ -5,7 +5,7 @@ apiVersion: apps/v1
 metadata:
   name: ebs-snapshot-controller
   labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+  {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
   serviceName: ebs-snapshot-controller
   replicas: 1
@@ -18,6 +18,9 @@ spec:
       labels:
         app: ebs-snapshot-controller
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
+        {{- if .Values.snapshotController.podLabels }}
+        {{- toYaml .Values.snapshotController.podlabels | nindent 8 }}
+        {{- end }}
       {{- if .Values.snapshotController.podAnnotations }}
       annotations: {{ toYaml .Values.snapshotController.podAnnotations | nindent 8 }}
       {{- end }}
@@ -26,40 +29,33 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
         {{- with .Values.nodeSelector }}
-{{ toYaml . | indent 8 }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
       priorityClassName: {{ .Values.priorityClassName | default "system-cluster-critical" }}
       {{- with .Values.affinity }}
-      affinity: {{ toYaml . | nindent 8 }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       tolerations:
-        {{- if .Values.tolerateAllTaints }}
-        - operator: Exists
-        {{- else }}
         - key: CriticalAddonsOnly
           operator: Exists
         - operator: Exists
           effect: NoExecute
           tolerationSeconds: 300
-        {{- end }}
         {{- with .Values.tolerations }}
-{{ toYaml . | indent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
         - name: snapshot-controller
           image: {{ printf "%s:%s" .Values.snapshotController.repository .Values.snapshotController.tag }}
           {{- with .Values.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.proxy.http_proxy }}
           env:
-{{- if .Values.proxy.http_proxy }}
-          - name: HTTP_PROXY
-            value: {{ .Values.proxy.http_proxy | quote }}
-          - name: HTTPS_PROXY
-            value: {{ .Values.proxy.http_proxy | quote }}
-          - name: NO_PROXY
-            value: {{ .Values.proxy.no_proxy | quote }}
-{{- end }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+          {{- end }}
           args:
             - --v=5
             - --leader-election=false

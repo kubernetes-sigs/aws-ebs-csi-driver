@@ -33,7 +33,6 @@ spec:
       containers:
         - name: snapshot-controller
           image: k8s.gcr.io/sig-storage/snapshot-controller:v3.0.3
-          env:
           args:
             - --v=5
             - --leader-election=false
