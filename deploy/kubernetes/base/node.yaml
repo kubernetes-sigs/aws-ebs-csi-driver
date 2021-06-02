@@ -31,7 +31,7 @@ spec:
         kubernetes.io/os: linux
       hostNetwork: true
       serviceAccountName: ebs-csi-node-sa
-      priorityClassName: system-cluster-critical
+      priorityClassName: system-node-critical
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -42,12 +42,12 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:latest
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
-            - --v=5
+            - --v=2
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock

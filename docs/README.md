@@ -142,7 +142,7 @@ If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD
 kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
 ```
 #### Config node toleration settings
-By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` and `Value.tolerateAllTaints` to true before deployment
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
@@ -174,9 +174,6 @@ Then install a release of the driver using the chart
 ```sh
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
-    --set enableVolumeScheduling=true \
-    --set enableVolumeResizing=true \
-    --set enableVolumeSnapshot=true \
     aws-ebs-csi-driver/aws-ebs-csi-driver
 ```
 

@@ -15,8 +15,12 @@ spec:
       labels:
         app: ebs-csi-node
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
-      {{- if .Values.node.podAnnotations }}
-      annotations: {{ toYaml .Values.node.podAnnotations | nindent 8 }}
+        {{- if .Values.node.podLabels }}
+        {{- toYaml .Values.node.podlabels | nindent 8 }}
+        {{- end }}
+      {{- with .Values.node.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
       affinity:
@@ -31,11 +35,11 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
         {{- with .Values.node.nodeSelector }}
-{{ toYaml . | indent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       hostNetwork: true
       serviceAccountName: {{ .Values.serviceAccount.node.name }}
-      priorityClassName: {{ .Values.node.priorityClassName | default "system-cluster-critical" }}
+      priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
@@ -47,7 +51,7 @@ spec:
           tolerationSeconds: 300
         {{- end }}
         {{- with .Values.node.tolerations }}
-{{ toYaml . | indent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
         - name: ebs-plugin
@@ -57,11 +61,11 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
-            {{- if .Values.volumeAttachLimit }}
-            - --volume-attach-limit={{ .Values.volumeAttachLimit }}
+            {{- with default .Values.volumeAttachLimit .Values.node.volumeAttachLimit }}
+            - --volume-attach-limit={{ . }}
             {{- end }}
             - --logtostderr
-            - --v=5
+            - --v=2
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -69,14 +73,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-{{- if .Values.proxy.http_proxy }}
-            - name: HTTP_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: HTTPS_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: NO_PROXY
-              value: {{ .Values.proxy.no_proxy | quote }}
-{{- end }}
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.node.env.ebsPlugin }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -97,14 +99,9 @@ spec:
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: 5
-          {{- if .Values.node.resources }}
-          {{- with .Values.node.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
-          {{- else }}
-          {{- with .Values.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
+          {{- with default .Values.resources (default .Values.node.resources .Values.node.containerResources.ebsPlugin) }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: node-driver-registrar
           image: {{ printf "%s:%s" .Values.sidecars.nodeDriverRegistrarImage.repository .Values.sidecars.nodeDriverRegistrarImage.tag }}
@@ -117,27 +114,20 @@ spec:
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
-{{- if .Values.proxy.http_proxy }}
-            - name: HTTP_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: HTTPS_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: NO_PROXY
-              value: {{ .Values.proxy.no_proxy | quote }}
-{{- end }}
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.node.env.nodeDriverRegistrar }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
-          {{- if .Values.node.resources }}
-          {{- with .Values.node.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
-          {{- else }}
-          {{- with .Values.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
+          {{- with default .Values.resources (default .Values.node.resources .Values.node.containerResources.nodeDriverRegistrar) }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbeImage.repository .Values.sidecars.livenessProbeImage.tag }}
@@ -146,14 +136,9 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
-          {{- if .Values.node.resources }}
-          {{- with .Values.node.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
-          {{- else }}
-          {{- with .Values.resources }}
-          resources: {{ toYaml . | nindent 12 }}
-          {{- end }}
+          {{- with default .Values.resources (default .Values.node.resources .Values.node.containerResources.liveness) }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -164,15 +149,15 @@ spec:
       volumes:
         - name: kubelet-dir
           hostPath:
-            path: /var/lib/kubelet
+            path: {{ .Values.node.kubeletPath }}
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+            path: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) }}
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/
+            path: {{ printf "%s/plugins_registry/" (trimSuffix "/" .Values.node.kubeletPath) }}
             type: Directory
         - name: device-dir
           hostPath:
