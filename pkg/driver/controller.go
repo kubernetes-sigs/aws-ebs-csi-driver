@@ -179,11 +179,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				isEncrypted = false
 			}
 		case MultiAttachEnabled:
-			if value == "true" {
-				multiAttachEnabled = true
-			} else {
-				multiAttachEnabled = false
-			}
+			multiAttachEnabled = value == "true"
 		case KmsKeyIDKey:
 			kmsKeyID = value
 		case PVCNameKey:
