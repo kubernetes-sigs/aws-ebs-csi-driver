@@ -141,6 +141,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		iops                   int
 		throughput             int
 		isEncrypted            bool
+		multiAttachEnabled     bool
 		kmsKeyID               string
 		volumeTags             = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
@@ -176,6 +177,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				isEncrypted = true
 			} else {
 				isEncrypted = false
+			}
+		case MultiAttachEnabled:
+			if value == "true" {
+				multiAttachEnabled = true
+			} else {
+				multiAttachEnabled = false
 			}
 		case KmsKeyIDKey:
 			kmsKeyID = value
@@ -249,6 +256,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AvailabilityZone:       zone,
 		OutpostArn:             outpostArn,
 		Encrypted:              isEncrypted,
+		MultiAttachEnabled:     multiAttachEnabled,
 		KmsKeyID:               kmsKeyID,
 		SnapshotID:             snapshotID,
 	}

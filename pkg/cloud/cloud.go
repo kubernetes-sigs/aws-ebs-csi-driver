@@ -178,6 +178,7 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
+	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -318,11 +319,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String(zone),
-		Size:              aws.Int64(capacityGiB),
-		VolumeType:        aws.String(createType),
-		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
-		Encrypted:         aws.Bool(diskOptions.Encrypted),
+		AvailabilityZone:   aws.String(zone),
+		Size:               aws.Int64(capacityGiB),
+		VolumeType:         aws.String(createType),
+		TagSpecifications:  []*ec2.TagSpecification{&tagSpec},
+		Encrypted:          aws.Bool(diskOptions.Encrypted),
+		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 	}
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
