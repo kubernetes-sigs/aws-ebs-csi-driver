@@ -8,7 +8,7 @@ This example shows how to create a EBS volume and consume it from a Windows cont
 ## Prerequisites
 
 1. A 1.18+ Windows node. Windows support has only been tested on 1.18 EKS Windows nodes. https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html
-2. [csi-proxy](https://github.com/kubernetes-csi/csi-proxy) vX.Y.Z+ (TODO: no such version exists yet) installed on the Windows node.
+2. [csi-proxy](https://github.com/kubernetes-csi/csi-proxy) built from commit c201c0afb8f12ceac6d5d778270c2702ca563889 or newer installed on the Windows node.
 3. The driver vX.Y.Z+ (TODO: no such version exists yet) Node plugin (DaemonSet) installed on the Windows node.
 4. The driver vX.Y.Z+ (TODO: no such version exists yet) Controller plugin (Deployment) installed on a Linux node. The Controller hasn't been tested on Windows.
 
