@@ -433,9 +433,16 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, err)
 	}
 
+	nodeExpansionRequired := true
+	// if this is a raw block device, no expansion should be necessary on the node
+	cap := req.GetVolumeCapability()
+	if cap != nil && cap.GetBlock() != nil {
+		nodeExpansionRequired = false
+	}
+
 	return &csi.ControllerExpandVolumeResponse{
 		CapacityBytes:         util.GiBToBytes(actualSizeGiB),
-		NodeExpansionRequired: true,
+		NodeExpansionRequired: nodeExpansionRequired,
 	}, nil
 }
 
@@ -655,7 +662,7 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 		}
 	}
 
-	segments := map[string]string{TopologyKey: disk.AvailabilityZone, WellKnownTopologyKey: disk.AvailabilityZone}
+	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
 
 	arn, err := arn.Parse(disk.OutpostArn)
 

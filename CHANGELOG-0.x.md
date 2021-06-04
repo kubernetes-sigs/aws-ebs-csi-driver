@@ -1,3 +1,31 @@
+# v1.1.0
+
+## Notable changes
+- Helm chart cleaned up ([#856](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/856), [@krmichel](https://github.com/krmichel))
+
+### New features
+* Add podAnnotations to snapshotController StatefulSet ([#884](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/884), [@snstanton](https://github.com/snstanton))
+* Support custom pod labels in Helm chart ([#905](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/905), [@eytanhanig](https://github.com/eytanhanig))
+
+### Bug fixes
+* fix naming mistake in clusterrolebinding, expose env var to controller via downward api ([#874](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/874), [@vdhanan](https://github.com/vdhanan))
+* Fix kustomize RBAC bindings to have namespace kube-system ([#878](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/878), [@wongma7](https://github.com/wongma7))
+* rename node clusterrolebinding to make auto upgrade work ([#894](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/894), [@vdhanan](https://github.com/vdhanan))
+* remove hardcoded namespace for pod disruption budget ([#895](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/895), [@vdhanan](https://github.com/vdhanan))
+* Only initialize the in-cluster kube client when metadata service is actually unavailable ([#897](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/897), [@chrisayoub](https://github.com/chrisayoub))
+* Reduce default log level to 2 ([#903](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/903), [@wongma7](https://github.com/wongma7))
+* Add pod disruption budgets that got missed in a rebase ([#906](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/906), [@krmichel](https://github.com/krmichel))
+* remove WellKnownTopologyKey from PV Topology ([#912](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/912), [@Elbehery](https://github.com/Elbehery))
+* Skip volume expansion if block node ([#916](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/916), [@gnufied](https://github.com/gnufied))
+
+### Misc.
+* Add eksctl support to e2e scripts ([#852](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/852), [@wongma7](https://github.com/wongma7))
+* release v1.0.0 ([#865](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/865), [@vdhanan](https://github.com/vdhanan))
+* add self as owner ([#866](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/866), [@vdhanan](https://github.com/vdhanan))
+* bump helm chart version ([#881](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/881), [@vdhanan](https://github.com/vdhanan))
+* add custom useragent suffix ([#910](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/910), [@vdhanan](https://github.com/vdhanan))
+* Bump chart-releaser-action to v1.2.1 ([#914](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/914), [@gliptak](https://github.com/gliptak))
+
 # v1.0.0
 ## Notable changes
 - With this release, the EBS CSI Driver is now Generally Available!

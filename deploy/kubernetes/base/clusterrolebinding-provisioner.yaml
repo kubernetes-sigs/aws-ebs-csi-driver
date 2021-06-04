@@ -9,7 +9,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-controller-sa
-    namespace: default
+    namespace: kube-system
 roleRef:
   kind: ClusterRole
   name: ebs-external-provisioner-role

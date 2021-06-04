@@ -2,11 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 2
-
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v1.0.0"
+  tag: "v1.1.0"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -32,31 +30,74 @@ sidecars:
 snapshotController:
   repository: k8s.gcr.io/sig-storage/snapshot-controller
   tag: "v3.0.3"
+  podAnnotations: {}
+  podLabels: {}
 
-proxy: {}
-#  http_proxy:
-#  no_proxy:
+proxy:
+  http_proxy:
+  no_proxy:
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-podAnnotations: {}
-
-# True if enable volume scheduling for dynamic volume provisioning
-enableVolumeScheduling: true
-
-# True if enable volume resizing
-enableVolumeResizing: false
+nameOverride:
+fullnameOverride:
 
 # True if enable volume snapshot
 enableVolumeSnapshot: false
 
-# The "maximum number of attachable volumes" per node
-volumeAttachLimit: ""
+# Moving to values under controller
+affinity: {}
+extraCreateMetadata: false
+extraVolumeTags: {}
+k8sTagClusterId:
+nodeSelector: {}
+podAnnotations: {}
+priorityClassName: "system-cluster-critical"
+region:
+replicaCount: 2
+resources: {}
+tolerations: []
+topologySpreadConstraints: []
 
-resources:
-  {}
+controller:
+  affinity: {}
+  # True if enable volume scheduling for dynamic volume provisioning
+  env:
+    ebsPlugin: []
+    provisioner: []
+    attacher: []
+    snapshotter: []
+    resizer: []
+  # If set, add pv/pvc metadata to plugin create requests as parameters.
+  extraCreateMetadata: false
+  # Will be removed in later version in favor of env.ebsPlugin
+  extraVars: {}
+  # Extra volume tags to attach to each dynamically provisioned volume.
+  # ---
+  # extraVolumeTags:
+  #   key1: value1
+  #   key2: value2
+  extraVolumeTags: {}
+  httpEndpoint:
+  # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
+  k8sTagClusterId:
+  nodeSelector: {}
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName:
+  # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
+  # service.
+  # ---
+  # region: us-east-1
+  region:
+  replicaCount:
+  resources: {}
+  containerResources:
+    ebsPlugin: {}
+    provisioner: {}
+    attacher: {}
+    snapshotter: {}
+    resizer: {}
+    liveness: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -69,58 +110,42 @@ resources:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+  tolerations: []
+  # TSCs without the label selector stanza
+  #
+  # Example:
+  #
+  # topologySpreadConstraints:
+  #  - maxSkew: 1
+  #    topologyKey: topology.kubernetes.io/zone
+  #    whenUnsatisfiable: ScheduleAnyway
+  #  - maxSkew: 1
+  #    topologyKey: kubernetes.io/hostname
+  #    whenUnsatisfiable: ScheduleAnyway
+  topologySpreadConstraints: []
 
-priorityClassName: ""
-nodeSelector: {}
-tolerateAllTaints: false
-tolerations: []
-affinity: {}
 
-# TSCs without the label selector stanza
-#
-# Example:
-#
-# topologySpreadConstraints:
-#  - maxSkew: 1
-#    topologyKey: topology.kubernetes.io/zone
-#    whenUnsatisfiable: ScheduleAnyway
-#  - maxSkew: 1
-#    topologyKey: kubernetes.io/hostname
-#    whenUnsatisfiable: ScheduleAnyway
-
-topologySpreadConstraints: []
-
-# Extra volume tags to attach to each dynamically provisioned volume.
-# ---
-# extraVolumeTags:
-#   key1: value1
-#   key2: value2
-extraVolumeTags: {}
-
-# If set, add pv/pvc metadata to plugin create requests as parameters.
-extraCreateMetadata: false
-
-# ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
-k8sTagClusterId: ""
-
-# AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
-# service.
-# ---
-# region: us-east-1
-region: ""
-
-# Additonal environment variables for the controller
-controller:
-  httpEndpoint: ""
-  extraVars: {}
+# Moving to values under node
+# The "maximum number of attachable volumes" per node
+volumeAttachLimit:
 
 node:
-  priorityClassName: ""
+  env:
+    ebsPlugin: []
+    nodeDriverRegistrar: []
+  kubeletPath: /var/lib/kubelet
+  priorityClassName:
   nodeSelector: {}
   podAnnotations: {}
+  podLabels: {}
   tolerateAllTaints: false
   tolerations: []
   resources: {}
+  containerResources:
+    ebsPlugin: {}
+    nodeDriverRegistrar: {}
+    liveness: {}
+  volumeAttachLimit:
 
 serviceAccount:
   controller:
