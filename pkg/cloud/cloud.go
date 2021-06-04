@@ -265,10 +265,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var (
-		createType string
-		iops       int64
-		throughput int64
-		err        error
+		createType         string
+		iops               int64
+		throughput         int64
+		err                error
+		multiAttachEnabled *bool
 	)
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
@@ -281,12 +282,14 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if err != nil {
 			return nil, err
 		}
+		multiAttachEnabled = &diskOptions.MultiAttachEnabled
 	case VolumeTypeIO2:
 		createType = diskOptions.VolumeType
 		iops, err = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB, diskOptions.AllowIOPSPerGBIncrease)
 		if err != nil {
 			return nil, err
 		}
+		multiAttachEnabled = &diskOptions.MultiAttachEnabled
 	case VolumeTypeGP3:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.IOPS)
@@ -319,12 +322,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	request := &ec2.CreateVolumeInput{
-		AvailabilityZone:   aws.String(zone),
-		Size:               aws.Int64(capacityGiB),
-		VolumeType:         aws.String(createType),
-		TagSpecifications:  []*ec2.TagSpecification{&tagSpec},
-		Encrypted:          aws.Bool(diskOptions.Encrypted),
-		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
+		AvailabilityZone:  aws.String(zone),
+		Size:              aws.Int64(capacityGiB),
+		VolumeType:        aws.String(createType),
+		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
+		Encrypted:         aws.Bool(diskOptions.Encrypted),
 	}
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
@@ -345,6 +347,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
 		request.SnapshotId = aws.String(snapshotID)
+	}
+	if multiAttachEnabled != nil {
+		request.MultiAttachEnabled = multiAttachEnabled
 	}
 
 	response, err := c.ec2.CreateVolumeWithContext(ctx, request)
@@ -538,6 +543,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return false, nil
 		}
 
+		// TODO: check MultiAttach
 		if len(volume.Attachments) > 1 {
 			// Shouldn't happen; log so we know if it is
 			klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
@@ -545,6 +551,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		attachmentState := ""
 		for _, a := range volume.Attachments {
 			if attachmentState != "" {
+				// TODO: check MultiAttach
 				// Shouldn't happen; log so we know if it is
 				klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
 			}

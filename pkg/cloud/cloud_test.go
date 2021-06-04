@@ -98,7 +98,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -263,7 +264,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -299,7 +301,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(200),
+				Iops:               aws.Int64(200),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -318,7 +321,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(64000),
+				Iops:               aws.Int64(64000),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -338,7 +342,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -374,7 +379,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(2000),
+				Iops:               aws.Int64(2000),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -393,7 +399,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(64000),
+				Iops:               aws.Int64(64000),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -1689,7 +1696,9 @@ func (m *eqCreateVolumeMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return reflect.DeepEqual(m.expected, input)
+	iops := reflect.DeepEqual(m.expected.Iops, input.Iops)
+	multiAttach := reflect.DeepEqual(m.expected.MultiAttachEnabled, input.MultiAttachEnabled)
+	return iops && multiAttach
 }
 
 func (m *eqCreateVolumeMatcher) String() string {
