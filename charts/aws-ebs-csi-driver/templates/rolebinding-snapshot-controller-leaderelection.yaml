@@ -1,4 +1,3 @@
-{{- if .Values.enableVolumeSnapshot }}
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -14,5 +13,3 @@ roleRef:
   kind: Role
   name: ebs-snapshot-controller-leaderelection
   apiGroup: rbac.authorization.k8s.io
-
-{{- end }}

@@ -242,12 +242,11 @@ func TestCreateVolume(t *testing.T) {
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{
-								TopologyKey:          expZone,
-								WellKnownTopologyKey: expZone,
-								AwsAccountIDKey:      outpostArn.AccountID,
-								AwsOutpostIDKey:      outpostArn.Resource,
-								AwsRegionKey:         outpostArn.Region,
-								AwsPartitionKey:      outpostArn.Partition,
+								TopologyKey:     expZone,
+								AwsAccountIDKey: outpostArn.AccountID,
+								AwsOutpostIDKey: outpostArn.Resource,
+								AwsRegionKey:    outpostArn.Region,
+								AwsPartitionKey: outpostArn.Partition,
 							},
 						},
 					},
@@ -1231,7 +1230,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: expZone},
+							Segments: map[string]string{TopologyKey: expZone},
 						},
 					},
 				}

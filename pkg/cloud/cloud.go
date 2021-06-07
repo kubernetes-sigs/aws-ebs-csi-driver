@@ -153,6 +153,9 @@ var (
 	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
 )
 
+// Set during build time via -ldflags
+var driverVersion string
+
 // Disk represents a EBS volume
 type Disk struct {
 	VolumeID         string
@@ -238,6 +241,9 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	if awsSdkDebugLog {
 		awsConfig.WithLogLevel(aws.LogDebugWithRequestErrors)
 	}
+
+	// Set the env var so that the session appends custom user agent string
+	os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
 
 	svc := ec2.New(session.Must(session.NewSession(awsConfig)))
 	svc.Handlers.AfterRetry.PushFrontNamed(request.NamedHandler{

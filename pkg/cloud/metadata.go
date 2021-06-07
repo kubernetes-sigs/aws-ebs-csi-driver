@@ -75,15 +75,18 @@ func (m *Metadata) GetOutpostArn() arn.ARN {
 func NewMetadata() (MetadataService, error) {
 	sess := session.Must(session.NewSession(&aws.Config{}))
 	svc := ec2metadata.New(sess)
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil && !svc.Available() {
-		return nil, err
-	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil && !svc.Available() {
-		return nil, err
+	var clientset *kubernetes.Clientset
+	if !svc.Available() {
+		// creates the in-cluster config
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			return nil, err
+		}
 	}
 	metadataService, err := NewMetadataService(svc, clientset)
 	if err != nil {
