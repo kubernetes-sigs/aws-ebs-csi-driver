@@ -17,7 +17,7 @@ spec:
         app: ebs-csi-controller
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
         {{- if .Values.controller.podLabels }}
-        {{- toYaml .Values.controller.podlabels | nindent 8 }}
+        {{- toYaml .Values.controller.podLabels | nindent 8 }}
         {{- end }}
       {{- if .Values.controller.podAnnotations }}
       annotations:
