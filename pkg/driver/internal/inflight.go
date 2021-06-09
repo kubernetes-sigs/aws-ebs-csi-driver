@@ -30,6 +30,10 @@ type Idempotent interface {
 	String() string
 }
 
+const (
+	VolumeOperationAlreadyExistsErrorMsg = "An operation with the given Volume %s already exists"
+)
+
 // InFlight is a struct used to manage in flight requests per volumeId.
 type InFlight struct {
 	mux      *sync.Mutex
