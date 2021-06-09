@@ -46,7 +46,9 @@ function kops_create_cluster() {
       -o json \
       "${CLUSTER_NAME}" > "${CLUSTER_FILE}"
 
-    kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
+    if test -f "$KOPS_PATCH_FILE"; then
+      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
+    fi
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
