@@ -138,14 +138,20 @@ fi
 
 loudecho "Deploying driver"
 startSec=$(date +'%s')
-"${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
-  --namespace kube-system \
-  --set image.repository="${IMAGE_NAME}" \
-  --set image.tag="${IMAGE_TAG}" \
-  -f "${HELM_VALUES_FILE}" \
-  --wait \
-  --kubeconfig "${KUBECONFIG}" \
-  ./charts/"${DRIVER_NAME}"
+
+HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
+  --namespace kube-system
+  --set image.repository="${IMAGE_NAME}"
+  --set image.tag="${IMAGE_TAG}"
+  --wait
+  --kubeconfig "${KUBECONFIG}"
+  ./charts/"${DRIVER_NAME}")
+if test -f "$HELM_VALUES_FILE"; then
+  HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+fi
+set -x
+"${HELM_BIN}" "${HELM_ARGS[@]}"
+set +x
 
 if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
   loudecho "Deploying snapshot CRD"

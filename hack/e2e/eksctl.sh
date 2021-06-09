@@ -43,7 +43,9 @@ function eksctl_create_cluster() {
       --dry-run \
       "${CLUSTER_NAME}" > "${CLUSTER_FILE}"
 
-    eksctl_patch_cluster_file "$CLUSTER_FILE" "$EKSCTL_PATCH_FILE"
+    if test -f "$EKSCTL_PATCH_FILE"; then
+      eksctl_patch_cluster_file "$CLUSTER_FILE" "$EKSCTL_PATCH_FILE"
+    fi
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} create cluster -f "${CLUSTER_FILE}" --kubeconfig "${KUBECONFIG}"
