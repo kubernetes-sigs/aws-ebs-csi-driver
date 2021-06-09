@@ -22,8 +22,10 @@ DriverInfo:
     fsGroup: true
     block: true
     exec: true
-    volumeLimits: false
+    snapshotDataSource: true
+    pvcDataSource: false
+    multipods: true
     controllerExpansion: true
     nodeExpansion: true
-    snapshotDataSource: true
-    multipods: true
+    volumeLimits: true
+    topology: true
