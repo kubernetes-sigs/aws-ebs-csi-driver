@@ -1536,11 +1536,10 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(nil, cloud.ErrNotFound)
 
 				inFlight := internal.NewInFlight()
-				inFlight.Insert(req.String())
-				defer inFlight.Delete(req.String())
+				inFlight.Insert(req.GetName())
+				defer inFlight.Delete(req.GetName())
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1549,17 +1548,8 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
-				if err == nil {
-					t.Fatalf("Expected CreateVolume to fail but got no error")
-				}
 
-				srvErr, ok := status.FromError(err)
-				if !ok {
-					t.Fatalf("Could not get error status code from error: %v", srvErr)
-				}
-				if srvErr.Code() != codes.Aborted {
-					t.Fatalf("Expected Aborted but got: %s", srvErr.Code())
-				}
+				checkAbortedErrorCode(t, err)
 			},
 		},
 		{
@@ -1712,6 +1702,31 @@ func TestDeleteVolume(t *testing.T) {
 				if resp != nil {
 					t.Fatalf("Expected resp to be nil, got: %+v", resp)
 				}
+			},
+		},
+		{
+			name: "fail another request already in-flight",
+			testFunc: func(t *testing.T) {
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				inFlight := internal.NewInFlight()
+				inFlight.Insert(req.GetVolumeId())
+				defer inFlight.Delete(req.GetVolumeId())
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      inFlight,
+					driverOptions: &DriverOptions{},
+				}
+				_, err := awsDriver.DeleteVolume(ctx, req)
+
+				checkAbortedErrorCode(t, err)
 			},
 		},
 	}
@@ -2259,6 +2274,34 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fail with another request in-flight",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateSnapshotRequest{
+					Name:           "test-snapshot",
+					Parameters:     nil,
+					SourceVolumeId: "vol-test",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				inFlight := internal.NewInFlight()
+				inFlight.Insert(req.GetName())
+				defer inFlight.Delete(req.GetName())
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      inFlight,
+					driverOptions: &DriverOptions{},
+				}
+				_, err := awsDriver.CreateSnapshot(context.Background(), req)
+
+				checkAbortedErrorCode(t, err)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -2319,6 +2362,34 @@ func TestDeleteSnapshot(t *testing.T) {
 				if _, err := awsDriver.DeleteSnapshot(ctx, req); err != nil {
 					t.Fatalf("Unexpected error: %v", err)
 				}
+			},
+		},
+		{
+			name: "fail with another request in-flight",
+			testFunc: func(t *testing.T) {
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				req := &csi.DeleteSnapshotRequest{
+					SnapshotId: "test-snapshotID",
+				}
+				inFlight := internal.NewInFlight()
+				inFlight.Insert(req.GetSnapshotId())
+				defer inFlight.Delete(req.GetSnapshotId())
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      inFlight,
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.DeleteSnapshot(ctx, req)
+
+				checkAbortedErrorCode(t, err)
 			},
 		},
 	}
@@ -3080,5 +3151,19 @@ func TestControllerExpandVolume(t *testing.T) {
 				t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
 			}
 		})
+	}
+}
+
+func checkAbortedErrorCode(t *testing.T, err error) {
+	if err == nil {
+		t.Fatalf("Expected operation to fail but got no error")
+	}
+
+	srvErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("Could not get error status code from error: %v", srvErr)
+	}
+	if srvErr.Code() != codes.Aborted {
+		t.Fatalf("Expected Aborted but got: %s", srvErr.Code())
 	}
 }
