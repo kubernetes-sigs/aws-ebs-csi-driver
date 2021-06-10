@@ -36,7 +36,7 @@ TEST_DIR=${BASE_DIR}/csi-test-artifacts
 BIN_DIR=${TEST_DIR}/bin
 SSH_KEY_PATH=${TEST_DIR}/id_rsa
 CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.json
-KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.kubeconfig"}
+KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
 
 REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
@@ -54,6 +54,8 @@ K8S_VERSION=${K8S_VERSION:-1.20.6}
 KOPS_VERSION=${KOPS_VERSION:-1.20.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
+
+EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
@@ -127,7 +129,8 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$INSTANCE_TYPE" \
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
-    "$KUBECONFIG"
+    "$KUBECONFIG" \
+    "$EKSCTL_PATCH_FILE"
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
@@ -135,14 +138,20 @@ fi
 
 loudecho "Deploying driver"
 startSec=$(date +'%s')
-"${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
-  --namespace kube-system \
-  --set image.repository="${IMAGE_NAME}" \
-  --set image.tag="${IMAGE_TAG}" \
-  -f "${HELM_VALUES_FILE}" \
-  --wait \
-  --kubeconfig "${KUBECONFIG}" \
-  ./charts/"${DRIVER_NAME}"
+
+HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
+  --namespace kube-system
+  --set image.repository="${IMAGE_NAME}"
+  --set image.tag="${IMAGE_TAG}"
+  --wait
+  --kubeconfig "${KUBECONFIG}"
+  ./charts/"${DRIVER_NAME}")
+if test -f "$HELM_VALUES_FILE"; then
+  HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+fi
+set -x
+"${HELM_BIN}" "${HELM_ARGS[@]}"
+set +x
 
 if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
   loudecho "Deploying snapshot CRD"

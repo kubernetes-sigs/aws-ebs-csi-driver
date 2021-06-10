@@ -108,6 +108,18 @@ test-e2e-external:
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
+.PHONY: test-e2e-external-eks
+test-e2e-external-eks:
+	CLUSTER_TYPE=eksctl \
+	K8S_VERSION="1.20" \
+	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+	./hack/e2e/run.sh
+
 .PHONY: image-release
 image-release:
 	docker build -t $(IMAGE):$(VERSION) . --target debian-base

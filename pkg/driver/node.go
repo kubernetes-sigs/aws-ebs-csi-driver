@@ -83,7 +83,7 @@ type nodeService struct {
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
 	klog.V(5).Infof("[Debug] Retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadata()
+	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
 	if err != nil {
 		panic(err)
 	}

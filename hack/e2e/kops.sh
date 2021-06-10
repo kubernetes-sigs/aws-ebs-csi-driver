@@ -46,7 +46,9 @@ function kops_create_cluster() {
       -o json \
       "${CLUSTER_NAME}" > "${CLUSTER_FILE}"
 
-    kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
+    if test -f "$KOPS_PATCH_FILE"; then
+      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
+    fi
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
@@ -86,10 +88,11 @@ function kops_delete_cluster() {
   ${BIN} delete cluster --name "${CLUSTER_NAME}" --state "${KOPS_STATE_FILE}" --yes
 }
 
-# TODO switch this to python, all this hacking with jq stinks!
+# TODO switch this to python or work exclusively with yaml, all this
+# hacking with jq stinks!
 function kops_patch_cluster_file() {
-  CLUSTER_FILE=${1}
-  KOPS_PATCH_FILE=${2}
+  CLUSTER_FILE=${1}    # input must be json
+  KOPS_PATCH_FILE=${2} # input must be yaml
 
   loudecho "Patching cluster $CLUSTER_NAME with $KOPS_PATCH_FILE"
 
@@ -116,5 +119,5 @@ function kops_patch_cluster_file() {
   mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
 
   # Done patching, overwrite original CLUSTER_FILE
-  mv "$CLUSTER_FILE_0" "$CLUSTER_FILE"
+  mv "$CLUSTER_FILE_0" "$CLUSTER_FILE" # output is yaml
 }
