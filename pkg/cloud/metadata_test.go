@@ -29,20 +29,17 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	k8s_testing "k8s.io/client-go/testing"
 )
 
-var (
-	stdInstanceID       = "instance-1"
-	stdInstanceType     = "t2.medium"
-	stdRegion           = "instance-1"
-	stdAvailabilityZone = "az-1"
-)
-
 const (
-	nodeName             = "ip-123-45-67-890.us-west-2.compute.internal"
-	nodeObjectInstanceID = "i-abcdefgh123456789"
+	nodeName            = "ip-123-45-67-890.us-west-2.compute.internal"
+	stdInstanceID       = "i-abcdefgh123456789"
+	stdInstanceType     = "t2.medium"
+	stdRegion           = "us-west-2"
+	stdAvailabilityZone = "us-west-2b"
 )
 
 func TestNewMetadataService(t *testing.T) {
@@ -51,75 +48,66 @@ func TestNewMetadataService(t *testing.T) {
 	validOutpostArn, _ := arn.Parse(strings.ReplaceAll(validRawOutpostArn, "outpost/", ""))
 
 	testCases := []struct {
-		name              string
-		isAvailable       bool
-		isPartial         bool
-		identityDocument  ec2metadata.EC2InstanceIdentityDocument
-		rawOutpostArn     string
-		outpostArn        arn.ARN
-		getInstanceDocErr error
-		getOutpostArnErr  error // We should keep this specific to outpost-arn until we need to use more endpoints
-		getNodeErr        error
-		node              v1.Node
-		nodeNameEnvVar    string
+		name                             string
+		ec2metadataAvailable             bool
+		clientsetReactors                func(*fake.Clientset)
+		getInstanceIdentityDocumentValue ec2metadata.EC2InstanceIdentityDocument
+		getInstanceIdentityDocumentError error
+		invalidInstanceIdentityDocument  bool
+		getMetadataValue                 string
+		getMetadataError                 error
+		expectedOutpostArn               arn.ARN
+		expectedErr                      error
+		node                             v1.Node
+		nodeNameEnvVar                   string
 	}{
 		{
-			name:        "success: normal",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "success: normal",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
 		},
 		{
-			name:        "success: outpost-arn is available",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "success: outpost-arn is available",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			rawOutpostArn:     validRawOutpostArn,
-			outpostArn:        validOutpostArn,
-			getInstanceDocErr: nil,
+			getMetadataValue:   validRawOutpostArn,
+			expectedOutpostArn: validOutpostArn,
 		},
 		{
-			name:        "success: outpost-arn is invalid",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "success: outpost-arn is invalid",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
+			getMetadataValue: "foo",
 		},
 		{
-			name:        "success: outpost-arn is not found",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "success: outpost-arn is not found",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
-			getOutpostArnErr:  fmt.Errorf("404"),
+			getMetadataError: fmt.Errorf("404"),
 		},
 		{
-			name:        "success: metadata not available, used k8s api",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
+			name:                 "success: metadata not available, used k8s api",
+			ec2metadataAvailable: false,
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
@@ -129,50 +117,34 @@ func TestNewMetadataService(t *testing.T) {
 					Name: nodeName,
 				},
 				Spec: v1.NodeSpec{
-					ProviderID: "aws:///us-west-2b/i-abcdefgh123456789",
+					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
 				},
 				Status: v1.NodeStatus{},
 			},
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:        "failure: metadata not available, k8s client error",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
+			name:                 "failure: metadata not available, k8s client error",
+			ec2metadataAvailable: false,
+			clientsetReactors: func(clientset *fake.Clientset) {
+				clientset.PrependReactor("get", "*", func(action k8s_testing.Action) (handled bool, ret runtime.Object, err error) {
+					return true, nil, fmt.Errorf("client failure")
+				})
 			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("client failure"),
-			nodeNameEnvVar:    nodeName,
+			expectedErr:    fmt.Errorf("error getting Node %s: client failure", nodeName),
+			nodeNameEnvVar: nodeName,
 		},
 
 		{
-			name:        "failure: metadata not available, node name env var not set",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("instance metadata is unavailable and CSI_NODE_NAME env var not set"),
-			nodeNameEnvVar:    "",
+			name:                 "failure: metadata not available, node name env var not set",
+			ec2metadataAvailable: false,
+			expectedErr:          fmt.Errorf("CSI_NODE_NAME env var not set"),
+			nodeNameEnvVar:       "",
 		},
 		{
-			name:        "failure: metadata not available, no provider ID",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("node providerID empty, cannot parse"),
+			name:                 "failure: metadata not available, no provider ID",
+			ec2metadataAvailable: false,
+			expectedErr:          fmt.Errorf("node providerID empty, cannot parse"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
@@ -189,16 +161,9 @@ func TestNewMetadataService(t *testing.T) {
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:        "failure: metadata not available, invalid region",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("did not find aws region in node providerID string"),
+			name:                 "failure: metadata not available, invalid region",
+			ec2metadataAvailable: false,
+			expectedErr:          fmt.Errorf("did not find aws region in node providerID string"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
@@ -215,16 +180,9 @@ func TestNewMetadataService(t *testing.T) {
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:        "failure: metadata not available, invalid az",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("did not find aws availability zone in node providerID string"),
+			name:                 "failure: metadata not available, invalid az",
+			ec2metadataAvailable: false,
+			expectedErr:          fmt.Errorf("did not find aws availability zone in node providerID string"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
@@ -241,16 +199,9 @@ func TestNewMetadataService(t *testing.T) {
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:        "failure: metadata not available, invalid instance id",
-			isAvailable: false,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: nil,
-			getNodeErr:        fmt.Errorf("did not find aws instance ID in node providerID string"),
+			name:                 "failure: metadata not available, invalid instance id",
+			ec2metadataAvailable: false,
+			expectedErr:          fmt.Errorf("did not find aws instance ID in node providerID string"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
@@ -267,143 +218,123 @@ func TestNewMetadataService(t *testing.T) {
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:        "fail: GetInstanceIdentityDocument returned error",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getInstanceDocErr: fmt.Errorf(""),
+			name:                             "fail: GetInstanceIdentityDocument returned error",
+			ec2metadataAvailable:             true,
+			getInstanceIdentityDocumentError: fmt.Errorf("foo"),
+			expectedErr:                      fmt.Errorf("could not get EC2 instance identity metadata: foo"),
 		},
 		{
-			name:        "fail: GetInstanceIdentityDocument returned empty instance",
-			isAvailable: true,
-			isPartial:   true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "fail: GetInstanceIdentityDocument returned empty instance",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       "",
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
+			invalidInstanceIdentityDocument: true,
+			expectedErr:                     fmt.Errorf("could not get valid EC2 instance ID"),
 		},
 		{
-			name:        "fail: GetInstanceIdentityDocument returned empty region",
-			isAvailable: true,
-			isPartial:   true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "fail: GetInstanceIdentityDocument returned empty region",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           "",
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
+			invalidInstanceIdentityDocument: true,
+			expectedErr:                     fmt.Errorf("could not get valid EC2 region"),
 		},
 		{
-			name:        "fail: GetInstanceIdentityDocument returned empty az",
-			isAvailable: true,
-			isPartial:   true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "fail: GetInstanceIdentityDocument returned empty az",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: "",
 			},
-			getInstanceDocErr: nil,
+			invalidInstanceIdentityDocument: true,
+			expectedErr:                     fmt.Errorf("could not get valid EC2 availability zone"),
 		},
 		{
-			name:        "fail: outpost-arn failed",
-			isAvailable: true,
-			identityDocument: ec2metadata.EC2InstanceIdentityDocument{
+			name:                 "fail: outpost-arn failed",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
 				InstanceID:       stdInstanceID,
 				InstanceType:     stdInstanceType,
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
-			getInstanceDocErr: nil,
-			getOutpostArnErr:  fmt.Errorf("405"),
+			getMetadataError: fmt.Errorf("405"),
+			expectedErr:      fmt.Errorf("something went wrong while getting EC2 outpost arn: 405"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clientset := fake.NewSimpleClientset(&tc.node)
-			if tc.name == "failure: metadata not available, k8s client error" {
-				clientset.PrependReactor("get", "*", func(action k8s_testing.Action) (handled bool, ret runtime.Object, err error) {
-					return true, nil, fmt.Errorf("client failure")
-				})
+			clientsetInitialized := false
+			if tc.clientsetReactors != nil {
+				tc.clientsetReactors(clientset)
 			}
+
 			mockCtrl := gomock.NewController(t)
 			mockEC2Metadata := mocks.NewMockEC2Metadata(mockCtrl)
 
-			mockEC2Metadata.EXPECT().Available().Return(tc.isAvailable)
+			ec2MetadataClient := func() (EC2Metadata, error) { return mockEC2Metadata, nil }
+			k8sAPIClient := func() (kubernetes.Interface, error) { clientsetInitialized = true; return clientset, nil }
+
+			mockEC2Metadata.EXPECT().Available().Return(tc.ec2metadataAvailable)
+			if tc.ec2metadataAvailable {
+				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.getInstanceIdentityDocumentValue, tc.getInstanceIdentityDocumentError)
+
+				// GetMetadata is to get the outpost ARN. It should be skipped if
+				// GetInstanceIdentityDocument returns an error or (somehow?) partial
+				// output
+				if tc.getInstanceIdentityDocumentError == nil && !tc.invalidInstanceIdentityDocument {
+					if tc.getMetadataValue != "" || tc.getMetadataError != nil {
+						mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return(tc.getMetadataValue, tc.getMetadataError)
+					} else {
+						mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return("", fmt.Errorf("404"))
+					}
+				}
+				if clientsetInitialized == true {
+					t.Errorf("kubernetes client was unexpectedly initialized when metadata is available!")
+					if len(clientset.Actions()) > 0 {
+						t.Errorf("kubernetes client was unexpectedly called! %v", clientset.Actions())
+					}
+				}
+			}
+
 			os.Setenv("CSI_NODE_NAME", tc.nodeNameEnvVar)
-			if tc.isAvailable {
-				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.identityDocument, tc.getInstanceDocErr)
-			}
 
-			if tc.isAvailable && tc.getInstanceDocErr == nil && !tc.isPartial {
-				mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return(tc.rawOutpostArn, tc.getOutpostArnErr)
-			}
-
-			m, err := NewMetadataService(mockEC2Metadata, clientset)
-			if tc.isAvailable && tc.getInstanceDocErr == nil && tc.getOutpostArnErr == nil && !tc.isPartial {
-				if err != nil {
-					t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
-				}
-
-				if m.GetInstanceID() != tc.identityDocument.InstanceID {
-					t.Fatalf("GetInstanceID() failed: expected %v, got %v", tc.identityDocument.InstanceID, m.GetInstanceID())
-				}
-
-				if m.GetInstanceType() != tc.identityDocument.InstanceType {
-					t.Fatalf("GetInstanceType() failed: expected %v, got %v", tc.identityDocument.InstanceType, m.GetInstanceType())
-				}
-
-				if m.GetRegion() != tc.identityDocument.Region {
-					t.Fatalf("GetRegion() failed: expected %v, got %v", tc.identityDocument.Region, m.GetRegion())
-				}
-
-				if m.GetAvailabilityZone() != tc.identityDocument.AvailabilityZone {
-					t.Fatalf("GetAvailabilityZone() failed: expected %v, got %v", tc.identityDocument.AvailabilityZone, m.GetAvailabilityZone())
-				}
-
-				if m.GetOutpostArn() != tc.outpostArn {
-					t.Fatalf("GetOutpostArn() failed: expected %v, got %v", tc.outpostArn, m.GetOutpostArn())
-				}
-			} else if !tc.isAvailable {
-				if tc.name == "success: metadata not available, used k8s api" {
-					if err != nil {
-						t.Fatalf("NewMetadataService() failed: expected no error, got %v", err)
-					}
-					if m.GetInstanceID() != nodeObjectInstanceID {
-						t.Fatalf("NewMetadataService() failed: got wrong instance ID %v, expected %v", m.GetInstanceID(), nodeObjectInstanceID)
-					}
-					if m.GetRegion() != "us-west-2" {
-						t.Fatalf("NewMetadataService() failed: got wrong region %v, expected %v", m.GetRegion(), "us-west-2")
-					}
-					if m.GetAvailabilityZone() != "us-west-2b" {
-						t.Fatalf("NewMetadataService() failed: got wrong AZ %v, expected %v", m.GetRegion(), "us-west-2b")
-					}
-					if m.GetOutpostArn() != tc.outpostArn {
-						t.Fatalf("GetOutpostArn() failed: got %v, expected %v", m.GetOutpostArn(), tc.outpostArn)
-					}
-				} else {
-					if err == nil {
-						t.Fatalf("NewMetadataService() failed: expected error but got nothing")
-					}
-					if err.Error() != tc.getNodeErr.Error() {
-						t.Fatalf("NewMetadataService() returned an unexpected error. Expected %v, got %v", tc.getNodeErr, err)
-					}
+			m, err := NewMetadataService(ec2MetadataClient, k8sAPIClient)
+			if err != nil {
+				if tc.expectedErr == nil {
+					t.Errorf("got error %q, expected no error", err)
+				} else if err.Error() != tc.expectedErr.Error() {
+					t.Errorf("got error %q, expected %q", err, tc.expectedErr)
 				}
 			} else {
-				if err == nil && tc.getOutpostArnErr == nil {
-					t.Fatal("NewMetadataService() failed: expected error when GetInstanceIdentityDocument returns partial data, got nothing")
+				if m == nil {
+					t.Fatalf("metadataService is unexpectedly nil!")
+				}
+				if m.GetInstanceID() != stdInstanceID {
+					t.Errorf("NewMetadataService() failed: got wrong instance ID %v, expected %v", m.GetInstanceID(), stdInstanceID)
+				}
+				if m.GetRegion() != stdRegion {
+					t.Errorf("NewMetadataService() failed: got wrong region %v, expected %v", m.GetRegion(), stdRegion)
+				}
+				if m.GetAvailabilityZone() != stdAvailabilityZone {
+					t.Errorf("NewMetadataService() failed: got wrong AZ %v, expected %v", m.GetAvailabilityZone(), stdAvailabilityZone)
+				}
+				if m.GetOutpostArn() != tc.expectedOutpostArn {
+					t.Errorf("GetOutpostArn() failed: got %v, expected %v", m.GetOutpostArn(), tc.expectedOutpostArn)
 				}
 			}
-
 			mockCtrl.Finish()
 		})
 	}
