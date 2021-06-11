@@ -1356,12 +1356,14 @@ func TestCreateVolume(t *testing.T) {
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
 				const (
-					volumeName            = "random-vol-name"
-					clusterID             = "test-cluster-id"
-					expectedOwnerTag      = "kubernetes.io/cluster/test-cluster-id"
-					expectedOwnerTagValue = "owned"
-					expectedNameTag       = "Name"
-					expectedNameTagValue  = "test-cluster-id-dynamic-random-vol-name"
+					volumeName                        = "random-vol-name"
+					clusterID                         = "test-cluster-id"
+					expectedOwnerTag                  = "kubernetes.io/cluster/test-cluster-id"
+					expectedOwnerTagValue             = "owned"
+					expectedNameTag                   = "Name"
+					expectedNameTagValue              = "test-cluster-id-dynamic-random-vol-name"
+					expectedKubernetesClusterTag      = "KubernetesCluster"
+					expectedKubernetesClusterTagValue = "test-cluster-id"
 				)
 				req := &csi.CreateVolumeRequest{
 					Name:               volumeName,
@@ -1381,10 +1383,11 @@ func TestCreateVolume(t *testing.T) {
 				diskOptions := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
 					Tags: map[string]string{
-						cloud.VolumeNameTagKey:   volumeName,
-						cloud.AwsEbsDriverTagKey: "true",
-						expectedOwnerTag:         expectedOwnerTagValue,
-						expectedNameTag:          expectedNameTagValue,
+						cloud.VolumeNameTagKey:       volumeName,
+						cloud.AwsEbsDriverTagKey:     "true",
+						expectedOwnerTag:             expectedOwnerTagValue,
+						expectedNameTag:              expectedNameTagValue,
+						expectedKubernetesClusterTag: expectedKubernetesClusterTagValue,
 					},
 				}
 
@@ -1418,7 +1421,6 @@ func TestCreateVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				const (
 					volumeName              = "random-vol-name"
-					clusterID               = "test-cluster-id"
 					expectedPVCNameTag      = "kubernetes.io/created-for/pvc/name"
 					expectedPVCNamespaceTag = "kubernetes.io/created-for/pvc/namespace"
 					expectedPVNameTag       = "kubernetes.io/created-for/pv/name"

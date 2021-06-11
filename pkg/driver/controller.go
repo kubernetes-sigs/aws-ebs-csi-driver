@@ -220,6 +220,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
 		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
 		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
+		volumeTags[KubernetesClusterTag] = d.driverOptions.kubernetesClusterID
 	}
 	for k, v := range d.driverOptions.extraTags {
 		volumeTags[k] = v
