@@ -113,6 +113,7 @@ test-e2e-external-eks:
 	CLUSTER_TYPE=eksctl \
 	K8S_VERSION="1.20" \
 	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
+	EKSCTL_ADMIN_ROLE="Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV" \
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
 	TEST_PATH=./tests/e2e-kubernetes/... \

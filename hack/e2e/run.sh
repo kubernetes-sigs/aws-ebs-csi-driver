@@ -56,6 +56,7 @@ KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
+EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
@@ -130,7 +131,8 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
     "$KUBECONFIG" \
-    "$EKSCTL_PATCH_FILE"
+    "$EKSCTL_PATCH_FILE" \
+    "$EKSCTL_ADMIN_ROLE"
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
