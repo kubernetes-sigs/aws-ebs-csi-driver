@@ -1,0 +1,4 @@
+build_root_image:
+  name: builder
+  namespace: ocp
+  tag: rhel-8-golang-1.15-openshift-4.7
