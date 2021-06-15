@@ -46,7 +46,7 @@ enableVolumeSnapshot: false
 
 # Moving to values under controller
 affinity: {}
-extraCreateMetadata: false
+extraCreateMetadata: true
 extraVolumeTags: {}
 k8sTagClusterId:
 nodeSelector: {}
