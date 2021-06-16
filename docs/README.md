@@ -130,22 +130,18 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 
 ## Installation
 #### Set up driver permission
-The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
-* Using secret object - create an IAM user with proper permission, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml) then deploy the secret.
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. There are several methods to grant the driver IAM permission:
+* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role for the instance(s) on which the driver Deployment will run
+* EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via helm is determined by value `serviceAccount.controller.name`, `ebs-csi-controller-sa` by default
+* Using secret object - create an IAM user, attach the policy to it, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml), then deploy the secret
 ```sh
 curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
 # Edit the secret with user credentials
 kubectl apply -f secret.yaml
 ```
-* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-#### Deploy CRD (optional)
-If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
-```sh
-kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
-```
 #### Config node toleration settings
-By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` to true before deployment
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on all nodes, please set helm `Value.node.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
@@ -195,11 +191,13 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, drain the node and set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistent volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you can migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager`. Then drain Nodes and set the same feature gates to `true` for `kubelet`.
 
 To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
-* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
+* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. The helm chart sets this option true by default.
 * Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
+
+To make sure that the CSI driver has permission to Attach, Detach, and Delete volumes that were dynamically provisioned and tagged by the in-tree plugin prior to migration being turned on, the IAM policy has to grant permission to operate on volumes with tag `kubernetes.io/cluster/<ID of the Kubernetes cluster>": "owned"` like in [the example policy](./example-iam-policy.json#L85).
 
 **Warning**:
 * kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
