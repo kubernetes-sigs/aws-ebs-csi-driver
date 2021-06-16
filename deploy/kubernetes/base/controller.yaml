@@ -31,7 +31,7 @@ spec:
           tolerationSeconds: 300
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -86,6 +86,7 @@ spec:
             - --csi-address=$(ADDRESS)
             - --v=5
             - --feature-gates=Topology=true
+            - --extra-create-metadata
             - --leader-election=true
             - --default-fstype=ext4
           env:
