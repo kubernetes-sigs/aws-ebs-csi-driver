@@ -86,6 +86,11 @@ const (
 	// in-tree volume plugin. Used only when --cluster-id is set.
 	NameTag = "Name"
 
+	// KubernetesClusterTag is tag applied to provisioned EBS volume for backward compatibility with
+	// in-tree volume plugin. Used only when --cluster-id is set.
+	// See https://github.com/kubernetes/cloud-provider-aws/blob/release-1.20/pkg/providers/v1/tags.go#L38-L41.
+	KubernetesClusterTag = "KubernetesCluster"
+
 	// PVCNameTag is tag applied to provisioned EBS volume for backward compatibility
 	// with in-tree volume plugin. Value of the tag is PVC name. It is applied only when
 	// the external provisioner sidecar is started with --extra-create-metadata=true and
