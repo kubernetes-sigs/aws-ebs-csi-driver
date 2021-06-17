@@ -68,7 +68,7 @@ controller:
     snapshotter: []
     resizer: []
   # If set, add pv/pvc metadata to plugin create requests as parameters.
-  extraCreateMetadata: false
+  extraCreateMetadata: true
   # Will be removed in later version in favor of env.ebsPlugin
   extraVars: {}
   # Extra volume tags to attach to each dynamically provisioned volume.
