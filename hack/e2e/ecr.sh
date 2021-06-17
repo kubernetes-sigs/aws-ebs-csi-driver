@@ -11,7 +11,7 @@ function ecr_build_and_push() {
   IMAGE_NAME=${3}
   IMAGE_TAG=${4}
   set +e
-  if docker images | grep "${IMAGE_NAME}" | grep "${IMAGE_TAG}"; then
+  if docker images --format "{{.Repository}}:{{.Tag}}" | grep "${IMAGE_NAME}:${IMAGE_TAG}"; then
     set -e
     loudecho "Assuming ${IMAGE_NAME}:${IMAGE_TAG} has been built and pushed"
   else

@@ -21,6 +21,7 @@ function eksctl_create_cluster() {
   CLUSTER_FILE=${7}
   KUBECONFIG=${8}
   EKSCTL_PATCH_FILE=${9}
+  EKSCTL_ADMIN_ROLE=${10}
 
   generate_ssh_key "${SSH_KEY_PATH}"
 
@@ -55,6 +56,14 @@ function eksctl_create_cluster() {
 
   loudecho "Getting cluster ${CLUSTER_NAME}"
   ${BIN} get cluster "${CLUSTER_NAME}"
+
+  if [ -n "$EKSCTL_ADMIN_ROLE" ]; then
+    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    ADMIN_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${EKSCTL_ADMIN_ROLE}"
+    loudecho "Granting ${ADMIN_ARN} admin access to the cluster"
+    ${BIN} create iamidentitymapping --cluster "${CLUSTER_NAME}" --arn "${ADMIN_ARN}" --group system:masters --username admin
+  fi
+
   return $?
 }
 
