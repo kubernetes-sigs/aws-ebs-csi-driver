@@ -35,12 +35,13 @@ CLUSTER_TYPE=${CLUSTER_TYPE:-kops}
 TEST_DIR=${BASE_DIR}/csi-test-artifacts
 BIN_DIR=${TEST_DIR}/bin
 SSH_KEY_PATH=${TEST_DIR}/id_rsa
-CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.json
+CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.yaml
 KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
 
 REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
 FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
+NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c4.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -54,8 +55,10 @@ K8S_VERSION=${K8S_VERSION:-1.20.6}
 KOPS_VERSION=${KOPS_VERSION:-1.20.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
+KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
+EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 
@@ -111,11 +114,13 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
     "$CLUSTER_NAME" \
     "$KOPS_BIN" \
     "$ZONES" \
+    "$NODE_COUNT" \
     "$INSTANCE_TYPE" \
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
     "$KUBECONFIG" \
     "$KOPS_PATCH_FILE" \
+    "$KOPS_PATCH_NODE_FILE" \
     "$KOPS_STATE_FILE"
   if [[ $? -ne 0 ]]; then
     exit 1
@@ -130,7 +135,8 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
     "$KUBECONFIG" \
-    "$EKSCTL_PATCH_FILE"
+    "$EKSCTL_PATCH_FILE" \
+    "$EKSCTL_ADMIN_ROLE"
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
