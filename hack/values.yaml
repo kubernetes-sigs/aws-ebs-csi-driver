@@ -1,5 +1,6 @@
 enableVolumeSnapshot: true
 controller:
+  k8sTagClusterId: test
   logLevel: 5
 node:
   logLevel: 5
