@@ -61,6 +61,7 @@ EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
+HELM_EXTRA_FLAGS=${HELM_EXTRA_FLAGS:-}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e/..."}
 ARTIFACTS=${ARTIFACTS:-"${TEST_DIR}/artifacts"}
@@ -155,8 +156,9 @@ HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
 if test -f "$HELM_VALUES_FILE"; then
   HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
 fi
+eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
 set -x
-"${HELM_BIN}" "${HELM_ARGS[@]}"
+"${HELM_BIN}" "${HELM_ARGS[@]}" "${EXPANDED_HELM_EXTRA_FLAGS}"
 set +x
 
 if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
