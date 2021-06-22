@@ -218,7 +218,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Errorf(codes.Internal, "Could not determine if volume %q (%q) need to be resized:  %v", req.GetVolumeId(), source, err)
 	}
 	if needResize {
-		r := mountutils.NewResizeFs(d.mounter)
+		r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
 		klog.V(2).Infof("Volume %s needs resizing", source)
 		if _, err := r.Resize(source, target); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, source, err)
@@ -321,7 +321,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	// TODO this won't make sense on Windows with csi-proxy
 	args := []string{"-o", "source", "--noheadings", "--target", volumePath}
-	output, err := d.mounter.Command("findmnt", args...).Output()
+	output, err := d.mounter.(*NodeMounter).Exec.Command("findmnt", args...).Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine device path: %v", err)
 
@@ -331,7 +331,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		return nil, status.Errorf(codes.Internal, "Could not get valid device for mount path: %q", req.GetVolumePath())
 	}
 
-	r := mountutils.NewResizeFs(d.mounter)
+	r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
 
 	// TODO: lock per volume ID to have some idempotency
 	if _, err := r.Resize(devicePath, volumePath); err != nil {
@@ -608,9 +608,8 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		}
 	}
 
-	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
-	if err := d.mounter.MakeDir(target); err != nil {
-		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
+	if err := d.preparePublishTarget(target); err != nil {
+		return status.Errorf(codes.Internal, err.Error())
 	}
 
 	fsType := mode.Mount.GetFsType()
