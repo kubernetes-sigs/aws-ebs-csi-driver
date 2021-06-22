@@ -9,7 +9,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-node-sa
-    namespace: kube-system
+    namespace: default
 roleRef:
   kind: ClusterRole
   name: ebs-csi-node-role
