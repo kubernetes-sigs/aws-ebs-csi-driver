@@ -31,7 +31,7 @@ spec:
           tolerationSeconds: 300
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
