@@ -125,28 +125,6 @@ test-e2e-external-eks:
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
-.PHONY: image-release
-image-release:
-	docker build -t $(IMAGE):$(VERSION) . --target debian-base
-	docker build -t $(IMAGE):$(VERSION_AMAZONLINUX) . --target amazonlinux
-
-.PHONY: image
-image:
-	docker build -t $(IMAGE):latest . --target debian-base
-
-.PHONY: image-amazonlinux
-image-amazonlinux:
-	docker build -t $(IMAGE):latest . --target amazonlinux
-
-.PHONY: push-release
-push-release:
-	docker push $(IMAGE):$(VERSION)
-	docker push $(IMAGE):$(VERSION_AMAZONLINUX)
-
-.PHONY: push
-push:
-	docker push $(IMAGE):latest
-
 .PHONY: verify-vendor
 test: verify-vendor
 verify: verify-vendor
