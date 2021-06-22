@@ -159,12 +159,6 @@ set -x
 "${HELM_BIN}" "${HELM_ARGS[@]}"
 set +x
 
-if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
-  loudecho "Deploying snapshot CRD"
-  kubectl apply -f "$EBS_SNAPSHOT_CRD" \
-    --kubeconfig "${KUBECONFIG}"
-  # TODO deploy snapshot controller too instead of including in helm chart
-fi
 endSec=$(date +'%s')
 secondUsed=$(((endSec - startSec) / 1))
 # Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
