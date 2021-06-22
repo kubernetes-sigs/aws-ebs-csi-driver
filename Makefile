@@ -180,3 +180,4 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-snapshot-controller.yaml > ../../deploy/kubernetes/base/serviceaccount-snapshot-controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/snapshot-controller.yaml -f ../../deploy/kubernetes/values/snapshotter.yaml > ../../deploy/kubernetes/base/snapshot_controller.yaml
+	cd charts/aws-ebs-csi-driver && mkdir -p ../../deploy/kubernetes/cluster && cp crds/snapshot-controller-crds.yaml ../../deploy/kubernetes/cluster/snapshot-controller-crds.yaml 
