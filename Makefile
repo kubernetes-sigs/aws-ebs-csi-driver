@@ -108,6 +108,10 @@ test-e2e-external:
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
+.PHONY: test-e2e-external-eks
+test-e2e-external-eks:
+	echo TODO
+
 .PHONY: image-release
 image-release:
 	docker build -t $(IMAGE):$(VERSION) . --target debian-base
