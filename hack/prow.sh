@@ -42,7 +42,6 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 loudecho "Build and push debian target"
 docker buildx build \
   --tag="${REGISTRY_NAME}"/aws-ebs-csi-driver:"${GIT_TAG}" \
-  --tag="${REGISTRY_NAME}"/aws-ebs-csi-driver:latest \
   --platform=linux/arm64,linux/amd64 \
   --progress=plain \
   --push=true \
@@ -52,7 +51,6 @@ docker buildx build \
 loudecho "Build and push amazonlinux target"
 docker buildx build \
   --tag="${REGISTRY_NAME}"/aws-ebs-csi-driver:"${GIT_TAG}"-amazonlinux \
-  --tag="${REGISTRY_NAME}"/aws-ebs-csi-driver:latest-amazonlinux \
   --platform=linux/arm64,linux/amd64 \
   --progress=plain \
   --push=true \
