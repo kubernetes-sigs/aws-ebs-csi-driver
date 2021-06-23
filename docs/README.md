@@ -131,7 +131,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Installation
 #### Set up driver permission
 The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. There are several methods to grant the driver IAM permission:
-* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role for the instance(s) on which the driver Deployment will run
+* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
 * EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via helm is determined by value `serviceAccount.controller.name`, `ebs-csi-controller-sa` by default
 * Using secret object - create an IAM user, attach the policy to it, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml), then deploy the secret
 ```sh
