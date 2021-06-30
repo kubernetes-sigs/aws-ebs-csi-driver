@@ -37,9 +37,10 @@ jobs:
       - name: Set environment variables
         run: |
           BRANCH=$(echo $GITHUB_REF | cut -d'/' -f3)
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c -7)
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           if [ "$BRANCH" = "master" ]; then
-            TAG="latest"
+            TAG=$SHORT_SHA
           else
             TAG=$BRANCH
           fi
