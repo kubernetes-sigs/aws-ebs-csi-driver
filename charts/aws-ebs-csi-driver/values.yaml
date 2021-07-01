@@ -4,7 +4,7 @@
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v1.1.0"
+  tag: "v1.1.1"
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -123,7 +123,6 @@ controller:
   #    topologyKey: kubernetes.io/hostname
   #    whenUnsatisfiable: ScheduleAnyway
   topologySpreadConstraints: []
-
 
 # Moving to values under node
 # The "maximum number of attachable volumes" per node
