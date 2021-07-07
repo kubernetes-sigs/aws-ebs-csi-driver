@@ -82,6 +82,7 @@ test-e2e-single-az:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
 	GINKGO_SKIP="\"sc1\"|\"st1\"" \
@@ -92,6 +93,7 @@ test-e2e-multi-az:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" \
 	./hack/e2e/run.sh
@@ -101,6 +103,7 @@ test-e2e-migration:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="\[ebs-csi-migration\]" \
 	EBS_CHECK_MIGRATION=true \
@@ -111,6 +114,7 @@ test-e2e-external:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="External.Storage" \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
@@ -122,6 +126,7 @@ test-e2e-external-eks:
 	K8S_VERSION="1.20" \
 	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
 	EKSCTL_ADMIN_ROLE="Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV" \
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
