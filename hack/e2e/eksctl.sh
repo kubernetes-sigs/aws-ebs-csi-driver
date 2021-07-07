@@ -4,8 +4,9 @@ set -euo pipefail
 
 function eksctl_install() {
   INSTALL_PATH=${1}
+  EKSCTL_VERSION=${2}
   if [[ ! -e ${INSTALL_PATH}/eksctl ]]; then
-    EKSCTL_DOWNLOAD_URL="https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz"
+    EKSCTL_DOWNLOAD_URL="https://github.com/weaveworks/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_$(uname -s)_amd64.tar.gz"
     curl --silent --location "${EKSCTL_DOWNLOAD_URL}" | tar xz -C "${INSTALL_PATH}"
     chmod +x "${INSTALL_PATH}"/eksctl
   fi
