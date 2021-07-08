@@ -50,9 +50,9 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-K8S_VERSION=${K8S_VERSION:-1.20.6}
+K8S_VERSION=${K8S_VERSION:-1.20.8}
 
-KOPS_VERSION=${KOPS_VERSION:-1.20.0}
+KOPS_VERSION=${KOPS_VERSION:-1.21.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
@@ -71,7 +71,8 @@ GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]"}
 GINKGO_NODES=${GINKGO_NODES:-4}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
-EBS_SNAPSHOT_CRD=${EBS_SNAPSHOT_CRD:-"./deploy/kubernetes/cluster/crd_snapshotter.yaml"}
+EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v4.1.1"}
 EBS_CHECK_MIGRATION=${EBS_CHECK_MIGRATION:-"false"}
 
 CLEAN=${CLEAN:-"true"}
@@ -144,6 +145,15 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   fi
 fi
 
+if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
+  loudecho "Installing snapshot controller and CRDs"
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+fi
+
 loudecho "Deploying driver"
 startSec=$(date +'%s')
 
@@ -154,12 +164,15 @@ HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
   --wait
   --kubeconfig "${KUBECONFIG}"
   ./charts/"${DRIVER_NAME}")
-if test -f "$HELM_VALUES_FILE"; then
+if [[ -f "$HELM_VALUES_FILE" ]]; then
   HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
 fi
 eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
+if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
+  HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+fi
 set -x
-"${HELM_BIN}" "${HELM_ARGS[@]}" "${EXPANDED_HELM_EXTRA_FLAGS}"
+"${HELM_BIN}" "${HELM_ARGS[@]}"
 set +x
 
 endSec=$(date +'%s')
