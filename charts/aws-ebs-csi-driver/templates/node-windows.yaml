@@ -2,7 +2,6 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-node-windows
-  namespace: kube-system
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
@@ -15,8 +14,12 @@ spec:
       labels:
         app: ebs-csi-node
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
-      {{- if .Values.node.podAnnotations }}
-      annotations: {{ toYaml .Values.node.podAnnotations | nindent 8 }}
+        {{- if .Values.node.podLabels }}
+        {{- toYaml .Values.node.podLabels | nindent 8 }}
+        {{- end }}
+      {{- with .Values.node.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
       affinity:
@@ -31,10 +34,10 @@ spec:
       nodeSelector:
         kubernetes.io/os: windows
         {{- with .Values.node.nodeSelector }}
-{{ toYaml . | indent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ .Values.node.serviceAccount.name }}
-      priorityClassName: {{ .Values.node.priorityClassName | default "system-cluster-critical" }}
+      priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
@@ -46,7 +49,7 @@ spec:
           tolerationSeconds: 300
         {{- end }}
         {{- with .Values.node.tolerations }}
-{{ toYaml . | indent 8 }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
         - name: ebs-plugin
@@ -62,14 +65,16 @@ spec:
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
-{{- if .Values.proxy.http_proxy }}
-            - name: HTTP_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: HTTPS_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: NO_PROXY
-              value: {{ .Values.proxy.no_proxy | quote }}
-{{- end }}
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.node.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: kubelet-dir
               mountPath: C:\var\lib\kubelet
@@ -95,7 +100,8 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
           {{- with .Values.node.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: node-driver-registrar
           image: {{ printf "%s:%s" .Values.sidecars.nodeDriverRegistrar.image.repository .Values.sidecars.nodeDriverRegistrar.image.tag }}
@@ -108,21 +114,20 @@ spec:
               value: unix:/csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: C:\var\lib\kubelet\plugins\ebs.csi.aws.com\csi.sock
-{{- if .Values.proxy.http_proxy }}
-            - name: HTTP_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: HTTPS_PROXY
-              value: {{ .Values.proxy.http_proxy | quote }}
-            - name: NO_PROXY
-              value: {{ .Values.proxy.no_proxy | quote }}
-{{- end }}
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.nodeDriverRegistrar.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
             - name: registration-dir
               mountPath: C:\registration
           {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
@@ -132,7 +137,8 @@ spec:
             - name: plugin-dir
               mountPath: C:\csi
           {{- with default .Values.node.resources .Values.sidecars.livenessProbe.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
