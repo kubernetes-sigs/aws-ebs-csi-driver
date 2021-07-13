@@ -9,18 +9,21 @@ image:
 
 sidecars:
   provisioner:
+    env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-provisioner
       tag: "v2.1.1"
     logLevel: 2
     resources: {}
   attacher:
+    env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-attacher
       tag: "v3.1.0"
     logLevel: 2
     resources: {}
   snapshotter:
+    env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-snapshotter
       tag: "v3.0.3"
@@ -32,12 +35,14 @@ sidecars:
       tag: "v2.2.0"
     resources: {}
   resizer:
+    env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-resizer
       tag: "v1.0.0"
     logLevel: 2
     resources: {}
   nodeDriverRegistrar:
+    env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
       tag: "v2.1.0"
@@ -56,17 +61,9 @@ controller:
   # If arbitrary args like "--aws-sdk-debug-log=true" need to be passed, use this value
   additionalArgs: []
   affinity: {}
-  # True if enable volume scheduling for dynamic volume provisioning
-  env:
-    ebsPlugin: []
-    provisioner: []
-    attacher: []
-    snapshotter: []
-    resizer: []
+  env: []
   # If set, add pv/pvc metadata to plugin create requests as parameters.
   extraCreateMetadata: true
-  # Will be removed in later version in favor of env.ebsPlugin
-  extraVars: {}
   # Extra volume tags to attach to each dynamically provisioned volume.
   # ---
   # extraVolumeTags:
@@ -88,10 +85,6 @@ controller:
   region:
   replicaCount: 2
   resources: {}
-  serviceAccount:
-    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
-    annotations: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -104,6 +97,10 @@ controller:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+  serviceAccount:
+    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
+    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
+    annotations: {}
   tolerations: []
   # TSCs without the label selector stanza
   #
@@ -119,9 +116,7 @@ controller:
   topologySpreadConstraints: []
 
 node:
-  env:
-    ebsPlugin: []
-    nodeDriverRegistrar: []
+  env: []
   kubeletPath: /var/lib/kubelet
   logLevel: 2
   priorityClassName:

@@ -75,7 +75,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.node.env.ebsPlugin }}
+            {{- with .Values.node.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -116,7 +116,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.node.env.nodeDriverRegistrar }}
+            {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
