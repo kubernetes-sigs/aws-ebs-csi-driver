@@ -227,20 +227,25 @@ sidecars:
     image:
 ```
 
-With the above reorganization `controller.containerResources` and `node.containerResources` were also moved into the sidecars structure as follows
+With the above reorganization `controller.containerResources`, `controller.env`, `node.containerResources`, and `node.env` were also moved into the sidecars structure as follows
 ```yaml
 sidecars:
   provisioner:
+    env: []
     resources: {}
   attacher:
+    env: []
     resources: {}
   snapshotter:
+    env: []
     resources: {}
   livenessProbe:
     resources: {}
   resizer:
+    env: []
     resources: {}
   nodeDriverRegistrar:
+    env: []
     resources: {}
 ```
 

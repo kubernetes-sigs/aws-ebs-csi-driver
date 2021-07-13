@@ -101,16 +101,10 @@ spec:
             - name: AWS_REGION
               value: {{ . }}
             {{- end }}
-            {{- if .Values.controller.extraVars }}
-            {{- range $key, $val :=  .Values.controller.extraVars }}
-            - name: {{ $key }}
-              value: "{{ $val }}"
-            {{- end }}
-            {{- end }}
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env.ebsPlugin }}
+            {{- with .Values.controller.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -157,7 +151,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env.provisioner }}
+            {{- with .Values.sidecars.provisioner.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -179,7 +173,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env.attacher }}
+            {{- with .Values.sidecars.attacher.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -201,7 +195,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env.snapshotter }}
+            {{- with .Values.sidecars.snapshotter.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -224,7 +218,7 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env.resizer }}
+            {{- with .Values.sidecars.resizer.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
