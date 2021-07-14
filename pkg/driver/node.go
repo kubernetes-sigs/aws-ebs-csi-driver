@@ -17,9 +17,11 @@ limitations under the License.
 package driver
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -29,6 +31,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/volume"
 	mountutils "k8s.io/mount-utils"
@@ -56,6 +59,9 @@ const (
 
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
+
+	keySecretName = "keydata"
+	dmCryptCipher = "aes-xts-plain"
 )
 
 var (
@@ -204,9 +210,28 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
+	// Add encryption layer
+	klog.V(4).Infof("NodeStageVolume: adding encryption for %s")
+
+	key, ok := req.Secrets[keySecretName]
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "Could not find %s secret", keySecretName)
+	}
+
+	mapperName := fmt.Sprintf("pvccrypt-",rand.String(5))
+	cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("--allow-discards --cipher %s --key-file - --key-size=256 --type plain %s %s", dmCryptCipher, source, mapperName), " ")...)
+	cmd.Stdin = bytes.NewReader([]byte(key))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not open the encrypted device: %v", err)
+	}
+
 	// FormatAndMount will format only if needed
 	klog.V(4).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
-	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
+	err = d.mounter.FormatAndMount(fmt.Sprintf("/dev/mapper/%s", mapperName), target, fsType, mountOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
@@ -272,6 +297,16 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	err = d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
+	}
+
+	klog.V(4).Infof("NodeUnstageVolume: closing dm-crypt")
+	mapperName := filepath.Base(target)
+	cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("close %s", mapperName), " ")...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not close the encrypted device: %v", err)
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
