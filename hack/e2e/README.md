@@ -41,7 +41,16 @@ To commit changes and submit them as a PR back to the ebs repo:
 
 ```
 git diff ebs/master:hack/e2e HEAD:hack/e2e > /tmp/hack_e2e.diff
-cd $GOPATH/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+pushd $GOPATH/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+git apply --reject --directory hack/e2e /tmp/hack_e2e.diff
+git commit
+```
+
+To consume newer changes from the ebs repo:
+
+```
+git fetch ebs
+git diff HEAD:hack/e2e ebs/master:hack/e2e > /tmp/hack_e2e.diff
 git apply --reject --directory hack/e2e /tmp/hack_e2e.diff
 git commit
 ```
