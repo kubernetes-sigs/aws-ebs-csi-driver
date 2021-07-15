@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v1.1.1"
-  pullPolicy: IfNotPresent
+  repository: docker.io/tlcowling/hackday-csi
+  tag: "latest"
+  pullPolicy: Always
 
 sidecars:
   provisioner:
@@ -73,7 +73,7 @@ controller:
   httpEndpoint:
   # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
   k8sTagClusterId:
-  logLevel: 2
+  logLevel: 4
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
@@ -118,7 +118,7 @@ controller:
 node:
   env: []
   kubeletPath: /var/lib/kubelet
-  logLevel: 2
+  logLevel: 4
   priorityClassName:
   nodeSelector: {}
   podAnnotations: {}
