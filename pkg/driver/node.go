@@ -17,6 +17,7 @@ limitations under the License.
 package driver
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -31,7 +32,6 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/volume"
 	mountutils "k8s.io/mount-utils"
@@ -211,27 +211,31 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Add encryption layer
-	klog.V(4).Infof("NodeStageVolume: adding encryption for %s")
+	if _, err := os.Stat(fmt.Sprintf("/dev/mapper/%s", volumeID)); os.IsNotExist(err) {
+		klog.V(4).Infof("NodeStageVolume: adding encryption for %s")
 
-	key, ok := req.Secrets[keySecretName]
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not find %s secret", keySecretName)
-	}
+		key, ok := req.Secrets[keySecretName]
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "Could not find %s secret", keySecretName)
+		}
 
-	mapperName := fmt.Sprintf("pvccrypt-",rand.String(5))
-	cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("--allow-discards --cipher %s --key-file - --key-size=256 --type plain %s %s", dmCryptCipher, source, mapperName), " ")...)
-	cmd.Stdin = bytes.NewReader([]byte(key))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+		bufStderr := &bytes.Buffer{}
+		cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("--allow-discards --cipher %s --key-file - --key-size=256 --type plain open %s %s", dmCryptCipher, source, volumeID), " ")...)
+		cmd.Stdin = bytes.NewReader([]byte(key))
+		cmd.Stdout = os.DevNull
+		cmd.Stderr = bufio.NewWriter(bufStderr)
 
-	err = cmd.Run()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not open the encrypted device: %v", err)
+		err := cmd.Run()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not open the encrypted device: %v - %q", err, bufStderr.String())
+		}
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if device mapper %q exists", fmt.Sprintf("/dev/mapper/%s", volumeID))
 	}
 
 	// FormatAndMount will format only if needed
 	klog.V(4).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
-	err = d.mounter.FormatAndMount(fmt.Sprintf("/dev/mapper/%s", mapperName), target, fsType, mountOptions)
+	err = d.mounter.FormatAndMount(fmt.Sprintf("/dev/mapper/%s", volumeID), target, fsType, mountOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
@@ -299,14 +303,18 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
 
-	klog.V(4).Infof("NodeUnstageVolume: closing dm-crypt")
-	mapperName := filepath.Base(target)
-	cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("close %s", mapperName), " ")...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "could not close the encrypted device: %v", err)
+	if _, err := os.Stat(fmt.Sprintf("/dev/mapper/%s", volumeID)); err == nil {
+		klog.V(4).Infof("NodeUnstageVolume: closing dm-crypt")
+
+		bufStderr := &bytes.Buffer{}
+		cmd := exec.CommandContext(ctx, "cryptsetup", strings.Split(fmt.Sprintf("close %s", req.GetVolumeId()), " ")...)
+		cmd.Stdout = os.DevNull
+		cmd.Stderr = bufio.NewWriter(bufStderr)
+
+		err := cmd.Run()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "could not close the encrypted device: %v - %q", err, bufStderr.String())
+		}
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
