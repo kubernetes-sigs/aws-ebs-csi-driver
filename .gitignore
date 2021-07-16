@@ -21,3 +21,6 @@ Vagrantfile
 
 # IntelliJ
 .idea/
+
+#MacOS system files
+*.DS_Store
