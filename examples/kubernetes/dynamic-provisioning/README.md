@@ -5,7 +5,7 @@ This example shows how to create a EBS volume and consume it from container dyna
 
 1. Kubernetes 1.13+ (CSI 1.0).
 
-2. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) is installed with `--set enableVolumeScheduling=true`.
+2. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) is installed.
 
 ## Usage
 
