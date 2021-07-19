@@ -147,14 +147,9 @@ By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSecon
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
 
-If you want to deploy the stable driver without alpha features:
+To deploy the CSI driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.10"
-```
-
-If you want to deploy the driver with alpha features:
-```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/alpha/?ref=master"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.1"
 ```
 
 Verify driver is running:
