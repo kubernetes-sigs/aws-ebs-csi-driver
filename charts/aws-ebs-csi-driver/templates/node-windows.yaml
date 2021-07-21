@@ -1,3 +1,4 @@
+{{- if .Values.node.enableWindows }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -171,3 +172,4 @@ spec:
           hostPath:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
+{{- end }}

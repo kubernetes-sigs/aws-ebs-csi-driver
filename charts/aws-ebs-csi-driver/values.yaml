@@ -130,6 +130,7 @@ node:
     create: true
     name: ebs-csi-node-sa
     annotations: {}
+  enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
 
