@@ -136,6 +136,9 @@ var (
 	// ErrNotFound is returned when a resource is not found.
 	ErrNotFound = errors.New("Resource was not found")
 
+	// ErrIdempotent is returned when another request with same idempotent token is in-flight.
+	ErrIdempotentParameterMismatch = errors.New("Parameters on this idempotent request are inconsistent with parameters used in previous request(s)")
+
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("Resource already exists")
 
@@ -317,8 +320,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 	}
 
-	request := &ec2.CreateVolumeInput{
+	requestInput := &ec2.CreateVolumeInput{
 		AvailabilityZone:  aws.String(zone),
+		ClientToken:       aws.String(volumeName),
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
@@ -327,28 +331,31 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
 	if len(diskOptions.OutpostArn) > 0 {
-		request.OutpostArn = aws.String(diskOptions.OutpostArn)
+		requestInput.OutpostArn = aws.String(diskOptions.OutpostArn)
 	}
 
 	if len(diskOptions.KmsKeyID) > 0 {
-		request.KmsKeyId = aws.String(diskOptions.KmsKeyID)
-		request.Encrypted = aws.Bool(true)
+		requestInput.KmsKeyId = aws.String(diskOptions.KmsKeyID)
+		requestInput.Encrypted = aws.Bool(true)
 	}
 	if iops > 0 {
-		request.Iops = aws.Int64(iops)
+		requestInput.Iops = aws.Int64(iops)
 	}
 	if throughput > 0 && diskOptions.VolumeType == VolumeTypeGP3 {
-		request.Throughput = aws.Int64(throughput)
+		requestInput.Throughput = aws.Int64(throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
-		request.SnapshotId = aws.String(snapshotID)
+		requestInput.SnapshotId = aws.String(snapshotID)
 	}
 
-	response, err := c.ec2.CreateVolumeWithContext(ctx, request)
+	response, err := c.ec2.CreateVolumeWithContext(ctx, requestInput)
 	if err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return nil, ErrNotFound
+		}
+		if isAWSErrorIdempotentParameterMismatch(err) {
+			return nil, ErrIdempotentParameterMismatch
 		}
 		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
 	}
@@ -987,6 +994,13 @@ func isAWSErrorModificationNotFound(err error) bool {
 // reported when the specified snapshot doesn't exist.
 func isAWSErrorSnapshotNotFound(err error) bool {
 	return isAWSError(err, "InvalidSnapshot.NotFound")
+}
+
+// isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
+// given error is an AWS IdempotentParameterMismatch error.
+// This error is reported when the two request contains same client-token but different parameters
+func isAWSErrorIdempotentParameterMismatch(err error) bool {
+	return isAWSError(err, "IdempotentParameterMismatch")
 }
 
 // ResizeDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit.
