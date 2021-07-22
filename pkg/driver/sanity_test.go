@@ -120,6 +120,14 @@ func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 			return nil, cloud.ErrNotFound
 		}
 	}
+	if existingDisk, ok := c.disks[volumeName]; ok {
+		//Already Created volume
+		if existingDisk.Disk.CapacityGiB != util.BytesToGiB(diskOptions.CapacityBytes) {
+			return nil, cloud.ErrIdempotentParameterMismatch
+		} else {
+			return existingDisk.Disk, nil
+		}
+	}
 	d := &fakeDisk{
 		Disk: &cloud.Disk{
 			VolumeID:         fmt.Sprintf("vol-%d", r1.Uint64()),
