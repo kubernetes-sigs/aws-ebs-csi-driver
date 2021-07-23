@@ -4,7 +4,7 @@ bases:
   - ../../base
 images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-    newTag: v1.1.1
+    newTag: v1.1.3
   - name: k8s.gcr.io/sig-storage/csi-provisioner
     newTag: v2.1.1
   - name: k8s.gcr.io/sig-storage/csi-attacher
