@@ -1,3 +1,8 @@
+# v1.1.2
+
+## Notable changes
+- Update base images: yum update al2, bump debian tag ([#986](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/986), [@wongma7](https://github.com/wongma7))
+
 # v1.1.1
 
 ### Bug fixes
