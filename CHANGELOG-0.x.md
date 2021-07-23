@@ -1,3 +1,15 @@
+# v1.1.3
+
+## Notable changes
+- Fix ecr image being debian-based
+- In a future release, the debian-based image will be removed and only an al2-based image will be maintained and pushed to GCR and ECR
+- In a future release, images will stop getting pushed to Docker Hub
+
+# v1.1.2
+
+## Notable changes
+- Update base images: yum update al2, bump debian tag ([#986](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/986), [@wongma7](https://github.com/wongma7))
+
 # v1.1.1
 
 ### Bug fixes
