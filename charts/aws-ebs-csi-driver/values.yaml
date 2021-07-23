@@ -4,7 +4,8 @@
 
 image:
   repository: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
-  tag: "v1.2.0"
+  # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
+  tag: ""
   pullPolicy: IfNotPresent
 
 sidecars:
@@ -133,6 +134,10 @@ node:
   enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "10%"
 
 storageClasses: []
 # Add StorageClass resources like:

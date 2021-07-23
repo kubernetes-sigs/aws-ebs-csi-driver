@@ -1,8 +1,8 @@
 apiVersion: v2
-appVersion: "1.2.0"
+appVersion: 1.2.0
 name: aws-ebs-csi-driver
 description: A Helm chart for AWS EBS CSI Driver
-version: 2.0.3
+version: 2.0.4
 kubeVersion: ">=1.17.0-0"
 home: https://github.com/kubernetes-sigs/aws-ebs-csi-driver
 sources:
@@ -16,3 +16,9 @@ maintainers:
     email: chengpan@amazon.com
   - name: krmichel
     url: https://github.com/krmichel
+annotations:
+  artifacthub.io/changes: |
+    - kind: changed
+      description: Use chart app version as default image tag
+    - kind: changed
+      description: Add updateStrategy to daemonsets
