@@ -57,6 +57,12 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
+            - name: AWS_EC2_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: aws-meta
+                  key: endpoint
+                  optional: true
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
