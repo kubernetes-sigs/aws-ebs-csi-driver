@@ -10,6 +10,8 @@ spec:
     matchLabels:
       app: ebs-csi-node
       {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    {{ toYaml .Values.node.updateStrategy | nindent 4 }}
   template:
     metadata:
       labels:
@@ -54,7 +56,7 @@ spec:
         {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
