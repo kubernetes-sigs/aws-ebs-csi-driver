@@ -133,6 +133,10 @@ node:
   enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "10%"
 
 storageClasses: []
 # Add StorageClass resources like:
