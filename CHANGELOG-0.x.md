@@ -1,3 +1,10 @@
+# v1.1.3
+
+## Notable changes
+- Fix ecr image being debian-based
+- In a future release, the debian-based image will be removed and only an al2-based image will be maintained and pushed to GCR and ECR
+- In a future release, images will stop getting pushed to Docker Hub
+
 # v1.1.2
 
 ## Notable changes
