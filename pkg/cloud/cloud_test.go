@@ -204,6 +204,30 @@ func TestCreateDisk(t *testing.T) {
 			expCreateVolumeErr:   fmt.Errorf("CreateVolume generic error"),
 		},
 		{
+			name:       "fail: ec2.CreateVolume returned snapshot not found error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               ErrNotFound,
+			expCreateVolumeErr:   awserr.New("InvalidSnapshot.NotFound", "Snapshot not found", fmt.Errorf("not able to find source snapshot")),
+		},
+		{
+			name:       "fail: ec2.CreateVolume returned Idempotent Parameter Mismatch error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               ErrIdempotentParameterMismatch,
+			expCreateVolumeErr:   awserr.New("IdempotentParameterMismatch", "Another request is in-flight", fmt.Errorf("another request is in-flight")),
+		},
+		{
 			name:       "fail: ec2.DescribeVolumes error after volume created",
 			volumeName: "vol-test-name-error",
 			volState:   "creating",
