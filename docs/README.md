@@ -94,25 +94,27 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 **Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
 ## Container Images:
-|AWS EBS CSI Driver Version | Image                                            |
-|---------------------------|--------------------------------------------------|
-|v1.1.3                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.3 |
-|v1.1.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.2 |
-|v1.1.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1 |
-|v1.1.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0 |
-|v1.0.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0 |
-|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1|
-|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|
-|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
-|v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
-|v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
-|v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
-|v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0                  |
-|v0.5.0                     |amazon/aws-ebs-csi-driver:v0.5.0                  |
-|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0                  |
-|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0                  |
-|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0                   |
-|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha             |
+|AWS EBS CSI Driver Version | GCR Image                                        | ECR Image                                                                   |
+|---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.1.3                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.3 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.3  |
+|v1.1.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.2 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.2  |
+|v1.1.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.1  |
+|v1.1.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.0  |
+|v1.0.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0 |                                                                             |
+|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1| 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v0.10.1 |
+|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|                                                                             |
+|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |                                                                             |
+|v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v0.9.0  |
+|v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |                                                                             |
+|v0.7.1                     |                                                  | amazon/aws-ebs-csi-driver:v0.7.1                                            |
+|v0.6.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.6.0                                            |
+|v0.5.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.5.0                                            |
+|v0.4.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.4.0                                            |
+|v0.3.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.3.0                                            |
+|v0.2.0                     |                                                  | amazon/aws-ebs-csi-driver:0.2.0                                             |
+|v0.1.0                     |                                                  | amazon/aws-ebs-csi-driver:0.1.0-alpha                                       |
+
+**Note**: If your cluster isn't in the `us-west-2` Region, please change `602401143452.dkr.ecr.us-west-2.amazonaws.com` to the [address](https://github.com/awsdocs/amazon-eks-user-guide/blob/master/doc_source/add-ons-images.md) that corresponds to your Region.
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
