@@ -98,7 +98,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Container Images:
 |AWS EBS CSI Driver Version | GCR Image                                        | ECR Image                                                                   |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
-|v1.2.0                     |Image ToBeBuild                                   | Image ToBeBuild                                                             |
+|v1.2.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.2.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.2.0  |
 |v1.1.3                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.3 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.3  |
 |v1.1.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.2 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.2  |
 |v1.1.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.1  |
@@ -156,7 +156,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.1"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.2"
 ```
 
 Verify driver is running:
