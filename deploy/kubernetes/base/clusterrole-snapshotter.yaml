@@ -1,5 +1,5 @@
 ---
-# Source: aws-ebs-csi-driver/templates/clusterrole-snapshotter.yaml
+# Source: aws-ebs-csi-driver/templates/controller/clusterrole-snapshotter.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:

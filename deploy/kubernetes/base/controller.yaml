@@ -1,5 +1,5 @@
 ---
-# Source: aws-ebs-csi-driver/templates/controller.yaml
+# Source: aws-ebs-csi-driver/templates/controller/deployment.yaml
 # Controller Service
 kind: Deployment
 apiVersion: apps/v1

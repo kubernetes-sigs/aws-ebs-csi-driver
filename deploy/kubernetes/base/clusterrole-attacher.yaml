@@ -1,5 +1,5 @@
 ---
-# Source: aws-ebs-csi-driver/templates/clusterrole-attacher.yaml
+# Source: aws-ebs-csi-driver/templates/controller/clusterrole-attacher.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
