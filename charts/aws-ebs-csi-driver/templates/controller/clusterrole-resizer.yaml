@@ -1,10 +1,10 @@
 ---
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: ebs-external-resizer-role
+  name: {{ include "aws-ebs-csi-driver.controller.fullname" . }}-resizer
   labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+    {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 4 }}
 rules:
   # The following rule should be uncommented for plugins that require secrets
   # for provisioning.

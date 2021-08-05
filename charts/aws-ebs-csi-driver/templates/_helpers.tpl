@@ -3,8 +3,8 @@
 Expand the name of the chart.
 */}}
 {{- define "aws-ebs-csi-driver.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
 
 {{/*
 Create a default fully qualified app name.
@@ -12,24 +12,24 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "aws-ebs-csi-driver.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
 
 {{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "aws-ebs-csi-driver.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
 
 {{/*
 Common labels
@@ -42,8 +42,9 @@ helm.sh/chart: {{ include "aws-ebs-csi-driver.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: aws-ebs-csi
 {{- end }}
-{{- end -}}
+{{- end }}
 
 {{/*
 Common selector labels
@@ -53,20 +54,7 @@ app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
 {{- if ne .Release.Name "kustomize" }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-{{- end -}}
-
-{{/*
-Convert the `--extra-volume-tags` command line arg from a map.
-*/}}
-{{- define "aws-ebs-csi-driver.extra-volume-tags" -}}
-{{- $result := dict "pairs" (list) -}}
-{{- range $key, $value := .Values.controller.extraVolumeTags -}}
-{{- $noop := printf "%s=%v" $key $value | append $result.pairs | set $result "pairs" -}}
-{{- end -}}
-{{- if gt (len $result.pairs) 0 -}}
-{{- printf "%s=%s" "- --extra-volume-tags" (join "," $result.pairs) -}}
-{{- end -}}
-{{- end -}}
+{{- end }}
 
 {{/*
 Handle http proxy env vars
@@ -78,4 +66,4 @@ Handle http proxy env vars
   value: {{ .Values.proxy.http_proxy | quote }}
 - name: NO_PROXY
   value: {{ .Values.proxy.no_proxy | quote }}
-{{- end -}}
+{{- end }}

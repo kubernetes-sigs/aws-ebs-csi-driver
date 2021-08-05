@@ -1,15 +1,15 @@
 ---
-kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
-  name: ebs-csi-node-getter-binding
+  name: {{ include "aws-ebs-csi-driver.node.fullname" . }}
   labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+    {{- include "aws-ebs-csi-driver.node.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.node.serviceAccount.name }}
     namespace: {{ .Release.Namespace }}
+    name: {{ include "aws-ebs-csi-driver.node.serviceAccountName" . }}
 roleRef:
-  kind: ClusterRole
-  name: ebs-csi-node-role
   apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "aws-ebs-csi-driver.fullname" . }}

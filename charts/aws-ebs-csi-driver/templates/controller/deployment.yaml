@@ -1,21 +1,19 @@
 # Controller Service
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: ebs-csi-controller
+  name: {{ include "aws-ebs-csi-driver.controller.fullname" . }}
   labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+    {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controller.replicaCount }}
   selector:
     matchLabels:
-      app: ebs-csi-controller
-      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
+      {{- include "aws-ebs-csi-driver.controller.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: ebs-csi-controller
-        {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
+        {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 8 }}
         {{- if .Values.controller.podLabels }}
         {{- toYaml .Values.controller.podLabels | nindent 8 }}
         {{- end }}
@@ -29,7 +27,7 @@ spec:
         {{- with .Values.controller.nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ .Values.controller.serviceAccount.name }}
+      serviceAccountName: {{ include "aws-ebs-csi-driver.controller.serviceAccountName" . }}
       priorityClassName: {{ .Values.controller.priorityClassName }}
       {{- with default .Values.controller.affinity }}
       affinity:
@@ -45,7 +43,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       {{- if .Values.controller.topologySpreadConstraints }}
-      {{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( dict "app" "ebs-csi-controller" ) ) }}
+      {{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( include "aws-ebs-csi-driver.controller.selectorLabels" ) ) }}
       {{- $constraints := list }}
       {{- range .Values.controller.topologySpreadConstraints }}
         {{- $constraints = mustAppend $constraints (mergeOverwrite . $tscLabelSelector) }}
@@ -65,7 +63,7 @@ spec:
             {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
             {{- if .Values.controller.extraVolumeTags }}
-              {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
+              {{- include "aws-ebs-csi-driver.controller.extra-volume-tags" . | nindent 12 }}
             {{- end }}
             {{- with .Values.controller.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ . }}

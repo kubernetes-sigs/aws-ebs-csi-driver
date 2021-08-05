@@ -1,22 +1,20 @@
 {{- if .Values.node.enableWindows }}
-kind: DaemonSet
 apiVersion: apps/v1
+kind: DaemonSet
 metadata:
-  name: ebs-csi-node-windows
+  name: {{ include "aws-ebs-csi-driver.node-windows.fullname" . }}
   labels:
-    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+    {{- include "aws-ebs-csi-driver.node-windows.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: ebs-csi-node
-      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
+      {{- include "aws-ebs-csi-driver.node-windows.selectorLabels" . | nindent 6 }}
   updateStrategy:
     {{ toYaml .Values.node.updateStrategy | nindent 4 }}
   template:
     metadata:
       labels:
-        app: ebs-csi-node
-        {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
+        {{- include "aws-ebs-csi-driver.node-windows.labels" . | nindent 8 }}
         {{- if .Values.node.podLabels }}
         {{- toYaml .Values.node.podLabels | nindent 8 }}
         {{- end }}
@@ -39,7 +37,7 @@ spec:
         {{- with .Values.node.nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ .Values.node.serviceAccount.name }}
+      serviceAccountName: {{ include "aws-ebs-csi-driver.node.serviceAccountName" . }}
       priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
