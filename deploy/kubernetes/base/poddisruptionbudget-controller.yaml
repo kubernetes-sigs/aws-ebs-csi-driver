@@ -6,9 +6,10 @@ metadata:
   name: ebs-csi-controller
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: controller
 spec:
   selector:
     matchLabels:
-      app: ebs-csi-controller
       app.kubernetes.io/name: aws-ebs-csi-driver
+      app.kubernetes.io/component: controller
   maxUnavailable: 1

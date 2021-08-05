@@ -1,11 +1,12 @@
 ---
 # Source: aws-ebs-csi-driver/templates/node/clusterrole.yaml
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: ebs-csi-node-role
+  name: ebs-csi-node
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: node
 rules:
   - apiGroups: [""]
     resources: ["nodes"]

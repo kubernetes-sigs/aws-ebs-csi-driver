@@ -1,16 +1,17 @@
 ---
 # Source: aws-ebs-csi-driver/templates/node/clusterrolebinding.yaml
-kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
 metadata:
-  name: ebs-csi-node-getter-binding
+  name: ebs-csi-node
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: node
 subjects:
   - kind: ServiceAccount
-    name: ebs-csi-node-sa
     namespace: default
+    name: ebs-csi-node-sa
 roleRef:
-  kind: ClusterRole
-  name: ebs-csi-node-role
   apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ebs-csi

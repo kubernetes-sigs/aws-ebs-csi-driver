@@ -1,23 +1,24 @@
 ---
 # Source: aws-ebs-csi-driver/templates/controller/deployment.yaml
 # Controller Service
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: ebs-csi-controller
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: controller
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: ebs-csi-controller
       app.kubernetes.io/name: aws-ebs-csi-driver
+      app.kubernetes.io/component: controller
   template:
     metadata:
       labels:
-        app: ebs-csi-controller
         app.kubernetes.io/name: aws-ebs-csi-driver
+        app.kubernetes.io/component: controller
     spec:
       nodeSelector:
         kubernetes.io/os: linux

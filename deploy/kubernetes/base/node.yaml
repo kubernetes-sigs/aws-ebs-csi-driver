@@ -1,17 +1,18 @@
 ---
 # Source: aws-ebs-csi-driver/templates/node/daemonset.yaml
 # Node Service
-kind: DaemonSet
 apiVersion: apps/v1
+kind: DaemonSet
 metadata:
   name: ebs-csi-node
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: node
 spec:
   selector:
     matchLabels:
-      app: ebs-csi-node
       app.kubernetes.io/name: aws-ebs-csi-driver
+      app.kubernetes.io/component: node
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 10%
@@ -19,8 +20,8 @@ spec:
   template:
     metadata:
       labels:
-        app: ebs-csi-node
         app.kubernetes.io/name: aws-ebs-csi-driver
+        app.kubernetes.io/component: node
     spec:
       affinity:
         nodeAffinity:

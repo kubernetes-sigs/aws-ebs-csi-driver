@@ -1,11 +1,12 @@
 ---
 # Source: aws-ebs-csi-driver/templates/controller/clusterrole-resizer.yaml
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: ebs-external-resizer-role
+  name: ebs-csi-controller-resizer
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: controller
 rules:
   # The following rule should be uncommented for plugins that require secrets
   # for provisioning.

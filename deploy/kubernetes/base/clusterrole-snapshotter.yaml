@@ -1,11 +1,12 @@
 ---
 # Source: aws-ebs-csi-driver/templates/controller/clusterrole-snapshotter.yaml
-kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: ebs-external-snapshotter-role
+  name: ebs-csi-controller-snapshotter
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/component: controller
 rules:
   - apiGroups: [ "" ]
     resources: [ "events" ]
