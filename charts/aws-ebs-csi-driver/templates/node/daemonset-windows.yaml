@@ -50,6 +50,10 @@ spec:
           tolerationSeconds: 300
         {{- end }}
         {{- with .Values.node.tolerations }}
+        {{- toYaml . | indent 8 }}
+        {{- end }}
+      {{- with .Values.node.podSecurityContext }}
+      securityContext:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:

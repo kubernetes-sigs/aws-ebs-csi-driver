@@ -51,8 +51,16 @@ spec:
       topologySpreadConstraints:
         {{- $constraints | toYaml | nindent 8 }}
       {{- end }}
+      {{- with .Values.controller.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: ebs-plugin
+          {{- with .Values.controller.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:

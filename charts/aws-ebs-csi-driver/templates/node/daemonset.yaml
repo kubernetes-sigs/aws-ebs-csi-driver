@@ -50,12 +50,19 @@ spec:
           tolerationSeconds: 300
         {{- end }}
         {{- with .Values.node.tolerations }}
+        {{- toYaml . | indent 8 }}
+        {{- end }}
+      {{- with .Values.node.podSecurityContext }}
+      securityContext:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
         - name: ebs-plugin
           securityContext:
             privileged: true
+            {{- with .Values.node.securityContext }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
           args:
             - node

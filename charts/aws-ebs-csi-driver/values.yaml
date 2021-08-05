@@ -78,6 +78,7 @@ controller:
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
+  podSecurityPolicy:
   priorityClassName:
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
   # service.
@@ -98,6 +99,7 @@ controller:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+  securityContext:
   serviceAccount:
     create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
     name: ebs-csi-controller-sa # Name of the service-account to be used/created.
@@ -123,7 +125,9 @@ node:
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
+  podSecurityPolicy:
   priorityClassName:
+  securityContext:
   tolerateAllTaints: false
   tolerations: []
   resources: {}
