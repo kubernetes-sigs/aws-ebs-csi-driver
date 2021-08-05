@@ -1,4 +1,12 @@
-apiVersion: {{ ternary "storage.k8s.io/v1" "storage.k8s.io/v1beta1" (semverCompare ">=1.18.0-0" .Capabilities.KubeVersion.Version) }}
+{{- if (semverCompare ">=1.18.0-0" .Capabilities.KubeVersion.Version) }}
+apiVersion: storage.k8s.io/v1
+{{- else }}
+{{/*
+NOTE: remove after 1.18 is the minimal supported version
+https://kubernetes.io/docs/reference/using-api/deprecation-guide/#storage-resources-v122
+*/}}
+apiVersion: storage.k8s.io/v1beta1
+{{- end }}
 kind: CSIDriver
 metadata:
   name: ebs.csi.aws.com

@@ -1,4 +1,12 @@
+{{- if (semverCompare ">=1.21.0-0" .Capabilities.KubeVersion.Version) }}
+apiVersion: policy/v1
+{{- else }}
+{{/*
+NOTE: remove after 1.21 is the minimal supported version
+https://kubernetes.io/docs/reference/using-api/deprecation-guide/#poddisruptionbudget-v125
+*/}}
 apiVersion: policy/v1beta1
+{{- end }}
 kind: PodDisruptionBudget
 metadata:
   name: {{ include "aws-ebs-csi-driver.controller.fullname" . }}
@@ -8,8 +16,8 @@ spec:
   selector:
     matchLabels:
       {{- include "aws-ebs-csi-driver.controller.selectorLabels" . | nindent 6 }}
-  {{- if le (.Values.controller.replicaCount | int) 2 }}
+{{- if le (.Values.controller.replicaCount | int) 2 }}
   maxUnavailable: 1
-  {{- else }}
+{{- else }}
   minAvailable: 2
-  {{- end }}
+{{- end }}
