@@ -1,4 +1,8 @@
 ---
+{{/*
+this should be sync from upstream https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
+modify `templates/clusterrole-ebs-plugin.yaml` for rules used by ebs-plugin
+*/}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -8,16 +12,13 @@ metadata:
 rules:
   - apiGroups: [ "" ]
     resources: [ "persistentvolumes" ]
-    verbs: [ "get", "list", "watch", "update", "patch" ]
-  - apiGroups: [ "" ]
-    resources: [ "nodes" ]
-    verbs: [ "get", "list", "watch" ]
-  - apiGroups: [ "csi.storage.k8s.io" ]
-    resources: [ "csinodeinfos" ]
+    verbs: [ "get", "list", "watch", "patch" ]
+  - apiGroups: [ "storage.k8s.io" ]
+    resources: [ "csinodes" ]
     verbs: [ "get", "list", "watch" ]
   - apiGroups: [ "storage.k8s.io" ]
     resources: [ "volumeattachments" ]
-    verbs: [ "get", "list", "watch", "update", "patch" ]
+    verbs: [ "get", "list", "watch", "patch" ]
   - apiGroups: [ "storage.k8s.io" ]
     resources: [ "volumeattachments/status" ]
     verbs: [ "patch" ]

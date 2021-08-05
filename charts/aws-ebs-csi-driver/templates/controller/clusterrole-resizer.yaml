@@ -1,4 +1,8 @@
 ---
+{{/*
+this should be sync from upstream https://github.com/kubernetes-csi/external-resizer/blob/master/deploy/kubernetes/rbac.yaml
+modify `templates/clusterrole-ebs-plugin.yaml` for rules used by ebs-plugin
+*/}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -6,23 +10,15 @@ metadata:
   labels:
     {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 4 }}
 rules:
-  # The following rule should be uncommented for plugins that require secrets
-  # for provisioning.
-  # - apiGroups: [""]
-  #   resources: ["secrets"]
-  #   verbs: ["get", "list", "watch"]
   - apiGroups: [ "" ]
     resources: [ "persistentvolumes" ]
-    verbs: [ "get", "list", "watch", "update", "patch" ]
+    verbs: [ "get", "list", "watch", "patch" ]
   - apiGroups: [ "" ]
     resources: [ "persistentvolumeclaims" ]
     verbs: [ "get", "list", "watch" ]
   - apiGroups: [ "" ]
     resources: [ "persistentvolumeclaims/status" ]
-    verbs: [ "update", "patch" ]
-  - apiGroups: [ "storage.k8s.io" ]
-    resources: [ "storageclasses" ]
-    verbs: [ "get", "list", "watch" ]
+    verbs: [ "patch" ]
   - apiGroups: [ "" ]
     resources: [ "events" ]
     verbs: [ "list", "watch", "create", "update", "patch" ]

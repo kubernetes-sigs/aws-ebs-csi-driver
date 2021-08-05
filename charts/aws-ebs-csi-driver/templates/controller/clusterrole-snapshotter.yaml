@@ -1,4 +1,9 @@
+{{- if .Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1" }}
 ---
+{{/*
+this should be sync from upstream https://github.com/kubernetes-csi/external-snapshotter/blob/master/deploy/kubernetes/csi-snapshotter/rbac-csi-snapshotter.yaml
+modify `templates/clusterrole-ebs-plugin.yaml` for rules used by ebs-plugin
+*/}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -9,9 +14,6 @@ rules:
   - apiGroups: [ "" ]
     resources: [ "events" ]
     verbs: [ "list", "watch", "create", "update", "patch" ]
-  - apiGroups: [ "" ]
-    resources: [ "secrets" ]
-    verbs: [ "get", "list" ]
   - apiGroups: [ "snapshot.storage.k8s.io" ]
     resources: [ "volumesnapshotclasses" ]
     verbs: [ "get", "list", "watch" ]
@@ -21,3 +23,4 @@ rules:
   - apiGroups: [ "snapshot.storage.k8s.io" ]
     resources: [ "volumesnapshotcontents/status" ]
     verbs: [ "update" ]
+{{- end }}
