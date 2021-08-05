@@ -28,8 +28,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ include "aws-ebs-csi-driver.controller.serviceAccountName" . }}
-      priorityClassName: {{ .Values.controller.priorityClassName }}
-      {{- with default .Values.controller.affinity }}
+      priorityClassName: {{ default "system-cluster-critical" .Values.controller.priorityClassName }}
+      {{- with .Values.controller.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}

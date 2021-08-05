@@ -78,7 +78,7 @@ controller:
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
-  priorityClassName: system-cluster-critical
+  priorityClassName:
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
   # service.
   # ---
@@ -120,10 +120,10 @@ node:
   env: []
   kubeletPath: /var/lib/kubelet
   logLevel: 2
-  priorityClassName:
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
+  priorityClassName:
   tolerateAllTaints: false
   tolerations: []
   resources: {}

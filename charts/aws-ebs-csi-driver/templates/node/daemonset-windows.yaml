@@ -38,7 +38,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ include "aws-ebs-csi-driver.node.serviceAccountName" . }}
-      priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
+      priorityClassName: {{ default "system-node-critical" .Values.node.priorityClassName }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
