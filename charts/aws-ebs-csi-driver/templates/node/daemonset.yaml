@@ -115,6 +115,7 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.nodeDriverRegistrar.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            - --http-endpoint=:8081
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
           env:
@@ -133,6 +134,16 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy
             - name: registration-dir
               mountPath: /registration
+          ports:
+            - name: registrar
+              containerPort: 8081
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: registrar
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
           {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
