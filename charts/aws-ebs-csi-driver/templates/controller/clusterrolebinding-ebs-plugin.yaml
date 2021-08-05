@@ -1,0 +1,15 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "aws-ebs-csi-driver.controller.fullname" . }}-ebs-plugin
+  labels:
+    {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    namespace: {{ .Release.Namespace }}
+    name: {{ include "aws-ebs-csi-driver.controller.serviceAccountName" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "aws-ebs-csi-driver.fullname" . }}-ebs-plugin

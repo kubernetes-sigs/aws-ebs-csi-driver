@@ -1,8 +1,8 @@
 ---
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ include "aws-ebs-csi-driver.node.fullname" . }}
+  name: {{ include "aws-ebs-csi-driver.node.fullname" . }}-ebs-plugin
   labels:
     {{- include "aws-ebs-csi-driver.node.labels" . | nindent 4 }}
 subjects:
@@ -12,4 +12,4 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "aws-ebs-csi-driver.fullname" . }}
+  name: {{ include "aws-ebs-csi-driver.fullname" . }}-ebs-plugin
