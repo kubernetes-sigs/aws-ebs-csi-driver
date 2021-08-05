@@ -74,7 +74,7 @@ spec:
             - --v={{ .Values.node.logLevel }}
           env:
             - name: CSI_ENDPOINT
-              value: unix:/csi/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             - name: CSI_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -89,8 +89,8 @@ spec:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
               mountPropagation: "Bidirectional"
-            - name: plugin-dir
-              mountPath: /csi
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy
             - name: device-dir
               mountPath: /dev
           ports:
@@ -117,7 +117,7 @@ spec:
             - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
           env:
             - name: ADDRESS
-              value: /csi/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
             {{- if .Values.proxy.http_proxy }}
@@ -127,8 +127,8 @@ spec:
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
-            - name: plugin-dir
-              mountPath: /csi
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy
             - name: registration-dir
               mountPath: /registration
           {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
@@ -138,10 +138,13 @@ spec:
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           args:
-            - --csi-address=/csi/csi.sock
+            - --csi-address=$(ADDRESS)
+          env:
+            - name: ADDRESS
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
           volumeMounts:
-            - name: plugin-dir
-              mountPath: /csi
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.node.resources .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -157,7 +160,7 @@ spec:
           hostPath:
             path: {{ .Values.node.kubeletPath }}
             type: Directory
-        - name: plugin-dir
+        - name: socket-dir
           hostPath:
             path: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) }}
             type: DirectoryOrCreate

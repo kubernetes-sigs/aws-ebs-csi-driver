@@ -115,7 +115,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
+              mountPath: /var/lib/csi/sockets/pluginproxy
           ports:
             - name: healthz
               containerPort: 9808
@@ -153,7 +153,7 @@ spec:
             - --default-fstype=ext4
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
@@ -162,7 +162,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.controller.resources .Values.sidecars.provisioner.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -175,7 +175,7 @@ spec:
             - --leader-election=true
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
@@ -184,7 +184,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.controller.resources .Values.sidecars.attacher.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -197,7 +197,7 @@ spec:
             - --leader-election=true
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
@@ -206,7 +206,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.controller.resources .Values.sidecars.snapshotter.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -220,7 +220,7 @@ spec:
             - --v={{ .Values.sidecars.resizer.logLevel }}
           env:
             - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
@@ -229,7 +229,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.controller.resources .Values.sidecars.resizer.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -237,10 +237,12 @@ spec:
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           args:
-            - --csi-address=/csi/csi.sock
+            - --csi-address=$(ADDRESS)
+            - name: ADDRESS
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
           volumeMounts:
             - name: socket-dir
-              mountPath: /csi
+              mountPath: /var/lib/csi/sockets/pluginproxy
           {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
