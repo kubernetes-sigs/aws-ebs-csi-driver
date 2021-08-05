@@ -1,4 +1,5 @@
 {{- if .Values.node.enableWindows }}
+# Node Service
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -9,18 +10,20 @@ spec:
   selector:
     matchLabels:
       {{- include "aws-ebs-csi-driver.node-windows.selectorLabels" . | nindent 6 }}
+  {{- with .Values.node.updateStrategy }}
   updateStrategy:
-    {{ toYaml .Values.node.updateStrategy | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   template:
     metadata:
       labels:
         {{- include "aws-ebs-csi-driver.node-windows.labels" . | nindent 8 }}
-        {{- if .Values.node.podLabels }}
-        {{- toYaml .Values.node.podLabels | nindent 8 }}
+        {{- with .Values.node.podLabels }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       {{- with .Values.node.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+       {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
       affinity:
@@ -35,7 +38,7 @@ spec:
       nodeSelector:
         kubernetes.io/os: windows
         {{- with .Values.node.nodeSelector }}
-        {{- toYaml . | nindent 8 }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ include "aws-ebs-csi-driver.node.serviceAccountName" . }}
       priorityClassName: {{ default "system-node-critical" .Values.node.priorityClassName }}
@@ -55,7 +58,7 @@ spec:
       {{- with .Values.node.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       containers:
         - name: ebs-plugin
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
@@ -67,7 +70,12 @@ spec:
             - --volume-attach-limit={{ . }}
             {{- end }}
             - --logtostderr
-            - --v={{ .Values.node.logLevel }}
+            {{- with .Values.node.logLevel }}
+            - --v={{ . }}
+            {{- end }}
+            {{- with .Values.node.additionalArgs }}
+            - {{ toYaml . | nindent 12 }}
+            {{- end }}
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -86,7 +94,7 @@ spec:
               mountPath: C:\var\lib\kubelet
               mountPropagation: "None"
             - name: socket-dir
-              mountPath: C:\var\lib\csi\sockets\puuginproxy
+              mountPath: C:\var\lib\csi\sockets\pluginproxy
             - name: csi-proxy-disk-pipe
               mountPath: \\.\pipe\csi-proxy-disk-v1
             - name: csi-proxy-volume-pipe
@@ -116,7 +124,9 @@ spec:
             - --csi-address=$(ADDRESS)
             - --http-endpoint=:8081
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-            - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            {{- with .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -126,11 +136,11 @@ spec:
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
-            {{- . | toYaml | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
             - name: socket-dir
-              mountPath: C:\var\lib\csi\sockets\puuginproxy
+              mountPath: C:\var\lib\csi\sockets\pluginproxy
             - name: registration-dir
               mountPath: C:\registration
           ports:
@@ -152,9 +162,18 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            {{- with .Values.sidecars.livenessProbe.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.livenessProbe.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: C:\var\lib\csi\sockets\pluginproxy
@@ -162,11 +181,9 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-      {{- range .Values.imagePullSecrets }}
-        - name: {{ . }}
-      {{- end }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
         - name: kubelet-dir

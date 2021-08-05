@@ -102,7 +102,7 @@ controller:
   securityContext:
   serviceAccount:
     create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
+    name: # Name of the service-account to be used/created.
     annotations: {}
   tolerations: []
   # TSCs without the label selector stanza
@@ -119,6 +119,8 @@ controller:
   topologySpreadConstraints: []
 
 node:
+  additionalArgs: []
+  enableWindows: false
   env: []
   kubeletPath: /var/lib/kubelet
   logLevel: 2
@@ -127,21 +129,20 @@ node:
   podLabels: {}
   podSecurityPolicy:
   priorityClassName:
-  securityContext:
-  tolerateAllTaints: false
-  tolerations: []
   resources: {}
+  securityContext:
   serviceAccount:
     create: true
-    name: ebs-csi-node-sa
+    name:
     annotations: {}
-  enableWindows: false
+  tolerateAllTaints: false
+  tolerations: []
   # The "maximum number of attachable volumes" per node
-  volumeAttachLimit:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: "10%"
+  volumeAttachLimit:
 
 storageClasses: []
 # Add StorageClass resources like:

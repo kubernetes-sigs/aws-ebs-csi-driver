@@ -14,12 +14,12 @@ spec:
     metadata:
       labels:
         {{- include "aws-ebs-csi-driver.controller.labels" . | nindent 8 }}
-        {{- if .Values.controller.podLabels }}
-        {{- toYaml .Values.controller.podLabels | nindent 8 }}
+        {{- with .Values.controller.podLabels }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- if .Values.controller.podAnnotations }}
+      {{- with .Values.controller.podAnnotations }}
       annotations:
-        {{- toYaml .Values.controller.podAnnotations | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
       nodeSelector:
@@ -49,7 +49,7 @@ spec:
         {{- $constraints = mustAppend $constraints (mergeOverwrite . $tscLabelSelector) }}
       {{- end }}
       topologySpreadConstraints:
-        {{- $constraints | toYaml | nindent 8 }}
+        {{- toYaml $constraints | nindent 8 }}
       {{- end }}
       {{- with .Values.controller.podSecurityContext }}
       securityContext:
@@ -71,7 +71,7 @@ spec:
             {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
             {{- if .Values.controller.extraVolumeTags }}
-              {{- include "aws-ebs-csi-driver.controller.extra-volume-tags" . | nindent 12 }}
+            {{- include "aws-ebs-csi-driver.controller.extra-volume-tags" . | nindent 12 }}
             {{- end }}
             {{- with .Values.controller.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ . }}
@@ -80,9 +80,11 @@ spec:
             - --http-endpoint={{ . }}
             {{- end }}
             - --logtostderr
-            - --v={{ .Values.controller.logLevel }}
-            {{- range .Values.controller.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.controller.logLevel }}
+            - --v={{ . }}
+            {{- end }}
+            {{- with .Values.controller.additionalArgs }}
+            - {{ toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: CSI_ENDPOINT
@@ -145,13 +147,16 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.provisioner.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            - --leader-election
             - --http-endpoint=:8081
             - --feature-gates=Topology=true
+            - --default-fstype=ext4
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
-            {{- end}}
-            - --leader-election=true
-            - --default-fstype=ext4
+            {{- end }}
+            {{- with .Values.sidecars.provisioner.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -185,7 +190,11 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.attacher.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            - --leader-election
             - --http-endpoint=:8082
+            {{- with .Values.sidecars.attacher.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -193,7 +202,7 @@ spec:
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
             {{- with .Values.sidecars.attacher.env }}
-            {{- . | toYaml | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
             - name: socket-dir
@@ -220,7 +229,11 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.snapshotter.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            - --leader-election
             - --http-endpoint=:8084
+            {{- with .Values.sidecars.snapshotter.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -228,7 +241,7 @@ spec:
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
             {{- with .Values.sidecars.snapshotter.env }}
-            {{- . | toYaml | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
             - name: socket-dir
@@ -256,6 +269,10 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --http-endpoint=:8083
+            - --leader-election
+            {{- with .Values.sidecars.resizer.logLevel }}
+            - --v={{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -263,7 +280,7 @@ spec:
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
             {{- with .Values.sidecars.resizer.env }}
-            {{- . | toYaml | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
             - name: socket-dir
@@ -289,8 +306,18 @@ spec:
           imagePullPolicy: {{ .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
+            {{- with .Values.sidecars.livenessProbe.logLevel }}
+            - --v={{ . }}
+            {{- end }}
+          env:
             - name: ADDRESS
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.livenessProbe.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy
@@ -298,11 +325,9 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-      {{- range .Values.imagePullSecrets }}
-        - name: {{ . }}
-      {{- end }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
         - name: socket-dir
