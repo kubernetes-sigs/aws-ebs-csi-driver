@@ -13,6 +13,7 @@ sidecars:
     env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-provisioner
+      tag: v2.2.2
       pullPolicy: IfNotPresent
     logLevel: 2
     resources: {}
@@ -20,6 +21,7 @@ sidecars:
     env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-attacher
+      tag: v3.2.1
       pullPolicy: IfNotPresent
     logLevel: 2
     resources: {}
@@ -27,18 +29,21 @@ sidecars:
     env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-snapshotter
+      tag: v3.0.3
       pullPolicy: IfNotPresent
     logLevel: 2
     resources: {}
   livenessProbe:
     image:
       repository: k8s.gcr.io/sig-storage/livenessprobe
+      tag: v2.3.0
       pullPolicy: IfNotPresent
     resources: {}
   resizer:
     env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-resizer
+      tag: v1.2.0
       pullPolicy: IfNotPresent
     logLevel: 2
     resources: {}
@@ -46,6 +51,7 @@ sidecars:
     env: []
     image:
       repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+      tag: v2.2.0
       pullPolicy: IfNotPresent
     logLevel: 2
     resources: {}
