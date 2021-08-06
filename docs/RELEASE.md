@@ -106,3 +106,7 @@ Send a PR to merge both the release and post-release commits to the main branch.
 ## Verify the helm chart release
 
 Visit the [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases) pages to verify we have a new helm chart release.
+
+## Update AWS EKS documentation
+
+Update the AWS EKS documentation https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html by submitting a PR https://github.com/awsdocs/amazon-eks-user-guide/blob/master/doc_source/ebs-csi.md. For example, if the release raises the Kubernetes version requirement then the doc must reflect that.
