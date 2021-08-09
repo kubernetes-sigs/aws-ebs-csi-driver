@@ -41,4 +41,4 @@ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 loudecho "Push manifest list containing amazon linux and windows based images to GCR"
 export REGISTRY=$REGISTRY_NAME
 export TAG=$GIT_TAG
-make all-push
+IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make all-push
