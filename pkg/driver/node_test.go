@@ -597,6 +597,8 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind"})).Return(nil)
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -629,6 +631,8 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(FSTypeXfs), gomock.Eq([]string{"bind"})).Return(nil)
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -670,6 +674,8 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind", "ro"})).Return(nil)
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
@@ -703,6 +709,8 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(stagingTargetPath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Eq([]string{"bind", "test-flag"})).Return(nil)
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},

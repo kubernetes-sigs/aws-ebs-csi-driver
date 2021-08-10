@@ -624,10 +624,39 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	}
 
 	klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
-	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
-		if removeErr := os.Remove(target); removeErr != nil {
-			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, err)
+	/*
+		Checking if it's a mount point. There are three cases,
+		1. true, err when the directory does not exist or corrupted.
+		2. false, nil when the path is already mounted with a device.
+		3. true, nil when the path is not mounted with any device.
+	*/
+	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil && !os.IsNotExist(err){
+		//Checking if the path exists and error is related to Corrupted Mount, in that case, the system could unmount and mount.
+		_, pathErr := mountutils.PathExists(target)
+		if pathErr != nil && mountutils.IsCorruptedMnt(pathErr) {
+			klog.V(4).Infof("Target path %q is a corrupted directory",target)
+		}else{
+			return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 		}
+	}
+
+	if !notMnt {
+		//Return error when any of the directory inside is not readable which means that a device could be mounted.
+		_, err = os.ReadDir(target)
+		if err != nil {
+			klog.V(4).Infof("Error occurred at reading directory %q. Trying to Unmount.",target)
+			//Reading the directory failed and trying to unmount and remount
+			if mntErr := d.mounter.Unmount(target); mntErr != nil {
+				return status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, err)
+			}
+		} else {
+			klog.V(4).Infof("Target path %q is already mounted",target)
+			return nil
+		}
+	}
+
+	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
 		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
 
