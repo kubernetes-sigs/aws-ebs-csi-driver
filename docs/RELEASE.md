@@ -36,7 +36,7 @@ You also might need to create a release branch, if it doesn't already exist. For
 
 ## Create the release commit in the release branch
 
-### Generate the CHANGELOG
+### Update `CHANGELOG-0.x.md`
 We need to generate the CHANGELOG for the new release by running `./hack/release`. You need to pass previous release tag to generate the changelog.
 
 ```
@@ -45,14 +45,11 @@ python3 release --github-user=ayberk --github-token=$GITHUB_TOKEN note --since <
 
 This will print the CHANGELOG to stdout. You should create a new section for the new version and copy the output there.
 
-### Update the README
+### Update `docs/README.md`
 Search for any references to the previous version on the README, and update them if necessary.
 
-### Update the build and helm deployment files
-1. Update the VERSION variable in the Makefile
-1. Update Helm values
-   - `aws-ebs-csi-driver/values.yaml`
-   - `aws-ebs-csi-driver/Chart.yaml`
+### Update `Makefile`
+Update the VERSION variable in the Makefile
 
 ### Send a release PR to the release branch
 At this point you should have all changes required for the release commit. Verify the changes via `git diff` and send a new PR with the release commit against the release branch. Note that if it doesn't exist, you'll need someone with write privileges to create it for you.
@@ -86,15 +83,21 @@ In ECR:
   - `aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 602401143452.dkr.ecr.us-west-2.amazonaws.com`
   - `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.1`
 
-## Create a post-release commit in the release branch
+## Create the post-release commit in the release branch
 
-### Update the kustomize deployment files
+### Update `charts/aws-ebs-csi-driver`
+1. Update Helm `appVersion`, `version`, `tag`, and CHANGELOG
+  - `charts/aws-ebs-csi-driver/Chart.yaml`
+  - `charts/aws-ebs-csi-driver/values.yaml`
+  - `charts/aws-ebs-csi-driver/CHANGELOG.md`
+
+### Update `deploy/kubernetes`
 1. Update the kustomize overlays
   - `deploy/kubernetes/overlays/stable/kustomization.yaml`
   - `deploy/kubernetes/overlays/stable/ecr/kustomization.yaml`
 
 ### Send a post-release PR to the release branch
-The kustomize deployment files must not be updated to refer to the new images until after the images have been verified available, therefore it's necessary to make these changes in a post-release PR rather than the original release PR.
+The helm and kustomize deployment files must not be updated to refer to the new images until after the images have been verified available, therefore it's necessary to make these changes in a post-release PR rather than the original release PR.
 
 ## Merge the release and post-release commits to the main branch
 
@@ -104,3 +107,6 @@ Send a PR to merge both the release and post-release commits to the main branch.
 
 Visit the [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases) pages to verify we have a new helm chart release.
 
+## Update AWS EKS documentation
+
+Update the AWS EKS documentation https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html by submitting a PR https://github.com/awsdocs/amazon-eks-user-guide/blob/master/doc_source/ebs-csi.md. For example, if the release raises the Kubernetes version requirement then the doc must reflect that.
