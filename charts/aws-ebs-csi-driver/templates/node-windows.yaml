@@ -42,6 +42,10 @@ spec:
       serviceAccountName: {{ .Values.node.serviceAccount.name }}
       priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
+        {{/* The order is important here - custom tolerations need to be put first as some can override eachother */}}
+        {{- with .Values.node.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
         {{- else }}
@@ -50,9 +54,6 @@ spec:
         - operator: Exists
           effect: NoExecute
           tolerationSeconds: 300
-        {{- end }}
-        {{- with .Values.node.tolerations }}
-        {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
         - name: ebs-plugin
