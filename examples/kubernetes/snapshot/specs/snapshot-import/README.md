@@ -23,7 +23,7 @@ volumes using the `VolumeSnapshot` custom resources.
    snapshot in us-west-2b availability zone.
 
 ```
-apiVersion: snapshot.storage.k8s.io/v1beta1
+apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotContent
 metadata:
   name: static-snapshot-content

@@ -35,12 +35,13 @@ CLUSTER_TYPE=${CLUSTER_TYPE:-kops}
 TEST_DIR=${BASE_DIR}/csi-test-artifacts
 BIN_DIR=${TEST_DIR}/bin
 SSH_KEY_PATH=${TEST_DIR}/id_rsa
-CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.json
-KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.kubeconfig"}
+CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.yaml
+KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
 
 REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
 FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
+NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c4.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -49,13 +50,22 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-K8S_VERSION=${K8S_VERSION:-1.20.6}
+K8S_VERSION=${K8S_VERSION:-1.20.8}
 
-KOPS_VERSION=${KOPS_VERSION:-1.20.0}
+KOPS_VERSION=${KOPS_VERSION:-1.21.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
+KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
+
+EKSCTL_VERSION=${EKSCTL_VERSION:-0.56.0-rc.1}
+EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
+EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
+# Creates a windows node group. The windows ami doesn't (yet) install csi-proxy
+# so that has to be done separately.
+WINDOWS=${WINDOWS:-"false"}
 
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
+HELM_EXTRA_FLAGS=${HELM_EXTRA_FLAGS:-}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e/..."}
 ARTIFACTS=${ARTIFACTS:-"${TEST_DIR}/artifacts"}
@@ -64,7 +74,8 @@ GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]"}
 GINKGO_NODES=${GINKGO_NODES:-4}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
-EBS_SNAPSHOT_CRD=${EBS_SNAPSHOT_CRD:-"./deploy/kubernetes/cluster/crd_snapshotter.yaml"}
+EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v4.1.1"}
 EBS_CHECK_MIGRATION=${EBS_CHECK_MIGRATION:-"false"}
 
 CLEAN=${CLEAN:-"true"}
@@ -78,8 +89,8 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_install "${BIN_DIR}" "${KOPS_VERSION}"
   KOPS_BIN=${BIN_DIR}/kops
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
-  loudecho "Installing eksctl latest to ${BIN_DIR}"
-  eksctl_install "${BIN_DIR}"
+  loudecho "Installing eksctl ${EKSCTL_VERSION} to ${BIN_DIR}"
+  eksctl_install "${BIN_DIR}" "${EKSCTL_VERSION}"
   EKSCTL_BIN=${BIN_DIR}/eksctl
 else
   loudecho "${CLUSTER_TYPE} must be kops or eksctl!"
@@ -109,11 +120,13 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
     "$CLUSTER_NAME" \
     "$KOPS_BIN" \
     "$ZONES" \
+    "$NODE_COUNT" \
     "$INSTANCE_TYPE" \
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
     "$KUBECONFIG" \
     "$KOPS_PATCH_FILE" \
+    "$KOPS_PATCH_NODE_FILE" \
     "$KOPS_STATE_FILE"
   if [[ $? -ne 0 ]]; then
     exit 1
@@ -127,29 +140,45 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$INSTANCE_TYPE" \
     "$K8S_VERSION" \
     "$CLUSTER_FILE" \
-    "$KUBECONFIG"
+    "$KUBECONFIG" \
+    "$EKSCTL_PATCH_FILE" \
+    "$EKSCTL_ADMIN_ROLE" \
+    "$WINDOWS"
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
 fi
 
+if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
+  loudecho "Installing snapshot controller and CRDs"
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+fi
+
 loudecho "Deploying driver"
 startSec=$(date +'%s')
-"${HELM_BIN}" upgrade --install "${DRIVER_NAME}" \
-  --namespace kube-system \
-  --set image.repository="${IMAGE_NAME}" \
-  --set image.tag="${IMAGE_TAG}" \
-  -f "${HELM_VALUES_FILE}" \
-  --wait \
-  --kubeconfig "${KUBECONFIG}" \
-  ./charts/"${DRIVER_NAME}"
 
-if [[ -r "${EBS_SNAPSHOT_CRD}" ]]; then
-  loudecho "Deploying snapshot CRD"
-  kubectl apply -f "$EBS_SNAPSHOT_CRD" \
-    --kubeconfig "${KUBECONFIG}"
-  # TODO deploy snapshot controller too instead of including in helm chart
+HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
+  --namespace kube-system
+  --set image.repository="${IMAGE_NAME}"
+  --set image.tag="${IMAGE_TAG}"
+  --wait
+  --kubeconfig "${KUBECONFIG}"
+  ./charts/"${DRIVER_NAME}")
+if [[ -f "$HELM_VALUES_FILE" ]]; then
+  HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
 fi
+eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
+if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
+  HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+fi
+set -x
+"${HELM_BIN}" "${HELM_ARGS[@]}"
+set +x
+
 endSec=$(date +'%s')
 secondUsed=$(((endSec - startSec) / 1))
 # Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup

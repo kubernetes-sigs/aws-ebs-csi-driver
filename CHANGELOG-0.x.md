@@ -1,3 +1,68 @@
+# v1.2.0
+## Notable changes
+* utilize latest go sdk to ensure createVolume idempotency ([#982](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/982), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Implement Windows NodePublish/Unpublish ([#823](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/823), [@wongma7](https://github.com/wongma7))
+- In a future release, the debian-based image will be removed and only an al2-based image will be maintained and pushed to GCR and ECR
+- In a future release, images will stop getting pushed to Docker Hub
+
+### Bug fixes
+* Update driver capabilities ([#922](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/922), [@wongma7](https://github.com/wongma7))
+* update inFlight cache to avoid race condition on volume operation ([#924](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/924), [@AndyXiangLi](https://github.com/AndyXiangLi))
+* Update example policy, use it in tests, and document it ([#940](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/940), [@wongma7](https://github.com/wongma7))
+* Default extra-create-metadata true so that volumes get created with pvc/pv tags ([#937](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/937), [@wongma7](https://github.com/wongma7))
+* Default controller.extra-create-metadata true so that volumes get created with pvc/pv tags ([#941](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/941), [@wongma7](https://github.com/wongma7))
+
+### New features
+* Implement Windows NodePublish/Unpublish ([#823](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/823), [@wongma7](https://github.com/wongma7))
+* Feature/allow add debug args ([#970](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/970), [@mkkatica](https://github.com/mkkatica))
+* Updated default setting of windows daemon set ([#978](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/978), [@nirmalaagash](https://github.com/nirmalaagash))
+* Update to csi-proxy v1 APIs ([#966](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/966), [@wongma7](https://github.com/wongma7))
+
+### Installation updates
+* Add test-e2e-external-eks make rule that tests EKS with pod instance metadata disabled. Remove hostNetwork from DaemonSet ([#907](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/907), [@wongma7](https://github.com/wongma7))
+* helm chart configurable log verbosity ([#908](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/908), [@wongma7](https://github.com/wongma7))
+* Fix podLabels case in Helm chart ([#925](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/925), [@eytanhanig](https://github.com/eytanhanig))
+* Add KubernetesCluster tag to provisioned volumes when cluster-id set ([#932](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/932), [@wongma7](https://github.com/wongma7))
+* Stop pushing latest tag and remove all references to it ([#949](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/949), [@wongma7](https://github.com/wongma7))
+* Install snapshot controller independently of helm for e2e tests ([#968](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/968), [@wongma7](https://github.com/wongma7))
+* Several breaking changes to the helm chart ([#965](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/965), [@krmichel](https://github.com/krmichel))
+* Increased the helm chart version ([#980](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/980), [@nirmalaagash](https://github.com/nirmalaagash))
+* [helm-chart] csi-snapshotter in ebs-csi-controller now checks for enableVolumeSnapshot before including it in containers ([#960](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/960), [@missingcharacter](https://github.com/missingcharacter))
+
+### Misc.
+* Disable uuid checks on XFS ([#913](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/913), [@jsafrane](https://github.com/jsafrane))
+* merge v1.1.0 release commits back to master ([#921](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/921), [@vdhanan](https://github.com/vdhanan))
+* Add migration upgrade/downgrade test ([#927](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/927), [@wongma7](https://github.com/wongma7))
+* Grant EKSCTL_ADMIN_ROLE admin access to eksctl clusters ([#933](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/933), [@wongma7](https://github.com/wongma7))
+* Adding CRDs VolumeSnapshotClass, VolumeSnapshotContent, VolumeSnapshot for snapshot.storage.k8s.io/v1 ([#938](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/938), [@missingcharacter](https://github.com/missingcharacter))
+* Revert "Fix kustomize RBAC bindings to have namespace kube-system" ([#947](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/947), [@TheRealDwright](https://github.com/TheRealDwright))
+* Clarify that using instance profile for permission requires instance metadata access on ([#952](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/952), [@wongma7](https://github.com/wongma7))
+* Release v1.1.1 and chart v1.2.4 ([#959](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/959), [@wongma7](https://github.com/wongma7))
+* Download fixed version of eksctl to avoid bugs ([#967](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/967), [@wongma7](https://github.com/wongma7))
+* Nit: Fix typo in the CHANGELOG ([#971](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/971), [@ialidzhikov](https://github.com/ialidzhikov))
+* Add how to consume new hack/e2e scripts in other repos (efs/fsx) ([#972](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/972), [@wongma7](https://github.com/wongma7))
+* Updated README.md and changed the version in snapshot example ([#976](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/976), [@nirmalaagash](https://github.com/nirmalaagash))
+* Update base images: yum update al2, bump debian tag ([#986](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/986), [@wongma7](https://github.com/wongma7))
+* Release 1.1.3 ([#992](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/992), [@wongma7](https://github.com/wongma7))
+* add ecr images to readme ([#998](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/998), [@vdhanan](https://github.com/vdhanan))
+
+# v1.1.3
+
+## Notable changes
+- Fix ecr image being debian-based
+- In a future release, the debian-based image will be removed and only an al2-based image will be maintained and pushed to GCR and ECR
+- In a future release, images will stop getting pushed to Docker Hub
+
+# v1.1.2
+
+## Notable changes
+- Update base images: yum update al2, bump debian tag ([#986](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/986), [@wongma7](https://github.com/wongma7))
+
+# v1.1.1
+
+### Bug fixes
+- update inFlight cache to avoid race condition on volume operation ([#924](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/924), [@AndyXiangLi](https://github.com/AndyXiangLi))
+
 # v1.1.0
 
 ## Notable changes

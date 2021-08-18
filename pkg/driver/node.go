@@ -83,7 +83,7 @@ type nodeService struct {
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
 	klog.V(5).Infof("[Debug] Retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadata()
+	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
 	if err != nil {
 		panic(err)
 	}
@@ -143,12 +143,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		fsType = defaultFsType
 	}
 
-	var mountOptions []string
-	for _, f := range mountVolume.MountFlags {
-		if !hasMountOption(mountOptions, f) {
-			mountOptions = append(mountOptions, f)
-		}
-	}
+	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
 
 	if ok := d.inFlight.Insert(volumeID); !ok {
 		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
@@ -223,7 +218,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Errorf(codes.Internal, "Could not determine if volume %q (%q) need to be resized:  %v", req.GetVolumeId(), source, err)
 	}
 	if needResize {
-		r := mountutils.NewResizeFs(d.mounter)
+		r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
 		klog.V(2).Infof("Volume %s needs resizing", source)
 		if _, err := r.Resize(source, target); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, source, err)
@@ -326,7 +321,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	// TODO this won't make sense on Windows with csi-proxy
 	args := []string{"-o", "source", "--noheadings", "--target", volumePath}
-	output, err := d.mounter.Command("findmnt", args...).Output()
+	output, err := d.mounter.(*NodeMounter).Exec.Command("findmnt", args...).Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine device path: %v", err)
 
@@ -336,7 +331,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		return nil, status.Errorf(codes.Internal, "Could not get valid device for mount path: %q", req.GetVolumePath())
 	}
 
-	r := mountutils.NewResizeFs(d.mounter)
+	r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
 
 	// TODO: lock per volume ID to have some idempotency
 	if _, err := r.Resize(devicePath, volumePath); err != nil {
@@ -613,15 +608,16 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		}
 	}
 
-	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
-	if err := d.mounter.MakeDir(target); err != nil {
-		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
+	if err := d.preparePublishTarget(target); err != nil {
+		return status.Errorf(codes.Internal, err.Error())
 	}
 
 	fsType := mode.Mount.GetFsType()
 	if len(fsType) == 0 {
 		fsType = defaultFsType
 	}
+
+	mountOptions = collectMountOptions(fsType, mountOptions)
 
 	klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
 	if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
@@ -657,4 +653,25 @@ func hasMountOption(options []string, opt string) bool {
 		}
 	}
 	return false
+}
+
+// collectMountOptions returns array of mount options from
+// VolumeCapability_MountVolume and special mount options for
+// given filesystem.
+func collectMountOptions(fsType string, mntFlags []string) []string {
+	var options []string
+	for _, opt := range mntFlags {
+		if !hasMountOption(options, opt) {
+			options = append(options, opt)
+		}
+	}
+
+	// By default, xfs does not allow mounting of two volumes with the same filesystem uuid.
+	// Force ignore this uuid to be able to mount volume + its clone / restored snapshot on the same node.
+	if fsType == FSTypeXfs {
+		if !hasMountOption(options, "nouuid") {
+			options = append(options, "nouuid")
+		}
+	}
+	return options
 }

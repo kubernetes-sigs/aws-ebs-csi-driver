@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.15.6 AS builder
+FROM golang:1.16 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 COPY . .
 RUN make
 
 FROM amazonlinux:2 AS amazonlinux
+RUN yum update -y
 RUN yum install ca-certificates e2fsprogs xfsprogs util-linux -y
+RUN yum clean all
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
 
-FROM k8s.gcr.io/build-image/debian-base:v2.1.3 AS debian-base
+FROM k8s.gcr.io/build-image/debian-base:buster-v1.8.0 AS debian-base
 RUN clean-install ca-certificates e2fsprogs mount udev util-linux xfsprogs
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 

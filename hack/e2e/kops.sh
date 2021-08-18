@@ -22,12 +22,14 @@ function kops_create_cluster() {
   CLUSTER_NAME=${2}
   BIN=${3}
   ZONES=${4}
-  INSTANCE_TYPE=${5}
-  K8S_VERSION=${6}
-  CLUSTER_FILE=${7}
-  KUBECONFIG=${8}
-  KOPS_PATCH_FILE=${9}
-  KOPS_STATE_FILE=${10}
+  NODE_COUNT=${5}
+  INSTANCE_TYPE=${6}
+  K8S_VERSION=${7}
+  CLUSTER_FILE=${8}
+  KUBECONFIG=${9}
+  KOPS_PATCH_FILE=${10}
+  KOPS_PATCH_NODE_FILE=${11}
+  KOPS_STATE_FILE=${12}
 
   generate_ssh_key "${SSH_KEY_PATH}"
 
@@ -39,14 +41,19 @@ function kops_create_cluster() {
     ${BIN} create cluster --state "${KOPS_STATE_FILE}" \
       --ssh-public-key="${SSH_KEY_PATH}".pub \
       --zones "${ZONES}" \
-      --node-count=3 \
+      --node-count="${NODE_COUNT}" \
       --node-size="${INSTANCE_TYPE}" \
       --kubernetes-version="${K8S_VERSION}" \
       --dry-run \
-      -o json \
+      -o yaml \
       "${CLUSTER_NAME}" > "${CLUSTER_FILE}"
 
-    kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE"
+    if test -f "$KOPS_PATCH_FILE"; then
+      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE" "Cluster" ""
+    fi
+    if test -f "$KOPS_PATCH_NODE_FILE"; then
+      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_NODE_FILE" "InstanceGroup" "Node"
+    fi
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
@@ -86,35 +93,63 @@ function kops_delete_cluster() {
   ${BIN} delete cluster --name "${CLUSTER_NAME}" --state "${KOPS_STATE_FILE}" --yes
 }
 
-# TODO switch this to python, all this hacking with jq stinks!
+# TODO switch this to python, work exclusively with yaml, use kops toolbox
+# template/kops set?, all this hacking with jq stinks!
 function kops_patch_cluster_file() {
-  CLUSTER_FILE=${1}
-  KOPS_PATCH_FILE=${2}
+  CLUSTER_FILE=${1}    # input must be yaml
+  KOPS_PATCH_FILE=${2} # input must be yaml
+  KIND=${3}            # must be either Cluster or InstanceGroup
+  ROLE=${4}            # must be either Master or Node
 
   loudecho "Patching cluster $CLUSTER_NAME with $KOPS_PATCH_FILE"
 
-  # Temporary intermediate files for patching
+  # Temporary intermediate files for patching, don't mutate CLUSTER_FILE until
+  # the end
+  CLUSTER_FILE_JSON=$CLUSTER_FILE.json
   CLUSTER_FILE_0=$CLUSTER_FILE.0
   CLUSTER_FILE_1=$CLUSTER_FILE.1
 
-  # Output is an array of Cluster and InstanceGroups
-  jq '.[] | select(.kind=="Cluster")' "$CLUSTER_FILE" > "$CLUSTER_FILE_0"
+  # HACK convert the multiple yaml documents to an array of json objects
+  yaml_to_json "$CLUSTER_FILE" "$CLUSTER_FILE_JSON"
 
-  # Patch only the Cluster
+  # Find the json objects to patch
+  FILTER=".[] | select(.kind==\"$KIND\")"
+  if [ -n "$ROLE" ]; then
+    FILTER="$FILTER | select(.spec.role==\"$ROLE\")"
+  fi
+  jq "$FILTER" "$CLUSTER_FILE_JSON" > "$CLUSTER_FILE_0"
+
+  # Patch only the json objects
   kubectl patch -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$KOPS_PATCH_FILE")" -o json > "$CLUSTER_FILE_1"
   mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
 
-  # Write the patched Cluster back to the array
-  jq '(.[] | select(.kind=="Cluster")) = $cluster[0]' "$CLUSTER_FILE" --slurpfile cluster "$CLUSTER_FILE_0" > "$CLUSTER_FILE_1"
+  # Delete the original json objects, add the patched
+  # TODO Cluster must always be first?
+  jq "del($FILTER)" "$CLUSTER_FILE_JSON" | jq ". + \$patched | sort" --slurpfile patched "$CLUSTER_FILE_0" > "$CLUSTER_FILE_1"
   mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
 
-  # HACK convert the json array to multiple yaml documents
-  for ((i = 0; i < $(jq length "$CLUSTER_FILE_0"); i++)); do
-    echo "---" >> "$CLUSTER_FILE_1"
-    jq ".[$i]" "$CLUSTER_FILE_0" | kubectl patch -f - --local -p "{}" --type merge -o yaml >> "$CLUSTER_FILE_1"
+  # HACK convert the array of json objects to multiple yaml documents
+  json_to_yaml "$CLUSTER_FILE_0" "$CLUSTER_FILE_1"
+  mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
+
+  # Done patching, overwrite original yaml CLUSTER_FILE
+  mv "$CLUSTER_FILE_0" "$CLUSTER_FILE" # output is yaml
+
+  # Clean up
+  rm "$CLUSTER_FILE_JSON"
+}
+
+function yaml_to_json() {
+  IN=${1}
+  OUT=${2}
+  kubectl patch -f "$IN" --local -p "{}" --type merge -o json | jq '.' -s > "$OUT"
+}
+
+function json_to_yaml() {
+  IN=${1}
+  OUT=${2}
+  for ((i = 0; i < $(jq length "$IN"); i++)); do
+    echo "---" >> "$OUT"
+    jq ".[$i]" "$IN" | kubectl patch -f - --local -p "{}" --type merge -o yaml >> "$OUT"
   done
-  mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
-
-  # Done patching, overwrite original CLUSTER_FILE
-  mv "$CLUSTER_FILE_0" "$CLUSTER_FILE"
 }

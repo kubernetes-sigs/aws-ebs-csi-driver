@@ -12,7 +12,8 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v1.1.0                                 | no    | no     | yes    |
+| v1.2.0                                 | no    | no     | yes    |
+| v1.1.x                                 | no    | no     | yes    |
 | v1.0.0                                 | no    | no     | yes    |
 | v0.10.x                                | no    | no     | yes    |
 | v0.9.x                                 | no    | no     | yes    |
@@ -75,9 +76,10 @@ There are couple driver options that can be passed as arguments when starting dr
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compatibility Matrix
-| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+ |
+| AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
+| v1.2.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v1.1.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v1.0.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
 | v0.10.x                                | no    | no+   | no    | no    | no    | yes   | yes   |
@@ -94,23 +96,28 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 **Note**: for the entry with `+` sign, it means the driver's default released manifest doesn't work with corresponding Kubernetes version, but the driver container image is compatiable with the Kubernetes version if an older version's manifest is used.
 
 ## Container Images:
-|AWS EBS CSI Driver Version | Image                                            |
-|---------------------------|--------------------------------------------------|
-|master branch              |amazon/aws-ebs-csi-driver:latest                  |
-|v1.1.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0 |
-|v1.0.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0 |
-|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1|
-|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|
-|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |
-|v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 |
-|v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |
-|v0.7.1                     |amazon/aws-ebs-csi-driver:v0.7.1                  |
-|v0.6.0                     |amazon/aws-ebs-csi-driver:v0.6.0                  |
-|v0.5.0                     |amazon/aws-ebs-csi-driver:v0.5.0                  |
-|v0.4.0                     |amazon/aws-ebs-csi-driver:v0.4.0                  |
-|v0.3.0                     |amazon/aws-ebs-csi-driver:v0.3.0                  |
-|v0.2.0                     |amazon/aws-ebs-csi-driver:0.2.0                   |
-|v0.1.0                     |amazon/aws-ebs-csi-driver:0.1.0-alpha             |
+|AWS EBS CSI Driver Version | GCR Image                                        | ECR Image                                                                   |
+|---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.2.0                     |Image ToBeBuild                                   | Image ToBeBuild                                                             |
+|v1.1.3                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.3 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.3  |
+|v1.1.2                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.2 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.2  |
+|v1.1.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.1  |
+|v1.1.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.0  |
+|v1.0.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.0.0 |                                                                             |
+|v0.10.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.1| 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v0.10.1 |
+|v0.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.10.0|                                                                             |
+|v0.9.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.1 |                                                                             |
+|v0.9.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.9.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v0.9.0  |
+|v0.8.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v0.8.1 |                                                                             |
+|v0.7.1                     |                                                  | amazon/aws-ebs-csi-driver:v0.7.1                                            |
+|v0.6.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.6.0                                            |
+|v0.5.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.5.0                                            |
+|v0.4.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.4.0                                            |
+|v0.3.0                     |                                                  | amazon/aws-ebs-csi-driver:v0.3.0                                            |
+|v0.2.0                     |                                                  | amazon/aws-ebs-csi-driver:0.2.0                                             |
+|v0.1.0                     |                                                  | amazon/aws-ebs-csi-driver:0.1.0-alpha                                       |
+
+**Note**: If your cluster isn't in the `us-west-2` Region, please change `602401143452.dkr.ecr.us-west-2.amazonaws.com` to the [address](https://github.com/awsdocs/amazon-eks-user-guide/blob/master/doc_source/add-ons-images.md) that corresponds to your Region.
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing EBS volumes, then create persistence volume (PV) from the EBS volume and consume the PV from container using persistence volume claim (PVC).
@@ -127,37 +134,29 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
   * Enable flag `--allow-privileged=true` for `kubelet` and `kube-apiserver`
   * Enable `kube-apiserver` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true`
   * Enable `kubelet` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true`
+* If you intend to use the csi-snapshotter functionality you will need to first install the [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter)
 
 ## Installation
 #### Set up driver permission
-The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
-* Using secret object - create an IAM user with proper permission, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml) then deploy the secret.
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. There are several methods to grant the driver IAM permission:
+* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
+* EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via helm is determined by value `controller.serviceAccount.name`, `ebs-csi-controller-sa` by default
+* Using secret object - create an IAM user, attach the policy to it, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml), then deploy the secret
 ```sh
 curl https://raw.githubusercontent.com/kubernetes-sigs/aws-ebs-csi-driver/master/deploy/kubernetes/secret.yaml > secret.yaml
 # Edit the secret with user credentials
 kubectl apply -f secret.yaml
 ```
-* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [proper permission](./example-iam-policy.json) by attaching policy to the instance profile of the worker.
 
-#### Deploy CRD (optional)
-If your cluster is v1.14+, you can skip this step. Install the `CSINodeInfo` CRD on the cluster:
-```sh
-kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml
-```
 #### Config node toleration settings
-By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on any nodes, please set helm `Value.node.tolerateAllTaints` to true before deployment
+By default, driver tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`, to deploy the driver on all nodes, please set helm `Value.node.tolerateAllTaints` to true before deployment
 
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
 
-If you want to deploy the stable driver without alpha features:
+To deploy the CSI driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-0.10"
-```
-
-If you want to deploy the driver with alpha features:
-```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/alpha/?ref=master"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.1"
 ```
 
 Verify driver is running:
@@ -180,6 +179,78 @@ helm upgrade --install aws-ebs-csi-driver \
     aws-ebs-csi-driver/aws-ebs-csi-driver
 ```
 
+##### Upgrading from version 1.X to 2.X of the helm chart
+Version 2.0.0 remove support for helm v2 and now requires helm v3 or above
+
+The [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter) controller and CRDs will no longer be installed as part of this chart and moving forward will be a prerequisite of using the snap shotting functionality.
+
+The following deprecated values have been removed, and you should now use their counterparts under the `controller` and `node` maps which have been available since chart version 1.1.0
+* affinity
+* extraCreateMetadata
+* extraVolumeTags
+* k8sTagClusterId
+* nodeSelector
+* podAnnotations
+* priorityClassName
+* region
+* replicaCount
+* resources
+* tolerations
+* topologySpreadConstraints
+* volumeAttachLimit
+
+The values under `serviceAccount.controller` have been relocated to `controller.serviceAccount`
+The values under `serviceAccount.node` have been relocated to `node.serviceAccount`
+
+The following `sidecars` values have been reorganized from
+```yaml
+sidecars:
+  provisionerImage:
+  attacherImage:
+  snapshotterImage:
+  livenessProbeImage:
+  resizerImage:
+  nodeDriverRegistrarImage:
+```
+to
+```yaml
+sidecars:
+  provisioner:
+    image:
+  attacher:
+    image:
+  snapshotter:
+    image:
+  livenessProbe:
+    image:
+  resizer:
+    image:
+  nodeDriverRegistrar:
+    image:
+```
+
+With the above reorganization `controller.containerResources`, `controller.env`, `node.containerResources`, and `node.env` were also moved into the sidecars structure as follows
+```yaml
+sidecars:
+  provisioner:
+    env: []
+    resources: {}
+  attacher:
+    env: []
+    resources: {}
+  snapshotter:
+    env: []
+    resources: {}
+  livenessProbe:
+    resources: {}
+  resizer:
+    env: []
+    resources: {}
+  nodeDriverRegistrar:
+    env: []
+    resources: {}
+```
+
 #### Deploy driver with debug mode
 To view driver debug logs, run the CSI driver with `-v=5` command line option
 
@@ -195,11 +266,13 @@ Make sure you follow the [Prerequisites](README.md#Prerequisites) before the exa
 
 
 ## Migrating from in-tree EBS plugin
-Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistence volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you could migrate to use EBS CSI driver. To turn on the migration, drain the node and set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager` and `kubelet`.
+Starting from Kubernetes 1.17, CSI migration is supported as beta feature (alpha since 1.14). If you have persistent volumes that are created with in-tree `kubernetes.io/aws-ebs` plugin, you can migrate to use EBS CSI driver. To turn on the migration, set `CSIMigration` and `CSIMigrationAWS` feature gates to `true` for `kube-controller-manager`. Then drain Nodes and set the same feature gates to `true` for `kubelet`.
 
 To make sure dynamically provisioned EBS volumes have all tags that the in-tree volume plugin used:
-* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. External-provisioner v1.6 or newer is required.
+* Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. The helm chart sets this option true by default.
 * Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
+
+To make sure that the CSI driver has permission to Attach, Detach, and Delete volumes that were dynamically provisioned and tagged by the in-tree plugin prior to migration being turned on, the IAM policy has to grant permission to operate on volumes with tag `kubernetes.io/cluster/<ID of the Kubernetes cluster>": "owned"` like in [the example policy](./example-iam-policy.json#L85).
 
 **Warning**:
 * kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
@@ -228,10 +301,6 @@ Please see [Release Process](./RELEASE.md).
 * Sanity tests make sure the driver complies with the CSI specification
 * EC2 instance is required to run integration test, since it is exercising the actual flow of creating EBS volume, attaching it and read/write on the disk. See [Integration Testing](../tests/integration/README.md) for more details.
 * E2E tests exercises various driver functionalities in Kubernetes cluster. See [E2E Testing](../tests/e2e/README.md) for more details.
-
-### Build and Publish Container Image
-* Build image and push it with latest tag: `make image && make push`
-* Build image and push it with release tag: `make image-release && make push-release`
 
 ### Helm and manifests
 The helm chart for this project is in the `charts/aws-ebs-csi-driver` directory.  The manifests for this project are in the `deploy/kubernetes` directory.  All of the manifests except kustomize patches are generated by running `helm template`.  This keeps the helm chart and the manifests in sync.

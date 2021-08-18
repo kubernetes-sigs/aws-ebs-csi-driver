@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // findDevicePath finds path of device and verifies its existence
@@ -93,6 +93,14 @@ func findNvmeVolume(findName string) (device string, err error) {
 	return resolved, nil
 }
 
+func (d *nodeService) preparePublishTarget(target string) error {
+	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
+	if err := d.mounter.MakeDir(target); err != nil {
+		return fmt.Errorf("Could not create dir %q: %v", target, err)
+	}
+	return nil
+}
+
 // IsBlock checks if the given path is a block device
 func (d *nodeService) IsBlockDevice(fullPath string) (bool, error) {
 	var st unix.Stat_t
@@ -105,7 +113,7 @@ func (d *nodeService) IsBlockDevice(fullPath string) (bool, error) {
 }
 
 func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
-	cmd := d.mounter.Command("blockdev", "--getsize64", devicePath)
+	cmd := d.mounter.(*NodeMounter).Exec.Command("blockdev", "--getsize64", devicePath)
 	output, err := cmd.Output()
 	if err != nil {
 		return -1, fmt.Errorf("error when getting size of block volume at path %s: output: %s, err: %v", devicePath, string(output), err)
