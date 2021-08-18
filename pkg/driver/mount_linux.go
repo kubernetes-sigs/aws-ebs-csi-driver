@@ -33,6 +33,11 @@ func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, erro
 	return mountutils.GetDeviceNameFromMount(m, mountPath)
 }
 
+// IsCorruptedMnt return true if err is about corrupted mount point
+func (m NodeMounter) IsCorruptedMnt(err error) bool {
+	return mountutils.IsCorruptedMnt(err)
+}
+
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go
 func (m *NodeMounter) MakeFile(path string) error {
