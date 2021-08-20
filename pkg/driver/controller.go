@@ -115,6 +115,19 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	defer d.inFlight.Delete(volName)
 
+	disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
+	if err != nil {
+		switch err {
+		case cloud.ErrNotFound:
+		case cloud.ErrMultiDisks:
+			return nil, status.Error(codes.Internal, err.Error())
+		case cloud.ErrDiskExistsDiffSize:
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		default:
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
 	var (
 		volumeType             string
 		iopsPerGB              int
@@ -190,6 +203,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		snapshotID = sourceSnapshot.GetSnapshotId()
 	}
 
+	// volume exists already
+	if disk != nil {
+		if disk.SnapshotID != snapshotID {
+			return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
+		}
+		return newCreateVolumeResponse(disk), nil
+	}
+
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
 	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
@@ -220,14 +241,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		SnapshotID:             snapshotID,
 	}
 
-	disk, err := d.cloud.CreateDisk(ctx, volName, opts)
+	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
 	if err != nil {
 		errCode := codes.Internal
 		if err == cloud.ErrNotFound {
 			errCode = codes.NotFound
-		}
-		if err == cloud.ErrIdempotentParameterMismatch {
-			errCode = codes.AlreadyExists
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}

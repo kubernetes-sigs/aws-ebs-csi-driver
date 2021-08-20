@@ -20,7 +20,6 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"time"
 
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	k8srestclient "k8s.io/client-go/rest"
@@ -90,8 +89,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
-		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-		disk, err := cloud.CreateDisk(context.Background(), fmt.Sprintf("pvc-%d", r1.Uint64()), diskOptions)
+		disk, err := cloud.CreateDisk(context.Background(), "", diskOptions)
 		if err != nil {
 			Fail(fmt.Sprintf("could not provision a volume: %v", err))
 		}
