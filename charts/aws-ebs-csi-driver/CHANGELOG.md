@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.1.0
+
+* Custom `controller.updateStrategy` to set controller deployment strategy.
+
 ## v2.0.4
 
 * Use chart app version as default image tag
