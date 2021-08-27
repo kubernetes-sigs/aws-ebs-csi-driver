@@ -32,7 +32,7 @@ type Mounter interface {
 	mountInterface
 
 	FormatAndMount(source string, target string, fstype string, options []string) error
-
+	IsCorruptedMnt(err error) bool
 	GetDeviceNameFromMount(mountPath string) (string, int, error)
 	MakeFile(path string) error
 	MakeDir(path string) error

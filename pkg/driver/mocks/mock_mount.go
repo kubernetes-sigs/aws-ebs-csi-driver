@@ -104,6 +104,20 @@ func (mr *MockMounterMockRecorder) GetDeviceNameFromMount(mountPath interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeviceNameFromMount", reflect.TypeOf((*MockMounter)(nil).GetDeviceNameFromMount), mountPath)
 }
 
+// IsCorruptedMnt mocks base method.
+func (m *MockMounter) IsCorruptedMnt(err error) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCorruptedMnt", err)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsCorruptedMnt indicates an expected call of IsCorruptedMnt.
+func (mr *MockMounterMockRecorder) IsCorruptedMnt(err interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCorruptedMnt", reflect.TypeOf((*MockMounter)(nil).IsCorruptedMnt), err)
+}
+
 // GetMountRefs mocks base method.
 func (m *MockMounter) GetMountRefs(pathname string) ([]string, error) {
 	m.ctrl.T.Helper()

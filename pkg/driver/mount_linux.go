@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -31,6 +32,11 @@ import (
 // GetDeviceNameFromMount returns the volume ID for a mount path.
 func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
 	return mountutils.GetDeviceNameFromMount(m, mountPath)
+}
+
+// IsCorruptedMnt return true if err is about corrupted mount point
+func (m NodeMounter) IsCorruptedMnt(err error) bool {
+	return mountutils.IsCorruptedMnt(err)
 }
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
