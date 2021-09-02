@@ -46,6 +46,11 @@
 * Release 1.1.3 ([#992](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/992), [@wongma7](https://github.com/wongma7))
 * add ecr images to readme ([#998](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/998), [@vdhanan](https://github.com/vdhanan))
 
+# v1.1.4
+
+## Notable changes
+- Fix mount idempotency ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
+
 # v1.1.3
 
 ## Notable changes
