@@ -1,3 +1,7 @@
+# v1.2.1
+## Notable changes
+- Fix mount idempotency ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
+
 # v1.2.0
 ## Notable changes
 * utilize latest go sdk to ensure createVolume idempotency ([#982](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/982), [@AndyXiangLi](https://github.com/AndyXiangLi))
