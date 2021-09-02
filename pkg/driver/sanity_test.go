@@ -293,6 +293,10 @@ func newFakeMounter() *fakeMounter {
 	}
 }
 
+func (f *fakeMounter) IsCorruptedMnt(err error) bool {
+	return false
+}
+
 func (f *fakeMounter) Mount(source string, target string, fstype string, options []string) error {
 	return nil
 }
