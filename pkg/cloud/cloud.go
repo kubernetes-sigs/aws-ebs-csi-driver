@@ -18,6 +18,8 @@ package cloud
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -320,9 +322,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 	}
 
+	// We hash the volume name to generate a unique token that is less than or equal to 64 characters
+	clientToken := sha256.Sum256([]byte(volumeName))
+
 	requestInput := &ec2.CreateVolumeInput{
 		AvailabilityZone:  aws.String(zone),
-		ClientToken:       aws.String(volumeName),
+		ClientToken:       aws.String(hex.EncodeToString(clientToken[:])),
 		Size:              aws.Int64(capacityGiB),
 		VolumeType:        aws.String(createType),
 		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
