@@ -24,6 +24,7 @@ import (
 	"regexp"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
+	mountutils "k8s.io/mount-utils"
 )
 
 func (m NodeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
@@ -67,6 +68,11 @@ func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, erro
 		return "", 0, err
 	}
 	return deviceName, 1, nil
+}
+
+// IsCorruptedMnt return true if err is about corrupted mount point
+func (m NodeMounter) IsCorruptedMnt(err error) bool {
+	return mountutils.IsCorruptedMnt(err)
 }
 
 func (m *NodeMounter) MakeFile(path string) error {
