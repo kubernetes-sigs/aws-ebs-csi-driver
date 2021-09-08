@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.2.0
+
+* Support setting imagePullPolicy for all containers
+
 ## v2.1.1
 
 * Bump app/driver version to `v1.2.1`
