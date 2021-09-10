@@ -1,3 +1,24 @@
+# v1.3.0
+## Notable changes
+* Make NodePublish Mount Idempotent ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
+* Build and push multi-arch/os (amazon and windows, no debian) image manifest via Make rules ([#957](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/957), [@wongma7](https://github.com/wongma7))
+
+### Bug fixes
+* Fix windows build IsCorruptedMnt not implemented ([#1047](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1047), [@wongma7](https://github.com/wongma7))
+* Hash volume name to get client token ([#1041](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1041), [@vdhanan](https://github.com/vdhanan))
+* Include ClusterRole and ClusterRoleBinding for csi-node ([#1021](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1021), [@groodt](https://github.com/groodt))
+* Fix gcr prow builld failing because docker missing --os-version ([#1020](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1020), [@wongma7](https://github.com/wongma7))
+* Fix gcr prow build failing because of IMAGE variable collision ([#1017](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1017), [@wongma7](https://github.com/wongma7))
+* Fix github build failing because of wrong docker hub registry name  ([#1016](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1016), [@wongma7](https://github.com/wongma7))
+
+### New features
+* [chart] Add controller strategy ([#1008](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1008), [@stevehipwell](https://github.com/stevehipwell))
+* [chart] Node update strategy & auto driver image tag ([#988](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/988), [@stevehipwell](https://github.com/stevehipwell))
+
+### Misc.
+* Update helm chart alongside kustomize, after images have been pushed, for consistency ([#1015](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1015), [@wongma7](https://github.com/wongma7))
+* Update kustomize templates only after verifying images are available in registries ([#995](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/995), [@wongma7](https://github.com/wongma7))
+
 # v1.2.1
 ## Notable changes
 - Fix mount idempotency ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
