@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.2.0
+appVersion: "1.2.1"
 name: aws-ebs-csi-driver
 description: A Helm chart for AWS EBS CSI Driver
 version: 2.1.0
