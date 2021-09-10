@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.1.1
+
+* Bump app/driver version to `v1.2.1`
+
 ## v2.1.0
 
 * Custom `controller.updateStrategy` to set controller deployment strategy.
