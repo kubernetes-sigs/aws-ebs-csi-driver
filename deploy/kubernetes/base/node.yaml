@@ -41,7 +41,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.2.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.2.1
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
