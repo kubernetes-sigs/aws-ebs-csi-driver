@@ -1,3 +1,7 @@
+# v1.2.1
+## Notable changes
+- Fix mount idempotency ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
+
 # v1.2.0
 ## Notable changes
 * utilize latest go sdk to ensure createVolume idempotency ([#982](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/982), [@AndyXiangLi](https://github.com/AndyXiangLi))
@@ -45,6 +49,11 @@
 * Update base images: yum update al2, bump debian tag ([#986](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/986), [@wongma7](https://github.com/wongma7))
 * Release 1.1.3 ([#992](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/992), [@wongma7](https://github.com/wongma7))
 * add ecr images to readme ([#998](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/998), [@vdhanan](https://github.com/vdhanan))
+
+# v1.1.4
+
+## Notable changes
+- Fix mount idempotency ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
 
 # v1.1.3
 
