@@ -114,6 +114,9 @@ func TestNewMetadataService(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"node.kubernetes.io/instance-type": stdInstanceType,
+					},
 					Name: nodeName,
 				},
 				Spec: v1.NodeSpec{
@@ -324,6 +327,9 @@ func TestNewMetadataService(t *testing.T) {
 				}
 				if m.GetInstanceID() != stdInstanceID {
 					t.Errorf("NewMetadataService() failed: got wrong instance ID %v, expected %v", m.GetInstanceID(), stdInstanceID)
+				}
+				if m.GetInstanceType() != stdInstanceType {
+					t.Errorf("GetInstanceType() failed: got wrong instance type %v, expected %v", m.GetInstanceType(), stdInstanceType)
 				}
 				if m.GetRegion() != stdRegion {
 					t.Errorf("NewMetadataService() failed: got wrong region %v, expected %v", m.GetRegion(), stdRegion)
