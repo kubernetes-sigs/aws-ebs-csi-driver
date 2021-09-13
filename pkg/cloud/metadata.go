@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -210,9 +211,14 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, fmt.Errorf("did not find aws instance ID in node providerID string")
 	}
 
+	var instanceType string
+	if it, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
+		instanceType = it
+	}
+
 	instanceInfo := Metadata{
 		InstanceID:       instanceID,
-		InstanceType:     "", // we have no way to find this, so we leave it empty
+		InstanceType:     instanceType,
 		Region:           region,
 		AvailabilityZone: availabilityZone,
 	}
