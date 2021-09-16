@@ -12,6 +12,7 @@ sidecars:
   provisioner:
     env: []
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-provisioner
       tag: "v2.1.1"
     logLevel: 2
@@ -19,6 +20,7 @@ sidecars:
   attacher:
     env: []
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-attacher
       tag: "v3.1.0"
     logLevel: 2
@@ -26,18 +28,21 @@ sidecars:
   snapshotter:
     env: []
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-snapshotter
       tag: "v3.0.3"
     logLevel: 2
     resources: {}
   livenessProbe:
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/livenessprobe
       tag: "v2.2.0"
     resources: {}
   resizer:
     env: []
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-resizer
       tag: "v1.0.0"
     logLevel: 2
@@ -45,6 +50,7 @@ sidecars:
   nodeDriverRegistrar:
     env: []
     image:
+      pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
       tag: "v2.1.0"
     logLevel: 2
@@ -104,8 +110,8 @@ controller:
   #   cpu: 100m
   #   memory: 128Mi
   serviceAccount:
-    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
+    create: true  # A service account will be created for you if set to true. Set to false if you want to use your own.
+    name: ebs-csi-controller-sa  # Name of the service-account to be used/created.
     annotations: {}
   tolerations: []
   # TSCs without the label selector stanza

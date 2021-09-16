@@ -26,11 +26,11 @@ spec:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-              - matchExpressions:
-                  - key: eks.amazonaws.com/compute-type
-                    operator: NotIn
-                    values:
-                      - fargate
+            - matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                - fargate
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: ebs-csi-node-sa
@@ -46,6 +46,7 @@ spec:
           securityContext:
             privileged: true
           image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.2.1
+          imagePullPolicy: IfNotPresent
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
@@ -80,6 +81,7 @@ spec:
             failureThreshold: 5
         - name: node-driver-registrar
           image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.1.0
+          imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -96,6 +98,7 @@ spec:
               mountPath: /registration
         - name: liveness-probe
           image: k8s.gcr.io/sig-storage/livenessprobe:v2.2.0
+          imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
