@@ -126,6 +126,7 @@ node:
   kubeletPath: /var/lib/kubelet
   logLevel: 2
   priorityClassName:
+  affinity: {}
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
