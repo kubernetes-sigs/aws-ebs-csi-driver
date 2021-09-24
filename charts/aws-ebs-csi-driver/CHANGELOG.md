@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.3.0
+
+* Support overriding controller `--default-fstype` flag via values
+
 ## v2.2.1
 
 * Bump app/driver version to `v1.3.0`
