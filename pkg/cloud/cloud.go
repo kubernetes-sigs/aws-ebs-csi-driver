@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -833,6 +834,57 @@ func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput
 	}
 
 	return volumes[0], nil
+}
+
+func (c *cloud) GetVolumeAttachLimit(ctx context.Context, nodeID string) (int, error) {
+	instance, err := c.getInstance(ctx, nodeID)
+	if err != nil {
+		return 0, err
+	}
+
+	instanceType := string(*instance.InstanceType)
+	networkInterfacesAttached := len(instance.NetworkInterfaces)
+	blockDevicesAttached := len(instance.BlockDeviceMappings)
+
+	nitroInstances := []string{"A1", "C5", "C5a", "C5ad", "C5d", "C5n", "C6g", "C6gd", "C6gn", "D3", "D3en", "G4", "I3en", "Inf1",
+		"M5", "M5a", "M5ad", "M5d", "M5dn", "M5n", "M5zn", "M6g", "M6gd", "M6i", "p3dn", "P4",
+		"R5", "R5a", "R5ad", "R5b", "R5d", "R5dn", "R5n", "R6g", "R6gd", "T3", "T3a", "T4g", "X2gd", "z1d"}
+
+	//Static values are taken from the https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-volume-limits
+	if instanceType == "d3.8xlarge" || instanceType == "d3en.12xlarge" {
+		return (3 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if instanceType == "inf1.xlarge" || instanceType == "inf1.2xlarge" {
+		return (26 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if instanceType == "inf1.6xlarge" {
+		return (23 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if instanceType == "inf1.24xlarge" {
+		return (11 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if instanceType == "mac1.metal" {
+		return (16 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if ok, _ := regexp.MatchString("^u-.*.metal$", instanceType); ok {
+		return (19 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if ok, _ := regexp.MatchString("^u-.*$", instanceType); ok {
+		return (27 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if ok, _ := regexp.MatchString("^.*.metal$", instanceType); ok {
+		return (31 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else if ok := contains(nitroInstances, strings.ToLower(instanceType)); ok {
+		return (28 - networkInterfacesAttached - blockDevicesAttached), nil
+	} else {
+		//For the Linux Instances, the number of attachments supported is 40. https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#linux-specific-volume-limits
+		return (40 - networkInterfacesAttached - blockDevicesAttached), nil
+	}
+
+}
+
+func contains(arr []string, target string) bool {
+	for _, prefix := range arr {
+		prefix = strings.ToLower(prefix)
+		if strings.HasPrefix(target, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {

@@ -1835,7 +1835,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceType:      "m5d.large",
 			availabilityZone:  "us-west-2b",
 			volumeAttachLimit: -1,
-			expMaxVolumes:     25,
+			expMaxVolumes:     39,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -1866,6 +1866,7 @@ func TestNodeGetInfo(t *testing.T) {
 				volumeAttachLimit: tc.volumeAttachLimit,
 			}
 
+			mockCloud := mocks.NewMockCloud(mockCtl)
 			mockMounter := mocks.NewMockMounter(mockCtl)
 
 			mockMetadata := mocks.NewMockMetadataService(mockCtl)
@@ -1875,9 +1876,12 @@ func TestNodeGetInfo(t *testing.T) {
 
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
+				mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
+				mockCloud.EXPECT().GetVolumeAttachLimit(context.TODO(), gomock.Eq("i-123456789abcdef01")).Return(39, nil)
 			}
 
 			awsDriver := &nodeService{
+				cloud:         mockCloud,
 				metadata:      mockMetadata,
 				mounter:       mockMounter,
 				inFlight:      internal.NewInFlight(),

@@ -186,6 +186,21 @@ func (mr *MockCloudMockRecorder) GetSnapshotByName(ctx, name interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotByName", reflect.TypeOf((*MockCloud)(nil).GetSnapshotByName), ctx, name)
 }
 
+// GetVolumeAttachLimit mocks base method.
+func (m *MockCloud) GetVolumeAttachLimit(ctx context.Context, nodeID string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVolumeAttachLimit", ctx, nodeID)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVolumeAttachLimit indicates an expected call of GetVolumeAttachLimit.
+func (mr *MockCloudMockRecorder) GetVolumeAttachLimit(ctx, nodeID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeAttachLimit", reflect.TypeOf((*MockCloud)(nil).GetVolumeAttachLimit), ctx, nodeID)
+}
+
 // IsExistInstance mocks base method.
 func (m *MockCloud) IsExistInstance(ctx context.Context, nodeID string) bool {
 	m.ctrl.T.Helper()

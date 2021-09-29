@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -47,13 +46,6 @@ const (
 	// default file system type to be used when it is not provided
 	defaultFsType = FSTypeExt4
 
-	// defaultMaxEBSVolumes is the maximum number of volumes that an AWS instance can have attached.
-	// More info at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
-	defaultMaxEBSVolumes = 39
-
-	// defaultMaxEBSNitroVolumes is the limit of volumes for some smaller instances, like c5 and m5.
-	defaultMaxEBSNitroVolumes = 25
-
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 )
@@ -73,6 +65,7 @@ var (
 
 // nodeService represents the node service of CSI driver
 type nodeService struct {
+	cloud         cloud.Cloud
 	metadata      cloud.MetadataService
 	mounter       Mounter
 	inFlight      *internal.InFlight
@@ -82,8 +75,19 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
+
 	klog.V(5).Infof("[Debug] Retrieving node info from metadata service")
 	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
+	if err != nil {
+		panic(err)
+	}
+
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = metadata.GetRegion()
+	}
+
+	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog)
 	if err != nil {
 		panic(err)
 	}
@@ -94,6 +98,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 	}
 
 	return nodeService{
+		cloud:         cloudSrv,
 		metadata:      metadata,
 		mounter:       nodeMounter,
 		inFlight:      internal.NewInFlight(),
@@ -528,7 +533,7 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 
 	return &csi.NodeGetInfoResponse{
 		NodeId:             d.metadata.GetInstanceID(),
-		MaxVolumesPerNode:  d.getVolumesLimit(),
+		MaxVolumesPerNode:  d.getVolumesLimit(ctx),
 		AccessibleTopology: topology,
 	}, nil
 }
@@ -678,16 +683,22 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 }
 
 // getVolumesLimit returns the limit of volumes that the node supports
-func (d *nodeService) getVolumesLimit() int64 {
+func (d *nodeService) getVolumesLimit(ctx context.Context) int64 {
 	if d.driverOptions.volumeAttachLimit >= 0 {
 		return d.driverOptions.volumeAttachLimit
 	}
-	ebsNitroInstanceTypeRegex := "^[cmr]5.*|t3|z1d"
+
 	instanceType := d.metadata.GetInstanceType()
-	if ok, _ := regexp.MatchString(ebsNitroInstanceTypeRegex, instanceType); ok {
-		return defaultMaxEBSNitroVolumes
+	instanceID := d.metadata.GetInstanceID()
+
+	limit, err := d.cloud.GetVolumeAttachLimit(ctx, instanceID)
+	if err != nil {
+		//CO decides on the number of volume of the same type to be published.
+		return 0
 	}
-	return defaultMaxEBSVolumes
+
+	klog.V(4).Infof("The volumeAttachLimit for the instance type %q is %d", instanceType, limit)
+	return int64(limit)
 }
 
 // hasMountOption returns a boolean indicating whether the given

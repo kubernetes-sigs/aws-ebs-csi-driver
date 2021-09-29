@@ -291,6 +291,10 @@ func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, new
 	return 0, cloud.ErrNotFound
 }
 
+func (c *fakeCloudProvider) GetVolumeAttachLimit(ctx context.Context, nodeID string) (int, error) {
+	return 39, nil
+}
+
 type fakeMounter struct {
 	exec.Interface
 }

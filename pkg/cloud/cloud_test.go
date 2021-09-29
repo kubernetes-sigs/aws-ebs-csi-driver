@@ -614,6 +614,81 @@ func TestAttachDisk(t *testing.T) {
 	}
 }
 
+func TestGetVolumeAttachLimit(t *testing.T) {
+	testCases := []struct {
+		name         string
+		nodeID       string
+		instanceType string
+		expLimit     int
+		expErr       error
+	}{
+		{
+			name:         "success: normal - linux instance - t2.micro",
+			nodeID:       "node-1234",
+			instanceType: "t2.micro",
+			expLimit:     37,
+			expErr:       nil,
+		},
+		{
+			name:         "success: normal - nitro instance - u-6tb1.metal",
+			nodeID:       "node-1234",
+			instanceType: "u-6tb1.metal",
+			expLimit:     16,
+			expErr:       nil,
+		},
+		{
+			name:         "success: normal - nitro instance - m5zn.metal",
+			nodeID:       "node-1234",
+			instanceType: "m5zn.metal",
+			expLimit:     28,
+			expErr:       nil,
+		},
+		{
+			name:         "success: normal - nitro instance - c5.xlarge",
+			nodeID:       "node-1234",
+			instanceType: "c5.xlarge",
+			expLimit:     25,
+			expErr:       nil,
+		},
+		{
+			name:         "fail: normal - nitro instance - c5.xlarge",
+			nodeID:       "node-1234",
+			instanceType: "c5.xlarge",
+			expLimit:     0,
+			expErr:       errors.New("Not found"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := mocks.NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			if tc.name == "fail: normal - nitro instance - c5.xlarge" {
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(nil, errors.New("Not found"))
+			} else {
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Eq(ctx), gomock.Any()).Return(newDescribeInstancesOutputForVolumeAttachLimit(tc.nodeID, tc.instanceType), nil)
+			}
+
+			limit, err := c.GetVolumeAttachLimit(ctx, tc.nodeID)
+
+			if err == nil {
+				if limit != tc.expLimit {
+					t.Fatalf("GetVolumeAttachLimitTest failed: expected %d, got: %d", tc.expLimit, limit)
+				}
+			} else {
+				if tc.expErr == nil {
+					t.Fatalf("GetVolumeAttachLimitTest failed: expected no error but got: %v", err)
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestDetachDisk(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -1637,6 +1712,21 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 		Reservations: []*ec2.Reservation{{
 			Instances: []*ec2.Instance{
 				{InstanceId: aws.String(nodeID)},
+			},
+		}},
+	}
+}
+
+func newDescribeInstancesOutputForVolumeAttachLimit(nodeID string, instanceType string) *ec2.DescribeInstancesOutput {
+	return &ec2.DescribeInstancesOutput{
+		Reservations: []*ec2.Reservation{{
+			Instances: []*ec2.Instance{
+				{
+					InstanceId:          aws.String(nodeID),
+					InstanceType:        aws.String(instanceType),
+					NetworkInterfaces:   []*ec2.InstanceNetworkInterface{{}},
+					BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{{}, {}},
+				},
 			},
 		}},
 	}
