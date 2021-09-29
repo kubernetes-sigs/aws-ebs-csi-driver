@@ -29,7 +29,7 @@ type mountInterface = mountutils.Interface
 // mount.Interface). Define it explicitly so that it can be mocked and to
 // insulate from oft-changing upstream interfaces/structs
 type Mounter interface {
-	mountInterface
+	mountutils.Interface
 
 	FormatAndMount(source string, target string, fstype string, options []string) error
 	IsCorruptedMnt(err error) bool
