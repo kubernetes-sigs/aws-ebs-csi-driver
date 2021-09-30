@@ -3,7 +3,6 @@ package cloud
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
@@ -22,13 +21,4 @@ type Cloud interface {
 	GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error)
 	GetSnapshotByID(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error)
 	ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error)
-}
-
-// MetadataService represents AWS metadata service.
-type MetadataService interface {
-	GetInstanceID() string
-	GetInstanceType() string
-	GetRegion() string
-	GetAvailabilityZone() string
-	GetOutpostArn() arn.ARN
 }
