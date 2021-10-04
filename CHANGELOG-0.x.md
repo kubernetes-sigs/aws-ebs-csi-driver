@@ -1,3 +1,6 @@
+# v1.3.1
+* Push multi-arch/os image manifest to ECR.
+
 # v1.3.0
 ## Notable changes
 * Make NodePublish Mount Idempotent ([#1019](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1019), [@nirmalaagash](https://github.com/nirmalaagash))
