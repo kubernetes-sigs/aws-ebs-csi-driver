@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-./bin/mockgen -package mocks -destination=./pkg/cloud/mocks/mock_ec2.go -source pkg/cloud/ec2_interface.go
-./bin/mockgen -package mocks -destination=./pkg/driver/mocks/mock_cloud.go -source pkg/cloud/cloud_interface.go
-./bin/mockgen -package mocks -destination=./pkg/driver/mocks/mock_metadata.go -source pkg/cloud/metadata_interface.go
-./bin/mockgen -package mocks -destination=./pkg/driver/mocks/mock_mount.go -source pkg/driver/mount.go
+./bin/mockgen -package cloud -destination=./pkg/cloud/mock_ec2.go -source pkg/cloud/ec2_interface.go
+./bin/mockgen -package cloud -destination=./pkg/cloud/mock_cloud.go -source pkg/cloud/cloud_interface.go
+./bin/mockgen -package cloud -destination=./pkg/cloud/mock_metadata.go -source pkg/cloud/metadata_interface.go
+./bin/mockgen -package driver -destination=./pkg/driver/mock_mount.go -source pkg/driver/mount.go
