@@ -27,8 +27,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/mocks"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -55,7 +55,7 @@ func TestNodeStageVolume(t *testing.T) {
 		name         string
 		request      *csi.NodeStageVolumeRequest
 		inFlightFunc func(*internal.InFlight) *internal.InFlight
-		expectMock   func(mockMounter mocks.MockMounter)
+		expectMock   func(mockMounter MockMounter)
 		expectedCode codes.Code
 	}{
 		{
@@ -66,7 +66,7 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -92,7 +92,7 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
@@ -113,7 +113,7 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -142,7 +142,7 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -171,7 +171,7 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -266,7 +266,7 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -286,7 +286,7 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeContext:     stdVolContext,
 				VolumeId:          "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -306,7 +306,7 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeContext:     map[string]string{VolumeAttributePartition: "0"},
 				VolumeId:          "vol-test",
 			},
-			expectMock: func(mockMounter mocks.MockMounter) {
+			expectMock: func(mockMounter MockMounter) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
@@ -338,8 +338,8 @@ func TestNodeStageVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := mocks.NewMockMetadataService(mockCtl)
-			mockMounter := mocks.NewMockMounter(mockCtl)
+			mockMetadata := cloud.NewMockMetadataService(mockCtl)
+			mockMounter := NewMockMounter(mockCtl)
 
 			inFlight := internal.NewInFlight()
 			if tc.inFlightFunc != nil {
@@ -380,8 +380,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -409,8 +409,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -436,8 +436,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -465,8 +465,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -488,8 +488,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -510,8 +510,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -536,8 +536,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -586,8 +586,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -619,8 +619,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -651,8 +651,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -684,8 +684,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -721,8 +721,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -763,8 +763,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -797,8 +797,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -843,8 +843,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -888,8 +888,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -932,8 +932,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -976,8 +976,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1026,8 +1026,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1072,8 +1072,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1118,8 +1118,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1153,8 +1153,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1187,8 +1187,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1224,8 +1224,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1251,8 +1251,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1278,8 +1278,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1305,8 +1305,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1331,8 +1331,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1363,8 +1363,8 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1403,8 +1403,8 @@ func TestNodeExpandVolume(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := mocks.NewMockMetadataService(mockCtl)
-	mockMounter := mocks.NewMockMounter(mockCtl)
+	mockMetadata := cloud.NewMockMetadataService(mockCtl)
+	mockMounter := NewMockMounter(mockCtl)
 
 	awsDriver := &nodeService{
 		metadata: mockMetadata,
@@ -1499,8 +1499,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1526,8 +1526,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1549,8 +1549,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1572,8 +1572,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1597,8 +1597,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 
 				awsDriver := &nodeService{
 					metadata: mockMetadata,
@@ -1634,8 +1634,8 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 				VolumePath := "./test"
 				err := os.MkdirAll(VolumePath, 0644)
 				if err != nil {
@@ -1667,8 +1667,8 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(false, nil)
@@ -1693,8 +1693,8 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(true, nil)
@@ -1719,8 +1719,8 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := mocks.NewMockMetadataService(mockCtl)
-				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMounter := NewMockMounter(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(false, errors.New("get existsPath call fail"))
@@ -1751,8 +1751,8 @@ func TestNodeGetCapabilities(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := mocks.NewMockMetadataService(mockCtl)
-	mockMounter := mocks.NewMockMounter(mockCtl)
+	mockMetadata := cloud.NewMockMetadataService(mockCtl)
+	mockMounter := NewMockMounter(mockCtl)
 
 	awsDriver := nodeService{
 		metadata: mockMetadata,
@@ -1866,9 +1866,9 @@ func TestNodeGetInfo(t *testing.T) {
 				volumeAttachLimit: tc.volumeAttachLimit,
 			}
 
-			mockMounter := mocks.NewMockMounter(mockCtl)
+			mockMounter := NewMockMounter(mockCtl)
 
-			mockMetadata := mocks.NewMockMetadataService(mockCtl)
+			mockMetadata := cloud.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
 			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
 			mockMetadata.EXPECT().GetOutpostArn().Return(tc.outpostArn)

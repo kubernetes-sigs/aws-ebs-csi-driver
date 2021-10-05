@@ -25,7 +25,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/golang/mock/gomock"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/mocks"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -285,7 +284,7 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			mockCtrl := gomock.NewController(t)
-			mockEC2Metadata := mocks.NewMockEC2Metadata(mockCtrl)
+			mockEC2Metadata := NewMockEC2Metadata(mockCtrl)
 
 			ec2MetadataClient := func() (EC2Metadata, error) { return mockEC2Metadata, nil }
 			k8sAPIClient := func() (kubernetes.Interface, error) { clientsetInitialized = true; return clientset, nil }
