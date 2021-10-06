@@ -15,6 +15,12 @@ images:
   - name: k8s.gcr.io/sig-storage/livenessprobe
     newName: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newTag: v2.2.0-eks-1-18-3
+  - name: k8s.gcr.io/sig-storage/csi-snapshotter
+    newName: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+    newTag: v3.0.3-eks-1-18-3
+  - name: k8s.gcr.io/sig-storage/csi-resizer
+    newName: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+    newTag: v1.0.1-eks-1-18-3
   - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     newName: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newTag: v2.1.0-eks-1-18-3

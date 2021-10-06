@@ -11,5 +11,9 @@ images:
     newTag: v3.1.0
   - name: k8s.gcr.io/sig-storage/livenessprobe
     newTag: v2.2.0
+  - name: k8s.gcr.io/sig-storage/csi-snapshotter
+    newTag: v3.0.3
+  - name: k8s.gcr.io/sig-storage/csi-resizer
+    newTag: v1.0.0
   - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     newTag: v2.1.0
