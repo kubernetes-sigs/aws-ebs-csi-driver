@@ -1,7 +1,5 @@
 ## Windows
 
-**This example requires unreleased versions of csi-proxy and the driver that. It is intended for developers only for now. It will be updated once the driver has been released. Only basic read/write (mount/unmount and attach/detach) functionality has been tested, other features like resize don't work yet.**
-
 This example shows how to create a EBS volume and consume it from a Windows container dynamically.
 
 
@@ -9,7 +7,7 @@ This example shows how to create a EBS volume and consume it from a Windows cont
 
 1. A 1.18+ Windows node. Windows support has only been tested on 1.18 EKS Windows nodes. https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html
 2. [csi-proxy](https://github.com/kubernetes-csi/csi-proxy) v1.0.0+ installed on the Windows node.
-3. An image of the driver built for Windows. It can be built and pushed with the command `TAG=$MY_TAG REGISTRY=$MY_REGISTRY make all-push` where `MY_TAG` refers to the image tag to push and `MY_REGISTRY` to the destination image registry like "XXXXXXXXXXXX.dkr.ecr.us-west-2.amazonaws.com"
+3. Driver v1.3.2 from GCR k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.3.2. It can be built and pushed to another image registry with the command `TAG=$MY_TAG REGISTRY=$MY_REGISTRY make all-push` where `MY_TAG` refers to the image tag to push and `MY_REGISTRY` to the destination image registry like "XXXXXXXXXXXX.dkr.ecr.us-west-2.amazonaws.com"
 4. The driver installed with the Node plugin on the Windows node and the Controller plugin on a Linux node: `helm upgrade --install aws-ebs-csi-driver --namespace kube-system ./charts/aws-ebs-csi-driver --set node.enableWindows=true --set image.repository=$MY_REGISTRY/aws-ebs-csi-driver --set image.tag=$MY_TAG`
 
 ## Usage
