@@ -34,33 +34,50 @@ import (
 // if the device is not nvme, return the path directly
 // if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
 func (d *nodeService) findDevicePath(devicePath, volumeID string, partition string) (string, error) {
+	canonicalDevicePath := ""
+
+	// If the given path exists, the device MAY be nvme. Further, it MAY be a
+	// symlink to the nvme device path like:
+	// | $ stat /dev/xvdba
+	// | File: ‘/dev/xvdba’ -> ‘nvme1n1’
+	// Since these are maybes, not guarantees, the search for the nvme device
+	// path below must happen and must rely on volume ID
 	exists, err := d.mounter.PathExists(devicePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to check if path %q exists: %v", devicePath, err)
 	}
 
-	// If the path exists, assume it is not nvme device
 	if exists {
 		if partition != "" {
 			devicePath = devicePath + diskPartitionSuffix + partition
 		}
-		return devicePath, nil
+		canonicalDevicePath = devicePath
 	}
 
-	// Else find the nvme device path using volume ID
-	// This is the magic name on which AWS presents NVME devices under /dev/disk/by-id/
-	// For example, vol-0fab1d5e3f72a5e23 creates a symlink at
+	// AWS recommends identifying devices by volume ID
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html),
+	// so find the nvme device path using volume ID. This is the magic name on
+	// which AWS presents NVME devices under /dev/disk/by-id/. For example,
+	// vol-0fab1d5e3f72a5e23 creates a symlink at
 	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
 	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
 
 	nvmeDevicePath, err := findNvmeVolume(nvmeName)
-	if err != nil {
-		return "", err
+
+	if err == nil {
+		if partition != "" {
+			nvmeDevicePath = nvmeDevicePath + nvmeDiskPartitionSuffix + partition
+		}
+		canonicalDevicePath = nvmeDevicePath
+	} else {
+		klog.V(5).Infof("[Debug] error searching for nvme path %q: %v", nvmeName, err)
 	}
-	if partition != "" {
-		nvmeDevicePath = nvmeDevicePath + nvmeDiskPartitionSuffix + partition
+
+	if canonicalDevicePath == "" {
+		return "", fmt.Errorf("no device path for %q found!", devicePath)
 	}
-	return nvmeDevicePath, nil
+
+	return canonicalDevicePath, nil
 }
 
 // findNvmeVolume looks for the nvme volume with the specified name
