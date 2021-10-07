@@ -589,7 +589,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	//Checking if the target file is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
+		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
 	}
 
 	if !mounted {
@@ -626,7 +626,7 @@ func (d *nodeService) isMounted(source string, target string) (bool, error) {
 			//After successful unmount, the device is ready to be mounted.
 			return !notMnt, nil
 		}
-		return !notMnt, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
+		return !notMnt, status.Errorf(codes.Internal, "Could not check if %q is a mount point: %v, %v", target, err, pathErr)
 	}
 
 	if !notMnt {
@@ -634,7 +634,12 @@ func (d *nodeService) isMounted(source string, target string) (bool, error) {
 		return !notMnt, nil
 	}
 
-	return !notMnt, err
+	// Do not return os.IsNotExist error. Other errors were handled above. It is
+	// the responsibility of the caller to check whether the given target path
+	// exists (in Linux, the target mount directory must exist before mount is
+	// called on it) or not (in Windows, the target must NOT exist before a
+	// symlink is created at it)
+	return !notMnt, nil
 }
 
 func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeRequest, mountOptions []string, mode *csi.VolumeCapability_Mount) error {
@@ -665,7 +670,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	mounted, err := d.isMounted(source, target)
 
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
+		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
 	}
 
 	if !mounted {
