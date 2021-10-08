@@ -33,7 +33,7 @@ import (
 // findDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
 // if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
-func (d *nodeService) findDevicePath(devicePath, volumeID string, partition string) (string, error) {
+func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (string, error) {
 	canonicalDevicePath := ""
 
 	// If the given path exists, the device MAY be nvme. Further, it MAY be a
@@ -62,7 +62,7 @@ func (d *nodeService) findDevicePath(devicePath, volumeID string, partition stri
 	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
 	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
 
-	nvmeDevicePath, err := findNvmeVolume(nvmeName)
+	nvmeDevicePath, err := findNvmeVolume(d.deviceIdentifier, nvmeName)
 
 	if err == nil {
 		if partition != "" {
@@ -74,17 +74,21 @@ func (d *nodeService) findDevicePath(devicePath, volumeID string, partition stri
 	}
 
 	if canonicalDevicePath == "" {
-		return "", fmt.Errorf("no device path for %q found!", devicePath)
+		return "", errNoDevicePathFound(devicePath, volumeID)
 	}
 
 	return canonicalDevicePath, nil
 }
 
+func errNoDevicePathFound(devicePath, volumeID string) error {
+	return fmt.Errorf("no device path for device %q volume %q found!", devicePath, volumeID)
+}
+
 // findNvmeVolume looks for the nvme volume with the specified name
 // It follows the symlink (if it exists) and returns the absolute path to the device
-func findNvmeVolume(findName string) (device string, err error) {
+func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device string, err error) {
 	p := filepath.Join("/dev/disk/by-id/", findName)
-	stat, err := os.Lstat(p)
+	stat, err := deviceIdentifier.Lstat(p)
 	if err != nil {
 		if os.IsNotExist(err) {
 			klog.V(5).Infof("[Debug] nvme path %q not found", p)
@@ -99,7 +103,7 @@ func findNvmeVolume(findName string) (device string, err error) {
 	}
 	// Find the target, resolving to an absolute path
 	// For example, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23 -> ../../nvme2n1
-	resolved, err := filepath.EvalSymlinks(p)
+	resolved, err := deviceIdentifier.EvalSymlinks(p)
 	if err != nil {
 		return "", fmt.Errorf("error reading target of symlink %q: %v", p, err)
 	}
