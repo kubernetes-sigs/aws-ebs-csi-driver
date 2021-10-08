@@ -5,6 +5,7 @@
 package driver
 
 import (
+	os "os"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -235,4 +236,57 @@ func (m *MockMounter) Unmount(target string) error {
 func (mr *MockMounterMockRecorder) Unmount(target interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmount", reflect.TypeOf((*MockMounter)(nil).Unmount), target)
+}
+
+// MockDeviceIdentifier is a mock of DeviceIdentifier interface.
+type MockDeviceIdentifier struct {
+	ctrl     *gomock.Controller
+	recorder *MockDeviceIdentifierMockRecorder
+}
+
+// MockDeviceIdentifierMockRecorder is the mock recorder for MockDeviceIdentifier.
+type MockDeviceIdentifierMockRecorder struct {
+	mock *MockDeviceIdentifier
+}
+
+// NewMockDeviceIdentifier creates a new mock instance.
+func NewMockDeviceIdentifier(ctrl *gomock.Controller) *MockDeviceIdentifier {
+	mock := &MockDeviceIdentifier{ctrl: ctrl}
+	mock.recorder = &MockDeviceIdentifierMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDeviceIdentifier) EXPECT() *MockDeviceIdentifierMockRecorder {
+	return m.recorder
+}
+
+// EvalSymlinks mocks base method.
+func (m *MockDeviceIdentifier) EvalSymlinks(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EvalSymlinks", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvalSymlinks indicates an expected call of EvalSymlinks.
+func (mr *MockDeviceIdentifierMockRecorder) EvalSymlinks(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvalSymlinks", reflect.TypeOf((*MockDeviceIdentifier)(nil).EvalSymlinks), path)
+}
+
+// Lstat mocks base method.
+func (m *MockDeviceIdentifier) Lstat(name string) (os.FileInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Lstat", name)
+	ret0, _ := ret[0].(os.FileInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Lstat indicates an expected call of Lstat.
+func (mr *MockDeviceIdentifierMockRecorder) Lstat(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lstat", reflect.TypeOf((*MockDeviceIdentifier)(nil).Lstat), name)
 }
