@@ -42,7 +42,7 @@ REGION=${AWS_REGION:-us-west-2}
 ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
 FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 NODE_COUNT=${NODE_COUNT:-3}
-INSTANCE_TYPE=${INSTANCE_TYPE:-c4.large}
+INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${DRIVER_NAME}}

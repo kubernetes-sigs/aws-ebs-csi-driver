@@ -35,7 +35,6 @@ import (
 // findDevicePath finds disk number of device
 // https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-volumes.html#list-nvme-powershell
 func (d *nodeService) findDevicePath(devicePath, volumeID, _ string) (string, error) {
-
 	diskClient, err := diskclient.NewClient()
 	if err != nil {
 		return "", fmt.Errorf("error creating csi-proxy disk client: %q", err)

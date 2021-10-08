@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"reflect"
 	"strings"
@@ -33,12 +34,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	volumeID        = "voltest"
+	nvmeName        = "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_voltest"
+	symlinkFileInfo = fs.FileInfo(&fakeFileInfo{nvmeName, os.ModeSymlink})
+)
+
 func TestNodeStageVolume(t *testing.T) {
 
 	var (
-		targetPath = "/test/path"
-		devicePath = "/dev/fake"
-		stdVolCap  = &csi.VolumeCapability{
+		targetPath     = "/test/path"
+		devicePath     = "/dev/fake"
+		nvmeDevicePath = "/dev/fakenvme1n1"
+		stdVolCap      = &csi.VolumeCapability{
 			AccessType: &csi.VolumeCapability_Mount{
 				Mount: &csi.VolumeCapability_MountVolume{
 					FsType: FSTypeExt4,
@@ -50,12 +58,24 @@ func TestNodeStageVolume(t *testing.T) {
 		}
 		stdVolContext           = map[string]string{VolumeAttributePartition: "1"}
 		devicePathWithPartition = devicePath + "1"
+		// With few exceptions, all "success" non-block cases have roughly the same
+		// expected calls and only care about testing the FormatAndMount call. The
+		// exceptions should not call this, instead they should define expectMock
+		// from scratch.
+		successExpectMock = func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+			mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil)
+			mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
+			mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+			mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
+			mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+			mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
+		}
 	)
 	testCases := []struct {
 		name         string
 		request      *csi.NodeStageVolumeRequest
 		inFlightFunc func(*internal.InFlight) *internal.InFlight
-		expectMock   func(mockMounter MockMounter)
+		expectMock   func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier)
 		expectedCode codes.Code
 	}{
 		{
@@ -64,17 +84,11 @@ func TestNodeStageVolume(t *testing.T) {
 				PublishContext:    map[string]string{DevicePathKey: devicePath},
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
-				VolumeId:          "vol-test",
+				VolumeId:          volumeID,
 			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -90,9 +104,9 @@ func TestNodeStageVolume(t *testing.T) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				VolumeId: "vol-test",
+				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter MockMounter) {
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
@@ -111,18 +125,11 @@ func TestNodeStageVolume(t *testing.T) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				VolumeId: "vol-test",
+				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -140,18 +147,11 @@ func TestNodeStageVolume(t *testing.T) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				VolumeId: "vol-test",
+				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 			},
 		},
 		{
@@ -169,18 +169,90 @@ func TestNodeStageVolume(t *testing.T) {
 						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 					},
 				},
-				VolumeId: "vol-test",
+				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
+			},
+		},
+		{
+			name: "success device already mounted at target",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, nil)
+				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return(devicePath, 1, nil)
+				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
+				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "success nvme device already mounted at target",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, nil)
+
+				// If the device is nvme GetDeviceNameFromMount should return the
+				// canonical device path
+				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return(nvmeDevicePath, 1, nil)
+
+				// The publish context device path may not exist but the driver should
+				// find the canonical device path (see TestFindDevicePath), compare it
+				// to the one returned by GetDeviceNameFromMount, and then skip
+				// FormatAndMount
+				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(false, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(symlinkFileInfo, nil)
+				mockDeviceIdentifier.EXPECT().EvalSymlinks(gomock.Eq(symlinkFileInfo.Name())).Return(nvmeDevicePath, nil)
+
+				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name: "success with partition",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeContext:     stdVolContext,
+				VolumeId:          volumeID,
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil)
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+
+				// The device path argument should be canonicalized to contain the
+				// partition
+				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath)).Return(false, nil)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+			},
+		},
+		{
+			name: "success with invalid partition config, will ignore partition",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeContext:     map[string]string{VolumeAttributePartition: "0"},
+				VolumeId:          volumeID,
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
 			},
 		},
 		{
@@ -211,7 +283,7 @@ func TestNodeStageVolume(t *testing.T) {
 			request: &csi.NodeStageVolumeRequest{
 				PublishContext:   map[string]string{DevicePathKey: devicePath},
 				VolumeCapability: stdVolCap,
-				VolumeId:         "vol-test",
+				VolumeId:         volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
@@ -220,7 +292,7 @@ func TestNodeStageVolume(t *testing.T) {
 			request: &csi.NodeStageVolumeRequest{
 				PublishContext:    map[string]string{DevicePathKey: devicePath},
 				StagingTargetPath: targetPath,
-				VolumeId:          "vol-test",
+				VolumeId:          volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
@@ -234,16 +306,15 @@ func TestNodeStageVolume(t *testing.T) {
 						Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
 					},
 				},
-				VolumeId: "vol-test",
+				VolumeId: volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
 		{
 			name: "fail no devicePath",
 			request: &csi.NodeStageVolumeRequest{
-				StagingTargetPath: targetPath,
-				VolumeCapability:  stdVolCap,
-				VolumeId:          "vol-test",
+				VolumeCapability: stdVolCap,
+				VolumeId:         volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
@@ -254,68 +325,9 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeContext:     map[string]string{VolumeAttributePartition: "partition1"},
-				VolumeId:          "vol-test",
+				VolumeId:          volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
-		},
-		{
-			name: "success device already mounted at target",
-			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{DevicePathKey: devicePath},
-				StagingTargetPath: targetPath,
-				VolumeCapability:  stdVolCap,
-				VolumeId:          "vol-test",
-			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return(devicePath, 1, nil)
-				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-		},
-		{
-			name: "success with partition",
-			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{DevicePathKey: devicePath},
-				StagingTargetPath: targetPath,
-				VolumeCapability:  stdVolCap,
-				VolumeContext:     stdVolContext,
-				VolumeId:          "vol-test",
-			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath)).Return(false, nil)
-			},
-		},
-		{
-			name: "success with invalid partition config, will ignore partition",
-			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{DevicePathKey: devicePath},
-				StagingTargetPath: targetPath,
-				VolumeCapability:  stdVolCap,
-				VolumeContext:     map[string]string{VolumeAttributePartition: "0"},
-				VolumeId:          "vol-test",
-			},
-			expectMock: func(mockMounter MockMounter) {
-				gomock.InOrder(
-					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(false, nil),
-				)
-				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
-				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
-				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
-			},
 		},
 		{
 			name: "fail with in-flight request",
@@ -323,10 +335,10 @@ func TestNodeStageVolume(t *testing.T) {
 				PublishContext:    map[string]string{DevicePathKey: devicePath},
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
-				VolumeId:          "vol-test",
+				VolumeId:          volumeID,
 			},
 			inFlightFunc: func(inFlight *internal.InFlight) *internal.InFlight {
-				inFlight.Insert("vol-test")
+				inFlight.Insert(volumeID)
 				return inFlight
 			},
 			expectedCode: codes.Aborted,
@@ -340,6 +352,7 @@ func TestNodeStageVolume(t *testing.T) {
 
 			mockMetadata := cloud.NewMockMetadataService(mockCtl)
 			mockMounter := NewMockMounter(mockCtl)
+			mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 			inFlight := internal.NewInFlight()
 			if tc.inFlightFunc != nil {
@@ -347,13 +360,14 @@ func TestNodeStageVolume(t *testing.T) {
 			}
 
 			awsDriver := &nodeService{
-				metadata: mockMetadata,
-				mounter:  mockMounter,
-				inFlight: inFlight,
+				metadata:         mockMetadata,
+				mounter:          mockMounter,
+				deviceIdentifier: mockDeviceIdentifier,
+				inFlight:         inFlight,
 			}
 
 			if tc.expectMock != nil {
-				tc.expectMock(*mockMounter)
+				tc.expectMock(*mockMounter, *mockDeviceIdentifier)
 			}
 
 			_, err := awsDriver.NodeStageVolume(context.TODO(), tc.request)
@@ -382,11 +396,13 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().GetDeviceNameFromMount(gomock.Eq(targetPath)).Return(devicePath, 1, nil)
@@ -394,7 +410,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
@@ -411,18 +427,20 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().GetDeviceNameFromMount(gomock.Eq(targetPath)).Return(devicePath, 0, nil)
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
 				if err != nil {
@@ -438,11 +456,13 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().GetDeviceNameFromMount(gomock.Eq(targetPath)).Return(devicePath, 2, nil)
@@ -450,7 +470,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
@@ -467,11 +487,13 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnstageVolumeRequest{
@@ -490,15 +512,17 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnstageVolumeRequest{
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
 				expectErr(t, err, codes.InvalidArgument)
@@ -512,18 +536,20 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().GetDeviceNameFromMount(gomock.Eq(targetPath)).Return("", 0, errors.New("GetDeviceName faield"))
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
@@ -538,19 +564,21 @@ func TestNodeUnstageVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
-				awsDriver.inFlight.Insert("vol-test")
+				awsDriver.inFlight.Insert(volumeID)
 				_, err := awsDriver.NodeUnstageVolume(context.TODO(), req)
 				expectErr(t, err, codes.Aborted)
 			},
@@ -588,11 +616,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
@@ -604,7 +634,7 @@ func TestNodePublishVolume(t *testing.T) {
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -621,11 +651,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
@@ -636,7 +668,7 @@ func TestNodePublishVolume(t *testing.T) {
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -653,11 +685,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -671,7 +705,7 @@ func TestNodePublishVolume(t *testing.T) {
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -686,11 +720,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, errors.New("CorruptedMntError"))
@@ -706,7 +742,7 @@ func TestNodePublishVolume(t *testing.T) {
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -723,11 +759,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
@@ -748,7 +786,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -765,11 +803,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
@@ -782,7 +822,7 @@ func TestNodePublishVolume(t *testing.T) {
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -799,11 +839,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				mockMounter.EXPECT().MakeDir(gomock.Eq(targetPath)).Return(nil)
@@ -828,7 +870,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -845,11 +887,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -860,6 +904,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -873,7 +918,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -890,11 +935,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -904,6 +951,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -917,7 +965,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -934,11 +982,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -950,6 +1000,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, errors.New("Internal System Error"))
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -963,7 +1014,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -978,11 +1029,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -998,6 +1051,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, errors.New("Internal System Error"))
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1011,7 +1065,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1028,11 +1082,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -1043,6 +1099,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1057,7 +1114,7 @@ func TestNodePublishVolume(t *testing.T) {
 						},
 					},
 					VolumeContext: stdVolContext,
-					VolumeId:      "vol-test",
+					VolumeId:      volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1074,11 +1131,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				gomock.InOrder(
@@ -1089,6 +1148,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1103,7 +1163,7 @@ func TestNodePublishVolume(t *testing.T) {
 						},
 					},
 					VolumeContext: map[string]string{VolumeAttributePartition: "0"},
-					VolumeId:      "vol-test",
+					VolumeId:      volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1120,11 +1180,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
@@ -1140,7 +1202,7 @@ func TestNodePublishVolume(t *testing.T) {
 						},
 					},
 					VolumeContext: map[string]string{VolumeAttributePartition: "partition1"},
-					VolumeId:      "vol-test",
+					VolumeId:      volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1155,11 +1217,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
@@ -1173,7 +1237,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1189,11 +1253,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
@@ -1208,7 +1274,7 @@ func TestNodePublishVolume(t *testing.T) {
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 						},
 					},
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(false, errors.New("findDevicePath failed"))
@@ -1226,11 +1292,13 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
@@ -1253,18 +1321,20 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:   map[string]string{DevicePathKey: devicePath},
 					TargetPath:       targetPath,
 					VolumeCapability: stdVolCap,
-					VolumeId:         "vol-test",
+					VolumeId:         volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1280,18 +1350,20 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
 					StagingTargetPath: stagingTargetPath,
 					VolumeCapability:  stdVolCap,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
@@ -1307,18 +1379,20 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath},
 					StagingTargetPath: stagingTargetPath,
 					TargetPath:        targetPath,
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 				}
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.InvalidArgument)
@@ -1333,18 +1407,20 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 					StagingTargetPath: "/test/staging/path",
 					TargetPath:        "/test/target/path",
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 					VolumeCapability: &csi.VolumeCapability{
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
@@ -1365,18 +1441,20 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
 					StagingTargetPath: "/test/staging/path",
 					TargetPath:        "/test/target/path",
-					VolumeId:          "vol-test",
+					VolumeId:          volumeID,
 					VolumeCapability: &csi.VolumeCapability{
 						AccessType: &csi.VolumeCapability_Block{
 							Block: &csi.VolumeCapability_BlockVolume{},
@@ -1386,7 +1464,7 @@ func TestNodePublishVolume(t *testing.T) {
 						},
 					},
 				}
-				awsDriver.inFlight.Insert("vol-test")
+				awsDriver.inFlight.Insert(volumeID)
 
 				_, err := awsDriver.NodePublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.Aborted)
@@ -1405,11 +1483,13 @@ func TestNodeExpandVolume(t *testing.T) {
 
 	mockMetadata := cloud.NewMockMetadataService(mockCtl)
 	mockMounter := NewMockMounter(mockCtl)
+	mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 	awsDriver := &nodeService{
-		metadata: mockMetadata,
-		mounter:  mockMounter,
-		inFlight: internal.NewInFlight(),
+		metadata:         mockMetadata,
+		mounter:          mockMounter,
+		deviceIdentifier: mockDeviceIdentifier,
+		inFlight:         internal.NewInFlight(),
 	}
 
 	tests := []struct {
@@ -1501,16 +1581,18 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnpublishVolumeRequest{
 					TargetPath: targetPath,
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 				}
 
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
@@ -1528,11 +1610,13 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnpublishVolumeRequest{
@@ -1551,15 +1635,17 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnpublishVolumeRequest{
-					VolumeId: "vol-test",
+					VolumeId: volumeID,
 				}
 
 				_, err := awsDriver.NodeUnpublishVolume(context.TODO(), req)
@@ -1574,16 +1660,18 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnpublishVolumeRequest{
 					TargetPath: targetPath,
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 				}
 
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(errors.New("test Unmount error"))
@@ -1599,19 +1687,21 @@ func TestNodeUnpublishVolume(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 				awsDriver := &nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeUnpublishVolumeRequest{
 					TargetPath: targetPath,
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 				}
 
-				awsDriver.inFlight.Insert("vol-test")
+				awsDriver.inFlight.Insert(volumeID)
 				_, err := awsDriver.NodeUnpublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.Aborted)
 			},
@@ -1636,6 +1726,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "./test"
 				err := os.MkdirAll(VolumePath, 0644)
 				if err != nil {
@@ -1646,13 +1737,14 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockMounter.EXPECT().PathExists(VolumePath).Return(true, nil)
 
 				awsDriver := nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeGetVolumeStatsRequest{
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 					VolumePath: VolumePath,
 				}
 				_, err = awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -1669,18 +1761,20 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(false, nil)
 
 				awsDriver := nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeGetVolumeStatsRequest{
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 					VolumePath: VolumePath,
 				}
 				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -1695,18 +1789,20 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(true, nil)
 
 				awsDriver := nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeGetVolumeStatsRequest{
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 					VolumePath: VolumePath,
 				}
 				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -1721,18 +1817,20 @@ func TestNodeGetVolumeStats(t *testing.T) {
 
 				mockMetadata := cloud.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
+				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
 
 				mockMounter.EXPECT().PathExists(VolumePath).Return(false, errors.New("get existsPath call fail"))
 
 				awsDriver := nodeService{
-					metadata: mockMetadata,
-					mounter:  mockMounter,
-					inFlight: internal.NewInFlight(),
+					metadata:         mockMetadata,
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
 				}
 
 				req := &csi.NodeGetVolumeStatsRequest{
-					VolumeId:   "vol-test",
+					VolumeId:   volumeID,
 					VolumePath: VolumePath,
 				}
 				_, err := awsDriver.NodeGetVolumeStats(context.TODO(), req)
@@ -1753,11 +1851,13 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 	mockMetadata := cloud.NewMockMetadataService(mockCtl)
 	mockMounter := NewMockMounter(mockCtl)
+	mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 	awsDriver := nodeService{
-		metadata: mockMetadata,
-		mounter:  mockMounter,
-		inFlight: internal.NewInFlight(),
+		metadata:         mockMetadata,
+		mounter:          mockMounter,
+		deviceIdentifier: mockDeviceIdentifier,
+		inFlight:         internal.NewInFlight(),
 	}
 
 	caps := []*csi.NodeServiceCapability{
@@ -1867,6 +1967,7 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 			mockMounter := NewMockMounter(mockCtl)
+			mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 			mockMetadata := cloud.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
@@ -1878,10 +1979,11 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 			awsDriver := &nodeService{
-				metadata:      mockMetadata,
-				mounter:       mockMounter,
-				inFlight:      internal.NewInFlight(),
-				driverOptions: driverOptions,
+				metadata:         mockMetadata,
+				mounter:          mockMounter,
+				deviceIdentifier: mockDeviceIdentifier,
+				inFlight:         internal.NewInFlight(),
+				driverOptions:    driverOptions,
 			}
 
 			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
