@@ -14,6 +14,6 @@ images:
   - name: k8s.gcr.io/sig-storage/csi-snapshotter
     newTag: v3.0.3
   - name: k8s.gcr.io/sig-storage/csi-resizer
-    newTag: v1.0.0
+    newTag: v1.1.0
   - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
     newTag: v2.1.0
