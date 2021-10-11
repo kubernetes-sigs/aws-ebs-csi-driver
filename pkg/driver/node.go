@@ -609,6 +609,8 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	return nil
 }
 
+// isMounted checks if target is mounted. It does NOT return an error if target
+// doesn't exist.
 func (d *nodeService) isMounted(source string, target string) (bool, error) {
 	/*
 		Checking if it's a mount point using IsLikelyNotMountPoint. There are three different return values,
@@ -623,24 +625,29 @@ func (d *nodeService) isMounted(source string, target string) (bool, error) {
 		if pathErr != nil && d.mounter.IsCorruptedMnt(pathErr) {
 			klog.V(4).Infof("NodePublishVolume: Target path %q is a corrupted mount. Trying to unmount.", target)
 			if mntErr := d.mounter.Unmount(target); mntErr != nil {
-				return !notMnt, status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, mntErr)
+				return false, status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, mntErr)
 			}
 			//After successful unmount, the device is ready to be mounted.
-			return !notMnt, nil
+			return false, nil
 		}
-		return !notMnt, status.Errorf(codes.Internal, "Could not check if %q is a mount point: %v, %v", target, err, pathErr)
+		return false, status.Errorf(codes.Internal, "Could not check if %q is a mount point: %v, %v", target, err, pathErr)
+	}
+
+	// Do not return os.IsNotExist error. Other errors were handled above.  The
+	// Existence of the target should be checked by the caller explicitly and
+	// independently because sometimes prior to mount it is expected not to exist
+	// (in Windows, the target must NOT exist before a symlink is created at it)
+	// and in others it is an error (in Linux, the target mount directory must
+	// exist before mount is called on it)
+	if err != nil && os.IsNotExist(err) {
+		klog.V(5).Infof("[Debug] NodePublishVolume: Target path %q does not exist", target)
+		return false, nil
 	}
 
 	if !notMnt {
 		klog.V(4).Infof("NodePublishVolume: Target path %q is already mounted", target)
-		return !notMnt, nil
 	}
 
-	// Do not return os.IsNotExist error. Other errors were handled above. It is
-	// the responsibility of the caller to check whether the given target path
-	// exists (in Linux, the target mount directory must exist before mount is
-	// called on it) or not (in Windows, the target must NOT exist before a
-	// symlink is created at it)
 	return !notMnt, nil
 }
 
@@ -659,23 +666,20 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		return status.Errorf(codes.Internal, err.Error())
 	}
 
-	fsType := mode.Mount.GetFsType()
-	if len(fsType) == 0 {
-		fsType = defaultFsType
-	}
-
-	mountOptions = collectMountOptions(fsType, mountOptions)
-
-	klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
-
 	//Checking if the target directory is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
-
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
 	}
 
 	if !mounted {
+		fsType := mode.Mount.GetFsType()
+		if len(fsType) == 0 {
+			fsType = defaultFsType
+		}
+
+		mountOptions = collectMountOptions(fsType, mountOptions)
+		klog.V(4).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
 		if err := d.mounter.Mount(source, target, fsType, mountOptions); err != nil {
 			return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 		}
