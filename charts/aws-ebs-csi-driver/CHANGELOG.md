@@ -1,8 +1,20 @@
 # Helm chart
 
-## v2.1.2
+## v2.3.1
+
+* Bump app/driver version to `v1.3.1`
+
+## v2.3.0
+
+* Support overriding controller `--default-fstype` flag via values
+
+## v2.2.1
 
 * Bump app/driver version to `v1.3.0`
+
+## v2.2.0
+
+* Support setting imagePullPolicy for all containers
 
 ## v2.1.1
 
