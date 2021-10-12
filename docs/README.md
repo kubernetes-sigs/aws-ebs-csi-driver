@@ -12,19 +12,8 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v1.3.x                                 | no    | no     | yes    |
-| v1.2.x                                 | no    | no     | yes    |
-| v1.1.x                                 | no    | no     | yes    |
-| v1.0.0                                 | no    | no     | yes    |
-| v0.10.x                                | no    | no     | yes    |
-| v0.9.x                                 | no    | no     | yes    |
-| v0.8.x                                 | no    | no     | yes    |
-| v0.7.1                                 | no    | no     | yes    |
-| v0.6.0                                 | no    | no     | yes    |
-| v0.5.0                                 | no    | no     | yes    |
-| v0.4.0                                 | no    | no     | yes    |
-| v0.3.0                                 | no    | yes    | no     |
-| v0.2.0                                 | no    | yes    | no     |
+| v0.4.0-v1.4.x                          | no    | no     | yes    |
+| v0.2.0-v0.3.0                          | no    | yes    | no     |
 | v0.1.0                                 | yes   | no     | no     |
 
 ## Features
@@ -79,19 +68,11 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Kubernetes Version Compatibility Matrix
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
-| master branch                          | no    | no+   | no    | no    | no    | yes   | yes   |
-| v1.3.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
-| v1.2.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
-| v1.1.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
-| v1.0.0                                 | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.10.x                                | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.9.x                                 | no    | no+   | no    | no    | no    | yes   | yes   |
-| v0.8.x                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
-| v0.7.1                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
-| v0.6.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
-| v0.5.0                                 | no    | no+   | yes   | yes   | yes   | yes   | yes   |
-| v0.4.0                                 | no    | no+   | yes   | yes   | no    | no    | no    |
-| v0.3.0                                 | no    | no+   | yes   | no    | no    | no    | no    |
+| master branch                          | no    | no    | no    | no    | no    | yes   | yes   |
+| v0.9.x-v1.4.x                          | no    | no    | no    | no    | no    | yes   | yes   |
+| v0.5.0-v0.8.x                          | no    | no    | yes   | yes   | yes   | yes   | yes   |
+| v0.4.0                                 | no    | no    | yes   | yes   | no    | no    | no    |
+| v0.3.0                                 | no    | no    | yes   | no    | no    | no    | no    |
 | v0.2.0                                 | no    | yes   | yes   | no    | no    | no    | no    |
 | v0.1.0                                 | yes   | yes   | yes   | no    | no    | no    | no    |
 
@@ -100,6 +81,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Container Images:
 |AWS EBS CSI Driver Version | GCR Image                                        | ECR Image                                                                   |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.4.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.4.0  |
 |v1.3.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.3.1 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.3.1  |
 |v1.3.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.3.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.3.0  |
 |v1.2.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.2.1 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.2.1  |
