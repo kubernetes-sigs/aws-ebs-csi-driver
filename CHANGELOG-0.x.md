@@ -1,3 +1,22 @@
+# v1.4.0
+## Notable changes
+* Recognize instance-type node label when EC2 metadata isn't available ([#1060](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1060), [@rifelpet](https://github.com/rifelpet))
+* Fix windows NodePublish failing because mount target doesn't exist ([#1081](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1081), [@wongma7](https://github.com/wongma7))
+* Search for nvme device path even if non-nvme exists ([#1082](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1082), [@wongma7](https://github.com/wongma7))
+
+### Misc.
+* Bump csi-proxy from RC v1.0.0 to GA v1.0.1 ([#1018](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1018), [@wongma7](https://github.com/wongma7))
+* Fix spacing in RELEASE.md ([#1035](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1035), [@wongma7](https://github.com/wongma7))
+* [chart] Support image.pullPolicy for csi-resizer image ([#1045](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1045), [@jyaworski](https://github.com/jyaworski))
+* merge 1.3.0 release and post-release commits into master ([#1068](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1068), [@vdhanan](https://github.com/vdhanan))
+* Allow default fstype to be overriden via values.yaml ([#1069](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1069), [@jcrsilva](https://github.com/jcrsilva))
+* Update windows example for image release ([#1070](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1070), [@wongma7](https://github.com/wongma7))
+* Refactor pkg/cloud/metadata.go into pkg/cloud/metadata_*.go files ([#1074](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1074), [@wongma7](https://github.com/wongma7))
+* Move mocks to parent package to avoid import cycle ([#1078](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1078), [@wongma7](https://github.com/wongma7))
+* deploy: Add resizer and snapshotter images to kustomization ([#1080](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1080), [@maxbrunet](https://github.com/maxbrunet))
+* deploy: Fix csi-resizer tag and bump to v1.1.0 ([#1085](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1085), [@maxbrunet](https://github.com/maxbrunet))
+* Reorder isMounted for readability ([#1087](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1087), [@wongma7](https://github.com/wongma7))
+
 # v1.3.1
 * Push multi-arch/os image manifest to ECR.
 
