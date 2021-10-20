@@ -31,7 +31,7 @@ spec:
           tolerationSeconds: 300
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.3.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.4.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -122,7 +122,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-resizer
-          image: k8s.gcr.io/sig-storage/csi-resizer:v1.1.0
+          image: k8s.gcr.io/sig-storage/csi-resizer:v1.0.0
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
