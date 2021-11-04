@@ -8,6 +8,10 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
+# -- Custom labels to add into metadata
+customLabels: #{}
+  k8s-app: aws-ebs-csi-driver
+
 sidecars:
   provisioner:
     env: []
