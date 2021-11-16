@@ -65,6 +65,7 @@ proxy:
   no_proxy:
 
 imagePullSecrets: []
+accessKeySecret: aws-secret
 nameOverride:
 fullnameOverride:
 

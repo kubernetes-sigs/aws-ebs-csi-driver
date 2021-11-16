@@ -92,13 +92,13 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
+                  name: {{ .Values.accessKeySecret }}
                   key: key_id
                   optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
+                  name: {{ .Values.accessKeySecret }}
                   key: access_key
                   optional: true
             {{- with .Values.controller.region }}

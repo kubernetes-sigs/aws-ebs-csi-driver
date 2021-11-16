@@ -1,9 +1,12 @@
 # Helm chart
 
+## v2.6.0
+
+* Support overriding access key secret name via Helm values
+
 ## v2.5.0
 
 * Bump app/driver version to `v1.5.0`
-
 
 ## v2.4.1
 
