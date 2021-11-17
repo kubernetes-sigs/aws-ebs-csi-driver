@@ -1,3 +1,9 @@
+# v1.5.0
+### Misc.
+* Update windows example to refer to v1.4.0 ([#1093](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1093), [@wongma7](https://github.com/wongma7))
+* Bump eksctl used in e2e tests to 0.69.0 ([#1094](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1094), [@wongma7](https://github.com/wongma7))
+* Update to go 1.17 ([#1109](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1109), [@bertinatto](https://github.com/bertinatto))
+
 # v1.4.0
 ## Notable changes
 * Recognize instance-type node label when EC2 metadata isn't available ([#1060](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1060), [@rifelpet](https://github.com/rifelpet))
