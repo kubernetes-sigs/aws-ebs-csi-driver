@@ -172,6 +172,9 @@ func (c *AutoScaling) AttachLoadBalancerTargetGroupsRequest(input *AttachLoadBal
 // API. To detach the target group from the Auto Scaling group, call the DetachLoadBalancerTargetGroups
 // API.
 //
+// This operation is additive and does not detach existing target groups or
+// Classic Load Balancers from the Auto Scaling group.
+//
 // For more information, see Elastic Load Balancing and Amazon EC2 Auto Scaling
 // (https://docs.aws.amazon.com/autoscaling/ec2/userguide/autoscaling-load-balancer.html)
 // in the Amazon EC2 Auto Scaling User Guide.
@@ -269,6 +272,9 @@ func (c *AutoScaling) AttachLoadBalancersRequest(input *AttachLoadBalancersInput
 // To describe the load balancers for an Auto Scaling group, call the DescribeLoadBalancers
 // API. To detach the load balancer from the Auto Scaling group, call the DetachLoadBalancers
 // API.
+//
+// This operation is additive and does not detach existing Classic Load Balancers
+// or target groups from the Auto Scaling group.
 //
 // For more information, see Elastic Load Balancing and Amazon EC2 Auto Scaling
 // (https://docs.aws.amazon.com/autoscaling/ec2/userguide/autoscaling-load-balancer.html)
@@ -629,7 +635,7 @@ func (c *AutoScaling) CompleteLifecycleActionRequest(input *CompleteLifecycleAct
 // This step is a part of the procedure for adding a lifecycle hook to an Auto
 // Scaling group:
 //
-// (Optional) Create a Lambda function and a rule that allows CloudWatch Events
+// (Optional) Create a Lambda function and a rule that allows Amazon EventBridge
 // to invoke your Lambda function when Amazon EC2 Auto Scaling launches or terminates
 // instances.
 //
@@ -643,7 +649,8 @@ func (c *AutoScaling) CompleteLifecycleActionRequest(input *CompleteLifecycleAct
 // If you need more time, record the lifecycle action heartbeat to keep the
 // instance in a pending state.
 //
-// If you finish before the timeout period ends, complete the lifecycle action.
+// If you finish before the timeout period ends, send a callback by using the
+// CompleteLifecycleAction API call.
 //
 // For more information, see Amazon EC2 Auto Scaling lifecycle hooks (https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html)
 // in the Amazon EC2 Auto Scaling User Guide.
@@ -1751,10 +1758,10 @@ func (c *AutoScaling) DescribeAccountLimitsRequest(input *DescribeAccountLimitsI
 //
 // Describes the current Amazon EC2 Auto Scaling resource quotas for your account.
 //
-// When you establish an account, the account has initial quotas on the maximum
-// number of Auto Scaling groups and launch configurations that you can create
-// in a given Region. For more information, see Amazon EC2 Auto Scaling service
-// quotas (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-account-limits.html)
+// When you establish an Amazon Web Services account, the account has initial
+// quotas on the maximum number of Auto Scaling groups and launch configurations
+// that you can create in a given Region. For more information, see Amazon EC2
+// Auto Scaling service quotas (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-account-limits.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -1932,7 +1939,13 @@ func (c *AutoScaling) DescribeAutoScalingGroupsRequest(input *DescribeAutoScalin
 //
 // Gets information about the Auto Scaling groups in the account and Region.
 //
-// This operation returns information about instances in Auto Scaling groups.
+// If you specify Auto Scaling group names, the output includes information
+// for only the specified Auto Scaling groups. If you specify filters, the output
+// includes information for only those Auto Scaling groups that meet the filter
+// criteria. If you do not specify group names or filters, the output includes
+// information for all Auto Scaling groups.
+//
+// This operation also returns information about instances in Auto Scaling groups.
 // To retrieve information about the instances in a warm pool, you must call
 // the DescribeWarmPool API.
 //
@@ -2746,6 +2759,9 @@ func (c *AutoScaling) DescribeLoadBalancerTargetGroupsRequest(input *DescribeLoa
 //   You already have a pending update to an Amazon EC2 Auto Scaling resource
 //   (for example, an Auto Scaling group, instance, or load balancer).
 //
+//   * ErrCodeInvalidNextToken "InvalidNextToken"
+//   The NextToken value is not valid.
+//
 // See also, https://docs.aws.amazon.com/goto/WebAPI/autoscaling-2011-01-01/DescribeLoadBalancerTargetGroups
 func (c *AutoScaling) DescribeLoadBalancerTargetGroups(input *DescribeLoadBalancerTargetGroupsInput) (*DescribeLoadBalancerTargetGroupsOutput, error) {
 	req, out := c.DescribeLoadBalancerTargetGroupsRequest(input)
@@ -2852,6 +2868,9 @@ func (c *AutoScaling) DescribeLoadBalancersRequest(input *DescribeLoadBalancersI
 //   * ErrCodeResourceContentionFault "ResourceContention"
 //   You already have a pending update to an Amazon EC2 Auto Scaling resource
 //   (for example, an Auto Scaling group, instance, or load balancer).
+//
+//   * ErrCodeInvalidNextToken "InvalidNextToken"
+//   The NextToken value is not valid.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/autoscaling-2011-01-01/DescribeLoadBalancers
 func (c *AutoScaling) DescribeLoadBalancers(input *DescribeLoadBalancersInput) (*DescribeLoadBalancersOutput, error) {
@@ -4789,14 +4808,14 @@ func (c *AutoScaling) PutLifecycleHookRequest(input *PutLifecycleHookInput) (req
 //
 // Creates or updates a lifecycle hook for the specified Auto Scaling group.
 //
-// A lifecycle hook tells Amazon EC2 Auto Scaling to perform an action on an
-// instance when the instance launches (before it is put into service) or as
-// the instance terminates (before it is fully terminated).
+// A lifecycle hook enables an Auto Scaling group to be aware of events in the
+// Auto Scaling instance lifecycle, and then perform a custom action when the
+// corresponding lifecycle event occurs.
 //
 // This step is a part of the procedure for adding a lifecycle hook to an Auto
 // Scaling group:
 //
-// (Optional) Create a Lambda function and a rule that allows CloudWatch Events
+// (Optional) Create a Lambda function and a rule that allows Amazon EventBridge
 // to invoke your Lambda function when Amazon EC2 Auto Scaling launches or terminates
 // instances.
 //
@@ -4811,8 +4830,8 @@ func (c *AutoScaling) PutLifecycleHookRequest(input *PutLifecycleHookInput) (req
 // instance in a pending state using the RecordLifecycleActionHeartbeat API
 // call.
 //
-// If you finish before the timeout period ends, complete the lifecycle action
-// using the CompleteLifecycleAction API call.
+// If you finish before the timeout period ends, send a callback by using the
+// CompleteLifecycleAction API call.
 //
 // For more information, see Amazon EC2 Auto Scaling lifecycle hooks (https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html)
 // in the Amazon EC2 Auto Scaling User Guide.
@@ -5322,7 +5341,7 @@ func (c *AutoScaling) RecordLifecycleActionHeartbeatRequest(input *RecordLifecyc
 // This step is a part of the procedure for adding a lifecycle hook to an Auto
 // Scaling group:
 //
-// (Optional) Create a Lambda function and a rule that allows CloudWatch Events
+// (Optional) Create a Lambda function and a rule that allows Amazon EventBridge
 // to invoke your Lambda function when Amazon EC2 Auto Scaling launches or terminates
 // instances.
 //
@@ -5336,7 +5355,8 @@ func (c *AutoScaling) RecordLifecycleActionHeartbeatRequest(input *RecordLifecyc
 // If you need more time, record the lifecycle action heartbeat to keep the
 // instance in a pending state.
 //
-// If you finish before the timeout period ends, complete the lifecycle action.
+// If you finish before the timeout period ends, send a callback by using the
+// CompleteLifecycleAction API call.
 //
 // For more information, see Amazon EC2 Auto Scaling lifecycle hooks (https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html)
 // in the Amazon EC2 Auto Scaling User Guide.
@@ -5688,8 +5708,8 @@ func (c *AutoScaling) SetInstanceProtectionRequest(input *SetInstanceProtectionI
 // operation cannot be called on instances in a warm pool.
 //
 // For more information about preventing instances that are part of an Auto
-// Scaling group from terminating on scale in, see Instance scale-in protection
-// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-instance-termination.html#instance-protection)
+// Scaling group from terminating on scale in, see Using instance scale-in protection
+// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 //
 // If you exceed your maximum limit of instance IDs, which is 50 per Auto Scaling
@@ -5779,13 +5799,17 @@ func (c *AutoScaling) StartInstanceRefreshRequest(input *StartInstanceRefreshInp
 
 // StartInstanceRefresh API operation for Auto Scaling.
 //
-// Starts a new instance refresh operation, which triggers a rolling replacement
-// of previously launched instances in the Auto Scaling group with a new group
-// of instances.
+// Starts a new instance refresh operation. An instance refresh performs a rolling
+// replacement of all or some instances in an Auto Scaling group. Each instance
+// is terminated first and then replaced, which temporarily reduces the capacity
+// available within your Auto Scaling group.
 //
 // This operation is part of the instance refresh feature (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-instance-refresh.html)
 // in Amazon EC2 Auto Scaling, which helps you update instances in your Auto
-// Scaling group after you make configuration changes.
+// Scaling group. This feature is helpful, for example, when you have a new
+// AMI or a new user data script. You just need to create a new launch template
+// that specifies the new AMI or user data script. Then start an instance refresh
+// to immediately begin the process of updating instances in the group.
 //
 // If the call succeeds, it creates a new instance refresh request with a unique
 // ID that you can use to track its progress. To query its status, call the
@@ -6158,6 +6182,90 @@ func (c *AutoScaling) UpdateAutoScalingGroupWithContext(ctx aws.Context, input *
 	return out, req.Send()
 }
 
+// Specifies the minimum and maximum for the AcceleratorCount object when you
+// specify InstanceRequirements for an Auto Scaling group.
+type AcceleratorCountRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum value.
+	Max *int64 `type:"integer"`
+
+	// The minimum value.
+	Min *int64 `type:"integer"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AcceleratorCountRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AcceleratorCountRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *AcceleratorCountRequest) SetMax(v int64) *AcceleratorCountRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *AcceleratorCountRequest) SetMin(v int64) *AcceleratorCountRequest {
+	s.Min = &v
+	return s
+}
+
+// Specifies the minimum and maximum for the AcceleratorTotalMemoryMiB object
+// when you specify InstanceRequirements for an Auto Scaling group.
+type AcceleratorTotalMemoryMiBRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The memory maximum in MiB.
+	Max *int64 `type:"integer"`
+
+	// The memory minimum in MiB.
+	Min *int64 `type:"integer"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AcceleratorTotalMemoryMiBRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s AcceleratorTotalMemoryMiBRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *AcceleratorTotalMemoryMiBRequest) SetMax(v int64) *AcceleratorTotalMemoryMiBRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *AcceleratorTotalMemoryMiBRequest) SetMin(v int64) *AcceleratorTotalMemoryMiBRequest {
+	s.Min = &v
+	return s
+}
+
 // Describes scaling activity, which is a long-running process that represents
 // a change to your Auto Scaling group, such as changing its size or replacing
 // an instance.
@@ -6211,12 +6319,20 @@ type Activity struct {
 	StatusMessage *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Activity) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Activity) GoString() string {
 	return s.String()
 }
@@ -6302,12 +6418,20 @@ type AdjustmentType struct {
 	AdjustmentType *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AdjustmentType) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AdjustmentType) GoString() string {
 	return s.String()
 }
@@ -6329,12 +6453,20 @@ type Alarm struct {
 	AlarmName *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Alarm) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Alarm) GoString() string {
 	return s.String()
 }
@@ -6363,12 +6495,20 @@ type AttachInstancesInput struct {
 	InstanceIds []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachInstancesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachInstancesInput) GoString() string {
 	return s.String()
 }
@@ -6405,12 +6545,20 @@ type AttachInstancesOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachInstancesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachInstancesOutput) GoString() string {
 	return s.String()
 }
@@ -6432,12 +6580,20 @@ type AttachLoadBalancerTargetGroupsInput struct {
 	TargetGroupARNs []*string `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancerTargetGroupsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancerTargetGroupsInput) GoString() string {
 	return s.String()
 }
@@ -6477,12 +6633,20 @@ type AttachLoadBalancerTargetGroupsOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancerTargetGroupsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancerTargetGroupsOutput) GoString() string {
 	return s.String()
 }
@@ -6501,12 +6665,20 @@ type AttachLoadBalancersInput struct {
 	LoadBalancerNames []*string `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancersInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancersInput) GoString() string {
 	return s.String()
 }
@@ -6546,14 +6718,64 @@ type AttachLoadBalancersOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancersOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s AttachLoadBalancersOutput) GoString() string {
 	return s.String()
+}
+
+// Specifies the minimum and maximum for the BaselineEbsBandwidthMbps object
+// when you specify InstanceRequirements for an Auto Scaling group.
+type BaselineEbsBandwidthMbpsRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum value in Mbps.
+	Max *int64 `type:"integer"`
+
+	// The minimum value in Mbps.
+	Min *int64 `type:"integer"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s BaselineEbsBandwidthMbpsRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s BaselineEbsBandwidthMbpsRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *BaselineEbsBandwidthMbpsRequest) SetMax(v int64) *BaselineEbsBandwidthMbpsRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *BaselineEbsBandwidthMbpsRequest) SetMin(v int64) *BaselineEbsBandwidthMbpsRequest {
+	s.Min = &v
+	return s
 }
 
 type BatchDeleteScheduledActionInput struct {
@@ -6571,12 +6793,20 @@ type BatchDeleteScheduledActionInput struct {
 	ScheduledActionNames []*string `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchDeleteScheduledActionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchDeleteScheduledActionInput) GoString() string {
 	return s.String()
 }
@@ -6620,12 +6850,20 @@ type BatchDeleteScheduledActionOutput struct {
 	FailedScheduledActions []*FailedScheduledUpdateGroupActionRequest `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchDeleteScheduledActionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchDeleteScheduledActionOutput) GoString() string {
 	return s.String()
 }
@@ -6650,12 +6888,20 @@ type BatchPutScheduledUpdateGroupActionInput struct {
 	ScheduledUpdateGroupActions []*ScheduledUpdateGroupActionRequest `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchPutScheduledUpdateGroupActionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchPutScheduledUpdateGroupActionInput) GoString() string {
 	return s.String()
 }
@@ -6709,12 +6955,20 @@ type BatchPutScheduledUpdateGroupActionOutput struct {
 	FailedScheduledUpdateGroupActions []*FailedScheduledUpdateGroupActionRequest `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchPutScheduledUpdateGroupActionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BatchPutScheduledUpdateGroupActionOutput) GoString() string {
 	return s.String()
 }
@@ -6756,12 +7010,20 @@ type BlockDeviceMapping struct {
 	VirtualName *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BlockDeviceMapping) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s BlockDeviceMapping) GoString() string {
 	return s.String()
 }
@@ -6823,12 +7085,20 @@ type CancelInstanceRefreshInput struct {
 	AutoScalingGroupName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CancelInstanceRefreshInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CancelInstanceRefreshInput) GoString() string {
 	return s.String()
 }
@@ -6862,12 +7132,20 @@ type CancelInstanceRefreshOutput struct {
 	InstanceRefreshId *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CancelInstanceRefreshOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CancelInstanceRefreshOutput) GoString() string {
 	return s.String()
 }
@@ -6884,7 +7162,7 @@ func (s *CancelInstanceRefreshOutput) SetInstanceRefreshId(v string) *CancelInst
 type CapacityForecast struct {
 	_ struct{} `type:"structure"`
 
-	// The time stamps for the data points, in UTC format.
+	// The timestamps for the data points, in UTC format.
 	//
 	// Timestamps is a required field
 	Timestamps []*time.Time `type:"list" required:"true"`
@@ -6895,12 +7173,20 @@ type CapacityForecast struct {
 	Values []*float64 `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CapacityForecast) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CapacityForecast) GoString() string {
 	return s.String()
 }
@@ -6945,12 +7231,20 @@ type CompleteLifecycleActionInput struct {
 	LifecycleHookName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CompleteLifecycleActionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CompleteLifecycleActionInput) GoString() string {
 	return s.String()
 }
@@ -7020,12 +7314,20 @@ type CompleteLifecycleActionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CompleteLifecycleActionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CompleteLifecycleActionOutput) GoString() string {
 	return s.String()
 }
@@ -7052,7 +7354,7 @@ type CreateAutoScalingGroupInput struct {
 	// attempts to launch a Spot Instance whenever Amazon EC2 notifies that a Spot
 	// Instance is at an elevated risk of interruption. After launching a new instance,
 	// it then terminates an old instance. For more information, see Amazon EC2
-	// Auto Scaling Capacity Rebalancing (https://docs.aws.amazon.com/autoscaling/ec2/userguide/capacity-rebalance.html)
+	// Auto Scaling Capacity Rebalancing (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	CapacityRebalance *bool `type:"boolean"`
 
@@ -7075,11 +7377,22 @@ type CreateAutoScalingGroupInput struct {
 	// the default is the minimum size of the group.
 	DesiredCapacity *int64 `type:"integer"`
 
+	// The unit of measurement for the value specified for desired capacity. Amazon
+	// EC2 Auto Scaling supports DesiredCapacityType for attribute-based instance
+	// type selection only. For more information, see Creating an Auto Scaling group
+	// using attribute-based instance type selection (https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-asg-instance-type-requirements.html)
+	// in the Amazon EC2 Auto Scaling User Guide.
+	//
+	// By default, Amazon EC2 Auto Scaling specifies units, which translates into
+	// number of instances.
+	//
+	// Valid values: units | vcpu | memory-mib
+	DesiredCapacityType *string `min:"1" type:"string"`
+
 	// The amount of time, in seconds, that Amazon EC2 Auto Scaling waits before
-	// checking the health status of an EC2 instance that has come into service.
-	// During this time, any health check failures for the instance are ignored.
-	// The default value is 0. For more information, see Health check grace period
-	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/healthcheck.html#health-check-grace-period)
+	// checking the health status of an EC2 instance that has come into service
+	// and marking it unhealthy due to a failed health check. The default value
+	// is 0. For more information, see Health check grace period (https://docs.aws.amazon.com/autoscaling/ec2/userguide/healthcheck.html#health-check-grace-period)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	//
 	// Conditional: Required if you are adding an ELB health check.
@@ -7154,25 +7467,17 @@ type CreateAutoScalingGroupInput struct {
 	// MinSize is a required field
 	MinSize *int64 `type:"integer" required:"true"`
 
-	// An embedded object that specifies a mixed instances policy. The required
-	// properties must be specified. If optional properties are unspecified, their
-	// default values are used.
+	// An embedded object that specifies a mixed instances policy.
 	//
-	// The policy includes properties that not only define the distribution of On-Demand
-	// Instances and Spot Instances, the maximum price to pay for Spot Instances,
-	// and how the Auto Scaling group allocates instance types to fulfill On-Demand
-	// and Spot capacities, but also the properties that specify the instance configuration
-	// information—the launch template and instance types. The policy can also
-	// include a weight for each instance type and different launch templates for
-	// individual instance types. For more information, see Auto Scaling groups
-	// with multiple instance types and purchase options (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-purchase-options.html)
+	// For more information, see Auto Scaling groups with multiple instance types
+	// and purchase options (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	MixedInstancesPolicy *MixedInstancesPolicy `type:"structure"`
 
 	// Indicates whether newly launched instances are protected from termination
 	// by Amazon EC2 Auto Scaling when scaling in. For more information about preventing
-	// instances from terminating on scale in, see Instance scale-in protection
-	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-instance-termination.html#instance-protection)
+	// instances from terminating on scale in, see Using instance scale-in protection
+	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	NewInstancesProtectedFromScaleIn *bool `type:"boolean"`
 
@@ -7225,12 +7530,20 @@ type CreateAutoScalingGroupInput struct {
 	VPCZoneIdentifier *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateAutoScalingGroupInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateAutoScalingGroupInput) GoString() string {
 	return s.String()
 }
@@ -7243,6 +7556,9 @@ func (s *CreateAutoScalingGroupInput) Validate() error {
 	}
 	if s.AutoScalingGroupName != nil && len(*s.AutoScalingGroupName) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("AutoScalingGroupName", 1))
+	}
+	if s.DesiredCapacityType != nil && len(*s.DesiredCapacityType) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("DesiredCapacityType", 1))
 	}
 	if s.HealthCheckType != nil && len(*s.HealthCheckType) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("HealthCheckType", 1))
@@ -7338,6 +7654,12 @@ func (s *CreateAutoScalingGroupInput) SetDefaultCooldown(v int64) *CreateAutoSca
 // SetDesiredCapacity sets the DesiredCapacity field's value.
 func (s *CreateAutoScalingGroupInput) SetDesiredCapacity(v int64) *CreateAutoScalingGroupInput {
 	s.DesiredCapacity = &v
+	return s
+}
+
+// SetDesiredCapacityType sets the DesiredCapacityType field's value.
+func (s *CreateAutoScalingGroupInput) SetDesiredCapacityType(v string) *CreateAutoScalingGroupInput {
+	s.DesiredCapacityType = &v
 	return s
 }
 
@@ -7453,12 +7775,20 @@ type CreateAutoScalingGroupOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateAutoScalingGroupOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateAutoScalingGroupOutput) GoString() string {
 	return s.String()
 }
@@ -7512,8 +7842,8 @@ type CreateLaunchConfigurationInput struct {
 	// EBS and an optimized configuration stack to provide optimal I/O performance.
 	// This optimization is not available with all instance types. Additional fees
 	// are incurred when you enable EBS optimization for an instance type that is
-	// not EBS-optimized by default. For more information, see Amazon EBS-Optimized
-	// Instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html)
+	// not EBS-optimized by default. For more information, see Amazon EBS-optimized
+	// instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html)
 	// in the Amazon EC2 User Guide for Linux Instances.
 	//
 	// The default value is false.
@@ -7641,12 +7971,20 @@ type CreateLaunchConfigurationInput struct {
 	UserData *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateLaunchConfigurationInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateLaunchConfigurationInput) GoString() string {
 	return s.String()
 }
@@ -7830,12 +8168,20 @@ type CreateLaunchConfigurationOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateLaunchConfigurationOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateLaunchConfigurationOutput) GoString() string {
 	return s.String()
 }
@@ -7849,12 +8195,20 @@ type CreateOrUpdateTagsInput struct {
 	Tags []*Tag `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateOrUpdateTagsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateOrUpdateTagsInput) GoString() string {
 	return s.String()
 }
@@ -7892,12 +8246,20 @@ type CreateOrUpdateTagsOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateOrUpdateTagsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CreateOrUpdateTagsOutput) GoString() string {
 	return s.String()
 }
@@ -7910,7 +8272,7 @@ func (s CreateOrUpdateTagsOutput) GoString() string {
 //    * Add values for each required parameter from CloudWatch. You can use
 //    an existing metric, or a new metric that you create. To use your own metric,
 //    you must first publish the metric to CloudWatch. For more information,
-//    see Publish Custom Metrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html)
+//    see Publish custom metrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html)
 //    in the Amazon CloudWatch User Guide.
 //
 //    * Choose a metric that changes proportionally with capacity. The value
@@ -7918,7 +8280,13 @@ func (s CreateOrUpdateTagsOutput) GoString() string {
 //    number of capacity units. That is, the value of the metric should decrease
 //    when capacity increases.
 //
-// For more information about CloudWatch, see Amazon CloudWatch Concepts (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html).
+// For more information about the CloudWatch terminology below, see Amazon CloudWatch
+// concepts (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html).
+//
+// Each individual service provides information about the metrics, namespace,
+// and dimensions they use. For more information, see Amazon Web Services services
+// that publish CloudWatch metrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-services-cloudwatch-metrics.html)
+// in the Amazon CloudWatch User Guide.
 type CustomizedMetricSpecification struct {
 	_ struct{} `type:"structure"`
 
@@ -7928,7 +8296,9 @@ type CustomizedMetricSpecification struct {
 	// the same dimensions in your scaling policy.
 	Dimensions []*MetricDimension `type:"list"`
 
-	// The name of the metric.
+	// The name of the metric. To get the exact metric name, namespace, and dimensions,
+	// inspect the Metric (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_Metric.html)
+	// object that is returned by a call to ListMetrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html).
 	//
 	// MetricName is a required field
 	MetricName *string `type:"string" required:"true"`
@@ -7943,16 +8313,26 @@ type CustomizedMetricSpecification struct {
 	// Statistic is a required field
 	Statistic *string `type:"string" required:"true" enum:"MetricStatistic"`
 
-	// The unit of the metric.
+	// The unit of the metric. For a complete list of the units that CloudWatch
+	// supports, see the MetricDatum (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)
+	// data type in the Amazon CloudWatch API Reference.
 	Unit *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CustomizedMetricSpecification) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s CustomizedMetricSpecification) GoString() string {
 	return s.String()
 }
@@ -8031,12 +8411,20 @@ type DeleteAutoScalingGroupInput struct {
 	ForceDelete *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteAutoScalingGroupInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteAutoScalingGroupInput) GoString() string {
 	return s.String()
 }
@@ -8073,12 +8461,20 @@ type DeleteAutoScalingGroupOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteAutoScalingGroupOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteAutoScalingGroupOutput) GoString() string {
 	return s.String()
 }
@@ -8092,12 +8488,20 @@ type DeleteLaunchConfigurationInput struct {
 	LaunchConfigurationName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLaunchConfigurationInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLaunchConfigurationInput) GoString() string {
 	return s.String()
 }
@@ -8128,12 +8532,20 @@ type DeleteLaunchConfigurationOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLaunchConfigurationOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLaunchConfigurationOutput) GoString() string {
 	return s.String()
 }
@@ -8152,12 +8564,20 @@ type DeleteLifecycleHookInput struct {
 	LifecycleHookName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLifecycleHookInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLifecycleHookInput) GoString() string {
 	return s.String()
 }
@@ -8200,12 +8620,20 @@ type DeleteLifecycleHookOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLifecycleHookOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteLifecycleHookOutput) GoString() string {
 	return s.String()
 }
@@ -8218,19 +8646,26 @@ type DeleteNotificationConfigurationInput struct {
 	// AutoScalingGroupName is a required field
 	AutoScalingGroupName *string `min:"1" type:"string" required:"true"`
 
-	// The Amazon Resource Name (ARN) of the Amazon Simple Notification Service
-	// (Amazon SNS) topic.
+	// The Amazon Resource Name (ARN) of the Amazon SNS topic.
 	//
 	// TopicARN is a required field
 	TopicARN *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteNotificationConfigurationInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteNotificationConfigurationInput) GoString() string {
 	return s.String()
 }
@@ -8273,12 +8708,20 @@ type DeleteNotificationConfigurationOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteNotificationConfigurationOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteNotificationConfigurationOutput) GoString() string {
 	return s.String()
 }
@@ -8295,12 +8738,20 @@ type DeletePolicyInput struct {
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeletePolicyInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeletePolicyInput) GoString() string {
 	return s.String()
 }
@@ -8340,12 +8791,20 @@ type DeletePolicyOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeletePolicyOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeletePolicyOutput) GoString() string {
 	return s.String()
 }
@@ -8364,12 +8823,20 @@ type DeleteScheduledActionInput struct {
 	ScheduledActionName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteScheduledActionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteScheduledActionInput) GoString() string {
 	return s.String()
 }
@@ -8412,12 +8879,20 @@ type DeleteScheduledActionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteScheduledActionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteScheduledActionOutput) GoString() string {
 	return s.String()
 }
@@ -8431,12 +8906,20 @@ type DeleteTagsInput struct {
 	Tags []*Tag `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteTagsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteTagsInput) GoString() string {
 	return s.String()
 }
@@ -8474,12 +8957,20 @@ type DeleteTagsOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteTagsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteTagsOutput) GoString() string {
 	return s.String()
 }
@@ -8499,12 +8990,20 @@ type DeleteWarmPoolInput struct {
 	ForceDelete *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteWarmPoolInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteWarmPoolInput) GoString() string {
 	return s.String()
 }
@@ -8541,12 +9040,20 @@ type DeleteWarmPoolOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteWarmPoolOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DeleteWarmPoolOutput) GoString() string {
 	return s.String()
 }
@@ -8555,12 +9062,20 @@ type DescribeAccountLimitsInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAccountLimitsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAccountLimitsInput) GoString() string {
 	return s.String()
 }
@@ -8583,12 +9098,20 @@ type DescribeAccountLimitsOutput struct {
 	NumberOfLaunchConfigurations *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAccountLimitsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAccountLimitsOutput) GoString() string {
 	return s.String()
 }
@@ -8621,12 +9144,20 @@ type DescribeAdjustmentTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAdjustmentTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAdjustmentTypesInput) GoString() string {
 	return s.String()
 }
@@ -8638,12 +9169,20 @@ type DescribeAdjustmentTypesOutput struct {
 	AdjustmentTypes []*AdjustmentType `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAdjustmentTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAdjustmentTypesOutput) GoString() string {
 	return s.String()
 }
@@ -8664,6 +9203,9 @@ type DescribeAutoScalingGroupsInput struct {
 	// If you omit this parameter, all Auto Scaling groups are described.
 	AutoScalingGroupNames []*string `type:"list"`
 
+	// One or more filters to limit the results based on specific tags.
+	Filters []*Filter `type:"list"`
+
 	// The maximum number of items to return with this call. The default value is
 	// 50 and the maximum value is 100.
 	MaxRecords *int64 `type:"integer"`
@@ -8673,12 +9215,20 @@ type DescribeAutoScalingGroupsInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingGroupsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingGroupsInput) GoString() string {
 	return s.String()
 }
@@ -8686,6 +9236,12 @@ func (s DescribeAutoScalingGroupsInput) GoString() string {
 // SetAutoScalingGroupNames sets the AutoScalingGroupNames field's value.
 func (s *DescribeAutoScalingGroupsInput) SetAutoScalingGroupNames(v []*string) *DescribeAutoScalingGroupsInput {
 	s.AutoScalingGroupNames = v
+	return s
+}
+
+// SetFilters sets the Filters field's value.
+func (s *DescribeAutoScalingGroupsInput) SetFilters(v []*Filter) *DescribeAutoScalingGroupsInput {
+	s.Filters = v
 	return s
 }
 
@@ -8716,12 +9272,20 @@ type DescribeAutoScalingGroupsOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingGroupsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingGroupsOutput) GoString() string {
 	return s.String()
 }
@@ -8757,12 +9321,20 @@ type DescribeAutoScalingInstancesInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingInstancesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingInstancesInput) GoString() string {
 	return s.String()
 }
@@ -8798,12 +9370,20 @@ type DescribeAutoScalingInstancesOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingInstancesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingInstancesOutput) GoString() string {
 	return s.String()
 }
@@ -8824,12 +9404,20 @@ type DescribeAutoScalingNotificationTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingNotificationTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingNotificationTypesInput) GoString() string {
 	return s.String()
 }
@@ -8841,12 +9429,20 @@ type DescribeAutoScalingNotificationTypesOutput struct {
 	AutoScalingNotificationTypes []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingNotificationTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeAutoScalingNotificationTypesOutput) GoString() string {
 	return s.String()
 }
@@ -8877,12 +9473,20 @@ type DescribeInstanceRefreshesInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeInstanceRefreshesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeInstanceRefreshesInput) GoString() string {
 	return s.String()
 }
@@ -8940,12 +9544,20 @@ type DescribeInstanceRefreshesOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeInstanceRefreshesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeInstanceRefreshesOutput) GoString() string {
 	return s.String()
 }
@@ -8980,12 +9592,20 @@ type DescribeLaunchConfigurationsInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLaunchConfigurationsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLaunchConfigurationsInput) GoString() string {
 	return s.String()
 }
@@ -9023,12 +9643,20 @@ type DescribeLaunchConfigurationsOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLaunchConfigurationsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLaunchConfigurationsOutput) GoString() string {
 	return s.String()
 }
@@ -9049,12 +9677,20 @@ type DescribeLifecycleHookTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHookTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHookTypesInput) GoString() string {
 	return s.String()
 }
@@ -9066,12 +9702,20 @@ type DescribeLifecycleHookTypesOutput struct {
 	LifecycleHookTypes []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHookTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHookTypesOutput) GoString() string {
 	return s.String()
 }
@@ -9095,12 +9739,20 @@ type DescribeLifecycleHooksInput struct {
 	LifecycleHookNames []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHooksInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHooksInput) GoString() string {
 	return s.String()
 }
@@ -9140,12 +9792,20 @@ type DescribeLifecycleHooksOutput struct {
 	LifecycleHooks []*LifecycleHook `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHooksOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLifecycleHooksOutput) GoString() string {
 	return s.String()
 }
@@ -9173,12 +9833,20 @@ type DescribeLoadBalancerTargetGroupsInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancerTargetGroupsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancerTargetGroupsInput) GoString() string {
 	return s.String()
 }
@@ -9230,12 +9898,20 @@ type DescribeLoadBalancerTargetGroupsOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancerTargetGroupsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancerTargetGroupsOutput) GoString() string {
 	return s.String()
 }
@@ -9269,12 +9945,20 @@ type DescribeLoadBalancersInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancersInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancersInput) GoString() string {
 	return s.String()
 }
@@ -9326,12 +10010,20 @@ type DescribeLoadBalancersOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancersOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeLoadBalancersOutput) GoString() string {
 	return s.String()
 }
@@ -9352,12 +10044,20 @@ type DescribeMetricCollectionTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeMetricCollectionTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeMetricCollectionTypesInput) GoString() string {
 	return s.String()
 }
@@ -9372,12 +10072,20 @@ type DescribeMetricCollectionTypesOutput struct {
 	Metrics []*MetricCollectionType `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeMetricCollectionTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeMetricCollectionTypesOutput) GoString() string {
 	return s.String()
 }
@@ -9409,12 +10117,20 @@ type DescribeNotificationConfigurationsInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeNotificationConfigurationsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeNotificationConfigurationsInput) GoString() string {
 	return s.String()
 }
@@ -9452,12 +10168,20 @@ type DescribeNotificationConfigurationsOutput struct {
 	NotificationConfigurations []*NotificationConfiguration `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeNotificationConfigurationsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeNotificationConfigurationsOutput) GoString() string {
 	return s.String()
 }
@@ -9500,12 +10224,20 @@ type DescribePoliciesInput struct {
 	PolicyTypes []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribePoliciesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribePoliciesInput) GoString() string {
 	return s.String()
 }
@@ -9566,12 +10298,20 @@ type DescribePoliciesOutput struct {
 	ScalingPolicies []*ScalingPolicy `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribePoliciesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribePoliciesOutput) GoString() string {
 	return s.String()
 }
@@ -9614,12 +10354,20 @@ type DescribeScalingActivitiesInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingActivitiesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingActivitiesInput) GoString() string {
 	return s.String()
 }
@@ -9683,12 +10431,20 @@ type DescribeScalingActivitiesOutput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingActivitiesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingActivitiesOutput) GoString() string {
 	return s.String()
 }
@@ -9709,12 +10465,20 @@ type DescribeScalingProcessTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingProcessTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingProcessTypesInput) GoString() string {
 	return s.String()
 }
@@ -9726,12 +10490,20 @@ type DescribeScalingProcessTypesOutput struct {
 	Processes []*ProcessType `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingProcessTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScalingProcessTypesOutput) GoString() string {
 	return s.String()
 }
@@ -9772,12 +10544,20 @@ type DescribeScheduledActionsInput struct {
 	StartTime *time.Time `type:"timestamp"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScheduledActionsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScheduledActionsInput) GoString() string {
 	return s.String()
 }
@@ -9844,12 +10624,20 @@ type DescribeScheduledActionsOutput struct {
 	ScheduledUpdateGroupActions []*ScheduledUpdateGroupAction `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScheduledActionsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeScheduledActionsOutput) GoString() string {
 	return s.String()
 }
@@ -9882,12 +10670,20 @@ type DescribeTagsInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTagsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTagsInput) GoString() string {
 	return s.String()
 }
@@ -9923,12 +10719,20 @@ type DescribeTagsOutput struct {
 	Tags []*TagDescription `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTagsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTagsOutput) GoString() string {
 	return s.String()
 }
@@ -9949,12 +10753,20 @@ type DescribeTerminationPolicyTypesInput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTerminationPolicyTypesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTerminationPolicyTypesInput) GoString() string {
 	return s.String()
 }
@@ -9968,12 +10780,20 @@ type DescribeTerminationPolicyTypesOutput struct {
 	TerminationPolicyTypes []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTerminationPolicyTypesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeTerminationPolicyTypesOutput) GoString() string {
 	return s.String()
 }
@@ -10001,12 +10821,20 @@ type DescribeWarmPoolInput struct {
 	NextToken *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeWarmPoolInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeWarmPoolInput) GoString() string {
 	return s.String()
 }
@@ -10059,12 +10887,20 @@ type DescribeWarmPoolOutput struct {
 	WarmPoolConfiguration *WarmPoolConfiguration `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeWarmPoolOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DescribeWarmPoolOutput) GoString() string {
 	return s.String()
 }
@@ -10087,6 +10923,78 @@ func (s *DescribeWarmPoolOutput) SetWarmPoolConfiguration(v *WarmPoolConfigurati
 	return s
 }
 
+// Describes the desired configuration for an instance refresh.
+//
+// If you specify a desired configuration, you must specify either a LaunchTemplate
+// or a MixedInstancesPolicy.
+type DesiredConfiguration struct {
+	_ struct{} `type:"structure"`
+
+	// Describes the launch template and the version of the launch template that
+	// Amazon EC2 Auto Scaling uses to launch Amazon EC2 instances. For more information
+	// about launch templates, see Launch templates (https://docs.aws.amazon.com/autoscaling/ec2/userguide/LaunchTemplates.html)
+	// in the Amazon EC2 Auto Scaling User Guide.
+	LaunchTemplate *LaunchTemplateSpecification `type:"structure"`
+
+	// Describes a mixed instances policy. A mixed instances policy contains the
+	// instance types that Amazon EC2 Auto Scaling can launch and other information
+	// that Amazon EC2 Auto Scaling can use to launch instances and help optimize
+	// your costs. For more information, see Auto Scaling groups with multiple instance
+	// types and purchase options (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups.html)
+	// in the Amazon EC2 Auto Scaling User Guide.
+	MixedInstancesPolicy *MixedInstancesPolicy `type:"structure"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DesiredConfiguration) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s DesiredConfiguration) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DesiredConfiguration) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DesiredConfiguration"}
+	if s.LaunchTemplate != nil {
+		if err := s.LaunchTemplate.Validate(); err != nil {
+			invalidParams.AddNested("LaunchTemplate", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.MixedInstancesPolicy != nil {
+		if err := s.MixedInstancesPolicy.Validate(); err != nil {
+			invalidParams.AddNested("MixedInstancesPolicy", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetLaunchTemplate sets the LaunchTemplate field's value.
+func (s *DesiredConfiguration) SetLaunchTemplate(v *LaunchTemplateSpecification) *DesiredConfiguration {
+	s.LaunchTemplate = v
+	return s
+}
+
+// SetMixedInstancesPolicy sets the MixedInstancesPolicy field's value.
+func (s *DesiredConfiguration) SetMixedInstancesPolicy(v *MixedInstancesPolicy) *DesiredConfiguration {
+	s.MixedInstancesPolicy = v
+	return s
+}
+
 type DetachInstancesInput struct {
 	_ struct{} `type:"structure"`
 
@@ -10105,12 +11013,20 @@ type DetachInstancesInput struct {
 	ShouldDecrementDesiredCapacity *bool `type:"boolean" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachInstancesInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachInstancesInput) GoString() string {
 	return s.String()
 }
@@ -10159,12 +11075,20 @@ type DetachInstancesOutput struct {
 	Activities []*Activity `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachInstancesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachInstancesOutput) GoString() string {
 	return s.String()
 }
@@ -10190,12 +11114,20 @@ type DetachLoadBalancerTargetGroupsInput struct {
 	TargetGroupARNs []*string `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancerTargetGroupsInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancerTargetGroupsInput) GoString() string {
 	return s.String()
 }
@@ -10235,12 +11167,20 @@ type DetachLoadBalancerTargetGroupsOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancerTargetGroupsOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancerTargetGroupsOutput) GoString() string {
 	return s.String()
 }
@@ -10259,12 +11199,20 @@ type DetachLoadBalancersInput struct {
 	LoadBalancerNames []*string `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancersInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancersInput) GoString() string {
 	return s.String()
 }
@@ -10304,12 +11252,20 @@ type DetachLoadBalancersOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancersOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DetachLoadBalancersOutput) GoString() string {
 	return s.String()
 }
@@ -10368,12 +11324,20 @@ type DisableMetricsCollectionInput struct {
 	Metrics []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DisableMetricsCollectionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DisableMetricsCollectionInput) GoString() string {
 	return s.String()
 }
@@ -10410,12 +11374,20 @@ type DisableMetricsCollectionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DisableMetricsCollectionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s DisableMetricsCollectionOutput) GoString() string {
 	return s.String()
 }
@@ -10431,27 +11403,20 @@ type Ebs struct {
 
 	// Specifies whether the volume should be encrypted. Encrypted EBS volumes can
 	// only be attached to instances that support Amazon EBS encryption. For more
-	// information, see Supported Instance Types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html#EBSEncryption_supported_instances).
+	// information, see Supported instance types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html#EBSEncryption_supported_instances).
 	// If your AMI uses encrypted volumes, you can also only launch it on supported
 	// instance types.
 	//
-	// If you are creating a volume from a snapshot, you cannot specify an encryption
-	// value. Volumes that are created from encrypted snapshots are automatically
-	// encrypted, and volumes that are created from unencrypted snapshots are automatically
-	// unencrypted. By default, encrypted snapshots use the Amazon Web Services
-	// managed CMK that is used for EBS encryption, but you can specify a custom
-	// CMK when you create the snapshot. The ability to encrypt a snapshot during
-	// copying also allows you to apply a new CMK to an already-encrypted snapshot.
-	// Volumes restored from the resulting copy are only accessible using the new
-	// CMK.
+	// If you are creating a volume from a snapshot, you cannot create an unencrypted
+	// volume from an encrypted snapshot. Also, you cannot specify a KMS key ID
+	// when using a launch configuration.
 	//
-	// Enabling encryption by default (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html#encryption-by-default)
-	// results in all EBS volumes being encrypted with the Amazon Web Services managed
-	// CMK or a customer managed CMK, whether or not the snapshot was encrypted.
+	// If you enable encryption by default, the EBS volumes that you create are
+	// always encrypted, either using the Amazon Web Services managed KMS key or
+	// a customer-managed KMS key, regardless of whether the snapshot was encrypted.
 	//
-	// For more information, see Using Encryption with EBS-Backed AMIs (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIEncryption.html)
-	// in the Amazon EC2 User Guide for Linux Instances and Required CMK key policy
-	// for use with encrypted volumes (https://docs.aws.amazon.com/autoscaling/ec2/userguide/key-policy-requirements-EBS-encryption.html)
+	// For more information, see Using Amazon Web Services KMS keys to encrypt Amazon
+	// EBS volumes (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-data-protection.html#encryption)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	Encrypted *bool `type:"boolean"`
 
@@ -10499,19 +11464,27 @@ type Ebs struct {
 	// the size of the snapshot.
 	VolumeSize *int64 `min:"1" type:"integer"`
 
-	// The volume type. For more information, see Amazon EBS Volume Types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
+	// The volume type. For more information, see Amazon EBS volume types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
 	// in the Amazon EC2 User Guide for Linux Instances.
 	//
 	// Valid Values: standard | io1 | gp2 | st1 | sc1 | gp3
 	VolumeType *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Ebs) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Ebs) GoString() string {
 	return s.String()
 }
@@ -10648,12 +11621,20 @@ type EnableMetricsCollectionInput struct {
 	Metrics []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnableMetricsCollectionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnableMetricsCollectionInput) GoString() string {
 	return s.String()
 }
@@ -10702,12 +11683,20 @@ type EnableMetricsCollectionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnableMetricsCollectionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnableMetricsCollectionOutput) GoString() string {
 	return s.String()
 }
@@ -10763,12 +11752,20 @@ type EnabledMetric struct {
 	Metric *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnabledMetric) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnabledMetric) GoString() string {
 	return s.String()
 }
@@ -10803,12 +11800,20 @@ type EnterStandbyInput struct {
 	ShouldDecrementDesiredCapacity *bool `type:"boolean" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnterStandbyInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnterStandbyInput) GoString() string {
 	return s.String()
 }
@@ -10857,12 +11862,20 @@ type EnterStandbyOutput struct {
 	Activities []*Activity `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnterStandbyOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s EnterStandbyOutput) GoString() string {
 	return s.String()
 }
@@ -10910,12 +11923,20 @@ type ExecutePolicyInput struct {
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExecutePolicyInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExecutePolicyInput) GoString() string {
 	return s.String()
 }
@@ -10973,12 +11994,20 @@ type ExecutePolicyOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExecutePolicyOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExecutePolicyOutput) GoString() string {
 	return s.String()
 }
@@ -10995,12 +12024,20 @@ type ExitStandbyInput struct {
 	InstanceIds []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExitStandbyInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExitStandbyInput) GoString() string {
 	return s.String()
 }
@@ -11040,12 +12077,20 @@ type ExitStandbyOutput struct {
 	Activities []*Activity `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExitStandbyOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ExitStandbyOutput) GoString() string {
 	return s.String()
 }
@@ -11072,12 +12117,20 @@ type FailedScheduledUpdateGroupActionRequest struct {
 	ScheduledActionName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s FailedScheduledUpdateGroupActionRequest) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s FailedScheduledUpdateGroupActionRequest) GoString() string {
 	return s.String()
 }
@@ -11101,27 +12154,80 @@ func (s *FailedScheduledUpdateGroupActionRequest) SetScheduledActionName(v strin
 }
 
 // Describes a filter that is used to return a more specific list of results
-// when describing tags.
+// from a describe operation.
+//
+// If you specify multiple filters, the filters are automatically logically
+// joined with an AND, and the request returns only the results that match all
+// of the specified filters.
 //
 // For more information, see Tagging Auto Scaling groups and instances (https://docs.aws.amazon.com/autoscaling/ec2/userguide/autoscaling-tagging.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 type Filter struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the filter. The valid values are: auto-scaling-group, key, value,
-	// and propagate-at-launch.
+	// The name of the filter.
+	//
+	// The valid values for Name depend on which API operation you're using with
+	// the filter (DescribeAutoScalingGroups or DescribeTags).
+	//
+	// DescribeAutoScalingGroups
+	//
+	// Valid values for Name include the following:
+	//
+	//    * tag-key - Accepts tag keys. The results only include information about
+	//    the Auto Scaling groups associated with these tag keys.
+	//
+	//    * tag-value - Accepts tag values. The results only include information
+	//    about the Auto Scaling groups associated with these tag values.
+	//
+	//    * tag:<key> - Accepts the key/value combination of the tag. Use the tag
+	//    key in the filter name and the tag value as the filter value. The results
+	//    only include information about the Auto Scaling groups associated with
+	//    the specified key/value combination.
+	//
+	// DescribeTags
+	//
+	// Valid values for Name include the following:
+	//
+	//    * auto-scaling-group - Accepts the names of Auto Scaling groups. The results
+	//    only include information about the tags associated with these Auto Scaling
+	//    groups.
+	//
+	//    * key - Accepts tag keys. The results only include information about the
+	//    tags associated with these tag keys.
+	//
+	//    * value - Accepts tag values. The results only include information about
+	//    the tags associated with these tag values.
+	//
+	//    * propagate-at-launch - Accepts a Boolean value, which specifies whether
+	//    tags propagate to instances at launch. The results only include information
+	//    about the tags associated with the specified Boolean value.
 	Name *string `type:"string"`
 
 	// One or more filter values. Filter values are case-sensitive.
+	//
+	// If you specify multiple values for a filter, the values are automatically
+	// logically joined with an OR, and the request returns all results that match
+	// any of the specified values. For example, specify "tag:environment" for the
+	// filter name and "production,development" for the filter values to find Auto
+	// Scaling groups with the tag "environment=production" or "environment=development".
 	Values []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Filter) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Filter) GoString() string {
 	return s.String()
 }
@@ -11168,12 +12274,20 @@ type GetPredictiveScalingForecastInput struct {
 	StartTime *time.Time `type:"timestamp" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetPredictiveScalingForecastInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetPredictiveScalingForecastInput) GoString() string {
 	return s.String()
 }
@@ -11249,12 +12363,20 @@ type GetPredictiveScalingForecastOutput struct {
 	UpdateTime *time.Time `type:"timestamp" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetPredictiveScalingForecastOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s GetPredictiveScalingForecastOutput) GoString() string {
 	return s.String()
 }
@@ -11315,11 +12437,24 @@ type Group struct {
 	// DesiredCapacity is a required field
 	DesiredCapacity *int64 `type:"integer" required:"true"`
 
+	// The unit of measurement for the value specified for desired capacity. Amazon
+	// EC2 Auto Scaling supports DesiredCapacityType for attribute-based instance
+	// type selection only. For more information, see Creating an Auto Scaling group
+	// using attribute-based instance type selection (https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-asg-instance-type-requirements.html)
+	// in the Amazon EC2 Auto Scaling User Guide.
+	//
+	// By default, Amazon EC2 Auto Scaling specifies units, which translates into
+	// number of instances.
+	//
+	// Valid values: units | vcpu | memory-mib
+	DesiredCapacityType *string `min:"1" type:"string"`
+
 	// The metrics enabled for the group.
 	EnabledMetrics []*EnabledMetric `type:"list"`
 
 	// The amount of time, in seconds, that Amazon EC2 Auto Scaling waits before
-	// checking the health status of an EC2 instance that has come into service.
+	// checking the health status of an EC2 instance that has come into service
+	// and marking it unhealthy due to a failed health check.
 	HealthCheckGracePeriod *int64 `type:"integer"`
 
 	// The service to use for the health checks. The valid values are EC2 and ELB.
@@ -11400,12 +12535,20 @@ type Group struct {
 	WarmPoolSize *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Group) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Group) GoString() string {
 	return s.String()
 }
@@ -11455,6 +12598,12 @@ func (s *Group) SetDefaultCooldown(v int64) *Group {
 // SetDesiredCapacity sets the DesiredCapacity field's value.
 func (s *Group) SetDesiredCapacity(v int64) *Group {
 	s.DesiredCapacity = &v
+	return s
+}
+
+// SetDesiredCapacityType sets the DesiredCapacityType field's value.
+func (s *Group) SetDesiredCapacityType(v string) *Group {
+	s.DesiredCapacityType = &v
 	return s
 }
 
@@ -11647,12 +12796,20 @@ type Instance struct {
 	WeightedCapacity *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Instance) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Instance) GoString() string {
 	return s.String()
 }
@@ -11774,12 +12931,20 @@ type InstanceDetails struct {
 	WeightedCapacity *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceDetails) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceDetails) GoString() string {
 	return s.String()
 }
@@ -11879,12 +13044,20 @@ type InstanceMetadataOptions struct {
 	HttpTokens *string `type:"string" enum:"InstanceMetadataHttpTokensState"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceMetadataOptions) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceMetadataOptions) GoString() string {
 	return s.String()
 }
@@ -11928,12 +13101,20 @@ type InstanceMonitoring struct {
 	Enabled *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceMonitoring) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceMonitoring) GoString() string {
 	return s.String()
 }
@@ -11951,6 +13132,9 @@ type InstanceRefresh struct {
 	// The name of the Auto Scaling group.
 	AutoScalingGroupName *string `min:"1" type:"string"`
 
+	// Describes the specific update you want to deploy.
+	DesiredConfiguration *DesiredConfiguration `type:"structure"`
+
 	// The date and time at which the instance refresh ended.
 	EndTime *time.Time `type:"timestamp"`
 
@@ -11967,6 +13151,9 @@ type InstanceRefresh struct {
 	// the specified warm-up time passes, the instance is considered updated and
 	// is added to the percentage complete.
 	PercentageComplete *int64 `type:"integer"`
+
+	// Describes the preferences for an instance refresh.
+	Preferences *RefreshPreferences `type:"structure"`
 
 	// Additional progress details for an Auto Scaling group that has a warm pool.
 	ProgressDetails *InstanceRefreshProgressDetails `type:"structure"`
@@ -11996,12 +13183,20 @@ type InstanceRefresh struct {
 	StatusReason *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefresh) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefresh) GoString() string {
 	return s.String()
 }
@@ -12009,6 +13204,12 @@ func (s InstanceRefresh) GoString() string {
 // SetAutoScalingGroupName sets the AutoScalingGroupName field's value.
 func (s *InstanceRefresh) SetAutoScalingGroupName(v string) *InstanceRefresh {
 	s.AutoScalingGroupName = &v
+	return s
+}
+
+// SetDesiredConfiguration sets the DesiredConfiguration field's value.
+func (s *InstanceRefresh) SetDesiredConfiguration(v *DesiredConfiguration) *InstanceRefresh {
+	s.DesiredConfiguration = v
 	return s
 }
 
@@ -12033,6 +13234,12 @@ func (s *InstanceRefresh) SetInstancesToUpdate(v int64) *InstanceRefresh {
 // SetPercentageComplete sets the PercentageComplete field's value.
 func (s *InstanceRefresh) SetPercentageComplete(v int64) *InstanceRefresh {
 	s.PercentageComplete = &v
+	return s
+}
+
+// SetPreferences sets the Preferences field's value.
+func (s *InstanceRefresh) SetPreferences(v *RefreshPreferences) *InstanceRefresh {
+	s.Preferences = v
 	return s
 }
 
@@ -12076,12 +13283,20 @@ type InstanceRefreshLivePoolProgress struct {
 	PercentageComplete *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshLivePoolProgress) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshLivePoolProgress) GoString() string {
 	return s.String()
 }
@@ -12113,12 +13328,20 @@ type InstanceRefreshProgressDetails struct {
 	WarmPoolProgress *InstanceRefreshWarmPoolProgress `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshProgressDetails) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshProgressDetails) GoString() string {
 	return s.String()
 }
@@ -12151,12 +13374,20 @@ type InstanceRefreshWarmPoolProgress struct {
 	PercentageComplete *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshWarmPoolProgress) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstanceRefreshWarmPoolProgress) GoString() string {
 	return s.String()
 }
@@ -12173,52 +13404,422 @@ func (s *InstanceRefreshWarmPoolProgress) SetPercentageComplete(v int64) *Instan
 	return s
 }
 
-// Describes an instances distribution for an Auto Scaling group with a MixedInstancesPolicy.
+// When you specify multiple parameters, you get instance types that satisfy
+// all of the specified parameters. If you specify multiple values for a parameter,
+// you get instance types that satisfy any of the specified values.
 //
-// The instances distribution specifies the distribution of On-Demand Instances
-// and Spot Instances, the maximum price to pay for Spot Instances, and how
-// the Auto Scaling group allocates instance types to fulfill On-Demand and
-// Spot capacities.
+// Represents requirements for the types of instances that can be launched.
+// You must specify VCpuCount and MemoryMiB, but all other parameters are optional.
+// For more information, see Creating an Auto Scaling group using attribute-based
+// instance type selection (https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-asg-instance-type-requirements.html)
+// in the Amazon EC2 Auto Scaling User Guide.
+type InstanceRequirements struct {
+	_ struct{} `type:"structure"`
+
+	// The minimum and maximum number of accelerators (GPUs, FPGAs, or Amazon Web
+	// Services Inferentia chips) for an instance type.
+	//
+	// To exclude accelerator-enabled instance types, set Max to 0.
+	//
+	// Default: No minimum or maximum
+	AcceleratorCount *AcceleratorCountRequest `type:"structure"`
+
+	// Indicates whether instance types must have accelerators by specific manufacturers.
+	//
+	//    * For instance types with NVIDIA devices, specify nvidia.
+	//
+	//    * For instance types with AMD devices, specify amd.
+	//
+	//    * For instance types with Amazon Web Services devices, specify amazon-web-services.
+	//
+	//    * For instance types with Xilinx devices, specify xilinx.
+	//
+	// Default: Any manufacturer
+	AcceleratorManufacturers []*string `type:"list"`
+
+	// Lists the accelerators that must be on an instance type.
+	//
+	//    * For instance types with NVIDIA A100 GPUs, specify a100.
+	//
+	//    * For instance types with NVIDIA V100 GPUs, specify v100.
+	//
+	//    * For instance types with NVIDIA K80 GPUs, specify k80.
+	//
+	//    * For instance types with NVIDIA T4 GPUs, specify t4.
+	//
+	//    * For instance types with NVIDIA M60 GPUs, specify m60.
+	//
+	//    * For instance types with AMD Radeon Pro V520 GPUs, specify radeon-pro-v520.
+	//
+	//    * For instance types with Xilinx VU9P FPGAs, specify vu9p.
+	//
+	// Default: Any accelerator
+	AcceleratorNames []*string `type:"list"`
+
+	// The minimum and maximum total memory size for the accelerators on an instance
+	// type, in MiB.
+	//
+	// Default: No minimum or maximum
+	AcceleratorTotalMemoryMiB *AcceleratorTotalMemoryMiBRequest `type:"structure"`
+
+	// Lists the accelerator types that must be on an instance type.
+	//
+	//    * For instance types with GPU accelerators, specify gpu.
+	//
+	//    * For instance types with FPGA accelerators, specify fpga.
+	//
+	//    * For instance types with inference accelerators, specify inference.
+	//
+	// Default: Any accelerator type
+	AcceleratorTypes []*string `type:"list"`
+
+	// Indicates whether bare metal instance types are included, excluded, or required.
+	//
+	// Default: excluded
+	BareMetal *string `type:"string" enum:"BareMetal"`
+
+	// The minimum and maximum baseline bandwidth performance for an instance type,
+	// in Mbps. For more information, see Amazon EBS–optimized instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-optimized.html)
+	// in the Amazon EC2 User Guide for Linux Instances.
+	//
+	// Default: No minimum or maximum
+	BaselineEbsBandwidthMbps *BaselineEbsBandwidthMbpsRequest `type:"structure"`
+
+	// Indicates whether burstable performance instance types are included, excluded,
+	// or required. For more information, see Burstable performance instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances.html)
+	// in the Amazon EC2 User Guide for Linux Instances.
+	//
+	// Default: excluded
+	BurstablePerformance *string `type:"string" enum:"BurstablePerformance"`
+
+	// Lists which specific CPU manufacturers to include.
+	//
+	//    * For instance types with Intel CPUs, specify intel.
+	//
+	//    * For instance types with AMD CPUs, specify amd.
+	//
+	//    * For instance types with Amazon Web Services CPUs, specify amazon-web-services.
+	//
+	// Don't confuse the CPU hardware manufacturer with the CPU hardware architecture.
+	// Instances will be launched with a compatible CPU architecture based on the
+	// Amazon Machine Image (AMI) that you specify in your launch template.
+	//
+	// Default: Any manufacturer
+	CpuManufacturers []*string `type:"list"`
+
+	// Lists which instance types to exclude. You can use strings with one or more
+	// wild cards, represented by an asterisk (*). The following are examples: c5*,
+	// m5a.*, r*, *3*.
+	//
+	// For example, if you specify c5*, you are excluding the entire C5 instance
+	// family, which includes all C5a and C5n instance types. If you specify m5a.*,
+	// you are excluding all the M5a instance types, but not the M5n instance types.
+	//
+	// Default: No excluded instance types
+	ExcludedInstanceTypes []*string `type:"list"`
+
+	// Indicates whether current or previous generation instance types are included.
+	//
+	//    * For current generation instance types, specify current. The current
+	//    generation includes EC2 instance types currently recommended for use.
+	//    This typically includes the latest two to three generations in each instance
+	//    family. For more information, see Instance types (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html)
+	//    in the Amazon EC2 User Guide for Linux Instances.
+	//
+	//    * For previous generation instance types, specify previous.
+	//
+	// Default: Any current or previous generation
+	InstanceGenerations []*string `type:"list"`
+
+	// Indicates whether instance types with instance store volumes are included,
+	// excluded, or required. For more information, see Amazon EC2 instance store
+	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html)
+	// in the Amazon EC2 User Guide for Linux Instances.
+	//
+	// Default: included
+	LocalStorage *string `type:"string" enum:"LocalStorage"`
+
+	// Indicates the type of local storage that is required.
+	//
+	//    * For instance types with hard disk drive (HDD) storage, specify hdd.
+	//
+	//    * For instance types with solid state drive (SSD) storage, specify sdd.
+	//
+	// Default: Any local storage type
+	LocalStorageTypes []*string `type:"list"`
+
+	// The minimum and maximum amount of memory per vCPU for an instance type, in
+	// GiB.
+	//
+	// Default: No minimum or maximum
+	MemoryGiBPerVCpu *MemoryGiBPerVCpuRequest `type:"structure"`
+
+	// The minimum and maximum instance memory size for an instance type, in MiB.
+	//
+	// MemoryMiB is a required field
+	MemoryMiB *MemoryMiBRequest `type:"structure" required:"true"`
+
+	// The minimum and maximum number of network interfaces for an instance type.
+	//
+	// Default: No minimum or maximum
+	NetworkInterfaceCount *NetworkInterfaceCountRequest `type:"structure"`
+
+	// The price protection threshold for On-Demand Instances. This is the maximum
+	// you’ll pay for an On-Demand Instance, expressed as a percentage higher
+	// than the cheapest M, C, or R instance type with your specified attributes.
+	// When Amazon EC2 Auto Scaling selects instance types with your attributes,
+	// we will exclude instance types whose price is higher than your threshold.
+	// The parameter accepts an integer, which Amazon EC2 Auto Scaling interprets
+	// as a percentage. To turn off price protection, specify a high value, such
+	// as 999999.
+	//
+	// Default: 20
+	OnDemandMaxPricePercentageOverLowestPrice *int64 `type:"integer"`
+
+	// Indicates whether instance types must provide On-Demand Instance hibernation
+	// support.
+	//
+	// Default: false
+	RequireHibernateSupport *bool `type:"boolean"`
+
+	// The price protection threshold for Spot Instances. This is the maximum you’ll
+	// pay for a Spot Instance, expressed as a percentage higher than the cheapest
+	// M, C, or R instance type with your specified attributes. When Amazon EC2
+	// Auto Scaling selects instance types with your attributes, we will exclude
+	// instance types whose price is higher than your threshold. The parameter accepts
+	// an integer, which Amazon EC2 Auto Scaling interprets as a percentage. To
+	// turn off price protection, specify a high value, such as 999999.
+	//
+	// Default: 100
+	SpotMaxPricePercentageOverLowestPrice *int64 `type:"integer"`
+
+	// The minimum and maximum total local storage size for an instance type, in
+	// GB.
+	//
+	// Default: No minimum or maximum
+	TotalLocalStorageGB *TotalLocalStorageGBRequest `type:"structure"`
+
+	// The minimum and maximum number of vCPUs for an instance type.
+	//
+	// VCpuCount is a required field
+	VCpuCount *VCpuCountRequest `type:"structure" required:"true"`
+}
+
+// String returns the string representation.
 //
-// When you update SpotAllocationStrategy, SpotInstancePools, or SpotMaxPrice,
-// this update action does not deploy any changes across the running Amazon
-// EC2 instances in the group. Your existing Spot Instances continue to run
-// as long as the maximum price for those instances is higher than the current
-// Spot price. When scale out occurs, Amazon EC2 Auto Scaling launches instances
-// based on the new settings. When scale in occurs, Amazon EC2 Auto Scaling
-// terminates instances according to the group's termination policies.
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s InstanceRequirements) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s InstanceRequirements) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *InstanceRequirements) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "InstanceRequirements"}
+	if s.MemoryMiB == nil {
+		invalidParams.Add(request.NewErrParamRequired("MemoryMiB"))
+	}
+	if s.VCpuCount == nil {
+		invalidParams.Add(request.NewErrParamRequired("VCpuCount"))
+	}
+	if s.MemoryMiB != nil {
+		if err := s.MemoryMiB.Validate(); err != nil {
+			invalidParams.AddNested("MemoryMiB", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.VCpuCount != nil {
+		if err := s.VCpuCount.Validate(); err != nil {
+			invalidParams.AddNested("VCpuCount", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetAcceleratorCount sets the AcceleratorCount field's value.
+func (s *InstanceRequirements) SetAcceleratorCount(v *AcceleratorCountRequest) *InstanceRequirements {
+	s.AcceleratorCount = v
+	return s
+}
+
+// SetAcceleratorManufacturers sets the AcceleratorManufacturers field's value.
+func (s *InstanceRequirements) SetAcceleratorManufacturers(v []*string) *InstanceRequirements {
+	s.AcceleratorManufacturers = v
+	return s
+}
+
+// SetAcceleratorNames sets the AcceleratorNames field's value.
+func (s *InstanceRequirements) SetAcceleratorNames(v []*string) *InstanceRequirements {
+	s.AcceleratorNames = v
+	return s
+}
+
+// SetAcceleratorTotalMemoryMiB sets the AcceleratorTotalMemoryMiB field's value.
+func (s *InstanceRequirements) SetAcceleratorTotalMemoryMiB(v *AcceleratorTotalMemoryMiBRequest) *InstanceRequirements {
+	s.AcceleratorTotalMemoryMiB = v
+	return s
+}
+
+// SetAcceleratorTypes sets the AcceleratorTypes field's value.
+func (s *InstanceRequirements) SetAcceleratorTypes(v []*string) *InstanceRequirements {
+	s.AcceleratorTypes = v
+	return s
+}
+
+// SetBareMetal sets the BareMetal field's value.
+func (s *InstanceRequirements) SetBareMetal(v string) *InstanceRequirements {
+	s.BareMetal = &v
+	return s
+}
+
+// SetBaselineEbsBandwidthMbps sets the BaselineEbsBandwidthMbps field's value.
+func (s *InstanceRequirements) SetBaselineEbsBandwidthMbps(v *BaselineEbsBandwidthMbpsRequest) *InstanceRequirements {
+	s.BaselineEbsBandwidthMbps = v
+	return s
+}
+
+// SetBurstablePerformance sets the BurstablePerformance field's value.
+func (s *InstanceRequirements) SetBurstablePerformance(v string) *InstanceRequirements {
+	s.BurstablePerformance = &v
+	return s
+}
+
+// SetCpuManufacturers sets the CpuManufacturers field's value.
+func (s *InstanceRequirements) SetCpuManufacturers(v []*string) *InstanceRequirements {
+	s.CpuManufacturers = v
+	return s
+}
+
+// SetExcludedInstanceTypes sets the ExcludedInstanceTypes field's value.
+func (s *InstanceRequirements) SetExcludedInstanceTypes(v []*string) *InstanceRequirements {
+	s.ExcludedInstanceTypes = v
+	return s
+}
+
+// SetInstanceGenerations sets the InstanceGenerations field's value.
+func (s *InstanceRequirements) SetInstanceGenerations(v []*string) *InstanceRequirements {
+	s.InstanceGenerations = v
+	return s
+}
+
+// SetLocalStorage sets the LocalStorage field's value.
+func (s *InstanceRequirements) SetLocalStorage(v string) *InstanceRequirements {
+	s.LocalStorage = &v
+	return s
+}
+
+// SetLocalStorageTypes sets the LocalStorageTypes field's value.
+func (s *InstanceRequirements) SetLocalStorageTypes(v []*string) *InstanceRequirements {
+	s.LocalStorageTypes = v
+	return s
+}
+
+// SetMemoryGiBPerVCpu sets the MemoryGiBPerVCpu field's value.
+func (s *InstanceRequirements) SetMemoryGiBPerVCpu(v *MemoryGiBPerVCpuRequest) *InstanceRequirements {
+	s.MemoryGiBPerVCpu = v
+	return s
+}
+
+// SetMemoryMiB sets the MemoryMiB field's value.
+func (s *InstanceRequirements) SetMemoryMiB(v *MemoryMiBRequest) *InstanceRequirements {
+	s.MemoryMiB = v
+	return s
+}
+
+// SetNetworkInterfaceCount sets the NetworkInterfaceCount field's value.
+func (s *InstanceRequirements) SetNetworkInterfaceCount(v *NetworkInterfaceCountRequest) *InstanceRequirements {
+	s.NetworkInterfaceCount = v
+	return s
+}
+
+// SetOnDemandMaxPricePercentageOverLowestPrice sets the OnDemandMaxPricePercentageOverLowestPrice field's value.
+func (s *InstanceRequirements) SetOnDemandMaxPricePercentageOverLowestPrice(v int64) *InstanceRequirements {
+	s.OnDemandMaxPricePercentageOverLowestPrice = &v
+	return s
+}
+
+// SetRequireHibernateSupport sets the RequireHibernateSupport field's value.
+func (s *InstanceRequirements) SetRequireHibernateSupport(v bool) *InstanceRequirements {
+	s.RequireHibernateSupport = &v
+	return s
+}
+
+// SetSpotMaxPricePercentageOverLowestPrice sets the SpotMaxPricePercentageOverLowestPrice field's value.
+func (s *InstanceRequirements) SetSpotMaxPricePercentageOverLowestPrice(v int64) *InstanceRequirements {
+	s.SpotMaxPricePercentageOverLowestPrice = &v
+	return s
+}
+
+// SetTotalLocalStorageGB sets the TotalLocalStorageGB field's value.
+func (s *InstanceRequirements) SetTotalLocalStorageGB(v *TotalLocalStorageGBRequest) *InstanceRequirements {
+	s.TotalLocalStorageGB = v
+	return s
+}
+
+// SetVCpuCount sets the VCpuCount field's value.
+func (s *InstanceRequirements) SetVCpuCount(v *VCpuCountRequest) *InstanceRequirements {
+	s.VCpuCount = v
+	return s
+}
+
+// Describes an instances distribution for an Auto Scaling group.
 type InstancesDistribution struct {
 	_ struct{} `type:"structure"`
 
-	// Indicates how to allocate instance types to fulfill On-Demand capacity. The
-	// only valid value is prioritized, which is also the default value. This strategy
-	// uses the order of instance types in the LaunchTemplateOverrides to define
-	// the launch priority of each instance type. The first instance type in the
-	// array is prioritized higher than the last. If all your On-Demand capacity
-	// cannot be fulfilled using your highest priority instance, then the Auto Scaling
-	// groups launches the remaining capacity using the second priority instance
-	// type, and so on.
+	// The order of the launch template overrides to use in fulfilling On-Demand
+	// capacity.
+	//
+	// If you specify lowest-price, Amazon EC2 Auto Scaling uses price to determine
+	// the order, launching the lowest price first.
+	//
+	// If you specify prioritized, Amazon EC2 Auto Scaling uses the priority that
+	// you assigned to each launch template override, launching the highest priority
+	// first. If all your On-Demand capacity cannot be fulfilled using your highest
+	// priority instance, then Amazon EC2 Auto Scaling launches the remaining capacity
+	// using the second priority instance type, and so on.
+	//
+	// Default: lowest-price for Auto Scaling groups that specify InstanceRequirements
+	// in the overrides and prioritized for Auto Scaling groups that don't.
 	OnDemandAllocationStrategy *string `type:"string"`
 
 	// The minimum amount of the Auto Scaling group's capacity that must be fulfilled
-	// by On-Demand Instances. This base portion is provisioned first as your group
-	// scales. Defaults to 0 if not specified. If you specify weights for the instance
-	// types in the overrides, set the value of OnDemandBaseCapacity in terms of
-	// the number of capacity units, and not the number of instances.
+	// by On-Demand Instances. This base portion is launched first as your group
+	// scales.
+	//
+	// If you specify weights for the instance types in the overrides, the base
+	// capacity is measured in the same unit of measurement as the instance types.
+	// If you specify InstanceRequirements in the overrides, the base capacity is
+	// measured in the same unit of measurement as your group's desired capacity.
+	//
+	// Default: 0
 	OnDemandBaseCapacity *int64 `type:"integer"`
 
 	// Controls the percentages of On-Demand Instances and Spot Instances for your
 	// additional capacity beyond OnDemandBaseCapacity. Expressed as a number (for
-	// example, 20 specifies 20% On-Demand Instances, 80% Spot Instances). Defaults
-	// to 100 if not specified. If set to 100, only On-Demand Instances are provisioned.
+	// example, 20 specifies 20% On-Demand Instances, 80% Spot Instances). If set
+	// to 100, only On-Demand Instances are used.
+	//
+	// Default: 100
 	OnDemandPercentageAboveBaseCapacity *int64 `type:"integer"`
 
 	// Indicates how to allocate instances across Spot Instance pools.
 	//
 	// If the allocation strategy is lowest-price, the Auto Scaling group launches
 	// instances using the Spot pools with the lowest price, and evenly allocates
-	// your instances across the number of Spot pools that you specify. Defaults
-	// to lowest-price if not specified.
+	// your instances across the number of Spot pools that you specify.
 	//
 	// If the allocation strategy is capacity-optimized (recommended), the Auto
 	// Scaling group launches instances using Spot pools that are optimally chosen
@@ -12227,28 +13828,40 @@ type InstancesDistribution struct {
 	// from highest to lowest priority (from first to last in the list). Amazon
 	// EC2 Auto Scaling honors the instance type priorities on a best-effort basis
 	// but optimizes for capacity first.
+	//
+	// Default: lowest-price
 	SpotAllocationStrategy *string `type:"string"`
 
 	// The number of Spot Instance pools across which to allocate your Spot Instances.
 	// The Spot pools are determined from the different instance types in the overrides.
 	// Valid only when the Spot allocation strategy is lowest-price. Value must
-	// be in the range of 1 to 20. Defaults to 2 if not specified.
+	// be in the range of 1–20.
+	//
+	// Default: 2
 	SpotInstancePools *int64 `type:"integer"`
 
 	// The maximum price per unit hour that you are willing to pay for a Spot Instance.
-	// If you leave the value at its default (empty), Amazon EC2 Auto Scaling uses
-	// the On-Demand price as the maximum Spot price. To remove a value that you
-	// previously set, include the property but specify an empty string ("") for
-	// the value.
+	// If you keep the value at its default (unspecified), Amazon EC2 Auto Scaling
+	// uses the On-Demand price as the maximum Spot price. To remove a value that
+	// you previously set, include the property but specify an empty string ("")
+	// for the value.
 	SpotMaxPrice *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstancesDistribution) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s InstancesDistribution) GoString() string {
 	return s.String()
 }
@@ -12417,12 +14030,20 @@ type LaunchConfiguration struct {
 	UserData *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchConfiguration) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchConfiguration) GoString() string {
 	return s.String()
 }
@@ -12547,14 +14168,8 @@ func (s *LaunchConfiguration) SetUserData(v string) *LaunchConfiguration {
 	return s
 }
 
-// Describes a launch template and overrides.
-//
-// You specify these properties as part of a mixed instances policy.
-//
-// When you update the launch template or overrides, existing Amazon EC2 instances
-// continue to run. When scale out occurs, Amazon EC2 Auto Scaling launches
-// instances to match the new settings. When scale in occurs, Amazon EC2 Auto
-// Scaling terminates instances according to the group's termination policies.
+// Describes a launch template and overrides. You specify these properties as
+// part of a mixed instances policy.
 type LaunchTemplate struct {
 	_ struct{} `type:"structure"`
 
@@ -12563,16 +14178,28 @@ type LaunchTemplate struct {
 
 	// Any properties that you specify override the same properties in the launch
 	// template. If not provided, Amazon EC2 Auto Scaling uses the instance type
-	// specified in the launch template when it launches an instance.
+	// or instance type requirements specified in the launch template when it launches
+	// an instance.
+	//
+	// The overrides can include either one or more instance types or a set of instance
+	// requirements, but not both.
 	Overrides []*LaunchTemplateOverrides `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplate) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplate) GoString() string {
 	return s.String()
 }
@@ -12614,14 +14241,18 @@ func (s *LaunchTemplate) SetOverrides(v []*LaunchTemplateOverrides) *LaunchTempl
 	return s
 }
 
-// Describes an override for a launch template. The maximum number of instance
-// types that can be associated with an Auto Scaling group is 40. The maximum
-// number of distinct launch templates you can define for an Auto Scaling group
-// is 20. For more information about configuring overrides, see Configuring
-// overrides (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-override-options.html)
+// Describes an override for a launch template. For more information, see Configuring
+// overrides (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-configuring-overrides.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 type LaunchTemplateOverrides struct {
 	_ struct{} `type:"structure"`
+
+	// The instance requirements. When you specify instance requirements, Amazon
+	// EC2 Auto Scaling finds instance types that satisfy your requirements, and
+	// then uses your On-Demand and Spot allocation strategies to launch instances
+	// from these instance types, in the same way as when you specify a list of
+	// specific instance types.
+	InstanceRequirements *InstanceRequirements `type:"structure"`
 
 	// The instance type, such as m3.xlarge. You must use an instance type that
 	// is supported in your requested Region and Availability Zones. For more information,
@@ -12629,35 +14260,44 @@ type LaunchTemplateOverrides struct {
 	// in the Amazon Elastic Compute Cloud User Guide.
 	InstanceType *string `min:"1" type:"string"`
 
-	// Provides the launch template to be used when launching the instance type.
-	// For example, some instance types might require a launch template with a different
-	// AMI. If not provided, Amazon EC2 Auto Scaling uses the launch template that's
-	// defined for your mixed instances policy. For more information, see Specifying
-	// a different launch template for an instance type (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-launch-template-overrides.html)
+	// Provides the launch template to be used when launching the instance type
+	// specified in InstanceType. For example, some instance types might require
+	// a launch template with a different AMI. If not provided, Amazon EC2 Auto
+	// Scaling uses the launch template that's defined for your mixed instances
+	// policy. For more information, see Specifying a different launch template
+	// for an instance type (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups-launch-template-overrides.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	LaunchTemplateSpecification *LaunchTemplateSpecification `type:"structure"`
 
-	// The number of capacity units provided by the specified instance type in terms
-	// of virtual CPUs, memory, storage, throughput, or other relative performance
-	// characteristic. When a Spot or On-Demand Instance is provisioned, the capacity
-	// units count toward the desired capacity. Amazon EC2 Auto Scaling provisions
-	// instances until the desired capacity is totally fulfilled, even if this results
-	// in an overage. For example, if there are 2 units remaining to fulfill capacity,
-	// and Amazon EC2 Auto Scaling can only provision an instance with a WeightedCapacity
-	// of 5 units, the instance is provisioned, and the desired capacity is exceeded
-	// by 3 units. For more information, see Instance weighting for Amazon EC2 Auto
-	// Scaling (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-instance-weighting.html)
+	// The number of capacity units provided by the instance type specified in InstanceType
+	// in terms of virtual CPUs, memory, storage, throughput, or other relative
+	// performance characteristic. When a Spot or On-Demand Instance is launched,
+	// the capacity units count toward the desired capacity. Amazon EC2 Auto Scaling
+	// launches instances until the desired capacity is totally fulfilled, even
+	// if this results in an overage. For example, if there are two units remaining
+	// to fulfill capacity, and Amazon EC2 Auto Scaling can only launch an instance
+	// with a WeightedCapacity of five units, the instance is launched, and the
+	// desired capacity is exceeded by three units. For more information, see Instance
+	// weighting for Amazon EC2 Auto Scaling (https://docs.aws.amazon.com/ec2-auto-scaling-mixed-instances-groups-instance-weighting.html)
 	// in the Amazon EC2 Auto Scaling User Guide. Value must be in the range of
-	// 1 to 999.
+	// 1–999.
 	WeightedCapacity *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplateOverrides) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplateOverrides) GoString() string {
 	return s.String()
 }
@@ -12671,6 +14311,11 @@ func (s *LaunchTemplateOverrides) Validate() error {
 	if s.WeightedCapacity != nil && len(*s.WeightedCapacity) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("WeightedCapacity", 1))
 	}
+	if s.InstanceRequirements != nil {
+		if err := s.InstanceRequirements.Validate(); err != nil {
+			invalidParams.AddNested("InstanceRequirements", err.(request.ErrInvalidParams))
+		}
+	}
 	if s.LaunchTemplateSpecification != nil {
 		if err := s.LaunchTemplateSpecification.Validate(); err != nil {
 			invalidParams.AddNested("LaunchTemplateSpecification", err.(request.ErrInvalidParams))
@@ -12681,6 +14326,12 @@ func (s *LaunchTemplateOverrides) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetInstanceRequirements sets the InstanceRequirements field's value.
+func (s *LaunchTemplateOverrides) SetInstanceRequirements(v *InstanceRequirements) *LaunchTemplateOverrides {
+	s.InstanceRequirements = v
+	return s
 }
 
 // SetInstanceType sets the InstanceType field's value.
@@ -12701,12 +14352,9 @@ func (s *LaunchTemplateOverrides) SetWeightedCapacity(v string) *LaunchTemplateO
 	return s
 }
 
-// Describes the Amazon EC2 launch template and the launch template version
-// that can be used by an Auto Scaling group to configure Amazon EC2 instances.
-//
-// The launch template that is specified must be configured for use with an
-// Auto Scaling group. For more information, see Creating a launch template
-// for an Auto Scaling group (https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-launch-template.html)
+// Describes the launch template and the version of the launch template that
+// Amazon EC2 Auto Scaling uses to launch Amazon EC2 instances. For more information
+// about launch templates, see Launch templates (https://docs.aws.amazon.com/autoscaling/ec2/userguide/LaunchTemplates.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 type LaunchTemplateSpecification struct {
 	_ struct{} `type:"structure"`
@@ -12740,12 +14388,20 @@ type LaunchTemplateSpecification struct {
 	Version *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplateSpecification) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LaunchTemplateSpecification) GoString() string {
 	return s.String()
 }
@@ -12787,8 +14443,9 @@ func (s *LaunchTemplateSpecification) SetVersion(v string) *LaunchTemplateSpecif
 	return s
 }
 
-// Describes a lifecycle hook, which tells Amazon EC2 Auto Scaling that you
-// want to perform an action whenever it launches instances or terminates instances.
+// Describes a lifecycle hook, which enables an Auto Scaling group to be aware
+// of events in the Auto Scaling instance lifecycle, and then perform a custom
+// action when the corresponding lifecycle event occurs.
 type LifecycleHook struct {
 	_ struct{} `type:"structure"`
 
@@ -12835,12 +14492,20 @@ type LifecycleHook struct {
 	RoleARN *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LifecycleHook) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LifecycleHook) GoString() string {
 	return s.String()
 }
@@ -12902,29 +14567,6 @@ func (s *LifecycleHook) SetRoleARN(v string) *LifecycleHook {
 // Describes information used to specify a lifecycle hook for an Auto Scaling
 // group.
 //
-// A lifecycle hook tells Amazon EC2 Auto Scaling to perform an action on an
-// instance when the instance launches (before it is put into service) or as
-// the instance terminates (before it is fully terminated).
-//
-// This step is a part of the procedure for creating a lifecycle hook for an
-// Auto Scaling group:
-//
-// (Optional) Create a Lambda function and a rule that allows CloudWatch Events
-// to invoke your Lambda function when Amazon EC2 Auto Scaling launches or terminates
-// instances.
-//
-// (Optional) Create a notification target and an IAM role. The target can be
-// either an Amazon SQS queue or an Amazon SNS topic. The role allows Amazon
-// EC2 Auto Scaling to publish lifecycle notifications to the target.
-//
-// Create the lifecycle hook. Specify whether the hook is used when the instances
-// launch or terminate.
-//
-// If you need more time, record the lifecycle action heartbeat to keep the
-// instance in a pending state.
-//
-// If you finish before the timeout period ends, complete the lifecycle action.
-//
 // For more information, see Amazon EC2 Auto Scaling lifecycle hooks (https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html)
 // in the Amazon EC2 Auto Scaling User Guide.
 type LifecycleHookSpecification struct {
@@ -12973,12 +14615,20 @@ type LifecycleHookSpecification struct {
 	RoleARN *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LifecycleHookSpecification) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LifecycleHookSpecification) GoString() string {
 	return s.String()
 }
@@ -13076,12 +14726,20 @@ type LoadBalancerState struct {
 	State *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadBalancerState) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadBalancerState) GoString() string {
 	return s.String()
 }
@@ -13124,12 +14782,20 @@ type LoadBalancerTargetGroupState struct {
 	State *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadBalancerTargetGroupState) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadBalancerTargetGroupState) GoString() string {
 	return s.String()
 }
@@ -13157,7 +14823,7 @@ type LoadForecast struct {
 	// MetricSpecification is a required field
 	MetricSpecification *PredictiveScalingMetricSpecification `type:"structure" required:"true"`
 
-	// The time stamps for the data points, in UTC format.
+	// The timestamps for the data points, in UTC format.
 	//
 	// Timestamps is a required field
 	Timestamps []*time.Time `type:"list" required:"true"`
@@ -13168,12 +14834,20 @@ type LoadForecast struct {
 	Values []*float64 `type:"list" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadForecast) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s LoadForecast) GoString() string {
 	return s.String()
 }
@@ -13193,6 +14867,193 @@ func (s *LoadForecast) SetTimestamps(v []*time.Time) *LoadForecast {
 // SetValues sets the Values field's value.
 func (s *LoadForecast) SetValues(v []*float64) *LoadForecast {
 	s.Values = v
+	return s
+}
+
+// Specifies the minimum and maximum for the MemoryGiBPerVCpu object when you
+// specify InstanceRequirements for an Auto Scaling group.
+type MemoryGiBPerVCpuRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The memory maximum in GiB.
+	Max *float64 `type:"double"`
+
+	// The memory minimum in GiB.
+	Min *float64 `type:"double"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MemoryGiBPerVCpuRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MemoryGiBPerVCpuRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *MemoryGiBPerVCpuRequest) SetMax(v float64) *MemoryGiBPerVCpuRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *MemoryGiBPerVCpuRequest) SetMin(v float64) *MemoryGiBPerVCpuRequest {
+	s.Min = &v
+	return s
+}
+
+// Specifies the minimum and maximum for the MemoryMiB object when you specify
+// InstanceRequirements for an Auto Scaling group.
+type MemoryMiBRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The memory maximum in MiB.
+	Max *int64 `type:"integer"`
+
+	// The memory minimum in MiB.
+	//
+	// Min is a required field
+	Min *int64 `type:"integer" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MemoryMiBRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MemoryMiBRequest) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MemoryMiBRequest) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MemoryMiBRequest"}
+	if s.Min == nil {
+		invalidParams.Add(request.NewErrParamRequired("Min"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMax sets the Max field's value.
+func (s *MemoryMiBRequest) SetMax(v int64) *MemoryMiBRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *MemoryMiBRequest) SetMin(v int64) *MemoryMiBRequest {
+	s.Min = &v
+	return s
+}
+
+// Represents a specific metric.
+type Metric struct {
+	_ struct{} `type:"structure"`
+
+	// The dimensions for the metric. For the list of available dimensions, see
+	// the Amazon Web Services documentation available from the table in Amazon
+	// Web Services services that publish CloudWatch metrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-services-cloudwatch-metrics.html)
+	// in the Amazon CloudWatch User Guide.
+	//
+	// Conditional: If you published your metric with dimensions, you must specify
+	// the same dimensions in your scaling policy.
+	Dimensions []*MetricDimension `type:"list"`
+
+	// The name of the metric.
+	//
+	// MetricName is a required field
+	MetricName *string `type:"string" required:"true"`
+
+	// The namespace of the metric. For more information, see the table in Amazon
+	// Web Services services that publish CloudWatch metrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-services-cloudwatch-metrics.html)
+	// in the Amazon CloudWatch User Guide.
+	//
+	// Namespace is a required field
+	Namespace *string `type:"string" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Metric) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s Metric) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *Metric) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "Metric"}
+	if s.MetricName == nil {
+		invalidParams.Add(request.NewErrParamRequired("MetricName"))
+	}
+	if s.Namespace == nil {
+		invalidParams.Add(request.NewErrParamRequired("Namespace"))
+	}
+	if s.Dimensions != nil {
+		for i, v := range s.Dimensions {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "Dimensions", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDimensions sets the Dimensions field's value.
+func (s *Metric) SetDimensions(v []*MetricDimension) *Metric {
+	s.Dimensions = v
+	return s
+}
+
+// SetMetricName sets the MetricName field's value.
+func (s *Metric) SetMetricName(v string) *Metric {
+	s.MetricName = &v
+	return s
+}
+
+// SetNamespace sets the Namespace field's value.
+func (s *Metric) SetNamespace(v string) *Metric {
+	s.Namespace = &v
 	return s
 }
 
@@ -13244,12 +15105,20 @@ type MetricCollectionType struct {
 	Metric *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricCollectionType) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricCollectionType) GoString() string {
 	return s.String()
 }
@@ -13257,6 +15126,130 @@ func (s MetricCollectionType) GoString() string {
 // SetMetric sets the Metric field's value.
 func (s *MetricCollectionType) SetMetric(v string) *MetricCollectionType {
 	s.Metric = &v
+	return s
+}
+
+// The metric data to return. Also defines whether this call is returning data
+// for one metric only, or whether it is performing a math expression on the
+// values of returned metric statistics to create a new time series. A time
+// series is a series of data points, each of which is associated with a timestamp.
+//
+// For more information and examples, see Advanced predictive scaling policy
+// configurations using custom metrics (https://docs.aws.amazon.com/autoscaling/ec2/userguide/predictive-scaling-customized-metric-specification.html)
+// in the Amazon EC2 Auto Scaling User Guide.
+type MetricDataQuery struct {
+	_ struct{} `type:"structure"`
+
+	// The math expression to perform on the returned data, if this object is performing
+	// a math expression. This expression can use the Id of the other metrics to
+	// refer to those metrics, and can also use the Id of other expressions to use
+	// the result of those expressions.
+	//
+	// Conditional: Within each MetricDataQuery object, you must specify either
+	// Expression or MetricStat, but not both.
+	Expression *string `min:"1" type:"string"`
+
+	// A short name that identifies the object's results in the response. This name
+	// must be unique among all MetricDataQuery objects specified for a single scaling
+	// policy. If you are performing math expressions on this set of data, this
+	// name represents that data and can serve as a variable in the mathematical
+	// expression. The valid characters are letters, numbers, and underscores. The
+	// first character must be a lowercase letter.
+	//
+	// Id is a required field
+	Id *string `min:"1" type:"string" required:"true"`
+
+	// A human-readable label for this metric or expression. This is especially
+	// useful if this is a math expression, so that you know what the value represents.
+	Label *string `type:"string"`
+
+	// Information about the metric data to return.
+	//
+	// Conditional: Within each MetricDataQuery object, you must specify either
+	// Expression or MetricStat, but not both.
+	MetricStat *MetricStat `type:"structure"`
+
+	// Indicates whether to return the timestamps and raw data values of this metric.
+	//
+	// If you use any math expressions, specify true for this value for only the
+	// final math expression that the metric specification is based on. You must
+	// specify false for ReturnData for all the other metrics and expressions used
+	// in the metric specification.
+	//
+	// If you are only retrieving metrics and not performing any math expressions,
+	// do not specify anything for ReturnData. This sets it to its default (true).
+	ReturnData *bool `type:"boolean"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricDataQuery) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricDataQuery) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MetricDataQuery) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MetricDataQuery"}
+	if s.Expression != nil && len(*s.Expression) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Expression", 1))
+	}
+	if s.Id == nil {
+		invalidParams.Add(request.NewErrParamRequired("Id"))
+	}
+	if s.Id != nil && len(*s.Id) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Id", 1))
+	}
+	if s.MetricStat != nil {
+		if err := s.MetricStat.Validate(); err != nil {
+			invalidParams.AddNested("MetricStat", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetExpression sets the Expression field's value.
+func (s *MetricDataQuery) SetExpression(v string) *MetricDataQuery {
+	s.Expression = &v
+	return s
+}
+
+// SetId sets the Id field's value.
+func (s *MetricDataQuery) SetId(v string) *MetricDataQuery {
+	s.Id = &v
+	return s
+}
+
+// SetLabel sets the Label field's value.
+func (s *MetricDataQuery) SetLabel(v string) *MetricDataQuery {
+	s.Label = &v
+	return s
+}
+
+// SetMetricStat sets the MetricStat field's value.
+func (s *MetricDataQuery) SetMetricStat(v *MetricStat) *MetricDataQuery {
+	s.MetricStat = v
+	return s
+}
+
+// SetReturnData sets the ReturnData field's value.
+func (s *MetricDataQuery) SetReturnData(v bool) *MetricDataQuery {
+	s.ReturnData = &v
 	return s
 }
 
@@ -13275,12 +15268,20 @@ type MetricDimension struct {
 	Value *string `type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricDimension) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricDimension) GoString() string {
 	return s.String()
 }
@@ -13321,12 +15322,20 @@ type MetricGranularityType struct {
 	Granularity *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricGranularityType) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MetricGranularityType) GoString() string {
 	return s.String()
 }
@@ -13337,36 +15346,130 @@ func (s *MetricGranularityType) SetGranularity(v string) *MetricGranularityType 
 	return s
 }
 
-// Describes a mixed instances policy for an Auto Scaling group. With mixed
-// instances, your Auto Scaling group can provision a combination of On-Demand
-// Instances and Spot Instances across multiple instance types. For more information,
-// see Auto Scaling groups with multiple instance types and purchase options
-// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-purchase-options.html)
-// in the Amazon EC2 Auto Scaling User Guide.
+// This structure defines the CloudWatch metric to return, along with the statistic,
+// period, and unit.
 //
-// You can create a mixed instances policy for a new Auto Scaling group, or
-// you can create it for an existing group by updating the group to specify
-// MixedInstancesPolicy as the top-level property instead of a launch configuration
-// or launch template.
+// For more information about the CloudWatch terminology below, see Amazon CloudWatch
+// concepts (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html)
+// in the Amazon CloudWatch User Guide.
+type MetricStat struct {
+	_ struct{} `type:"structure"`
+
+	// The CloudWatch metric to return, including the metric name, namespace, and
+	// dimensions. To get the exact metric name, namespace, and dimensions, inspect
+	// the Metric (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_Metric.html)
+	// object that is returned by a call to ListMetrics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html).
+	//
+	// Metric is a required field
+	Metric *Metric `type:"structure" required:"true"`
+
+	// The statistic to return. It can include any CloudWatch statistic or extended
+	// statistic. For a list of valid values, see the table in Statistics (https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Statistic)
+	// in the Amazon CloudWatch User Guide.
+	//
+	// The most commonly used metrics for predictive scaling are Average and Sum.
+	//
+	// Stat is a required field
+	Stat *string `min:"1" type:"string" required:"true"`
+
+	// The unit to use for the returned data points. For a complete list of the
+	// units that CloudWatch supports, see the MetricDatum (https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html)
+	// data type in the Amazon CloudWatch API Reference.
+	Unit *string `type:"string"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStat) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s MetricStat) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *MetricStat) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "MetricStat"}
+	if s.Metric == nil {
+		invalidParams.Add(request.NewErrParamRequired("Metric"))
+	}
+	if s.Stat == nil {
+		invalidParams.Add(request.NewErrParamRequired("Stat"))
+	}
+	if s.Stat != nil && len(*s.Stat) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("Stat", 1))
+	}
+	if s.Metric != nil {
+		if err := s.Metric.Validate(); err != nil {
+			invalidParams.AddNested("Metric", err.(request.ErrInvalidParams))
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMetric sets the Metric field's value.
+func (s *MetricStat) SetMetric(v *Metric) *MetricStat {
+	s.Metric = v
+	return s
+}
+
+// SetStat sets the Stat field's value.
+func (s *MetricStat) SetStat(v string) *MetricStat {
+	s.Stat = &v
+	return s
+}
+
+// SetUnit sets the Unit field's value.
+func (s *MetricStat) SetUnit(v string) *MetricStat {
+	s.Unit = &v
+	return s
+}
+
+// Describes a mixed instances policy. A mixed instances policy contains the
+// instance types that Amazon EC2 Auto Scaling can launch and other information
+// that Amazon EC2 Auto Scaling can use to launch instances and help optimize
+// your costs. For more information, see Auto Scaling groups with multiple instance
+// types and purchase options (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups.html)
+// in the Amazon EC2 Auto Scaling User Guide.
 type MixedInstancesPolicy struct {
 	_ struct{} `type:"structure"`
 
-	// Specifies the instances distribution. If not provided, the value for each
-	// property in InstancesDistribution uses a default value.
+	// Specifies the instances distribution.
 	InstancesDistribution *InstancesDistribution `type:"structure"`
 
-	// Specifies the launch template to use and optionally the instance types (overrides)
-	// that are used to provision EC2 instances to fulfill On-Demand and Spot capacities.
+	// Specifies the launch template to use and the instance types (overrides) that
+	// are used to launch EC2 instances to fulfill On-Demand and Spot capacities.
 	// Required when creating a mixed instances policy.
 	LaunchTemplate *LaunchTemplate `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MixedInstancesPolicy) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s MixedInstancesPolicy) GoString() string {
 	return s.String()
 }
@@ -13398,6 +15501,48 @@ func (s *MixedInstancesPolicy) SetLaunchTemplate(v *LaunchTemplate) *MixedInstan
 	return s
 }
 
+// Specifies the minimum and maximum for the NetworkInterfaceCount object when
+// you specify InstanceRequirements for an Auto Scaling group.
+type NetworkInterfaceCountRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum number of network interfaces.
+	Max *int64 `type:"integer"`
+
+	// The minimum number of network interfaces.
+	Min *int64 `type:"integer"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s NetworkInterfaceCountRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s NetworkInterfaceCountRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *NetworkInterfaceCountRequest) SetMax(v int64) *NetworkInterfaceCountRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *NetworkInterfaceCountRequest) SetMin(v int64) *NetworkInterfaceCountRequest {
+	s.Min = &v
+	return s
+}
+
 // Describes a notification.
 type NotificationConfiguration struct {
 	_ struct{} `type:"structure"`
@@ -13418,17 +15563,24 @@ type NotificationConfiguration struct {
 	//    * autoscaling:TEST_NOTIFICATION
 	NotificationType *string `min:"1" type:"string"`
 
-	// The Amazon Resource Name (ARN) of the Amazon Simple Notification Service
-	// (Amazon SNS) topic.
+	// The Amazon Resource Name (ARN) of the Amazon SNS topic.
 	TopicARN *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s NotificationConfiguration) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s NotificationConfiguration) GoString() string {
 	return s.String()
 }
@@ -13501,12 +15653,20 @@ type PredefinedMetricSpecification struct {
 	ResourceLabel *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredefinedMetricSpecification) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredefinedMetricSpecification) GoString() string {
 	return s.String()
 }
@@ -13599,12 +15759,20 @@ type PredictiveScalingConfiguration struct {
 	SchedulingBufferTime *int64 `type:"integer"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingConfiguration) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingConfiguration) GoString() string {
 	return s.String()
 }
@@ -13662,6 +15830,183 @@ func (s *PredictiveScalingConfiguration) SetSchedulingBufferTime(v int64) *Predi
 	return s
 }
 
+// Describes a customized capacity metric for a predictive scaling policy.
+type PredictiveScalingCustomizedCapacityMetric struct {
+	_ struct{} `type:"structure"`
+
+	// One or more metric data queries to provide the data points for a capacity
+	// metric. Use multiple metric data queries only if you are performing a math
+	// expression on returned data.
+	//
+	// MetricDataQueries is a required field
+	MetricDataQueries []*MetricDataQuery `type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedCapacityMetric) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedCapacityMetric) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PredictiveScalingCustomizedCapacityMetric) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PredictiveScalingCustomizedCapacityMetric"}
+	if s.MetricDataQueries == nil {
+		invalidParams.Add(request.NewErrParamRequired("MetricDataQueries"))
+	}
+	if s.MetricDataQueries != nil {
+		for i, v := range s.MetricDataQueries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "MetricDataQueries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMetricDataQueries sets the MetricDataQueries field's value.
+func (s *PredictiveScalingCustomizedCapacityMetric) SetMetricDataQueries(v []*MetricDataQuery) *PredictiveScalingCustomizedCapacityMetric {
+	s.MetricDataQueries = v
+	return s
+}
+
+// Describes a custom load metric for a predictive scaling policy.
+type PredictiveScalingCustomizedLoadMetric struct {
+	_ struct{} `type:"structure"`
+
+	// One or more metric data queries to provide the data points for a load metric.
+	// Use multiple metric data queries only if you are performing a math expression
+	// on returned data.
+	//
+	// MetricDataQueries is a required field
+	MetricDataQueries []*MetricDataQuery `type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedLoadMetric) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedLoadMetric) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PredictiveScalingCustomizedLoadMetric) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PredictiveScalingCustomizedLoadMetric"}
+	if s.MetricDataQueries == nil {
+		invalidParams.Add(request.NewErrParamRequired("MetricDataQueries"))
+	}
+	if s.MetricDataQueries != nil {
+		for i, v := range s.MetricDataQueries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "MetricDataQueries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMetricDataQueries sets the MetricDataQueries field's value.
+func (s *PredictiveScalingCustomizedLoadMetric) SetMetricDataQueries(v []*MetricDataQuery) *PredictiveScalingCustomizedLoadMetric {
+	s.MetricDataQueries = v
+	return s
+}
+
+// Describes a custom scaling metric for a predictive scaling policy.
+type PredictiveScalingCustomizedScalingMetric struct {
+	_ struct{} `type:"structure"`
+
+	// One or more metric data queries to provide the data points for a scaling
+	// metric. Use multiple metric data queries only if you are performing a math
+	// expression on returned data.
+	//
+	// MetricDataQueries is a required field
+	MetricDataQueries []*MetricDataQuery `type:"list" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedScalingMetric) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s PredictiveScalingCustomizedScalingMetric) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *PredictiveScalingCustomizedScalingMetric) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "PredictiveScalingCustomizedScalingMetric"}
+	if s.MetricDataQueries == nil {
+		invalidParams.Add(request.NewErrParamRequired("MetricDataQueries"))
+	}
+	if s.MetricDataQueries != nil {
+		for i, v := range s.MetricDataQueries {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "MetricDataQueries", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMetricDataQueries sets the MetricDataQueries field's value.
+func (s *PredictiveScalingCustomizedScalingMetric) SetMetricDataQueries(v []*MetricDataQuery) *PredictiveScalingCustomizedScalingMetric {
+	s.MetricDataQueries = v
+	return s
+}
+
 // This structure specifies the metrics and target utilization settings for
 // a predictive scaling policy.
 //
@@ -13698,31 +16043,58 @@ func (s *PredictiveScalingConfiguration) SetSchedulingBufferTime(v int64) *Predi
 //    each hour of the forecast period so that the average number of requests
 //    received by each instance is as close to 1000 requests per minute as possible
 //    at all times.
+//
+// For information about using custom metrics with predictive scaling, see Advanced
+// predictive scaling policy configurations using custom metrics (https://docs.aws.amazon.com/autoscaling/ec2/userguide/predictive-scaling-customized-metric-specification.html)
+// in the Amazon EC2 Auto Scaling User Guide.
 type PredictiveScalingMetricSpecification struct {
 	_ struct{} `type:"structure"`
 
-	// The load metric specification.
+	// The customized capacity metric specification.
+	CustomizedCapacityMetricSpecification *PredictiveScalingCustomizedCapacityMetric `type:"structure"`
+
+	// The customized load metric specification.
+	CustomizedLoadMetricSpecification *PredictiveScalingCustomizedLoadMetric `type:"structure"`
+
+	// The customized scaling metric specification.
+	CustomizedScalingMetricSpecification *PredictiveScalingCustomizedScalingMetric `type:"structure"`
+
+	// The predefined load metric specification.
 	PredefinedLoadMetricSpecification *PredictiveScalingPredefinedLoadMetric `type:"structure"`
 
-	// The metric pair specification from which Amazon EC2 Auto Scaling determines
-	// the appropriate scaling metric and load metric to use.
+	// The predefined metric pair specification from which Amazon EC2 Auto Scaling
+	// determines the appropriate scaling metric and load metric to use.
 	PredefinedMetricPairSpecification *PredictiveScalingPredefinedMetricPair `type:"structure"`
 
-	// The scaling metric specification.
+	// The predefined scaling metric specification.
 	PredefinedScalingMetricSpecification *PredictiveScalingPredefinedScalingMetric `type:"structure"`
 
 	// Specifies the target utilization.
+	//
+	// Some metrics are based on a count instead of a percentage, such as the request
+	// count for an Application Load Balancer or the number of messages in an SQS
+	// queue. If the scaling policy specifies one of these metrics, specify the
+	// target utilization as the optimal average request or message count per instance
+	// during any one-minute interval.
 	//
 	// TargetValue is a required field
 	TargetValue *float64 `type:"double" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingMetricSpecification) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingMetricSpecification) GoString() string {
 	return s.String()
 }
@@ -13732,6 +16104,21 @@ func (s *PredictiveScalingMetricSpecification) Validate() error {
 	invalidParams := request.ErrInvalidParams{Context: "PredictiveScalingMetricSpecification"}
 	if s.TargetValue == nil {
 		invalidParams.Add(request.NewErrParamRequired("TargetValue"))
+	}
+	if s.CustomizedCapacityMetricSpecification != nil {
+		if err := s.CustomizedCapacityMetricSpecification.Validate(); err != nil {
+			invalidParams.AddNested("CustomizedCapacityMetricSpecification", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.CustomizedLoadMetricSpecification != nil {
+		if err := s.CustomizedLoadMetricSpecification.Validate(); err != nil {
+			invalidParams.AddNested("CustomizedLoadMetricSpecification", err.(request.ErrInvalidParams))
+		}
+	}
+	if s.CustomizedScalingMetricSpecification != nil {
+		if err := s.CustomizedScalingMetricSpecification.Validate(); err != nil {
+			invalidParams.AddNested("CustomizedScalingMetricSpecification", err.(request.ErrInvalidParams))
+		}
 	}
 	if s.PredefinedLoadMetricSpecification != nil {
 		if err := s.PredefinedLoadMetricSpecification.Validate(); err != nil {
@@ -13753,6 +16140,24 @@ func (s *PredictiveScalingMetricSpecification) Validate() error {
 		return invalidParams
 	}
 	return nil
+}
+
+// SetCustomizedCapacityMetricSpecification sets the CustomizedCapacityMetricSpecification field's value.
+func (s *PredictiveScalingMetricSpecification) SetCustomizedCapacityMetricSpecification(v *PredictiveScalingCustomizedCapacityMetric) *PredictiveScalingMetricSpecification {
+	s.CustomizedCapacityMetricSpecification = v
+	return s
+}
+
+// SetCustomizedLoadMetricSpecification sets the CustomizedLoadMetricSpecification field's value.
+func (s *PredictiveScalingMetricSpecification) SetCustomizedLoadMetricSpecification(v *PredictiveScalingCustomizedLoadMetric) *PredictiveScalingMetricSpecification {
+	s.CustomizedLoadMetricSpecification = v
+	return s
+}
+
+// SetCustomizedScalingMetricSpecification sets the CustomizedScalingMetricSpecification field's value.
+func (s *PredictiveScalingMetricSpecification) SetCustomizedScalingMetricSpecification(v *PredictiveScalingCustomizedScalingMetric) *PredictiveScalingMetricSpecification {
+	s.CustomizedScalingMetricSpecification = v
+	return s
 }
 
 // SetPredefinedLoadMetricSpecification sets the PredefinedLoadMetricSpecification field's value.
@@ -13820,12 +16225,20 @@ type PredictiveScalingPredefinedLoadMetric struct {
 	ResourceLabel *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedLoadMetric) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedLoadMetric) GoString() string {
 	return s.String()
 }
@@ -13899,12 +16312,20 @@ type PredictiveScalingPredefinedMetricPair struct {
 	ResourceLabel *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedMetricPair) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedMetricPair) GoString() string {
 	return s.String()
 }
@@ -13978,12 +16399,20 @@ type PredictiveScalingPredefinedScalingMetric struct {
 	ResourceLabel *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedScalingMetric) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PredictiveScalingPredefinedScalingMetric) GoString() string {
 	return s.String()
 }
@@ -14047,12 +16476,20 @@ type ProcessType struct {
 	ProcessName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ProcessType) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ProcessType) GoString() string {
 	return s.String()
 }
@@ -14127,12 +16564,20 @@ type PutLifecycleHookInput struct {
 	RoleARN *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutLifecycleHookInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutLifecycleHookInput) GoString() string {
 	return s.String()
 }
@@ -14217,12 +16662,20 @@ type PutLifecycleHookOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutLifecycleHookOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutLifecycleHookOutput) GoString() string {
 	return s.String()
 }
@@ -14242,19 +16695,26 @@ type PutNotificationConfigurationInput struct {
 	// NotificationTypes is a required field
 	NotificationTypes []*string `type:"list" required:"true"`
 
-	// The Amazon Resource Name (ARN) of the Amazon Simple Notification Service
-	// (Amazon SNS) topic.
+	// The Amazon Resource Name (ARN) of the Amazon SNS topic.
 	//
 	// TopicARN is a required field
 	TopicARN *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutNotificationConfigurationInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutNotificationConfigurationInput) GoString() string {
 	return s.String()
 }
@@ -14306,12 +16766,20 @@ type PutNotificationConfigurationOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutNotificationConfigurationOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutNotificationConfigurationOutput) GoString() string {
 	return s.String()
 }
@@ -14396,9 +16864,9 @@ type PutScalingPolicyInput struct {
 	//    * PredictiveScaling
 	PolicyType *string `min:"1" type:"string"`
 
-	// A predictive scaling policy. Provides support for only predefined metrics.
+	// A predictive scaling policy. Provides support for predefined and custom metrics.
 	//
-	// Predictive scaling works with CPU utilization, network in/out, and the Application
+	// Predefined metrics include CPU utilization, network in/out, and the Application
 	// Load Balancer request count.
 	//
 	// For more information, see PredictiveScalingConfiguration (https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_PredictiveScalingConfiguration.html)
@@ -14422,7 +16890,7 @@ type PutScalingPolicyInput struct {
 	// type.)
 	StepAdjustments []*StepAdjustment `type:"list"`
 
-	// A target tracking scaling policy. Provides support for predefined or customized
+	// A target tracking scaling policy. Provides support for predefined or custom
 	// metrics.
 	//
 	// The following predefined metrics are available:
@@ -14445,12 +16913,20 @@ type PutScalingPolicyInput struct {
 	TargetTrackingConfiguration *TargetTrackingConfiguration `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScalingPolicyInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScalingPolicyInput) GoString() string {
 	return s.String()
 }
@@ -14601,12 +17077,20 @@ type PutScalingPolicyOutput struct {
 	PolicyARN *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScalingPolicyOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScalingPolicyOutput) GoString() string {
 	return s.String()
 }
@@ -14685,12 +17169,20 @@ type PutScheduledUpdateGroupActionInput struct {
 	TimeZone *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScheduledUpdateGroupActionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScheduledUpdateGroupActionInput) GoString() string {
 	return s.String()
 }
@@ -14787,12 +17279,20 @@ type PutScheduledUpdateGroupActionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScheduledUpdateGroupActionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutScheduledUpdateGroupActionOutput) GoString() string {
 	return s.String()
 }
@@ -14837,12 +17337,20 @@ type PutWarmPoolInput struct {
 	PoolState *string `type:"string" enum:"WarmPoolState"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutWarmPoolInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutWarmPoolInput) GoString() string {
 	return s.String()
 }
@@ -14894,12 +17402,20 @@ type PutWarmPoolOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutWarmPoolOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s PutWarmPoolOutput) GoString() string {
 	return s.String()
 }
@@ -14926,12 +17442,20 @@ type RecordLifecycleActionHeartbeatInput struct {
 	LifecycleHookName *string `min:"1" type:"string" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RecordLifecycleActionHeartbeatInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RecordLifecycleActionHeartbeatInput) GoString() string {
 	return s.String()
 }
@@ -14992,20 +17516,25 @@ type RecordLifecycleActionHeartbeatOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RecordLifecycleActionHeartbeatOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RecordLifecycleActionHeartbeatOutput) GoString() string {
 	return s.String()
 }
 
-// Describes information used to start an instance refresh.
-//
-// All properties are optional. However, if you specify a value for CheckpointDelay,
-// you must also provide a value for CheckpointPercentages.
+// Describes the preferences for an instance refresh.
 type RefreshPreferences struct {
 	_ struct{} `type:"structure"`
 
@@ -15030,18 +17559,37 @@ type RefreshPreferences struct {
 	InstanceWarmup *int64 `type:"integer"`
 
 	// The amount of capacity in the Auto Scaling group that must remain healthy
-	// during an instance refresh to allow the operation to continue, as a percentage
-	// of the desired capacity of the Auto Scaling group (rounded up to the nearest
-	// integer). The default is 90.
+	// during an instance refresh to allow the operation to continue. The value
+	// is expressed as a percentage of the desired capacity of the Auto Scaling
+	// group (rounded up to the nearest integer). The default is 90.
+	//
+	// Setting the minimum healthy percentage to 100 percent limits the rate of
+	// replacement to one instance at a time. In contrast, setting it to 0 percent
+	// has the effect of replacing all instances at the same time.
 	MinHealthyPercentage *int64 `type:"integer"`
+
+	// A boolean value that indicates whether skip matching is enabled. If true,
+	// then Amazon EC2 Auto Scaling skips replacing instances that match the desired
+	// configuration. If no desired configuration is specified, then it skips replacing
+	// instances that have the same configuration that is already set on the group.
+	// The default is false.
+	SkipMatching *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RefreshPreferences) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s RefreshPreferences) GoString() string {
 	return s.String()
 }
@@ -15070,16 +17618,30 @@ func (s *RefreshPreferences) SetMinHealthyPercentage(v int64) *RefreshPreference
 	return s
 }
 
+// SetSkipMatching sets the SkipMatching field's value.
+func (s *RefreshPreferences) SetSkipMatching(v bool) *RefreshPreferences {
+	s.SkipMatching = &v
+	return s
+}
+
 type ResumeProcessesOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ResumeProcessesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ResumeProcessesOutput) GoString() string {
 	return s.String()
 }
@@ -15156,12 +17718,20 @@ type ScalingPolicy struct {
 	TargetTrackingConfiguration *TargetTrackingConfiguration `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScalingPolicy) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScalingPolicy) GoString() string {
 	return s.String()
 }
@@ -15294,12 +17864,20 @@ type ScalingProcessQuery struct {
 	ScalingProcesses []*string `type:"list"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScalingProcessQuery) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScalingProcessQuery) GoString() string {
 	return s.String()
 }
@@ -15375,12 +17953,20 @@ type ScheduledUpdateGroupAction struct {
 	TimeZone *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScheduledUpdateGroupAction) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScheduledUpdateGroupAction) GoString() string {
 	return s.String()
 }
@@ -15506,12 +18092,20 @@ type ScheduledUpdateGroupActionRequest struct {
 	TimeZone *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScheduledUpdateGroupActionRequest) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s ScheduledUpdateGroupActionRequest) GoString() string {
 	return s.String()
 }
@@ -15607,12 +18201,20 @@ type SetDesiredCapacityInput struct {
 	HonorCooldown *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetDesiredCapacityInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetDesiredCapacityInput) GoString() string {
 	return s.String()
 }
@@ -15658,12 +18260,20 @@ type SetDesiredCapacityOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetDesiredCapacityOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetDesiredCapacityOutput) GoString() string {
 	return s.String()
 }
@@ -15694,12 +18304,20 @@ type SetInstanceHealthInput struct {
 	ShouldRespectGracePeriod *bool `type:"boolean"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceHealthInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceHealthInput) GoString() string {
 	return s.String()
 }
@@ -15748,12 +18366,20 @@ type SetInstanceHealthOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceHealthOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceHealthOutput) GoString() string {
 	return s.String()
 }
@@ -15778,12 +18404,20 @@ type SetInstanceProtectionInput struct {
 	ProtectedFromScaleIn *bool `type:"boolean" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceProtectionInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceProtectionInput) GoString() string {
 	return s.String()
 }
@@ -15832,12 +18466,20 @@ type SetInstanceProtectionOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceProtectionOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SetInstanceProtectionOutput) GoString() string {
 	return s.String()
 }
@@ -15850,32 +18492,47 @@ type StartInstanceRefreshInput struct {
 	// AutoScalingGroupName is a required field
 	AutoScalingGroupName *string `min:"1" type:"string" required:"true"`
 
-	// Set of preferences associated with the instance refresh request.
+	// The desired configuration. For example, the desired configuration can specify
+	// a new launch template or a new version of the current launch template.
 	//
-	// If not provided, the default values are used. For MinHealthyPercentage, the
-	// default value is 90. For InstanceWarmup, the default is to use the value
-	// specified for the health check grace period for the Auto Scaling group.
+	// Once the instance refresh succeeds, Amazon EC2 Auto Scaling updates the settings
+	// of the Auto Scaling group to reflect the new desired configuration.
 	//
-	// For more information, see RefreshPreferences (https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_RefreshPreferences.html)
-	// in the Amazon EC2 Auto Scaling API Reference.
+	// When you specify a new launch template or a new version of the current launch
+	// template for your desired configuration, consider enabling the SkipMatching
+	// property in preferences. If it's enabled, Amazon EC2 Auto Scaling skips replacing
+	// instances that already use the specified launch template and version. This
+	// can help you reduce the number of replacements that are required to apply
+	// updates.
+	DesiredConfiguration *DesiredConfiguration `type:"structure"`
+
+	// Set of preferences associated with the instance refresh request. If not provided,
+	// the default values are used.
 	Preferences *RefreshPreferences `type:"structure"`
 
 	// The strategy to use for the instance refresh. The only valid value is Rolling.
 	//
-	// A rolling update is an update that is applied to all instances in an Auto
-	// Scaling group until all instances have been updated. A rolling update can
-	// fail due to failed health checks or if instances are on standby or are protected
-	// from scale in. If the rolling update process fails, any instances that were
-	// already replaced are not rolled back to their previous configuration.
+	// A rolling update helps you update your instances gradually. A rolling update
+	// can fail due to failed health checks or if instances are on standby or are
+	// protected from scale in. If the rolling update process fails, any instances
+	// that are replaced are not rolled back to their previous configuration.
 	Strategy *string `type:"string" enum:"RefreshStrategy"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StartInstanceRefreshInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StartInstanceRefreshInput) GoString() string {
 	return s.String()
 }
@@ -15889,6 +18546,11 @@ func (s *StartInstanceRefreshInput) Validate() error {
 	if s.AutoScalingGroupName != nil && len(*s.AutoScalingGroupName) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("AutoScalingGroupName", 1))
 	}
+	if s.DesiredConfiguration != nil {
+		if err := s.DesiredConfiguration.Validate(); err != nil {
+			invalidParams.AddNested("DesiredConfiguration", err.(request.ErrInvalidParams))
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -15899,6 +18561,12 @@ func (s *StartInstanceRefreshInput) Validate() error {
 // SetAutoScalingGroupName sets the AutoScalingGroupName field's value.
 func (s *StartInstanceRefreshInput) SetAutoScalingGroupName(v string) *StartInstanceRefreshInput {
 	s.AutoScalingGroupName = &v
+	return s
+}
+
+// SetDesiredConfiguration sets the DesiredConfiguration field's value.
+func (s *StartInstanceRefreshInput) SetDesiredConfiguration(v *DesiredConfiguration) *StartInstanceRefreshInput {
+	s.DesiredConfiguration = v
 	return s
 }
 
@@ -15921,12 +18589,20 @@ type StartInstanceRefreshOutput struct {
 	InstanceRefreshId *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StartInstanceRefreshOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StartInstanceRefreshOutput) GoString() string {
 	return s.String()
 }
@@ -15995,12 +18671,20 @@ type StepAdjustment struct {
 	ScalingAdjustment *int64 `type:"integer" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StepAdjustment) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s StepAdjustment) GoString() string {
 	return s.String()
 }
@@ -16040,12 +18724,20 @@ type SuspendProcessesOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SuspendProcessesOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SuspendProcessesOutput) GoString() string {
 	return s.String()
 }
@@ -16064,12 +18756,20 @@ type SuspendedProcess struct {
 	SuspensionReason *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SuspendedProcess) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s SuspendedProcess) GoString() string {
 	return s.String()
 }
@@ -16109,12 +18809,20 @@ type Tag struct {
 	Value *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Tag) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s Tag) GoString() string {
 	return s.String()
 }
@@ -16186,12 +18894,20 @@ type TagDescription struct {
 	Value *string `type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagDescription) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TagDescription) GoString() string {
 	return s.String()
 }
@@ -16251,12 +18967,20 @@ type TargetTrackingConfiguration struct {
 	TargetValue *float64 `type:"double" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TargetTrackingConfiguration) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TargetTrackingConfiguration) GoString() string {
 	return s.String()
 }
@@ -16323,12 +19047,20 @@ type TerminateInstanceInAutoScalingGroupInput struct {
 	ShouldDecrementDesiredCapacity *bool `type:"boolean" required:"true"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TerminateInstanceInAutoScalingGroupInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TerminateInstanceInAutoScalingGroupInput) GoString() string {
 	return s.String()
 }
@@ -16371,12 +19103,20 @@ type TerminateInstanceInAutoScalingGroupOutput struct {
 	Activity *Activity `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TerminateInstanceInAutoScalingGroupOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s TerminateInstanceInAutoScalingGroupOutput) GoString() string {
 	return s.String()
 }
@@ -16384,6 +19124,48 @@ func (s TerminateInstanceInAutoScalingGroupOutput) GoString() string {
 // SetActivity sets the Activity field's value.
 func (s *TerminateInstanceInAutoScalingGroupOutput) SetActivity(v *Activity) *TerminateInstanceInAutoScalingGroupOutput {
 	s.Activity = v
+	return s
+}
+
+// Specifies the minimum and maximum for the TotalLocalStorageGB object when
+// you specify InstanceRequirements for an Auto Scaling group.
+type TotalLocalStorageGBRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The storage maximum in GB.
+	Max *float64 `type:"double"`
+
+	// The storage minimum in GB.
+	Min *float64 `type:"double"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TotalLocalStorageGBRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s TotalLocalStorageGBRequest) GoString() string {
+	return s.String()
+}
+
+// SetMax sets the Max field's value.
+func (s *TotalLocalStorageGBRequest) SetMax(v float64) *TotalLocalStorageGBRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *TotalLocalStorageGBRequest) SetMin(v float64) *TotalLocalStorageGBRequest {
+	s.Min = &v
 	return s
 }
 
@@ -16399,7 +19181,7 @@ type UpdateAutoScalingGroupInput struct {
 	AvailabilityZones []*string `type:"list"`
 
 	// Enables or disables Capacity Rebalancing. For more information, see Amazon
-	// EC2 Auto Scaling Capacity Rebalancing (https://docs.aws.amazon.com/autoscaling/ec2/userguide/capacity-rebalance.html)
+	// EC2 Auto Scaling Capacity Rebalancing (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-capacity-rebalancing.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	CapacityRebalance *bool `type:"boolean"`
 
@@ -16420,10 +19202,22 @@ type UpdateAutoScalingGroupInput struct {
 	// or equal to the maximum size of the group.
 	DesiredCapacity *int64 `type:"integer"`
 
+	// The unit of measurement for the value specified for desired capacity. Amazon
+	// EC2 Auto Scaling supports DesiredCapacityType for attribute-based instance
+	// type selection only. For more information, see Creating an Auto Scaling group
+	// using attribute-based instance type selection (https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-asg-instance-type-requirements.html)
+	// in the Amazon EC2 Auto Scaling User Guide.
+	//
+	// By default, Amazon EC2 Auto Scaling specifies units, which translates into
+	// number of instances.
+	//
+	// Valid values: units | vcpu | memory-mib
+	DesiredCapacityType *string `min:"1" type:"string"`
+
 	// The amount of time, in seconds, that Amazon EC2 Auto Scaling waits before
-	// checking the health status of an EC2 instance that has come into service.
-	// The default value is 0. For more information, see Health check grace period
-	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/healthcheck.html#health-check-grace-period)
+	// checking the health status of an EC2 instance that has come into service
+	// and marking it unhealthy due to a failed health check. The default value
+	// is 0. For more information, see Health check grace period (https://docs.aws.amazon.com/autoscaling/ec2/userguide/healthcheck.html#health-check-grace-period)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	//
 	// Conditional: Required if you are adding an ELB health check.
@@ -16464,17 +19258,16 @@ type UpdateAutoScalingGroupInput struct {
 	// The minimum size of the Auto Scaling group.
 	MinSize *int64 `type:"integer"`
 
-	// An embedded object that specifies a mixed instances policy. When you make
-	// changes to an existing policy, all optional properties are left unchanged
-	// if not specified. For more information, see Auto Scaling groups with multiple
-	// instance types and purchase options (https://docs.aws.amazon.com/autoscaling/ec2/userguide/asg-purchase-options.html)
+	// An embedded object that specifies a mixed instances policy. For more information,
+	// see Auto Scaling groups with multiple instance types and purchase options
+	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	MixedInstancesPolicy *MixedInstancesPolicy `type:"structure"`
 
 	// Indicates whether newly launched instances are protected from termination
 	// by Amazon EC2 Auto Scaling when scaling in. For more information about preventing
-	// instances from terminating on scale in, see Instance scale-in protection
-	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-instance-termination.html#instance-protection)
+	// instances from terminating on scale in, see Using instance scale-in protection
+	// (https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html)
 	// in the Amazon EC2 Auto Scaling User Guide.
 	NewInstancesProtectedFromScaleIn *bool `type:"boolean"`
 
@@ -16503,12 +19296,20 @@ type UpdateAutoScalingGroupInput struct {
 	VPCZoneIdentifier *string `min:"1" type:"string"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UpdateAutoScalingGroupInput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UpdateAutoScalingGroupInput) GoString() string {
 	return s.String()
 }
@@ -16521,6 +19322,9 @@ func (s *UpdateAutoScalingGroupInput) Validate() error {
 	}
 	if s.AutoScalingGroupName != nil && len(*s.AutoScalingGroupName) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("AutoScalingGroupName", 1))
+	}
+	if s.DesiredCapacityType != nil && len(*s.DesiredCapacityType) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("DesiredCapacityType", 1))
 	}
 	if s.HealthCheckType != nil && len(*s.HealthCheckType) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("HealthCheckType", 1))
@@ -16587,6 +19391,12 @@ func (s *UpdateAutoScalingGroupInput) SetDefaultCooldown(v int64) *UpdateAutoSca
 // SetDesiredCapacity sets the DesiredCapacity field's value.
 func (s *UpdateAutoScalingGroupInput) SetDesiredCapacity(v int64) *UpdateAutoScalingGroupInput {
 	s.DesiredCapacity = &v
+	return s
+}
+
+// SetDesiredCapacityType sets the DesiredCapacityType field's value.
+func (s *UpdateAutoScalingGroupInput) SetDesiredCapacityType(v string) *UpdateAutoScalingGroupInput {
+	s.DesiredCapacityType = &v
 	return s
 }
 
@@ -16672,14 +19482,79 @@ type UpdateAutoScalingGroupOutput struct {
 	_ struct{} `type:"structure"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UpdateAutoScalingGroupOutput) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s UpdateAutoScalingGroupOutput) GoString() string {
 	return s.String()
+}
+
+// Specifies the minimum and maximum for the VCpuCount object when you specify
+// InstanceRequirements for an Auto Scaling group.
+type VCpuCountRequest struct {
+	_ struct{} `type:"structure"`
+
+	// The maximum number of vCPUs.
+	Max *int64 `type:"integer"`
+
+	// The minimum number of vCPUs.
+	//
+	// Min is a required field
+	Min *int64 `type:"integer" required:"true"`
+}
+
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s VCpuCountRequest) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
+func (s VCpuCountRequest) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *VCpuCountRequest) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "VCpuCountRequest"}
+	if s.Min == nil {
+		invalidParams.Add(request.NewErrParamRequired("Min"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetMax sets the Max field's value.
+func (s *VCpuCountRequest) SetMax(v int64) *VCpuCountRequest {
+	s.Max = &v
+	return s
+}
+
+// SetMin sets the Min field's value.
+func (s *VCpuCountRequest) SetMin(v int64) *VCpuCountRequest {
+	s.Min = &v
+	return s
 }
 
 // Describes a warm pool configuration.
@@ -16700,12 +19575,20 @@ type WarmPoolConfiguration struct {
 	Status *string `type:"string" enum:"WarmPoolStatus"`
 }
 
-// String returns the string representation
+// String returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s WarmPoolConfiguration) String() string {
 	return awsutil.Prettify(s)
 }
 
-// GoString returns the string representation
+// GoString returns the string representation.
+//
+// API parameter values that are decorated as "sensitive" in the API will not
+// be included in the string output. The member name will be present, but the
+// value will be replaced with "sensitive".
 func (s WarmPoolConfiguration) GoString() string {
 	return s.String()
 }
@@ -16732,6 +19615,162 @@ func (s *WarmPoolConfiguration) SetPoolState(v string) *WarmPoolConfiguration {
 func (s *WarmPoolConfiguration) SetStatus(v string) *WarmPoolConfiguration {
 	s.Status = &v
 	return s
+}
+
+const (
+	// AcceleratorManufacturerNvidia is a AcceleratorManufacturer enum value
+	AcceleratorManufacturerNvidia = "nvidia"
+
+	// AcceleratorManufacturerAmd is a AcceleratorManufacturer enum value
+	AcceleratorManufacturerAmd = "amd"
+
+	// AcceleratorManufacturerAmazonWebServices is a AcceleratorManufacturer enum value
+	AcceleratorManufacturerAmazonWebServices = "amazon-web-services"
+
+	// AcceleratorManufacturerXilinx is a AcceleratorManufacturer enum value
+	AcceleratorManufacturerXilinx = "xilinx"
+)
+
+// AcceleratorManufacturer_Values returns all elements of the AcceleratorManufacturer enum
+func AcceleratorManufacturer_Values() []string {
+	return []string{
+		AcceleratorManufacturerNvidia,
+		AcceleratorManufacturerAmd,
+		AcceleratorManufacturerAmazonWebServices,
+		AcceleratorManufacturerXilinx,
+	}
+}
+
+const (
+	// AcceleratorNameA100 is a AcceleratorName enum value
+	AcceleratorNameA100 = "a100"
+
+	// AcceleratorNameV100 is a AcceleratorName enum value
+	AcceleratorNameV100 = "v100"
+
+	// AcceleratorNameK80 is a AcceleratorName enum value
+	AcceleratorNameK80 = "k80"
+
+	// AcceleratorNameT4 is a AcceleratorName enum value
+	AcceleratorNameT4 = "t4"
+
+	// AcceleratorNameM60 is a AcceleratorName enum value
+	AcceleratorNameM60 = "m60"
+
+	// AcceleratorNameRadeonProV520 is a AcceleratorName enum value
+	AcceleratorNameRadeonProV520 = "radeon-pro-v520"
+
+	// AcceleratorNameVu9p is a AcceleratorName enum value
+	AcceleratorNameVu9p = "vu9p"
+)
+
+// AcceleratorName_Values returns all elements of the AcceleratorName enum
+func AcceleratorName_Values() []string {
+	return []string{
+		AcceleratorNameA100,
+		AcceleratorNameV100,
+		AcceleratorNameK80,
+		AcceleratorNameT4,
+		AcceleratorNameM60,
+		AcceleratorNameRadeonProV520,
+		AcceleratorNameVu9p,
+	}
+}
+
+const (
+	// AcceleratorTypeGpu is a AcceleratorType enum value
+	AcceleratorTypeGpu = "gpu"
+
+	// AcceleratorTypeFpga is a AcceleratorType enum value
+	AcceleratorTypeFpga = "fpga"
+
+	// AcceleratorTypeInference is a AcceleratorType enum value
+	AcceleratorTypeInference = "inference"
+)
+
+// AcceleratorType_Values returns all elements of the AcceleratorType enum
+func AcceleratorType_Values() []string {
+	return []string{
+		AcceleratorTypeGpu,
+		AcceleratorTypeFpga,
+		AcceleratorTypeInference,
+	}
+}
+
+const (
+	// BareMetalIncluded is a BareMetal enum value
+	BareMetalIncluded = "included"
+
+	// BareMetalExcluded is a BareMetal enum value
+	BareMetalExcluded = "excluded"
+
+	// BareMetalRequired is a BareMetal enum value
+	BareMetalRequired = "required"
+)
+
+// BareMetal_Values returns all elements of the BareMetal enum
+func BareMetal_Values() []string {
+	return []string{
+		BareMetalIncluded,
+		BareMetalExcluded,
+		BareMetalRequired,
+	}
+}
+
+const (
+	// BurstablePerformanceIncluded is a BurstablePerformance enum value
+	BurstablePerformanceIncluded = "included"
+
+	// BurstablePerformanceExcluded is a BurstablePerformance enum value
+	BurstablePerformanceExcluded = "excluded"
+
+	// BurstablePerformanceRequired is a BurstablePerformance enum value
+	BurstablePerformanceRequired = "required"
+)
+
+// BurstablePerformance_Values returns all elements of the BurstablePerformance enum
+func BurstablePerformance_Values() []string {
+	return []string{
+		BurstablePerformanceIncluded,
+		BurstablePerformanceExcluded,
+		BurstablePerformanceRequired,
+	}
+}
+
+const (
+	// CpuManufacturerIntel is a CpuManufacturer enum value
+	CpuManufacturerIntel = "intel"
+
+	// CpuManufacturerAmd is a CpuManufacturer enum value
+	CpuManufacturerAmd = "amd"
+
+	// CpuManufacturerAmazonWebServices is a CpuManufacturer enum value
+	CpuManufacturerAmazonWebServices = "amazon-web-services"
+)
+
+// CpuManufacturer_Values returns all elements of the CpuManufacturer enum
+func CpuManufacturer_Values() []string {
+	return []string{
+		CpuManufacturerIntel,
+		CpuManufacturerAmd,
+		CpuManufacturerAmazonWebServices,
+	}
+}
+
+const (
+	// InstanceGenerationCurrent is a InstanceGeneration enum value
+	InstanceGenerationCurrent = "current"
+
+	// InstanceGenerationPrevious is a InstanceGeneration enum value
+	InstanceGenerationPrevious = "previous"
+)
+
+// InstanceGeneration_Values returns all elements of the InstanceGeneration enum
+func InstanceGeneration_Values() []string {
+	return []string{
+		InstanceGenerationCurrent,
+		InstanceGenerationPrevious,
+	}
 }
 
 const (
@@ -16891,6 +19930,42 @@ func LifecycleState_Values() []string {
 		LifecycleStateWarmedTerminated,
 		LifecycleStateWarmedStopped,
 		LifecycleStateWarmedRunning,
+	}
+}
+
+const (
+	// LocalStorageIncluded is a LocalStorage enum value
+	LocalStorageIncluded = "included"
+
+	// LocalStorageExcluded is a LocalStorage enum value
+	LocalStorageExcluded = "excluded"
+
+	// LocalStorageRequired is a LocalStorage enum value
+	LocalStorageRequired = "required"
+)
+
+// LocalStorage_Values returns all elements of the LocalStorage enum
+func LocalStorage_Values() []string {
+	return []string{
+		LocalStorageIncluded,
+		LocalStorageExcluded,
+		LocalStorageRequired,
+	}
+}
+
+const (
+	// LocalStorageTypeHdd is a LocalStorageType enum value
+	LocalStorageTypeHdd = "hdd"
+
+	// LocalStorageTypeSsd is a LocalStorageType enum value
+	LocalStorageTypeSsd = "ssd"
+)
+
+// LocalStorageType_Values returns all elements of the LocalStorageType enum
+func LocalStorageType_Values() []string {
+	return []string{
+		LocalStorageTypeHdd,
+		LocalStorageTypeSsd,
 	}
 }
 
