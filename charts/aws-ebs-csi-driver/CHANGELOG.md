@@ -1,6 +1,6 @@
 # Helm chart
 
-## v2.5.1
+## v2.6.0
 
 * Add securityContext support for controller Deployment
 
