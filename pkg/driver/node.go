@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -308,7 +307,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		// VolumeCapability is nil, check if volumePath point to a block device
 		isBlock, err := d.IsBlockDevice(volumePath)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to determine device path for volumePath [%v]: %v", volumePath, err)
+			return nil, status.Errorf(codes.Internal, "failed to determine if volumePath [%v] is a block device: %v", volumePath, err)
 		}
 		if isBlock {
 			// Skip resizing for Block NodeExpandVolume
@@ -321,16 +320,14 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		}
 	}
 
-	// TODO this won't make sense on Windows with csi-proxy
-	args := []string{"-o", "source", "--noheadings", "--target", volumePath}
-	output, err := d.mounter.(*NodeMounter).Exec.Command("findmnt", args...).Output()
+	deviceName, _, err := d.mounter.GetDeviceNameFromMount(volumePath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine device path: %v", err)
-
+		return nil, status.Errorf(codes.Internal, "failed to get device name from mount %s: %v", volumePath, err)
 	}
-	devicePath := strings.TrimSpace(string(output))
-	if len(devicePath) == 0 {
-		return nil, status.Errorf(codes.Internal, "Could not get valid device for mount path: %q", req.GetVolumePath())
+
+	devicePath, err := d.findDevicePath(deviceName, volumeID, "")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to find device path for device name %s for mount %s: %v", deviceName, req.GetVolumePath(), err)
 	}
 
 	r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
