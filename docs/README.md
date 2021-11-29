@@ -145,7 +145,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.5"
 ```
 
 Verify driver is running:
