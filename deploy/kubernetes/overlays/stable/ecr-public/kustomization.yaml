@@ -1,26 +1,25 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 bases:
-  - ../../../base
+  - ../ecr
 images:
-  - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver
     newName: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
-    newTag: v1.4.0
-  - name: k8s.gcr.io/sig-storage/csi-provisioner
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-provisioner
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
     newTag: v2.1.1-eks-1-18-3
-  - name: k8s.gcr.io/sig-storage/csi-attacher
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-attacher
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
     newTag: v3.1.0-eks-1-18-3
-  - name: k8s.gcr.io/sig-storage/livenessprobe
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/livenessprobe
     newName: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newTag: v2.2.0-eks-1-18-3
-  - name: k8s.gcr.io/sig-storage/csi-snapshotter
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
     newTag: v3.0.3-eks-1-18-3
-  - name: k8s.gcr.io/sig-storage/csi-resizer
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newTag: v1.1.0-eks-1-18-3
-  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+  - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-node-driver-registrar
     newName: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newTag: v2.1.0-eks-1-18-3
