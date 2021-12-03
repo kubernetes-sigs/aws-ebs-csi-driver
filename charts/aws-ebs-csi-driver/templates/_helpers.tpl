@@ -41,7 +41,11 @@ helm.sh/chart: {{ include "aws-ebs-csi-driver.chart" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
+app.kubernetes.io/component: csi-driver
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels }}
 {{- end }}
 {{- end -}}
 
