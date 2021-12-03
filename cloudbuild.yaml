@@ -1,6 +1,6 @@
 timeout: 3600s
 steps:
-  - name: gcr.io/k8s-testimages/gcb-docker-gcloud:v20210722-085d930
+  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20211118-2f2d816b90
     entrypoint: ./hack/prow.sh
     env:
       - GIT_TAG=${_GIT_TAG}
