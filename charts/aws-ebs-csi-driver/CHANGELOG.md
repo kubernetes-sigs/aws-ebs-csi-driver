@@ -1,9 +1,8 @@
 # Helm chart
 
+## v2.4.1
 
-## v2.5.0
-
-* Bump app/driver version to `v1.5.0`
+* Replace deprecated arg `--extra-volume-tags` by `--extra-tags`
 
 ## v2.4.0
 
