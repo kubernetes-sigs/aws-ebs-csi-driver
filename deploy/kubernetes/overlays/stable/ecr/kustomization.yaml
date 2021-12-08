@@ -5,7 +5,6 @@ bases:
 images:
   - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver
-    newTag: v1.5.0
   - name: k8s.gcr.io/sig-storage/csi-provisioner
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-provisioner
   - name: k8s.gcr.io/sig-storage/csi-attacher
