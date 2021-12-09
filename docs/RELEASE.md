@@ -1,40 +1,25 @@
 # Amazon Elastic Block Store (EBS) CSI driver Release Process
 NOTE: Your GitHub account must have the required permissions and you must have generated a GitHub token.
 
-## Choosing the release version
-Using semantic versioning, pick a release number that makes sense by bumping the major, minor or patch release version.  If its a major or minor release (backwards incompatible changes, and new features, respectively) then you will want to start this process with an alpha release first.  Here are some examples:
+## Choose the release version and release branch
 
-Bumping a minor version after releasing a new feature:
-```
-v1.4.5 -> v1.5.0-alpha.0
-```
-
-After testing and allowing some time for feedback on the alpha, releasing v1.5.0:
-```
-v1.4.5 -> v1.5.0
-```
-
-New patch release:
-```
-v1.5.3 -> v1.5.4
-```
-
-New major version release with two alpha releases:
-```
-v1.6.2 -> v2.0.0-alpha.0
-       -> v2.0.0-alpha.1
-       -> v2.0.0
-```
-
-## Choosing the release branch
-You also might need to create a release branch, if it doesn't already exist. For example, in the case that we are backporting a fix to the v0.5 release branch, then we would do the following:
-
-1. Create the release branch (named release-0.5) if it doesn't exist or check it out if it already exists.
-2. Cherry-pick the necessary commits onto the release branch.
-3. Follow the instructions below to create the release commit.
-4. Create a pull request to merge your fork of the release branch into the upstream release branch (i.e. <user>/aws-ebs-csi-driver/release-0.5 -> kubernetes-sigs/aws-ebs-csi-driver/release-0.5).
+1. Find the latest release:
+   https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases. For example,
+   `v1.3.1`. (Ignore helm releases prefixed by `helm-chart` like
+   `helm-chart-aws-ebs-csi-driver-2.5.0`).
+2. Increment the version according to semantic versioning https://semver.org/.
+   For example, for a release that only contains bug fixes or an updated Amazon
+   Linux 2 base image, `v1.3.2`.
+3. Find or create the corresponding release branch. Release branches correspond
+   to minor version. For example, for `v1.3.2` the release branch would be
+   `release-1.3` and it would already exist. For `v1.4.0` it would be
+   `release-1.4` and the branch would need to be created. If you do not have
+   permission to create the branch, ask an OWNER to do it
+   https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/OWNERS.
 
 ## Create the release commit in the release branch
+
+Proceed according to the version and branch you chose above, for example version v1.3.2 and branch release-1.3.
 
 ### Update `CHANGELOG-0.x.md`
 We need to generate the CHANGELOG for the new release by running `./hack/release`. You need to pass previous release tag to generate the changelog.
