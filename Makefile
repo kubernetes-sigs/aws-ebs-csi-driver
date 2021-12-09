@@ -63,25 +63,31 @@ bin/aws-ebs-csi-driver.exe: | bin
 	CGO_ENABLED=0 GOOS=windows GOARCH=$(ARCH) go build -mod=vendor -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver.exe ./cmd/
 
 # Builds all linux images (not windows because it can't be exported with OUTPUT_TYPE=docker)
+.PHONY: all
 all: all-image-docker
 
 # Builds all linux and windows images and pushes them
+.PHONY: all-push
 all-push: all-image-registry push-manifest
 
+.PHONY: push-manifest
 push-manifest: create-manifest all-annotate-manifest
 	docker manifest push --purge $(IMAGE):$(TAG)
 
+.PHONY: create-manifest
 create-manifest:
 # sed expression:
 # LHS: match 0 or more not space characters
 # RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
 	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_OS_ARCH_OSVERSION) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
 
+.PHONY: all-annotate-manifest
 all-annotate-manifest: $(addprefix sub-annotate-manifest-,$(ALL_OS_ARCH_OSVERSION))
 
 sub-annotate-manifest-%:
 	$(MAKE) OS=$(call word-hyphen,$*,1) ARCH=$(call word-hyphen,$*,2) OSVERSION=$(call word-hyphen,$*,3) annotate-manifest
 
+.PHONY: annotate-manifest
 annotate-manifest: .annotate-manifest-$(OS)-$(ARCH)-$(OSVERSION)
 .annotate-manifest-$(OS)-$(ARCH)-$(OSVERSION):
 	set -x; docker manifest annotate --os $(OS) --arch $(ARCH) --os-version $(OSVERSION) $(IMAGE):$(TAG) $(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
@@ -89,12 +95,15 @@ annotate-manifest: .annotate-manifest-$(OS)-$(ARCH)-$(OSVERSION)
 # Only linux for OUTPUT_TYPE=docker because windows image cannot be exported
 # "Currently, multi-platform images cannot be exported with the docker export type. The most common usecase for multi-platform images is to directly push to a registry (see registry)."
 # https://docs.docker.com/engine/reference/commandline/buildx_build/#output
+.PHONY: all-image-docker
 all-image-docker: $(addprefix sub-image-docker-,$(ALL_OS_ARCH_OSVERSION_linux))
+.PHONY: all-image-registry
 all-image-registry: $(addprefix sub-image-registry-,$(ALL_OS_ARCH_OSVERSION))
 
 sub-image-%:
 	$(MAKE) OUTPUT_TYPE=$(call word-hyphen,$*,1) OS=$(call word-hyphen,$*,2) ARCH=$(call word-hyphen,$*,3) OSVERSION=$(call word-hyphen,$*,4) image
 
+.PHONY: image
 image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
 .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION):
 	docker buildx build \
@@ -134,6 +143,7 @@ bin/golangci-lint: | bin
 kubeval: bin/kubeval
 	bin/kubeval -d deploy/kubernetes/base,deploy/kubernetes/cluster,deploy/kubernetes/overlays -i kustomization.yaml,crd_.+\.yaml,controller_add
 
+.PHONY: mockgen
 mockgen: bin/mockgen
 	./hack/update-gomock
 
