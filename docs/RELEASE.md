@@ -21,6 +21,7 @@
 Checkout the release branch you chose above, for example `git checkout release-1.3`.
 
 ### Update `CHANGELOG-0.x.md`
+
 1. Generate a Personal Access Token with `repos` permissions.
 2. Run hack/release with arguments according to the version and branch you chose above:
   - `--since`: the release version immediately preceding your chosen release version and the chosen release branch to generate the changelog. For example, for v1.3.2 pass `--since v1.3.1`.
@@ -32,15 +33,19 @@ This will print the CHANGELOG to stdout.
 3. Create a new section for the new version and copy the output there. Organize and prune the CHANGELOG at your own discretion. For example, release commits like "Release v1.3.3" are not useful and should be removed or put in a "Misc." section.
 
 ### Update `docs/README.md`
+
 Search for any references to the previous version on the README, and update them if necessary.
 
 ### Update `Makefile`
+
 Update the VERSION variable in the Makefile
 
 ### Send a release PR to the release branch
+
 At this point you should have all changes required for the release commit. Verify the changes via `git diff` and send a new PR with the release commit against the release branch. Note that if it doesn't exist, you'll need someone with write privileges to create it for you.
 
 ## Tag the release
+
 Once the PR is merged, pull the release branch locally and tag the release commit with the relase tag. You'll need push privileges for this step.
 
 ```
@@ -51,18 +56,22 @@ git push upstream v0.7.0
 ```
 
 ## Verify the release on GitHub
+
 The new tag should trigger a new Github release. Verify that it has run by going to [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases). Then, click on the new version and verify all assets have been created:
 
 - Source code (zip)
 - Source code (tar.gz)
 
 ## Promote the new image on GCR
+
 Promote the new images from the staging repo by sending a PR to the kubernetes/k8s.io repo. Here's an [example PR](https://github.com/kubernetes/k8s.io/pull/1606).
 
 ## Promote the new image on ECR
+
 Follow the AWS-internal process.
 
 ## Verify the images are available
+
 In GCR:
   - `docker pull k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1`
 
@@ -73,18 +82,21 @@ In ECR:
 ## Create the post-release commit in the release branch
 
 ### Update `charts/aws-ebs-csi-driver`
+
 1. Update Helm `appVersion`, `version`, `tag`, and CHANGELOG
   - `charts/aws-ebs-csi-driver/Chart.yaml`
   - `charts/aws-ebs-csi-driver/values.yaml`
   - `charts/aws-ebs-csi-driver/CHANGELOG.md`
 
 ### Update `deploy/kubernetes`
+
 1. Update the kustomize overlays
   - `deploy/kubernetes/overlays/stable/kustomization.yaml`
   - `deploy/kubernetes/overlays/stable/ecr/kustomization.yaml`
 2. Run make generate-kustomize
 
 ### Send a post-release PR to the release branch
+
 The helm and kustomize deployment files must not be updated to refer to the new images until after the images have been verified available, therefore it's necessary to make these changes in a post-release PR rather than the original release PR.
 
 ## Merge the release and post-release commits to the main branch
