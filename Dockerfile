@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# See
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
 FROM --platform=$BUILDPLATFORM golang:1.17 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 COPY . .
-ARG OS
-ARG ARCH
-RUN make $OS/$ARCH
+ARG TARGETOS
+ARG TARGETARCH
+RUN OS=$TARGETOS ARCH=$TARGETARCH make $TARGETOS/$TARGETARCH
 
 FROM amazonlinux:2 AS linux-amazon
 RUN yum update -y && \
