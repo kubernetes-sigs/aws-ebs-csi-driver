@@ -25,7 +25,7 @@ Proceed according to the version and branch you chose above, for example version
 We need to generate the CHANGELOG for the new release by running `./hack/release`. You need to pass previous release tag to generate the changelog.
 
 ```
-python3 release --github-user=ayberk --github-token=$GITHUB_TOKEN note --since <previous_version_tag>
+python3 hack/release --github-user=ayberk --github-token=$GITHUB_TOKEN note --since <previous_version_tag>
 ```
 
 This will print the CHANGELOG to stdout. You should create a new section for the new version and copy the output there.
