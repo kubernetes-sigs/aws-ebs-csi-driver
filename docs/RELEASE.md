@@ -1,5 +1,4 @@
 # Amazon Elastic Block Store (EBS) CSI driver Release Process
-NOTE: Your GitHub account must have the required permissions and you must have generated a GitHub token.
 
 ## Choose the release version and release branch
 
@@ -19,16 +18,18 @@ NOTE: Your GitHub account must have the required permissions and you must have g
 
 ## Create the release commit in the release branch
 
-Proceed according to the version and branch you chose above, for example version v1.3.2 and branch release-1.3.
+Checkout the release branch you chose above, for example `git checkout release-1.3`.
 
 ### Update `CHANGELOG-0.x.md`
-We need to generate the CHANGELOG for the new release by running `./hack/release`. You need to pass previous release tag to generate the changelog.
-
+1. Generate a Personal Access Token with `repos` permissions.
+2. Run hack/release with arguments according to the version and branch you chose above:
+  - `--since`: the release version immediately preceding your chosen release version and the chosen release branch to generate the changelog. For example, for v1.3.2 pass `--since v1.3.1`.
+  - `--branch`: the release branch you chose. For example, for v1.3.2 pass `--branch release-1.3`.
 ```
-python3 hack/release --github-user=ayberk --github-token=$GITHUB_TOKEN note --since <previous_version_tag>
+python3 hack/release --github-user=$GITHUB_USER --github-token=$GITHUB_TOKEN note --since $PREVIOUS_VERSION --branch $BRANCH
 ```
-
-This will print the CHANGELOG to stdout. You should create a new section for the new version and copy the output there.
+This will print the CHANGELOG to stdout.
+3. Create a new section for the new version and copy the output there. Organize and prune the CHANGELOG at your own discretion. For example, release commits like "Release v1.3.3" are not useful and should be removed or put in a "Misc." section.
 
 ### Update `docs/README.md`
 Search for any references to the previous version on the README, and update them if necessary.
