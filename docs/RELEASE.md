@@ -96,6 +96,7 @@ In ECR:
 1. Update the kustomize overlays
   - `deploy/kubernetes/overlays/stable/kustomization.yaml`
   - `deploy/kubernetes/overlays/stable/ecr/kustomization.yaml`
+2. Run make generate-kustomize
 
 ### Send a post-release PR to the release branch
 The helm and kustomize deployment files must not be updated to refer to the new images until after the images have been verified available, therefore it's necessary to make these changes in a post-release PR rather than the original release PR.
