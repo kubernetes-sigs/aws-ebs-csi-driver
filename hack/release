@@ -55,8 +55,8 @@ class Github:
         self._user = user
         self._token = token
 
-    def get_commits(self, repo, since):
-        resp = requests.get('{}/repos/{}/compare/{}...master'.format(self._url, repo, since),
+    def get_commits(self, repo, since, branch):
+        resp = requests.get('{}/repos/{}/compare/{}...{}'.format(self._url, repo, since, branch),
                 auth=(self._user, self._token))
         jsonResp = json.loads(resp.content)
         return jsonResp['commits']
@@ -79,9 +79,9 @@ class Github:
         jsonResp = json.loads(resp.content)
         return jsonResp
 
-    def print_release_note(self, repo, since):
+    def print_release_note(self, repo, since, branch):
         # remove merge commits
-        commits = self.get_commits(repo, since)
+        commits = self.get_commits(repo, since, branch)
         commits = filter(lambda c: not c['commit']['message'].startswith('Merge pull request'), commits)
         pr_numbers = set()
         for commit in commits:
@@ -106,11 +106,12 @@ def print_sha(args):
 def print_notes(args):
     repo = args.repo
     since = args.since
+    branch = args.branch
     user = args.github_user
     token = args.github_token
 
     g = Github(user, token)
-    g.print_release_note(repo, since)
+    g.print_release_note(repo, since, branch)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Generate release CHANGELOG')
@@ -121,7 +122,8 @@ if __name__=="__main__":
     subParsers = parser.add_subparsers(title='subcommands', description='[note|sha]')
 
     noteParser = subParsers.add_parser('note', help='generate release notes')
-    noteParser.add_argument('--since', metavar='since', type=str, required=True, help='since version tag')
+    noteParser.add_argument('--since', metavar='since', type=str, required=True, help='since version tag, e.g. if releasing v1.3.5 then set this to v1.3.4')
+    noteParser.add_argument('--branch', metavar='branch', type=str, required=True, help='release branch, e.g. if releasing v1.3.5 then set this to release-1.3')
     noteParser.set_defaults(func=print_notes)
 
     shaParser = subParsers.add_parser('sha', help='generate SHA for released version tag')
