@@ -1,9 +1,8 @@
 # Helm chart
 
-## v2.6.0
+## v2.6.1
 
 * Add securityContext support for controller Deployment
-* Bump app/driver version to `v1.6.0`
 
 ## v2.5.0
 
