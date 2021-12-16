@@ -133,6 +133,9 @@ controller:
   #    topologyKey: kubernetes.io/hostname
   #    whenUnsatisfiable: ScheduleAnyway
   topologySpreadConstraints: []
+  securityContext: {}
+  #  AWS EKS /var/run/secrets/eks.amazonaws.com/serviceaccount/token FS group is nogroup (65534) - required for Kubernetes 1.18.x and below
+  #  fsGroup: 65534
 
 node:
   env: []
