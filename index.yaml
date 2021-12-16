@@ -6,6 +6,32 @@ entries:
         - kind: added
           description: Custom controller.updateStrategy to set controller deployment strategy.
     apiVersion: v2
+    appVersion: 1.5.0
+    created: "2021-12-16T22:41:12.608703075Z"
+    description: A Helm chart for AWS EBS CSI Driver
+    digest: ffe67f07e6a508340713f01b4406934a90eceadb420a1093e7bca7fe8e2e9a50
+    home: https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    keywords:
+    - aws
+    - ebs
+    - csi
+    kubeVersion: '>=1.17.0-0'
+    maintainers:
+    - email: chengpan@amazon.com
+      name: leakingtapan
+    - name: krmichel
+      url: https://github.com/krmichel
+    name: aws-ebs-csi-driver
+    sources:
+    - https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    urls:
+    - https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/helm-chart-aws-ebs-csi-driver-2.6.1/aws-ebs-csi-driver-2.6.1.tgz
+    version: 2.6.1
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Custom controller.updateStrategy to set controller deployment strategy.
+    apiVersion: v2
     appVersion: 1.6.0
     created: "2021-12-16T05:17:39.426237289Z"
     description: A Helm chart for AWS EBS CSI Driver
@@ -1295,4 +1321,4 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.4.0/helm-chart.tgz
     version: 0.1.0
-generated: "2021-12-16T05:17:39.427618338Z"
+generated: "2021-12-16T22:41:12.609632382Z"
