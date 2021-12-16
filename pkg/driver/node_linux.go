@@ -27,8 +27,20 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
-	"k8s.io/klog/v2"
+	"k8s.io/klog"
 )
+
+func (d *nodeService) appendPartition(devicePath, partition string) string {
+	if partition == "" {
+		return devicePath
+	}
+
+	if strings.HasPrefix(devicePath, "/dev/nvme") {
+		return devicePath + nvmeDiskPartitionSuffix + partition
+	}
+
+	return devicePath + diskPartitionSuffix + partition
+}
 
 // findDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
@@ -48,11 +60,25 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	}
 
 	if exists {
-		if partition != "" {
-			devicePath = devicePath + diskPartitionSuffix + partition
+		stat, err := d.deviceIdentifier.Lstat(devicePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to lstat %q: %v", devicePath, err)
 		}
-		canonicalDevicePath = devicePath
+
+		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+			canonicalDevicePath, err = d.deviceIdentifier.EvalSymlinks(devicePath)
+			if err != nil {
+				return "", fmt.Errorf("failed to evaluate symlink %q: %v", devicePath, err)
+			}
+		} else {
+			canonicalDevicePath = devicePath
+		}
+
+		klog.V(5).Infof("[Debug] The canonical device path for %q was resolved to: %q", devicePath, canonicalDevicePath)
+		return d.appendPartition(canonicalDevicePath, partition), nil
 	}
+
+	klog.V(5).Infof("[Debug] Falling back to nvme volume ID lookup for: %q", devicePath)
 
 	// AWS recommends identifying devices by volume ID
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html),
@@ -65,9 +91,7 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	nvmeDevicePath, err := findNvmeVolume(d.deviceIdentifier, nvmeName)
 
 	if err == nil {
-		if partition != "" {
-			nvmeDevicePath = nvmeDevicePath + nvmeDiskPartitionSuffix + partition
-		}
+		klog.V(5).Infof("[Debug] successfully resolved nvmeName=%q to %q", nvmeName, nvmeDevicePath)
 		canonicalDevicePath = nvmeDevicePath
 	} else {
 		klog.V(5).Infof("[Debug] error searching for nvme path %q: %v", nvmeName, err)
@@ -77,6 +101,7 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 		return "", errNoDevicePathFound(devicePath, volumeID)
 	}
 
+	canonicalDevicePath = d.appendPartition(canonicalDevicePath, partition)
 	return canonicalDevicePath, nil
 }
 
