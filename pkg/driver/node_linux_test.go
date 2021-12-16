@@ -36,7 +36,9 @@ func TestFindDevicePath(t *testing.T) {
 	nvmeDevicePath := "/dev/nvme1n1"
 	volumeID := "vol-test"
 	nvmeName := "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_voltest"
+	deviceFileInfo := fs.FileInfo(&fakeFileInfo{devicePath, os.ModeDevice})
 	symlinkFileInfo := fs.FileInfo(&fakeFileInfo{nvmeName, os.ModeSymlink})
+	nvmeDevicePathSymlinkFileInfo := fs.FileInfo(&fakeFileInfo{nvmeDevicePath, os.ModeSymlink})
 	type testCase struct {
 		name             string
 		devicePath       string
@@ -55,9 +57,8 @@ func TestFindDevicePath(t *testing.T) {
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-
-					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(symlinkFileInfo, nil),
-					mockDeviceIdentifier.EXPECT().EvalSymlinks(gomock.Eq(symlinkFileInfo.Name())).Return(nvmeDevicePath, nil),
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(nvmeDevicePathSymlinkFileInfo, nil),
+					mockDeviceIdentifier.EXPECT().EvalSymlinks(gomock.Eq(devicePath)).Return(nvmeDevicePath, nil),
 				)
 			},
 			expectDevicePath: nvmeDevicePath,
@@ -70,8 +71,7 @@ func TestFindDevicePath(t *testing.T) {
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
-
-					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist),
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil),
 				)
 			},
 			expectDevicePath: devicePath,
