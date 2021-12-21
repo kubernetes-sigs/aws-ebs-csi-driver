@@ -45,8 +45,10 @@ func TestNodeStageVolume(t *testing.T) {
 	var (
 		targetPath     = "/test/path"
 		devicePath     = "/dev/fake"
-		nvmeDevicePath = "/dev/fakenvme1n1"
-		stdVolCap      = &csi.VolumeCapability{
+		nvmeDevicePath = "/dev/nvmefake1n1"
+		deviceFileInfo = fs.FileInfo(&fakeFileInfo{devicePath, os.ModeDevice})
+		//deviceSymlinkFileInfo = fs.FileInfo(&fakeFileInfo{nvmeDevicePath, os.ModeSymlink})
+		stdVolCap = &csi.VolumeCapability{
 			AccessType: &csi.VolumeCapability_Mount{
 				Mount: &csi.VolumeCapability_MountVolume{
 					FsType: FSTypeExt4,
@@ -67,7 +69,7 @@ func TestNodeStageVolume(t *testing.T) {
 			mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 			mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 			mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
-			mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+			mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 			mockMounter.EXPECT().NeedResize(gomock.Eq(devicePath), gomock.Eq(targetPath)).Return(false, nil)
 		}
 	)
@@ -188,7 +190,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return(devicePath, 1, nil)
 				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -233,7 +235,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(targetPath).Return(nil)
 				mockMounter.EXPECT().GetDeviceNameFromMount(targetPath).Return("", 1, nil)
 				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				// The device path argument should be canonicalized to contain the
 				// partition
@@ -594,6 +596,7 @@ func TestNodePublishVolume(t *testing.T) {
 	targetPath := "/test/path"
 	stagingTargetPath := "/test/staging/path"
 	devicePath := "/dev/fake"
+	deviceFileInfo := fs.FileInfo(&fakeFileInfo{devicePath, os.ModeDevice})
 	stdVolCap := &csi.VolumeCapability{
 		AccessType: &csi.VolumeCapability_Mount{
 			Mount: &csi.VolumeCapability_MountVolume{},
@@ -904,7 +907,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -951,7 +954,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(false, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -993,6 +996,7 @@ func TestNodePublishVolume(t *testing.T) {
 
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq("/test")).Return(false, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, nil),
 				)
@@ -1000,7 +1004,6 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeDir(gomock.Eq("/test")).Return(nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, errors.New("Internal System Error"))
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1040,6 +1043,7 @@ func TestNodePublishVolume(t *testing.T) {
 
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil),
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq("/test")).Return(false, nil),
 					mockMounter.EXPECT().PathExists(gomock.Eq(targetPath)).Return(true, errors.New("CorruptedMntError")),
 				)
@@ -1051,7 +1055,6 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, errors.New("Internal System Error"))
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1099,7 +1102,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
@@ -1148,7 +1151,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Eq(targetPath)).Return(true, nil)
-				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist)
+				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: "/dev/fake"},
