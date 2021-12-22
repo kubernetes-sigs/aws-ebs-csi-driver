@@ -25,7 +25,7 @@ app    1/1     Running   0          16m
 Verify the device node is mounted inside the container:
 
 ```sh
-$ kubectl exec -ti app -- ls -al /dev/xvda
+$ kubectl exec -it app -- ls -al /dev/xvda
 brw-rw----    1 root     disk      202, 23296 Mar 12 04:23 /dev/xvda
 ```
 

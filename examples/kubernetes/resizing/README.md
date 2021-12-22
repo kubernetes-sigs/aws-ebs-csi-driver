@@ -34,7 +34,7 @@ You should see that both should have the new value relfected in the capacity fie
 
 6. Verify that the application is continuously running without any interruption:
 ```sh
-kubectl exec -it app cat /data/out.txt
+kubectl exec -it app -- cat /data/out.txt
 ```
 
 7. Cleanup resources:

@@ -21,7 +21,7 @@ kubectl describe pv
 
 3. Validate the pod successfully wrote data to the volume:
 ```
-kubectl exec -it app cat /data/out.txt
+kubectl exec -it app -- cat /data/out.txt
 ```
 
 4. Cleanup resources:

@@ -34,7 +34,7 @@ kubectl describe pv
 
 4. Validate the pod successfully wrote data to the volume, taking note of the timestamp of the first entry:
 ```
-kubectl exec -it app cat /data/out.txt
+kubectl exec -it app -- cat /data/out.txt
 ```
 
 5. Create a `VolumeSnapshot` referencing the `PersistentVolumeClaim` name:
@@ -59,7 +59,7 @@ kubectl apply -f specs/snapshot-restore/
 
 9. Validate the new pod has the restored data by comparing the timestamp of the first entry to that of in step 4:
 ```
-kubectl exec -it app cat /data/out.txt
+kubectl exec -it app -- cat /data/out.txt
 ```
 
 10. Cleanup resources:
