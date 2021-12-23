@@ -8,6 +8,11 @@ image:
   tag: ""
   pullPolicy: IfNotPresent
 
+# -- Custom labels to add into metadata
+customLabels:
+  {}
+  # k8s-app: aws-ebs-csi-driver
+
 sidecars:
   provisioner:
     env: []
@@ -37,14 +42,14 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/livenessprobe
-      tag: "v2.2.0"
+      tag: "v2.4.0"
     resources: {}
   resizer:
     env: []
     image:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-resizer
-      tag: "v1.0.0"
+      tag: "v1.1.0"
     logLevel: 2
     resources: {}
   nodeDriverRegistrar:
@@ -113,8 +118,8 @@ controller:
   #   cpu: 100m
   #   memory: 128Mi
   serviceAccount:
-    create: true  # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa  # Name of the service-account to be used/created.
+    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
+    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
     annotations: {}
   tolerations: []
   # TSCs without the label selector stanza
@@ -129,6 +134,9 @@ controller:
   #    topologyKey: kubernetes.io/hostname
   #    whenUnsatisfiable: ScheduleAnyway
   topologySpreadConstraints: []
+  securityContext: {}
+  #  AWS EKS /var/run/secrets/eks.amazonaws.com/serviceaccount/token FS group is nogroup (65534) - required for Kubernetes 1.18.x and below
+  #  fsGroup: 65534
 
 node:
   env: []
