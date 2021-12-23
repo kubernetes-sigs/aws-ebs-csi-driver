@@ -9,7 +9,8 @@ image:
   pullPolicy: IfNotPresent
 
 # -- Custom labels to add into metadata
-customLabels: {}
+customLabels:
+  {}
   # k8s-app: aws-ebs-csi-driver
 
 sidecars:
@@ -48,7 +49,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-resizer
-      tag: "v1.0.0"
+      tag: "v1.1.0"
     logLevel: 2
     resources: {}
   nodeDriverRegistrar:
@@ -117,8 +118,8 @@ controller:
   #   cpu: 100m
   #   memory: 128Mi
   serviceAccount:
-    create: true  # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa  # Name of the service-account to be used/created.
+    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
+    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
     annotations: {}
   tolerations: []
   # TSCs without the label selector stanza
