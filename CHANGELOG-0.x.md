@@ -1,3 +1,7 @@
+# v1.5.1
+## Notable changes
+* Address CVE ALAS-2021-1552
+
 # v1.5.0
 ### Misc.
 * Update windows example to refer to v1.4.0 ([#1093](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1093), [@wongma7](https://github.com/wongma7))
