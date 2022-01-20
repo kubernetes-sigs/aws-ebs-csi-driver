@@ -316,7 +316,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if zone == "" {
 		var err error
 		zone, err = c.randomAvailabilityZone(ctx)
-		klog.V(5).Infof("[Debug] AZ is not provided. Using node AZ [%s]", zone)
+		klog.V(5).Infof("[Debug] AZ is not provided. Using random AZ [%s]", zone)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get availability zone %s", err)
 		}
