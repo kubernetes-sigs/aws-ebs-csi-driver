@@ -19,9 +19,11 @@ package driver
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -75,6 +77,7 @@ var (
 // newControllerService creates a new controller service
 // it panics if failed to create the service
 func newControllerService(driverOptions *DriverOptions) controllerService {
+	rand.Seed(time.Now().UTC().UnixNano())
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")

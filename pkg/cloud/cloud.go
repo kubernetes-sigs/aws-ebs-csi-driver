@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -1157,7 +1158,8 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 }
 
 // randomAvailabilityZone returns a random zone from the given region
-// the randomness relies on the response of DescribeAvailabilityZones
+// the randomness is explicit because DescribeAvailabilityZones may
+// return an ordered list
 func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
 	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
@@ -1170,7 +1172,9 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 		zones = append(zones, *zone.ZoneName)
 	}
 
-	return zones[0], nil
+	randomIndex := rand.Intn(len(zones))
+
+	return zones[randomIndex], nil
 }
 
 func volumeModificationDone(state string) bool {
