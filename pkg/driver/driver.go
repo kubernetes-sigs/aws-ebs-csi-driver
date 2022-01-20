@@ -60,12 +60,13 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint            string
-	extraTags           map[string]string
-	mode                Mode
-	volumeAttachLimit   int64
-	kubernetesClusterID string
-	awsSdkDebugLog      bool
+	endpoint                     string
+	extraTags                    map[string]string
+	mode                         Mode
+	volumeAttachLimit            int64
+	kubernetesClusterID          string
+	awsSdkDebugLog               bool
+	availabilityZoneFromMetadata bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -189,5 +190,11 @@ func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
 func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.awsSdkDebugLog = enableSdkDebugLog
+	}
+}
+
+func WithAvailabilityZoneFromMetadata(enableAZFromMetdata bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.availabilityZoneFromMetadata = enableAZFromMetdata
 	}
 }
