@@ -79,16 +79,23 @@ var (
 func newControllerService(driverOptions *DriverOptions) controllerService {
 	rand.Seed(time.Now().UTC().UnixNano())
 	region := os.Getenv("AWS_REGION")
+	var metadata cloud.MetadataService
 	if region == "" {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
-		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
-		if err != nil {
-			panic(err)
-		}
+		metadata = getMetadataService()
 		region = metadata.GetRegion()
 	}
 
-	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog)
+	defaultAvailabilityZone := ""
+	if driverOptions.availabilityZoneFromMetadata {
+		klog.V(5).Infof("[Debug] Retrieving node availability zone from metadata service")
+		if metadata == nil {
+			metadata = getMetadataService()
+		}
+		defaultAvailabilityZone = metadata.GetAvailabilityZone()
+	}
+
+	cloudSrv, err := NewCloudFunc(region, defaultAvailabilityZone, driverOptions.awsSdkDebugLog)
 	if err != nil {
 		panic(err)
 	}
@@ -98,6 +105,14 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
+}
+
+func getMetadataService() cloud.MetadataService {
+	metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
+	if err != nil {
+		panic(err)
+	}
+	return metadata
 }
 
 func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {

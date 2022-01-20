@@ -217,21 +217,22 @@ type ec2ListSnapshotsResponse struct {
 }
 
 type cloud struct {
-	region string
-	ec2    EC2
-	dm     dm.DeviceManager
+	region                  string
+	defaultAvailabilityZone string
+	ec2                     EC2
+	dm                      dm.DeviceManager
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+func NewCloud(region string, defaultAvailabilityZone string, awsSdkDebugLog bool) (Cloud, error) {
 	RegisterMetrics()
-	return newEC2Cloud(region, awsSdkDebugLog)
+	return newEC2Cloud(region, defaultAvailabilityZone, awsSdkDebugLog)
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+func newEC2Cloud(region string, defaultAvailabilityZone string, awsSdkDebugLog bool) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
@@ -262,9 +263,10 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	})
 
 	return &cloud{
-		region: region,
-		dm:     dm.NewDeviceManager(),
-		ec2:    svc,
+		region:                  region,
+		defaultAvailabilityZone: defaultAvailabilityZone,
+		dm:                      dm.NewDeviceManager(),
+		ec2:                     svc,
 	}, nil
 }
 
@@ -315,11 +317,16 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
-		var err error
-		zone, err = c.randomAvailabilityZone(ctx)
-		klog.V(5).Infof("[Debug] AZ is not provided. Using random AZ [%s]", zone)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get availability zone %s", err)
+		if c.defaultAvailabilityZone == "" {
+			var err error
+			zone, err = c.randomAvailabilityZone(ctx)
+			klog.V(5).Infof("[Debug] AZ is not provided. Using random AZ [%s]", zone)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get availability zone %s", err)
+			}
+		} else {
+			zone = c.defaultAvailabilityZone
+			klog.V(5).Infof("[Debug] AZ is not provided. Using node AZ [%s]", zone)
 		}
 	}
 

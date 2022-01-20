@@ -49,10 +49,13 @@ func TestNewControllerService(t *testing.T) {
 		testErr    = errors.New("test error")
 		testRegion = "test-region"
 
-		getNewCloudFunc = func(expectedRegion string, awsSdkDebugLog bool) func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
-			return func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
+		getNewCloudFunc = func(expectedRegion string, expectedDefaultAvailabilityZone string, awsSdkDebugLog bool) func(region string, defaultAvailabilityZone string, awsSdkDebugLog bool) (cloud.Cloud, error) {
+			return func(region string, defaultAvailabilityZone string, awsSdkDebugLog bool) (cloud.Cloud, error) {
 				if region != expectedRegion {
 					t.Fatalf("expected region %q but got %q", expectedRegion, region)
+				}
+				if defaultAvailabilityZone != expectedDefaultAvailabilityZone {
+					t.Fatalf("expected defaultAvailabilityZone %q but got %q", expectedDefaultAvailabilityZone, defaultAvailabilityZone)
 				}
 				return cloudObj, nil
 			}
@@ -62,30 +65,30 @@ func TestNewControllerService(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		region                string
-		newCloudFunc          func(string, bool) (cloud.Cloud, error)
+		newCloudFunc          func(string, string, bool) (cloud.Cloud, error)
 		newMetadataFuncErrors bool
 		expectPanic           bool
 	}{
 		{
 			name:         "AWS_REGION variable set, newCloud does not error",
 			region:       "foo",
-			newCloudFunc: getNewCloudFunc("foo", false),
+			newCloudFunc: getNewCloudFunc("foo", "", false),
 		},
 		{
 			name:   "AWS_REGION variable set, newCloud errors",
 			region: "foo",
-			newCloudFunc: func(region string, awsSdkDebugLog bool) (cloud.Cloud, error) {
+			newCloudFunc: func(region string, defaultAvailabilityZone string, awsSdkDebugLog bool) (cloud.Cloud, error) {
 				return nil, testErr
 			},
 			expectPanic: true,
 		},
 		{
 			name:         "AWS_REGION variable not set, newMetadata does not error",
-			newCloudFunc: getNewCloudFunc(testRegion, false),
+			newCloudFunc: getNewCloudFunc(testRegion, "", false),
 		},
 		{
 			name:                  "AWS_REGION variable not set, newMetadata errors",
-			newCloudFunc:          getNewCloudFunc(testRegion, false),
+			newCloudFunc:          getNewCloudFunc(testRegion, "", false),
 			newMetadataFuncErrors: true,
 			expectPanic:           true,
 		},
