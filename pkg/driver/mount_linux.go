@@ -25,8 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	"k8s.io/klog"
-
 	mountutils "k8s.io/mount-utils"
 )
 
@@ -73,49 +71,10 @@ func (m *NodeMounter) PathExists(path string) (bool, error) {
 	return mountutils.PathExists(path)
 }
 
-//TODO: use common util from vendor kubernetes/mount-util
 func (m *NodeMounter) NeedResize(devicePath string, deviceMountPath string) (bool, error) {
-	// TODO(xiangLi) resize fs size on formatted file system following this PR https://github.com/kubernetes/kubernetes/pull/99223
-	// Port the in-tree un-released change first, need to remove after in-tree release
-	deviceSize, err := m.getDeviceSize(devicePath)
-	if err != nil {
-		return false, err
-	}
-	var fsSize, blockSize uint64
-	format, err := m.SafeFormatAndMount.GetDiskFormat(devicePath)
-	if err != nil {
-		formatErr := fmt.Errorf("ResizeFS.Resize - error checking format for device %s: %v", devicePath, err)
-		return false, formatErr
-	}
-
-	// If disk has no format, there is no need to resize the disk because mkfs.*
-	// by default will use whole disk anyways.
-	if format == "" {
-		return false, nil
-	}
-
-	klog.V(3).Infof("ResizeFs.needResize - checking mounted volume %s", devicePath)
-	switch format {
-	case "ext3", "ext4":
-		blockSize, fsSize, err = m.getExtSize(devicePath)
-		klog.V(5).Infof("Ext size: filesystem size=%d, block size=%d", fsSize, blockSize)
-	case "xfs":
-		blockSize, fsSize, err = m.getXFSSize(deviceMountPath)
-		klog.V(5).Infof("Xfs size: filesystem size=%d, block size=%d, err=%v", fsSize, blockSize, err)
-	default:
-		klog.Errorf("Not able to parse given filesystem info. fsType: %s, will not resize", format)
-		return false, fmt.Errorf("Could not parse fs info on given filesystem format: %s. Supported fs types are: xfs, ext3, ext4", format)
-	}
-	if err != nil {
-		return false, err
-	}
-	// Tolerate one block difference, just in case of rounding errors somewhere.
-	klog.V(5).Infof("Volume %s: device size=%d, filesystem size=%d, block size=%d", devicePath, deviceSize, fsSize, blockSize)
-	if deviceSize <= fsSize+blockSize {
-		return false, nil
-	}
-	return true, nil
+	return mountutils.NewResizeFs(m.Exec).NeedResize(devicePath, deviceMountPath)
 }
+
 func (m *NodeMounter) getDeviceSize(devicePath string) (uint64, error) {
 	output, err := m.SafeFormatAndMount.Exec.Command("blockdev", "--getsize64", devicePath).CombinedOutput()
 	outStr := strings.TrimSpace(string(output))
