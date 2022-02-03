@@ -57,7 +57,7 @@ git push upstream v0.7.0
 
 ## Verify the release on GitHub
 
-The new tag should trigger a new Github release. Verify that it has run by going to [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases). Then, click on the new version and verify all assets have been created:
+The new tag should trigger a new Github release. It should be a pre-release true because images are not available yet and documentation, like README and CHANGELOG in master branch, does not yet reflect the new release. Verify that it has run by going to [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases). Then, click on the new version and verify all assets have been created:
 
 - Source code (zip)
 - Source code (tar.gz)
@@ -106,6 +106,10 @@ Send a PR to merge both the release and post-release commits to the main branch.
 ## Verify the helm chart release
 
 Visit the [Releases](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases) pages to verify we have a new helm chart release.
+
+## Update the GitHub release to be pre-release false
+
+Now that images are available and documentation is updated, uncheck "This is a pre-release".
 
 ## Update AWS EKS documentation
 

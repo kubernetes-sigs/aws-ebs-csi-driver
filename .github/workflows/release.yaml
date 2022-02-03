@@ -23,4 +23,4 @@ jobs:
             ## CHANGELOG
             See [CHANGELOG](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/CHANGELOG-0.x.md) for full list of changes
           draft: false
-          prerelease: false
+          prerelease: true
