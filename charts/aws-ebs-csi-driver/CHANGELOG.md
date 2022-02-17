@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.6.3
+
+* Bump app/driver to version `v1.5.1`
+
 ## v2.6.2
 
 * Update csi-resizer version to v1.1.0
