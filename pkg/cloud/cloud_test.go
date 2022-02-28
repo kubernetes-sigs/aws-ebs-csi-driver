@@ -97,7 +97,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -286,7 +287,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -322,7 +324,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(200),
+				Iops:               aws.Int64(200),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -341,7 +344,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(64000),
+				Iops:               aws.Int64(64000),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -361,7 +365,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(100),
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -397,7 +402,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(2000),
+				Iops:               aws.Int64(2000),
+				MultiAttachEnabled: aws.Bool(false),
 			},
 			expErr: nil,
 		},
@@ -416,7 +422,29 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(64000),
+				Iops:               aws.Int64(64000),
+				MultiAttachEnabled: aws.Bool(false),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io2 with multi-attach enabled",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(1),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:         VolumeTypeIO2,
+				IOPSPerGB:          100,
+				MultiAttachEnabled: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops:               aws.Int64(100),
+				MultiAttachEnabled: aws.Bool(true),
 			},
 			expErr: nil,
 		},
@@ -434,11 +462,12 @@ func TestCreateDisk(t *testing.T) {
 			}
 
 			vol := &ec2.Volume{
-				VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-				Size:             aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-				State:            aws.String(volState),
-				AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
-				OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
+				VolumeId:           aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+				Size:               aws.Int64(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+				State:              aws.String(volState),
+				AvailabilityZone:   aws.String(tc.diskOptions.AvailabilityZone),
+				OutpostArn:         aws.String(tc.diskOptions.OutpostArn),
+				MultiAttachEnabled: aws.Bool(tc.diskOptions.MultiAttachEnabled),
 			}
 			snapshot := &ec2.Snapshot{
 				SnapshotId: aws.String(tc.diskOptions.SnapshotID),
@@ -1689,9 +1718,10 @@ func (m *eqCreateVolumeMatcher) Matches(x interface{}) bool {
 	if input == nil {
 		return false
 	}
-	// Compare only IOPS for now
-	ret := reflect.DeepEqual(m.expected.Iops, input.Iops)
-	return ret
+
+	iops := reflect.DeepEqual(m.expected.Iops, input.Iops)
+	multiAttach := reflect.DeepEqual(m.expected.MultiAttachEnabled, input.MultiAttachEnabled)
+	return iops && multiAttach
 }
 
 func (m *eqCreateVolumeMatcher) String() string {
