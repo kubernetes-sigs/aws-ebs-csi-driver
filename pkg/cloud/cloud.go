@@ -183,6 +183,7 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
+	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -269,10 +270,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var (
-		createType string
-		iops       int64
-		throughput int64
-		err        error
+		createType         string
+		iops               int64
+		throughput         int64
+		err                error
+		multiAttachEnabled *bool
 	)
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
@@ -285,12 +287,14 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if err != nil {
 			return nil, err
 		}
+		multiAttachEnabled = &diskOptions.MultiAttachEnabled
 	case VolumeTypeIO2:
 		createType = diskOptions.VolumeType
 		iops, err = capIOPS(diskOptions.VolumeType, capacityGiB, int64(diskOptions.IOPSPerGB), io2MinTotalIOPS, io2MaxTotalIOPS, io2MaxIOPSPerGB, diskOptions.AllowIOPSPerGBIncrease)
 		if err != nil {
 			return nil, err
 		}
+		multiAttachEnabled = &diskOptions.MultiAttachEnabled
 	case VolumeTypeGP3:
 		createType = diskOptions.VolumeType
 		iops = int64(diskOptions.IOPS)
@@ -352,6 +356,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
 		requestInput.SnapshotId = aws.String(snapshotID)
+	}
+	if multiAttachEnabled != nil {
+		request.MultiAttachEnabled = multiAttachEnabled
 	}
 
 	response, err := c.ec2.CreateVolumeWithContext(ctx, requestInput)
@@ -548,6 +555,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return false, nil
 		}
 
+		// TODO: check MultiAttach
 		if len(volume.Attachments) > 1 {
 			// Shouldn't happen; log so we know if it is
 			klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
@@ -555,6 +563,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		attachmentState := ""
 		for _, a := range volume.Attachments {
 			if attachmentState != "" {
+				// TODO: check MultiAttach
 				// Shouldn't happen; log so we know if it is
 				klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
 			}
