@@ -1,39 +1,36 @@
-## Raw Block Volume
-This example shows how to consume a dynamically-provisioned EBS volume as a raw block device.
+# Raw Block Volume
 
-### Edit [Persistence Volume Claim Spec](./specs/raw-claim.yaml)
-Make sure the `volumeMode` is `Block`.
+## Prerequisites
 
-### Edit [Application Pod](./specs/pod.yaml)
-Make sure the pod is consuming the PVC with the defined name and `volumeDevices` is used instead of `volumeMounts`.
+1. Kubernetes 1.13+ (CSI 1.0).
+2. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) installed.
 
-### Deploy the Application
-```sh
-kubectl apply -f examples/kubernetes/block-volume/specs/storageclass.yaml
-kubectl apply -f examples/kubernetes/block-volume/specs/raw-claim.yaml
-kubectl apply -f examples/kubernetes/block-volume/specs/pod.yaml
-```
+## Usage
 
-### Access Block Device
-After the objects are created, verify that pod is running:
+This example shows you how to create and consume a dynamically-provisioned EBS volume as a raw block device.
 
-```sh
-$ kubectl get pods
-NAME   READY   STATUS    RESTARTS   AGE
-app    1/1     Running   0          16m
-```
-Verify the device node is mounted inside the container:
+1. Deploy the provided pod on your cluster along with the `StorageClass` and `PersistentVolumeClaim`:
+    ```sh
+    $ kubectl apply -f manifests
 
-```sh
-$ kubectl exec -ti app -- ls -al /dev/xvda
-brw-rw----    1 root     disk      202, 23296 Mar 12 04:23 /dev/xvda
-```
+    pod/app created
+    persistentvolumeclaim/block-claim created
+    storageclass.storage.k8s.io/ebs-sc created
+    ```
 
-Write to the device using:
+2. Validate the `PersistentVolumeClaim` is bound to your `PersistentVolume`.
+    ```sh
+    $ kubectl get pvc block-claim
 
-```sh
-dd if=/dev/zero of=/dev/xvda bs=1024k count=100
-100+0 records in
-100+0 records out
-104857600 bytes (105 MB, 100 MiB) copied, 0.0492386 s, 2.1 GB/s
-```
+    NAME          STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    block-claim   Bound    pvc-2074bf0a-4726-44f2-bb7a-eb4292d4f40a   10Gi       RWO            ebs-sc
+    ```
+
+3. Cleanup resources:
+    ```sh
+    $ kubectl delete -f manifests
+
+    pod "app" deleted
+    persistentvolumeclaim "block-claim" deleted
+    storageclass.storage.k8s.io "ebs-sc" deleted
+    ```
