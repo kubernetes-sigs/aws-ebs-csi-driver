@@ -1,51 +1,70 @@
 # Static Provisioning 
-This example shows how to create and consume persistent volume from exising EBS using static provisioning.
+
+## Prerequisites
+
+1. Kubernetes 1.13+ (CSI 1.0).
+2. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) installed.
+3. Created an [Amazon EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
 
 ## Usage
-1. Edit the PersistentVolume spec in [example manifest](./specs/example.yaml). Update `volumeHandle` with EBS volume ID that you are going to use, and update the `fsType` with the filesystem type of the volume. In this example, I have a pre-created EBS  volume in us-east-1c availability zone and it is formatted with xfs filesystem.
 
-```
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: test-pv
-spec:
-  capacity:
-    storage: 50Gi
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  csi:
-    driver: ebs.csi.aws.com
-    volumeHandle: {volumeId} 
-    fsType: xfs
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: topology.ebs.csi.aws.com/zone
-          operator: In
-          values:
-          - us-east-1c 
-```
-Note that node affinity is used here since EBS volume is created in us-east-1c, hence only node in the same AZ can consume this persistent volume.
+This example shows you how to create and consume a `PersistentVolume` from an existing EBS volume with static provisioning.
 
-2. Deploy the example:
-```sh
-kubectl apply -f specs/
-```
+1. Edit the `PersistentVolume` manifest in [pv.yaml](./manifests/pv.yaml) to include your `volumeHandle` EBS volume ID and `nodeSelectorTerms` zone value.
 
-3. Verify application pod is running:
-```sh
-kubectl describe po app
-```
+    ```
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: test-pv
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      capacity:
+        storage: 5Gi
+      csi:
+        driver: ebs.csi.aws.com
+        volumeHandle: {EBS volume ID}
+      nodeAffinity:
+        required:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: topology.ebs.csi.aws.com/zone
+                  operator: In
+                  values:
+                    - {availability zone}
+    ```
 
-4. Validate the pod successfully wrote data to the volume:
-```sh
-kubectl exec -it app cat /data/out.txt
-```
+2. Deploy the provided pod on your cluster along with the `PersistentVolume` and `PersistentVolumeClaim`:
+    ```sh
+    $ kubectl apply -f manifests
+
+    persistentvolumeclaim/ebs-claim created
+    pod/app created
+    persistentvolume/test-pv created
+    ```
+
+3. Validate the `PersistentVolumeClaim` is bound to your `PersistentVolume`.
+    ```sh
+    $ kubectl get pvc ebs-claim
+
+    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    ebs-claim   Bound    pvc-119a0c81-f45a-4bec-a116-c36cc428cc57   5Gi        RWO            gp2            53s
+    ```
+
+4. Validate the pod successfully wrote data to the statically provisioned volume:
+    ```sh
+    $ kubectl exec app -- cat /data/out.txt
+
+    Tue Feb 22 20:51:37 UTC 2022
+    ...
+    ```
 
 5. Cleanup resources:
-```sh
-kubectl delete -f specs/
-```
+    ```sh
+    $ kubectl delete -f manifests
+
+    persistentvolumeclaim "ebs-claim" deleted
+    pod "app" deleted
+    persistentvolume "test-pv" deleted
+    ```

@@ -1,12 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: block-claim
+  name: ebs-claim
 spec:
   accessModes:
     - ReadWriteOnce
-  volumeMode: Block
-  storageClassName: ebs-sc
+  storageClassName: resize-sc
   resources:
     requests:
-      storage: 10Gi
+      storage: 4Gi
