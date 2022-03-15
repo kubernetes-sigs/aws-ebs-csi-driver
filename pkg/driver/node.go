@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -690,12 +689,34 @@ func (d *nodeService) getVolumesLimit() int64 {
 	if d.driverOptions.volumeAttachLimit >= 0 {
 		return d.driverOptions.volumeAttachLimit
 	}
-	ebsNitroInstanceTypeRegex := "^[cmr]5.*|t3|z1d"
+
 	instanceType := d.metadata.GetInstanceType()
-	if ok, _ := regexp.MatchString(ebsNitroInstanceTypeRegex, instanceType); ok {
-		return defaultMaxEBSNitroVolumes
+
+	isNitro := cloud.IsNitroInstanceType(instanceType)
+	availableAttachments := cloud.GetMaxAttachments(isNitro)
+	blockVolumes := d.metadata.GetNumBlockDeviceMappings()
+
+	// For Nitro instances, attachments are shared between EBS volumes, ENIs and NVMe instance stores
+	if isNitro {
+		enis := d.metadata.GetNumAttachedENIs()
+		nvmeInstanceStoreVolumes := cloud.GetNVMeInstanceStoreVolumesForInstanceType(instanceType)
+		availableAttachments = availableAttachments - enis - blockVolumes - nvmeInstanceStoreVolumes
+	} else {
+		availableAttachments -= blockVolumes
 	}
-	return defaultMaxEBSVolumes
+	maxEBSAttachments, ok := cloud.GetEBSLimitForInstanceType(instanceType)
+	if ok {
+		availableAttachments = min(maxEBSAttachments, availableAttachments)
+	}
+
+	return int64(availableAttachments)
+}
+
+func min(x, y int) int {
+	if x <= y {
+		return x
+	}
+	return y
 }
 
 // hasMountOption returns a boolean indicating whether the given
