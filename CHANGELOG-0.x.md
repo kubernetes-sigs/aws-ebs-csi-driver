@@ -1,3 +1,7 @@
+# v1.5.2
+## Notable changes
+* Address CVE ALAS-2022-1764
+
 # v1.5.1
 ## Notable changes
 * Address CVE ALAS-2021-1552
