@@ -260,6 +260,16 @@ func (mounter *CSIProxyMounter) FormatAndMount(source string, target string, fst
 		return err
 	}
 
+	// Ensure the disk is online before mounting.
+	setDiskStateRequest := &disk.SetDiskStateRequest{
+		DiskNumber: uint32(diskNumber),
+		IsOnline:   true,
+	}
+	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
+	if err != nil {
+		return err
+	}
+
 	// List the volumes on the given disk.
 	volumeIDsRequest := &volume.ListVolumesOnDiskRequest{
 		DiskNumber: uint32(diskNumber),
