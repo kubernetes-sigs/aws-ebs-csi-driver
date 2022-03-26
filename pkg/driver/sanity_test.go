@@ -322,6 +322,14 @@ func (f *fakeMounter) Unmount(target string) error {
 	return nil
 }
 
+func (f *fakeMounter) Unstage(target string) error {
+	return nil
+}
+
+func (f *fakeMounter) Unpublish(target string) error {
+	return nil
+}
+
 func (f *fakeMounter) List() ([]mount.MountPoint, error) {
 	return []mount.MountPoint{}, nil
 }

@@ -104,3 +104,39 @@ func (m *NodeMounter) NeedResize(devicePath string, deviceMountPath string) (boo
 	// Implement it to respect spec v1.4.0 https://github.com/container-storage-interface/spec/pull/452
 	return false, nil
 }
+
+// Unmount volume from target path
+func (m *NodeMounter) Unpublish(target string) error {
+	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*mounter.CSIProxyMounter)
+	if !ok {
+		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	}
+	// WriteVolumeCache before unmount
+	proxyMounter.WriteVolumeCache(target)
+	// Remove symlink
+	err := proxyMounter.Rmdir(target)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Unmount volume from staging path
+// usually this staging path is a global directory on the node
+func (m *NodeMounter) Unstage(target string) error {
+	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*mounter.CSIProxyMounter)
+	if !ok {
+		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	}
+	// Unmounts and offlines the disk via the CSI Proxy API
+	err := proxyMounter.Unmount(target)
+	if err != nil {
+		return err
+	}
+	// Cleanup stage path
+	err = proxyMounter.Rmdir(target)
+	if err != nil {
+		return err
+	}
+	return nil
+}

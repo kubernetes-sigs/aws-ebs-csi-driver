@@ -1,3 +1,0 @@
-This CSIProxyMounter code is copied from https://github.com/kubernetes-sigs/azuredisk-csi-driver/tree/18cf57775b5dcb4eac435feac5fbe13bb06216d1/pkg/mounter.
-
-TODO consume this as a standalone module instead. This can't be included in the k8s.io/utils module because, by depending on kubernetes-csi/csi-proxy, it violates the criterion "No dependencies on any other Kubernetes repository."
