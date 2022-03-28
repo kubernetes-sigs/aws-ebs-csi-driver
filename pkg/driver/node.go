@@ -269,7 +269,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	}
 
 	klog.V(4).Infof("NodeUnstageVolume: unmounting %s", target)
-	err = d.mounter.Unmount(target)
+	err = d.mounter.Unstage(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
@@ -416,7 +416,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	}()
 
 	klog.V(4).Infof("NodeUnpublishVolume: unmounting %s", target)
-	err := d.mounter.Unmount(target)
+	err := d.mounter.Unpublish(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
 	}
@@ -620,7 +620,7 @@ func (d *nodeService) isMounted(source string, target string) (bool, error) {
 		_, pathErr := d.mounter.PathExists(target)
 		if pathErr != nil && d.mounter.IsCorruptedMnt(pathErr) {
 			klog.V(4).Infof("NodePublishVolume: Target path %q is a corrupted mount. Trying to unmount.", target)
-			if mntErr := d.mounter.Unmount(target); mntErr != nil {
+			if mntErr := d.mounter.Unpublish(target); mntErr != nil {
 				return false, status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, mntErr)
 			}
 			//After successful unmount, the device is ready to be mounted.
