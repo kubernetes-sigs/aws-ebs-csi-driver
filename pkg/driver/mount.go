@@ -41,6 +41,8 @@ type Mounter interface {
 	MakeDir(path string) error
 	PathExists(path string) (bool, error)
 	NeedResize(devicePath string, deviceMountPath string) (bool, error)
+	Unpublish(path string) error
+	Unstage(path string) error
 }
 
 // NodeMounter implements Mounter.
