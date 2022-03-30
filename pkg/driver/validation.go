@@ -18,13 +18,15 @@ package driver
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"k8s.io/klog"
 )
 
 func ValidateDriverOptions(options *DriverOptions) error {
-	if err := validateExtraTags(options.extraTags); err != nil {
+	if err := validateExtraTags(options.extraTags, false); err != nil {
 		return fmt.Errorf("Invalid extra tags: %v", err)
 	}
 
@@ -35,14 +37,21 @@ func ValidateDriverOptions(options *DriverOptions) error {
 	return nil
 }
 
-func validateExtraTags(tags map[string]string) error {
+var (
+	/// https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html
+	awsTagValidRegex = regexp.MustCompile(`[a-zA-Z0-9_.:=+\-@]*`)
+)
+
+func validateExtraTags(tags map[string]string, warnOnly bool) error {
 	if len(tags) > cloud.MaxNumTagsPerResource {
 		return fmt.Errorf("Too many tags (actual: %d, limit: %d)", len(tags), cloud.MaxNumTagsPerResource)
 	}
 
-	for k, v := range tags {
+	validate := func(k, v string) error {
 		if len(k) > cloud.MaxTagKeyLength {
 			return fmt.Errorf("Tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
+		} else if len(k) < cloud.MinTagKeyLength {
+			return fmt.Errorf("Tag key cannot be empty (min: 1)")
 		}
 		if len(v) > cloud.MaxTagValueLength {
 			return fmt.Errorf("Tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)
@@ -62,8 +71,25 @@ func validateExtraTags(tags map[string]string) error {
 		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
 			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
 		}
+		if !awsTagValidRegex.MatchString(k) {
+			return fmt.Errorf("Tag key '%s' is not a valid AWS tag key", k)
+		}
+		if !awsTagValidRegex.MatchString(v) {
+			return fmt.Errorf("Tag value '%s' is not a valid AWS tag value", v)
+		}
+		return nil
 	}
 
+	for k, v := range tags {
+		err := validate(k, v)
+		if err != nil {
+			if warnOnly {
+				klog.Warningf("Skipping tag: the following key-value pair is not valid: (%s, %s): (%v)", k, v, err)
+			} else {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
