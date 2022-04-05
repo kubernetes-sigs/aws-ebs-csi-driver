@@ -1,43 +1,52 @@
-## Volume Resizing
-This example shows how to resize EBS persistence volume using volume resizing features.
+# Volume Resizing
 
-**Note**
-1. CSI volume resizing is still alpha as of Kubernetes 1.15
-2. EBS has a limit of one volume modification every 6 hours. Refer to [EBS documentation](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyVolume.html) for more details.
+## Prerequisites
+
+1. Kubernetes 1.13+ (CSI 1.0).
+2. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) installed.
 
 ## Usage
-1. Add `allowVolumeExpansion: true` in the StorageClass spec in [example manifest](./spec/example.yaml) to enable volume expansion. You can only expand a PVC if its storage class’s allowVolumeExpansion field is set to true
 
-2. Deploy the example:
-```sh
-kubectl apply -f specs/
-``` 
+In this example, an EBS volume of `4Gi` is resized to `8Gi` using the volume resizing feature.
 
-3. Verify the volume is created and Pod is running:
-```sh
-kubectl get pv
-kubectl get po app
-```
+1. Deploy the provided pod on your cluster along with the `StorageClass` and `PersistentVolumeClaim`:
+    ```sh
+    $ kubectl apply -f manifests
 
-4. Expand the volume size by increasing the capacity in PVC's `spec.resources.requests.storage`:
-```sh
-kubectl edit pvc ebs-claim
-```
-Save the result at the end of the edit.
+    persistentvolumeclaim/ebs-claim created
+    pod/app created
+    storageclass.storage.k8s.io/resize-sc created
+    ```
 
-5. Verify that both the persistence volume and persistence volume claim are resized:
-```sh
-kubectl get pv
-kubectl get pvc
-```
-You should see that both should have the new value relfected in the capacity fields.
+2. Validate the `PersistentVolumeClaim` is bound to your `PersistentVolume`.
+    ```sh
+    $ kubectl get pvc ebs-claim
 
-6. Verify that the application is continuously running without any interruption:
-```sh
-kubectl exec -it app cat /data/out.txt
-```
+    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    ebs-claim   Bound    pvc-b0f6d590-f4b3-4329-a118-49cd09f6993c   4Gi        RWO            resize-sc      28s
+    ```
 
-7. Cleanup resources:
-```
-kubectl delete -f specs/
-```
+3. Expand the volume size by increasing the `capacity` specification in the `PersistentVolumeClaim`.
+    ```sh
+    $ export KUBE_EDITOR="nano" && kubectl edit pvc ebs-claim
+    ```
+
+4. Verify that both the persistence volume and persistence volume claim have been appropriately resized:
+    ```sh
+    $ kubectl get pv && kubectl get pvc
+
+    NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM               STORAGECLASS   
+    pvc-b0f6d590-f4b3-4329-a118-49cd09f6993c   8Gi        RWO            Delete           Bound    default/ebs-claim   resize-sc   
+
+    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    ebs-claim   Bound    pvc-b0f6d590-f4b3-4329-a118-49cd09f6993c   8Gi        RWO            resize-sc      23m
+    ```
+
+5. Cleanup resources:
+    ```sh
+    $ kubectl delete -f manifests
+
+    persistentvolumeclaim "ebs-claim" deleted
+    pod "app" deleted
+    storageclass.storage.k8s.io "resize-sc" deleted
+    ```

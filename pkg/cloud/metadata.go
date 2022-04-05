@@ -26,15 +26,25 @@ import (
 
 // Metadata is info about the ec2 instance on which the driver is running
 type Metadata struct {
-	InstanceID       string
-	InstanceType     string
-	Region           string
-	AvailabilityZone string
-	OutpostArn       arn.ARN
+	InstanceID             string
+	InstanceType           string
+	Region                 string
+	AvailabilityZone       string
+	NumAttachedENIs        int
+	NumBlockDeviceMappings int
+	OutpostArn             arn.ARN
 }
 
-// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
-const OutpostArnEndpoint string = "outpost-arn"
+const (
+	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
+	outpostArnEndpoint string = "outpost-arn"
+
+	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs
+	enisEndpoint string = "network/interfaces/macs"
+
+	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices
+	blockDevicesEndpoint string = "block-device-mapping"
+)
 
 var _ MetadataService = &Metadata{}
 
@@ -56,6 +66,14 @@ func (m *Metadata) GetRegion() string {
 // GetAvailabilityZone returns the Availability Zone which the instance is in.
 func (m *Metadata) GetAvailabilityZone() string {
 	return m.AvailabilityZone
+}
+
+func (m *Metadata) GetNumAttachedENIs() int {
+	return m.NumAttachedENIs
+}
+
+func (m *Metadata) GetNumBlockDeviceMappings() int {
+	return m.NumBlockDeviceMappings
 }
 
 // GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.

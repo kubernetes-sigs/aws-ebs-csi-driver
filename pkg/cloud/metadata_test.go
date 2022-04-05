@@ -55,6 +55,10 @@ func TestNewMetadataService(t *testing.T) {
 		invalidInstanceIdentityDocument  bool
 		getMetadataValue                 string
 		getMetadataError                 error
+		imdsBlockDeviceOutput            string
+		imdsENIOutput                    string
+		expectedENIs                     int
+		expectedBlockDevices             int
 		expectedOutpostArn               arn.ARN
 		expectedErr                      error
 		node                             v1.Node
@@ -69,6 +73,8 @@ func TestNewMetadataService(t *testing.T) {
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
+			imdsENIOutput: "00:00:00:00:00:00",
+			expectedENIs:  1,
 		},
 		{
 			name:                 "success: outpost-arn is available",
@@ -81,6 +87,8 @@ func TestNewMetadataService(t *testing.T) {
 			},
 			getMetadataValue:   validRawOutpostArn,
 			expectedOutpostArn: validOutpostArn,
+			imdsENIOutput:      "00:00:00:00:00:00",
+			expectedENIs:       1,
 		},
 		{
 			name:                 "success: outpost-arn is invalid",
@@ -92,6 +100,8 @@ func TestNewMetadataService(t *testing.T) {
 				AvailabilityZone: stdAvailabilityZone,
 			},
 			getMetadataValue: "foo",
+			imdsENIOutput:    "00:00:00:00:00:00",
+			expectedENIs:     1,
 		},
 		{
 			name:                 "success: outpost-arn is not found",
@@ -103,6 +113,8 @@ func TestNewMetadataService(t *testing.T) {
 				AvailabilityZone: stdAvailabilityZone,
 			},
 			getMetadataError: fmt.Errorf("404"),
+			imdsENIOutput:    "00:00:00:00:00:00",
+			expectedENIs:     1,
 		},
 		{
 			name:                 "success: metadata not available, used k8s api",
@@ -123,6 +135,7 @@ func TestNewMetadataService(t *testing.T) {
 				},
 				Status: v1.NodeStatus{},
 			},
+			expectedENIs:   1,
 			nodeNameEnvVar: nodeName,
 		},
 		{
@@ -270,8 +283,36 @@ func TestNewMetadataService(t *testing.T) {
 				Region:           stdRegion,
 				AvailabilityZone: stdAvailabilityZone,
 			},
+			imdsENIOutput:    "00:00:00:00:00:00",
+			expectedENIs:     1,
 			getMetadataError: fmt.Errorf("405"),
 			expectedErr:      fmt.Errorf("something went wrong while getting EC2 outpost arn: 405"),
+		},
+		{
+			name:                 "success: GetMetadata() returns correct number of ENIs",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			imdsENIOutput: "00:00:00:00:00:00\n00:00:00:00:00:01",
+			expectedENIs:  2,
+		},
+		{
+			name:                 "success: GetMetadata() returns correct number of block device mappings",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           stdRegion,
+				AvailabilityZone: stdAvailabilityZone,
+			},
+			imdsENIOutput:         "00:00:00:00:00:00",
+			expectedENIs:          1,
+			imdsBlockDeviceOutput: "ami\nroot\nebs1\nebs2",
+			expectedBlockDevices:  3,
 		},
 	}
 
@@ -297,12 +338,17 @@ func TestNewMetadataService(t *testing.T) {
 				// GetInstanceIdentityDocument returns an error or (somehow?) partial
 				// output
 				if tc.getInstanceIdentityDocumentError == nil && !tc.invalidInstanceIdentityDocument {
+					mockEC2Metadata.EXPECT().GetMetadata(enisEndpoint).Return(tc.imdsENIOutput, nil)
+					mockEC2Metadata.EXPECT().GetMetadata(blockDevicesEndpoint).Return(tc.imdsBlockDeviceOutput, nil)
+
 					if tc.getMetadataValue != "" || tc.getMetadataError != nil {
-						mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return(tc.getMetadataValue, tc.getMetadataError)
+						mockEC2Metadata.EXPECT().GetMetadata(outpostArnEndpoint).Return(tc.getMetadataValue, tc.getMetadataError)
+
 					} else {
-						mockEC2Metadata.EXPECT().GetMetadata(OutpostArnEndpoint).Return("", fmt.Errorf("404"))
+						mockEC2Metadata.EXPECT().GetMetadata(outpostArnEndpoint).Return("", fmt.Errorf("404"))
 					}
 				}
+
 				if clientsetInitialized == true {
 					t.Errorf("kubernetes client was unexpectedly initialized when metadata is available!")
 					if len(clientset.Actions()) > 0 {
@@ -338,6 +384,12 @@ func TestNewMetadataService(t *testing.T) {
 				}
 				if m.GetOutpostArn() != tc.expectedOutpostArn {
 					t.Errorf("GetOutpostArn() failed: got %v, expected %v", m.GetOutpostArn(), tc.expectedOutpostArn)
+				}
+				if m.GetNumAttachedENIs() != tc.expectedENIs {
+					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", enisEndpoint, m.GetNumAttachedENIs(), tc.expectedENIs)
+				}
+				if m.GetNumBlockDeviceMappings() != tc.expectedBlockDevices {
+					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", blockDevicesEndpoint, m.GetNumBlockDeviceMappings(), tc.expectedBlockDevices)
 				}
 			}
 			mockCtrl.Finish()

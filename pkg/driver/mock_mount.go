@@ -238,6 +238,34 @@ func (mr *MockMounterMockRecorder) Unmount(target interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmount", reflect.TypeOf((*MockMounter)(nil).Unmount), target)
 }
 
+// Unpublish mocks base method.
+func (m *MockMounter) Unpublish(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unpublish", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Unpublish indicates an expected call of Unpublish.
+func (mr *MockMounterMockRecorder) Unpublish(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unpublish", reflect.TypeOf((*MockMounter)(nil).Unpublish), path)
+}
+
+// Unstage mocks base method.
+func (m *MockMounter) Unstage(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unstage", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Unstage indicates an expected call of Unstage.
+func (mr *MockMounterMockRecorder) Unstage(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unstage", reflect.TypeOf((*MockMounter)(nil).Unstage), path)
+}
+
 // MockDeviceIdentifier is a mock of DeviceIdentifier interface.
 type MockDeviceIdentifier struct {
 	ctrl     *gomock.Controller

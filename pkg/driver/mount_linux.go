@@ -21,10 +21,11 @@ package driver
 
 import (
 	"fmt"
-	"k8s.io/klog"
 	"os"
 	"strconv"
 	"strings"
+
+	"k8s.io/klog"
 
 	mountutils "k8s.io/mount-utils"
 )
@@ -187,4 +188,12 @@ func (m *NodeMounter) parseFsInfoOutput(cmdOutput string, spliter string, blockS
 		}
 	}
 	return blockSize, blockCount, err
+}
+
+func (m *NodeMounter) Unpublish(path string) error {
+	return m.Unmount(path)
+}
+
+func (m *NodeMounter) Unstage(path string) error {
+	return m.Unmount(path)
 }

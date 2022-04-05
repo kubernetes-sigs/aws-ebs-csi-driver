@@ -2,7 +2,6 @@
 
 This example shows how to create a EBS volume and consume it from a Windows container dynamically.
 
-
 ## Prerequisites
 
 1. A 1.18+ Windows node. Windows support has only been tested on 1.18 EKS Windows nodes. https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html
