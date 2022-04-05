@@ -108,7 +108,7 @@ func TestValidateExtraVolumeTags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateExtraTags(tc.tags)
+			err := validateExtraTags(tc.tags, false)
 			if !reflect.DeepEqual(err, tc.expErr) {
 				t.Fatalf("error not equal\ngot:\n%s\nexpected:\n%s", err, tc.expErr)
 			}

@@ -35,6 +35,8 @@ type ControllerOptions struct {
 	KubernetesClusterID string
 	// flag to enable sdk debug log
 	AwsSdkDebugLog bool
+	// flag to warn on invalid tag, instead of returning an error
+	WarnOnInvalidTag bool
 }
 
 func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
@@ -42,4 +44,5 @@ func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.Var(cliflag.NewMapStringString(&s.ExtraVolumeTags), "extra-volume-tags", "DEPRECATED: Please use --extra-tags instead. Extra volume tags to attach to each dynamically provisioned volume. It is a comma separated list of key value pairs like '<key1>=<value1>,<key2>=<value2>'")
 	fs.StringVar(&s.KubernetesClusterID, "k8s-tag-cluster-id", "", "ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).")
 	fs.BoolVar(&s.AwsSdkDebugLog, "aws-sdk-debug-log", false, "To enable the aws sdk debug log level (default to false).")
+	fs.BoolVar(&s.WarnOnInvalidTag, "warn-on-invalid-tag", false, "To warn on invalid tags, instead of returning an error")
 }

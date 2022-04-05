@@ -68,6 +68,10 @@ const (
 	// PVNameKey contains name of the final PV that will be used for the dynamically
 	// provisioned volume
 	PVNameKey = "csi.storage.k8s.io/pv/name"
+
+	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
+	// a tag to be attached to the resource
+	TagKeyPrefix = "tagSpecification"
 )
 
 // constants for volume tags and their values
