@@ -71,10 +71,47 @@ func (mounter *CSIProxyMounter) Mount(source string, target string, fstype strin
 	return nil
 }
 
+func (mounter *CSIProxyMounter) Unmount(target string) error {
+	// Find the volume id
+	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
+		TargetPath: normalizeWindowsPath(target),
+	}
+	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
+	volumeId := volumeIdResponse.GetVolumeId()
+
+	// Call UnmountVolume CSI proxy function which flushes data cache to disk and removes the global staging path
+	unmountVolumeRequest := &volume.UnmountVolumeRequest{
+		VolumeId:   volumeId,
+		TargetPath: normalizeWindowsPath(target),
+	}
+	_, err = mounter.VolumeClient.UnmountVolume(context.Background(), unmountVolumeRequest)
+	if err != nil {
+		return err
+	}
+
+	// Get disk number
+	getDiskNumberRequest := &volume.GetDiskNumberFromVolumeIDRequest{
+		VolumeId: volumeId,
+	}
+	getDiskNumberResponse, err := mounter.VolumeClient.GetDiskNumberFromVolumeID(context.Background(), getDiskNumberRequest)
+	diskNumber := getDiskNumberResponse.GetDiskNumber()
+	if err != nil {
+		return err
+	}
+
+	// Offline the disk
+	setDiskStateRequest := &disk.SetDiskStateRequest{
+		DiskNumber: diskNumber,
+		IsOnline:   false,
+	}
+	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Rmdir - delete the given directory
-// TODO: Call separate rmdir for pod context and plugin context. v1alpha1 for CSI
-//       proxy does a relaxed check for prefix as c:\var\lib\kubelet, so we can do
-//       rmdir with either pod or plugin context.
 func (mounter *CSIProxyMounter) Rmdir(path string) error {
 	rmdirRequest := &fs.RmdirRequest{
 		Path:  normalizeWindowsPath(path),
@@ -87,10 +124,9 @@ func (mounter *CSIProxyMounter) Rmdir(path string) error {
 	return nil
 }
 
-// Unmount - Removes the directory - equivalent to unmount on Linux.
-func (mounter *CSIProxyMounter) Unmount(target string) error {
-	// WriteVolumeCache before unmount
-	response, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), &volume.GetVolumeIDFromTargetPathRequest{TargetPath: target})
+func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
+	request := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(target)}
+	response, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), request)
 	if err != nil || response == nil {
 		klog.Warningf("GetVolumeIDFromTargetPath(%s) failed with error: %v, response: %v", target, err, response)
 	} else {
@@ -101,7 +137,6 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 			klog.Warningf("WriteVolumeCache(%s) failed with error: %v, response: %v", response.VolumeId, err, res)
 		}
 	}
-	return mounter.Rmdir(target)
 }
 
 func (mounter *CSIProxyMounter) List() ([]mount.MountPoint, error) {
@@ -256,6 +291,16 @@ func (mounter *CSIProxyMounter) FormatAndMount(source string, target string, fst
 		DiskNumber: uint32(diskNumber),
 	}
 	_, err = mounter.DiskClient.PartitionDisk(context.Background(), partionDiskRequest)
+	if err != nil {
+		return err
+	}
+
+	// Ensure the disk is online before mounting.
+	setDiskStateRequest := &disk.SetDiskStateRequest{
+		DiskNumber: uint32(diskNumber),
+		IsOnline:   true,
+	}
+	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
 	if err != nil {
 		return err
 	}

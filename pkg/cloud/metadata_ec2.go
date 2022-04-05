@@ -41,14 +41,31 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 		return nil, fmt.Errorf("could not get valid EC2 availability zone")
 	}
 
-	instanceInfo := Metadata{
-		InstanceID:       doc.InstanceID,
-		InstanceType:     doc.InstanceType,
-		Region:           doc.Region,
-		AvailabilityZone: doc.AvailabilityZone,
+	enis, err := svc.GetMetadata(enisEndpoint)
+	// the ENIs should not be empty; if (somehow) it is empty, return an error
+	if enis == "" || err != nil {
+		return nil, fmt.Errorf("could not get number of attached ENIs")
 	}
 
-	outpostArn, err := svc.GetMetadata(OutpostArnEndpoint)
+	attachedENIs := strings.Count(enis, "\n") + 1
+
+	mappings, err := svc.GetMetadata(blockDevicesEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("could not get number of block device mappings")
+	}
+	// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
+	blockDevMappings := strings.Count(mappings, "\n")
+
+	instanceInfo := Metadata{
+		InstanceID:             doc.InstanceID,
+		InstanceType:           doc.InstanceType,
+		Region:                 doc.Region,
+		AvailabilityZone:       doc.AvailabilityZone,
+		NumAttachedENIs:        attachedENIs,
+		NumBlockDeviceMappings: blockDevMappings,
+	}
+
+	outpostArn, err := svc.GetMetadata(outpostArnEndpoint)
 	// "outpust-arn" returns 404 for non-outpost instances. note that the request is made to a link-local address.
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.

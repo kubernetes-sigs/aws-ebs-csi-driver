@@ -11,6 +11,8 @@ type MetadataService interface {
 	GetInstanceType() string
 	GetRegion() string
 	GetAvailabilityZone() string
+	GetNumAttachedENIs() int
+	GetNumBlockDeviceMappings() int
 	GetOutpostArn() arn.ARN
 }
 
