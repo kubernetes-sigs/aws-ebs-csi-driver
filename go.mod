@@ -5,6 +5,7 @@ require (
 	github.com/container-storage-interface/spec v1.3.0
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
+	github.com/google/go-cmp v0.5.5
 	github.com/kubernetes-csi/csi-proxy/client v1.0.1
 	github.com/kubernetes-csi/csi-test v2.0.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.0.0
@@ -36,7 +37,6 @@ require (
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.4.1 // indirect

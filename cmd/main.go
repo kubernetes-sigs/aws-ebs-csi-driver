@@ -51,6 +51,7 @@ func main() {
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
+		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
 	)
 	if err != nil {
 		klog.Fatalln(err)
