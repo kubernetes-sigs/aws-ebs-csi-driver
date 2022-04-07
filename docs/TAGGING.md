@@ -1,6 +1,6 @@
 # Tagging
 
-The AWS EBS CSI Driver supports tagging through `StorageClass.parameters`. 
+The AWS EBS CSI Driver supports tagging through `StorageClass.parameters` (in v1.6.0 and later). 
 
 If a key has the prefix `tagSpecification`, the CSI driver will treat the value as a key-value pair to be applied to the dynamically provisioned volume as tags.
 
