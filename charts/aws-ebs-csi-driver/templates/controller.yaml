@@ -58,9 +58,9 @@ spec:
         {{- $constraints | toYaml | nindent 8 }}
       {{- end }}
       {{- with .Values.controller.securityContext }}
-      securityContext:  
+      securityContext:
         {{- toYaml . | nindent 8 }}
-      {{- end }} 
+      {{- end }}
       containers:
         - name: ebs-plugin
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
@@ -118,6 +118,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              {{- with .Values.controller.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+              {{- end }}
           ports:
             - name: healthz
               containerPort: 9808
@@ -166,6 +169,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- with default .Values.controller.extraVolumeMounts .Values.sidecars.provisioner.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.provisioner.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -189,6 +195,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- with default .Values.controller.extraVolumeMounts .Values.sidecars.attacher.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.attacher.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -212,6 +221,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- with default .Values.controller.extraVolumeMounts .Values.sidecars.snapshotter.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.snapshotter.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -235,6 +247,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- with default .Values.controller.extraVolumeMounts .Values.sidecars.resizer.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.resizer.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -247,6 +262,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+            {{- with default .Values.controller.extraVolumeMounts .Values.sidecars.livenessProbe.extraVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -260,3 +278,6 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir: {}
+          {{- with .Values.controller.extraVolumes }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}

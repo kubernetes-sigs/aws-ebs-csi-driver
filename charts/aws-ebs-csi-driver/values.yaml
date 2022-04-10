@@ -22,6 +22,7 @@ sidecars:
       tag: "v2.1.1"
     logLevel: 2
     resources: {}
+    extraVolumeMounts: []
   attacher:
     env: []
     image:
@@ -30,6 +31,7 @@ sidecars:
       tag: "v3.1.0"
     logLevel: 2
     resources: {}
+    extraVolumeMounts: []
   snapshotter:
     env: []
     image:
@@ -38,12 +40,14 @@ sidecars:
       tag: "v3.0.3"
     logLevel: 2
     resources: {}
+    extraVolumeMounts: []
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/livenessprobe
       tag: "v2.4.0"
     resources: {}
+    extraVolumeMounts: []
   resizer:
     env: []
     image:
@@ -52,6 +56,7 @@ sidecars:
       tag: "v1.1.0"
     logLevel: 2
     resources: {}
+    extraVolumeMounts: []
   nodeDriverRegistrar:
     env: []
     image:
@@ -60,6 +65,7 @@ sidecars:
       tag: "v2.1.0"
     logLevel: 2
     resources: {}
+    extraVolumeMounts: []
 
 proxy:
   http_proxy:
@@ -137,6 +143,23 @@ controller:
   securityContext: {}
   #  AWS EKS /var/run/secrets/eks.amazonaws.com/serviceaccount/token FS group is nogroup (65534) - required for Kubernetes 1.18.x and below
   #  fsGroup: 65534
+  # extraVolumeMounts are the additional volume mounts. This enables setting up IRSA on non-EKS Kubernetes cluster
+
+  extraVolumeMounts: []
+  # - name: aws-iam-token
+  #   mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+  #   readOnly: true
+
+  # extraVolumes for the extraVolumeMounts. Useful to mount a projected service account token for example.
+  extraVolumes: []
+  # - name: aws-iam-token
+  #   projected:
+  #     defaultMode: 420
+  #     sources:
+  #     - serviceAccountToken:
+  #         audience: sts.amazonaws.com
+  #         expirationSeconds: 86400
+  #         path: token
 
 node:
   env: []

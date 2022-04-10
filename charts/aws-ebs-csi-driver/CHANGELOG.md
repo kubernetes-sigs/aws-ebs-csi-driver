@@ -1,5 +1,8 @@
 # Helm chart
 
+
+* Added `extraVolumes` and `extraVolumeMounts`
+
 ## v2.6.6
 
 * Bump app/driver to version `v1.6.0`
