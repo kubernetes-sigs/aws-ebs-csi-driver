@@ -43,6 +43,11 @@ type Mounter interface {
 	NeedResize(devicePath string, deviceMountPath string) (bool, error)
 	Unpublish(path string) error
 	Unstage(path string) error
+	NewResizeFs() (Resizefs, error)
+}
+
+type Resizefs interface {
+	Resize(devicePath, deviceMountPath string) (bool, error)
 }
 
 // NodeMounter implements Mounter.
