@@ -197,3 +197,7 @@ func (m *NodeMounter) Unpublish(path string) error {
 func (m *NodeMounter) Unstage(path string) error {
 	return m.Unmount(path)
 }
+
+func (m *NodeMounter) NewResizeFs() (Resizefs, error) {
+	return mountutils.NewResizeFs(m.Exec), nil
+}

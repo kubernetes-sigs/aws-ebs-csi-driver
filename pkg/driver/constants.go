@@ -118,3 +118,9 @@ const (
 const (
 	DefaultCSIEndpoint = "unix://tmp/csi.sock"
 )
+
+// constants for disk block size
+const (
+	//DefaultBlockSize represents the default block size (4KB)
+	DefaultBlockSize = 4096
+)
