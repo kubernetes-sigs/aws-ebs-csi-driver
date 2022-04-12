@@ -218,6 +218,10 @@ func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemd(source string, targ
 	return fmt.Errorf("MountSensitiveWithoutSystemd is not implemented for CSIProxyMounter")
 }
 
+func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemdWithMountFlags(source string, target string, fstype string, options []string, sensitiveOptions []string, mountFlags []string) error {
+	return fmt.Errorf("MountSensitiveWithoutSystemdWithMountFlags is not implemented for CSIProxyMounter")
+}
+
 // Rescan would trigger an update storage cache via the CSI proxy.
 func (mounter *CSIProxyMounter) Rescan() error {
 	// Call Rescan from disk APIs of CSI Proxy.
