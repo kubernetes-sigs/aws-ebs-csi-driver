@@ -66,7 +66,8 @@ all: all-image-docker
 # Builds all linux and windows images and pushes them
 all-push: all-image-registry push-manifest
 
-push-manifest: create-manifest all-annotate-manifest
+.PHONY: push-manifest
+push-manifest: create-manifest
 	docker manifest push --purge $(IMAGE):$(TAG)
 
 create-manifest:
@@ -75,16 +76,7 @@ create-manifest:
 # RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
 	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_OS_ARCH_OSVERSION) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
 
-all-annotate-manifest: $(addprefix sub-annotate-manifest-,$(ALL_OS_ARCH_OSVERSION))
-
-sub-annotate-manifest-%:
-	$(MAKE) OS=$(call word-hyphen,$*,1) ARCH=$(call word-hyphen,$*,2) OSVERSION=$(call word-hyphen,$*,3) annotate-manifest
-
-annotate-manifest: .annotate-manifest-$(OS)-$(ARCH)-$(OSVERSION)
-.annotate-manifest-$(OS)-$(ARCH)-$(OSVERSION):
-	set -x; docker manifest annotate --os $(OS) --arch $(ARCH) --os-version $(OSVERSION) $(IMAGE):$(TAG) $(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
-
-# only linux for OUTPUT_TYPE=docker because windows image cannot be exported
+# Only linux for OUTPUT_TYPE=docker because windows image cannot be exported
 # "Currently, multi-platform images cannot be exported with the docker export type. The most common usecase for multi-platform images is to directly push to a registry (see registry)."
 # https://docs.docker.com/engine/reference/commandline/buildx_build/#output
 all-image-docker: $(addprefix sub-image-docker-,$(ALL_OS_ARCH_OSVERSION_linux))
@@ -124,7 +116,7 @@ bin/kubeval: | /tmp/kubeval bin
 	@rm -rf /tmp/kubeval/*
 
 bin/mockgen: | bin
-	go get github.com/golang/mock/mockgen@v1.5.0
+	go install github.com/golang/mock/mockgen@v1.5.0
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
