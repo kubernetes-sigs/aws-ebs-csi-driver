@@ -62,10 +62,13 @@ The new tag should trigger a new Github release. It should be a pre-release true
 - Source code (zip)
 - Source code (tar.gz)
 
+<<<<<<< HEAD
 ## Promote the new image on GCR
 
 Promote the new images from the staging repo by sending a PR to the kubernetes/k8s.io repo. Here's an [example PR](https://github.com/kubernetes/k8s.io/pull/1606).
 
+=======
+>>>>>>> 6170683b (Driver v1.5.3 post-release)
 ## Promote the new image on ECR
 
 Follow the AWS-internal process.
