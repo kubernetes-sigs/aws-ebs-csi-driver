@@ -1,5 +1,13 @@
 # Helm chart
 
+## v2.6.5
+
+* Bump app/driver to version `v1.5.3`
+
+## v2.6.4
+
+* Remove exposure all secrets to external-snapshotter-role
+
 ## v2.6.3
 
 * Bump app/driver to version `v1.5.1`
