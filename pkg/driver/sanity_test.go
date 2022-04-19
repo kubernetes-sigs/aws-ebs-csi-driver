@@ -318,6 +318,10 @@ func (f *fakeMounter) MountSensitiveWithoutSystemd(source string, target string,
 	return nil
 }
 
+func (f *fakeMounter) MountSensitiveWithoutSystemdWithMountFlags(source string, target string, fstype string, options []string, sensitiveOptions []string, mountFlags []string) error {
+	return nil
+}
+
 func (f *fakeMounter) Unmount(target string) error {
 	return nil
 }
