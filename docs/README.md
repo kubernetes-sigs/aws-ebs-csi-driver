@@ -84,6 +84,8 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Container Images:
 |AWS EBS CSI Driver Version | GCR Image                                        | ECR Image                                                                   |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.5.3                     |                                                  | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.5.3                     |
+|v1.5.2                     |                                                  | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.5.2                     |
 |v1.5.1                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.5.1 | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.5.1                     |
 |v1.5.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.5.0 | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.5.0                     |
 |v1.4.0                     |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0 | 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.4.0  |

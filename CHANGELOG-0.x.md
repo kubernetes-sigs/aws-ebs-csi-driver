@@ -1,3 +1,12 @@
+# v1.5.3
+## Notable changes
+* Ensure image OCI compliance ([#1205](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1205), [@torredil](https://github.com/torredil))
+* Update driver dependencies ([#1208](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1208), [@rdpsin](https://github.com/rdpsin))
+
+# v1.5.2
+## Notable changes
+* Address CVE ALAS-2022-1764
+
 # v1.5.1
 ## Notable changes
 * Address CVE ALAS-2021-1552, ALAS2-2022-1736, ALAS2-2022-1738, ALAS2-2022-1743
