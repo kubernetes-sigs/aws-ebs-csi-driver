@@ -45,7 +45,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.5.3
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.0
           imagePullPolicy: IfNotPresent
           args:
             - node

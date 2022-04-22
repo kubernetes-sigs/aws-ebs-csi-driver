@@ -68,8 +68,8 @@ Follow the AWS-internal process.
 
 ## Verify the images are available
 
-In GCR:
-  - `docker pull k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1`
+In ECR Public:
+  - `docker pull public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.0`
 
 In ECR:
   - `aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 602401143452.dkr.ecr.us-west-2.amazonaws.com`
