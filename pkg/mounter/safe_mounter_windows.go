@@ -40,7 +40,24 @@ import (
 	utilexec "k8s.io/utils/exec"
 )
 
-var _ mount.Interface = &CSIProxyMounter{}
+var _ ProxyMounter = &CSIProxyMounter{}
+
+type ProxyMounter interface {
+	mount.Interface
+
+	Rmdir(path string) error
+	WriteVolumeCache(target string)
+	IsMountPointMatch(mp mount.MountPoint, dir string) bool
+	GetDeviceNameFromMount(mountPath, pluginMountDir string) (string, error)
+	MakeFile(pathname string) error
+	ExistsPath(path string) (bool, error)
+	Rescan() error
+	FindDiskByLun(lun string) (diskNum string, err error)
+	FormatAndMount(source, target, fstype string, options []string) error
+	ResizeVolume(deviceMountPath string) (bool, error)
+	GetVolumeSizeInBytes(deviceMountPath string) (int64, error)
+	GetDeviceSize(devicePath string) (int64, error)
+}
 
 type CSIProxyMounter struct {
 	FsClient     *fsclient.Client
