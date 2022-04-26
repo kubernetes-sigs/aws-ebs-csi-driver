@@ -10,12 +10,12 @@ import (
 
 // resizeFs provides support for resizing file systems
 type resizeFs struct {
-	proxy *mounter.CSIProxyMounter
+	proxy mounter.ProxyMounter
 }
 
 // NewResizeFs returns an instance of resizeFs
-func NewResizeFs(proxy *mounter.CSIProxyMounter) *resizeFs {
-	return &resizeFs{proxy: proxy}
+func NewResizeFs(p mounter.ProxyMounter) *resizeFs {
+	return &resizeFs{proxy: p}
 }
 
 // Resize performs resize of file system
