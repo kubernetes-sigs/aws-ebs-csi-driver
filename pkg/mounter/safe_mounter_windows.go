@@ -40,7 +40,24 @@ import (
 	utilexec "k8s.io/utils/exec"
 )
 
-var _ mount.Interface = &CSIProxyMounter{}
+var _ ProxyMounter = &CSIProxyMounter{}
+
+type ProxyMounter interface {
+	mount.Interface
+
+	Rmdir(path string) error
+	WriteVolumeCache(target string)
+	IsMountPointMatch(mp mount.MountPoint, dir string) bool
+	GetDeviceNameFromMount(mountPath, pluginMountDir string) (string, error)
+	MakeFile(pathname string) error
+	ExistsPath(path string) (bool, error)
+	Rescan() error
+	FindDiskByLun(lun string) (diskNum string, err error)
+	FormatAndMount(source, target, fstype string, options []string) error
+	ResizeVolume(deviceMountPath string) (bool, error)
+	GetVolumeSizeInBytes(deviceMountPath string) (int64, error)
+	GetDeviceSize(devicePath string) (int64, error)
+}
 
 type CSIProxyMounter struct {
 	FsClient     *fsclient.Client
@@ -253,6 +270,10 @@ func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemd(source string, targ
 	return fmt.Errorf("MountSensitiveWithoutSystemd is not implemented for CSIProxyMounter")
 }
 
+func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemdWithMountFlags(source string, target string, fstype string, options []string, sensitiveOptions []string, mountFlags []string) error {
+	return fmt.Errorf("MountSensitiveWithoutSystemdWithMountFlags is not implemented for CSIProxyMounter")
+}
+
 // Rescan would trigger an update storage cache via the CSI proxy.
 func (mounter *CSIProxyMounter) Rescan() error {
 	// Call Rescan from disk APIs of CSI Proxy.
@@ -351,23 +372,66 @@ func (mounter *CSIProxyMounter) FormatAndMount(source string, target string, fst
 	return nil
 }
 
-// ResizeVolume resizes the volume to the maximum available size.
-func (mounter *CSIProxyMounter) ResizeVolume(devicePath string) error {
-	req := &volume.ResizeVolumeRequest{VolumeId: devicePath, SizeBytes: 0}
-
-	_, err := mounter.VolumeClient.ResizeVolume(context.Background(), req)
+// ResizeVolume resizes the volume at given mount path
+func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string) (bool, error) {
+	// Find the volume id
+	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
+		TargetPath: normalizeWindowsPath(deviceMountPath),
+	}
+	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
 	if err != nil {
-		return err
+		return false, err
+	}
+	volumeId := volumeIdResponse.GetVolumeId()
+
+	// Resize volume
+	resizeVolumeRequest := &volume.ResizeVolumeRequest{
+		VolumeId: volumeId,
+	}
+	_, err = mounter.VolumeClient.ResizeVolume(context.Background(), resizeVolumeRequest)
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	return true, nil
 }
 
-// GetVolumeSizeInBytes returns the size of the volume in bytes.
-func (mounter *CSIProxyMounter) GetVolumeSizeInBytes(devicePath string) (int64, error) {
-	req := &volume.GetVolumeStatsRequest{VolumeId: devicePath}
+// GetVolumeSizeInBytes returns the size of the volume in bytes
+func (mounter *CSIProxyMounter) GetVolumeSizeInBytes(deviceMountPath string) (int64, error) {
+	// Find the volume id
+	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
+		TargetPath: normalizeWindowsPath(deviceMountPath),
+	}
+	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
+	if err != nil {
+		return -1, err
+	}
+	volumeId := volumeIdResponse.GetVolumeId()
 
-	resp, err := mounter.VolumeClient.GetVolumeStats(context.Background(), req)
+	// Get size of the volume
+	getVolumeStatsRequest := &volume.GetVolumeStatsRequest{
+		VolumeId: volumeId,
+	}
+	resp, err := mounter.VolumeClient.GetVolumeStats(context.Background(), getVolumeStatsRequest)
+	if err != nil {
+		return -1, err
+	}
+
+	return resp.TotalBytes, nil
+}
+
+// GetDeviceSize returns the size of the disk in bytes
+func (mounter *CSIProxyMounter) GetDeviceSize(devicePath string) (int64, error) {
+	diskNumber, err := strconv.Atoi(devicePath)
+	if err != nil {
+		return -1, err
+	}
+
+	//Get size of the disk
+	getDiskStatsRequest := &disk.GetDiskStatsRequest{
+		DiskNumber: uint32(diskNumber),
+	}
+	resp, err := mounter.DiskClient.GetDiskStats(context.Background(), getDiskStatsRequest)
 	if err != nil {
 		return -1, err
 	}

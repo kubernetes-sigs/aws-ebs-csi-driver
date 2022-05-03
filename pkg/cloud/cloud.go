@@ -98,6 +98,8 @@ const (
 const (
 	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
 	MaxNumTagsPerResource = 50
+	// MinTagKeyLength represents the minimum key length for a tag.
+	MinTagKeyLength = 1
 	// MaxTagKeyLength represents the maximum key length for a tag.
 	MaxTagKeyLength = 128
 	// MaxTagValueLength represents the maximum value length for a tag.
