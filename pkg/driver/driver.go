@@ -66,6 +66,7 @@ type DriverOptions struct {
 	volumeAttachLimit   int64
 	kubernetesClusterID string
 	awsSdkDebugLog      bool
+	warnOnInvalidTag    bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -189,5 +190,11 @@ func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
 func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.awsSdkDebugLog = enableSdkDebugLog
+	}
+}
+
+func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.warnOnInvalidTag = warnOnInvalidTag
 	}
 }

@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/volume"
-	mountutils "k8s.io/mount-utils"
 )
 
 const (
@@ -217,8 +216,12 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if volume %q (%q) need to be resized:  %v", req.GetVolumeId(), source, err)
 	}
+
 	if needResize {
-		r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
+		r, err := d.mounter.NewResizeFs()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Error attempting to create new ResizeFs:  %v", err)
+		}
 		klog.V(2).Infof("Volume %s needs resizing", source)
 		if _, err := r.Resize(source, target); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, source, err)
@@ -329,7 +332,10 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		return nil, status.Errorf(codes.Internal, "failed to find device path for device name %s for mount %s: %v", deviceName, req.GetVolumePath(), err)
 	}
 
-	r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
+	r, err := d.mounter.NewResizeFs()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Error attempting to create new ResizeFs:  %v", err)
+	}
 
 	// TODO: lock per volume ID to have some idempotency
 	if _, err := r.Resize(devicePath, volumePath); err != nil {

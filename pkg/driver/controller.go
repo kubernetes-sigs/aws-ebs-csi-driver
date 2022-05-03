@@ -29,6 +29,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
@@ -123,11 +124,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		throughput             int
 		isEncrypted            bool
 		kmsKeyID               string
+		scTags                 []string
 		volumeTags             = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
 	)
+
+	tProps := new(template.Props)
 
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
@@ -162,12 +166,19 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			kmsKeyID = value
 		case PVCNameKey:
 			volumeTags[PVCNameTag] = value
+			tProps.PVCName = value
 		case PVCNamespaceKey:
 			volumeTags[PVCNamespaceTag] = value
+			tProps.PVCNamespace = value
 		case PVNameKey:
 			volumeTags[PVNameTag] = value
+			tProps.PVName = value
 		default:
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
+			if strings.HasPrefix(key, TagKeyPrefix) {
+				scTags = append(scTags, value)
+			} else {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
+			}
 		}
 	}
 
@@ -202,6 +213,19 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[KubernetesClusterTag] = d.driverOptions.kubernetesClusterID
 	}
 	for k, v := range d.driverOptions.extraTags {
+		volumeTags[k] = v
+	}
+
+	addTags, err := template.Evaluate(scTags, tProps, d.driverOptions.warnOnInvalidTag)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+	}
+
+	if err := validateExtraTags(addTags, d.driverOptions.warnOnInvalidTag); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+
+	for k, v := range addTags {
 		volumeTags[k] = v
 	}
 

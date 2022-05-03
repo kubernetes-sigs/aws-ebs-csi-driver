@@ -62,22 +62,18 @@ The new tag should trigger a new Github release. It should be a pre-release true
 - Source code (zip)
 - Source code (tar.gz)
 
-## Promote the new image on GCR
-
-Promote the new images from the staging repo by sending a PR to the kubernetes/k8s.io repo. Here's an [example PR](https://github.com/kubernetes/k8s.io/pull/1606).
-
 ## Promote the new image on ECR
 
 Follow the AWS-internal process.
 
 ## Verify the images are available
 
-In GCR:
-  - `docker pull k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.1.1`
+In ECR Public:
+  - `docker pull public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.1`
 
 In ECR:
   - `aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 602401143452.dkr.ecr.us-west-2.amazonaws.com`
-  - `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.1.1`
+  - `docker pull 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver:v1.6.1`
 
 ## Create the post-release commit in the release branch
 

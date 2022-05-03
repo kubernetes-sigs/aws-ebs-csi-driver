@@ -1,3 +1,34 @@
+# v1.6.1
+## Notable changes
+* Address CVE ALAS2-2022-1782, ALAS2-2022-1788, ALAS2-2022-1784
+
+# v1.6.0
+## Notable changes
+* Platform agnostic device removal ([#1193](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1193), [@torredil](https://github.com/torredil))
+
+### Bug fixes
+* Fix windows mounting bug ([#1189](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1189), [@torredil](https://github.com/torredil))
+
+### New features
+* Adding tagging support through StorageClass.parameters ([#1199](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1199), [@rdpsin](https://github.com/rdpsin))
+* Add volume resizing support for windows ([#1207](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1207), [@torredil](https://github.com/torredil))
+
+### Misc.
+* Update deprecated command `go get` ([#1194](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1194), [@gtxu](https://github.com/gtxu))
+* Upgrade PodDisruptionBudget api version for kubernetes 1.21+ ([#1196](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1196), [@wangshu3000](https://github.com/wangshu3000))
+* Bump prometheus/client_golang to v1.11.1 ([#1197](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1197), [@dobsonj](https://github.com/dobsonj))
+* Updated TAGGING.md to mention minimum version for tagging ([#1202](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1202), [@rdpsin](https://github.com/rdpsin))
+* Update README.md to reflect correct tag key for snapshots ([#1203](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1203), [@rdpsin](https://github.com/rdpsin))
+
+# v1.5.3
+## Notable changes
+* Ensure image OCI compliance ([#1205](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1205), [@torredil](https://github.com/torredil))
+* Update driver dependencies ([#1208](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1208), [@rdpsin](https://github.com/rdpsin))
+
+# v1.5.2
+## Notable changes
+* Address CVE ALAS-2022-1764
+
 # v1.5.1
 ## Notable changes
 * Address CVE ALAS-2021-1552, ALAS2-2022-1736, ALAS2-2022-1738, ALAS2-2022-1743
