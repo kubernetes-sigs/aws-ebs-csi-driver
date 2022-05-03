@@ -60,7 +60,7 @@ require (
 	github.com/prometheus/procfs v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vmware/govmomi v0.20.3 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
