@@ -1,3 +1,7 @@
+# v1.6.1
+## Notable changes
+* Address CVE ALAS2-2022-1782, ALAS2-2022-1788, ALAS2-2022-1784
+
 # v1.6.0
 ## Notable changes
 * Platform agnostic device removal ([#1193](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1193), [@torredil](https://github.com/torredil))
