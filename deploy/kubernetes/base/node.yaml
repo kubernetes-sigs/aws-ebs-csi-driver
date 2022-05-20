@@ -45,7 +45,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.1
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2
           imagePullPolicy: IfNotPresent
           args:
             - node
@@ -80,7 +80,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.1.0
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.3.0
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
