@@ -1,5 +1,10 @@
 # Helm chart
 
+## v2.6.8
+
+* Bump app/driver to version `v1.6.2`
+* Bump sidecar version for nodeDriverRegistrar, provisioner to be consistent with EKS CSI Driver Add-on
+
 ## v2.6.7
 
 * Bump app/driver to version `v1.6.1`
