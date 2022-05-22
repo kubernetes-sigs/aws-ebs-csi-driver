@@ -9,3 +9,5 @@ To help manage volumes in the aws account, CSI driver will automatically add tag
 | ebs.csi.aws.com/cluster| true                      | ebs.csi.aws.com/cluster = true                                      | add to all volumes and snapshots, for allowing users to use a policy to limit csi driver's permission to just the resources it manages.                      |
 | kubernetes.io/cluster/X| owned                     | kubernetes.io/cluster/aws-cluster-id-1 = owned                      | add to all volumes and snapshots if k8s-tag-cluster-id argument is set to X.|
 | extra-key              | extra-value               | extra-key = extra-value                                             | add to all volumes and snapshots if extraTags argument is set|
+
+The CSI driver also supports passing tags through `StorageClass.parameters`. For more information, please refer to the [tagging doc](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/TAGGING.md).
