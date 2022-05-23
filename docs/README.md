@@ -77,7 +77,7 @@ Latest Image: `public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2`
 
 ## Documentation
 
-* [Kubernetes Examples](../examples/kubernetes]
+* [Kubernetes Examples](../examples/kubernetes)
 * [Driver Luanch Options](options.md)
 * [StorageClass Parameters](parameters.md)
 * [Volume Tagging](tagging.md)
