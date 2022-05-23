@@ -87,6 +87,6 @@ Latest Image: `public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2`
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.4.0-v1.5.x                          | no    | no     | yes    |
+| v0.4.0-v1.6.x                          | no    | no     | yes    |
 | v0.2.0-v0.3.0                          | no    | yes    | no     |
 | v0.1.0                                 | yes   | no     | no     |
