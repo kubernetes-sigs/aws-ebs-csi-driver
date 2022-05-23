@@ -61,7 +61,7 @@ Latest Image: `public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2`
 </details>
 
 <details>
-<summary>Image Compatibility Matrix</summary>
+<summary>Kubernetes Compatibility Matrix</summary>
 
 | AWS EBS CSI Driver \ Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
