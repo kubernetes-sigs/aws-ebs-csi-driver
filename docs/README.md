@@ -81,6 +81,7 @@ Latest Image: `public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2`
 * [Driver Luanch Options](options.md)
 * [StorageClass Parameters](parameters.md)
 * [Volume Tagging](tagging.md)
+* [Development and Contributing](../CONTRIBUTING.md)
 
 ## CSI Specification Compatibility Matrix
 | AWS EBS CSI Driver \ CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
