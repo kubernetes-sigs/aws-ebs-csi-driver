@@ -299,6 +299,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		throughput = int64(diskOptions.Throughput)
 	case "":
 		createType = DefaultVolumeType
+		iops = int64(diskOptions.IOPS)
+		throughput = int64(diskOptions.Throughput)
 	default:
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
