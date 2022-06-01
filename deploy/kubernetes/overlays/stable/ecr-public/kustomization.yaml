@@ -16,7 +16,7 @@ images:
     newTag: v2.2.0-eks-1-18-13
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-    newTag: v3.0.3-eks-1-18-13
+    newTag: v5.0.1-eks-1-22-7
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newTag: v1.1.0-eks-1-18-13
