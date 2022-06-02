@@ -110,7 +110,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
-          image: k8s.gcr.io/sig-storage/csi-snapshotter:v3.0.3
+          image: k8s.gcr.io/sig-storage/csi-snapshotter:v6.0.1
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
