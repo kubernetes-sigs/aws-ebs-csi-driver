@@ -1,5 +1,14 @@
 # Helm chart
 
+## v2.6.9
+
+* Update csi-snapshotter to version `v6.0.1`
+* Update external-attacher to version `v3.4.0`
+* Update external-resizer to version `v1.4.0`
+* Update external-provisioner to version `v3.1.0`
+* Update node-driver-registrar to version `v2.5.1`
+* Update livenessprobe to version `v2.5.0`
+
 ## v2.6.8
 
 * Bump app/driver to version `v1.6.2`
