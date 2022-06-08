@@ -32,7 +32,7 @@ Reference: https://stackoverflow.com/questions/23937436/add-subdirectory-of-remo
 How to consume this directory by read-treeing the ebs repo:
 
 ```
-git remote add ebs git@github.com:kubernetes-sigs/aws-ebs-csi-driver.git
+git remote add ebs git@github.com:kubernetes-sigs/aws-ebs-csi-driver.git --no-tags
 git fetch ebs
 git read-tree --prefix=hack/e2e/ -u ebs/master:hack/e2e
 ```
@@ -52,5 +52,6 @@ To consume newer changes from the ebs repo:
 git fetch ebs
 git diff HEAD:hack/e2e ebs/master:hack/e2e > /tmp/hack_e2e.diff
 git apply --reject --directory hack/e2e /tmp/hack_e2e.diff
-git commit
+git add hack/e2e
+git commit -m "Update hack/e2e"
 ```
