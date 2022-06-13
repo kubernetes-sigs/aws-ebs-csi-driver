@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.6.10
+
+* Add quotes around the `extra-tags` argument in order to prevent special characters such as `":"` from breaking the manifest YAML after template rendering.
+
 ## v2.6.9
 
 * Update csi-snapshotter to version `v6.0.1`
