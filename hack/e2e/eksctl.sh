@@ -55,10 +55,6 @@ function eksctl_create_cluster() {
   fi
 
   loudecho "Cluster ${CLUSTER_NAME} kubecfg written to ${KUBECONFIG}"
-  # TODO: Workaround for https://github.com/weaveworks/eksctl/issues/5257
-  # Remove when eksctl releases a fix
-  sed -i 's/v1alpha1/v1beta1/g' ${KUBECONFIG}
-
   loudecho "Getting cluster ${CLUSTER_NAME}"
   ${BIN} get cluster "${CLUSTER_NAME}"
 
