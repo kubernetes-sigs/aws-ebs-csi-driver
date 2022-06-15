@@ -143,6 +143,15 @@ node:
   kubeletPath: /var/lib/kubelet
   logLevel: 2
   priorityClassName:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: eks.amazonaws.com/compute-type
+            operator: NotIn
+            values:
+            - fargate
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
