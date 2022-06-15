@@ -22,10 +22,7 @@ ARG TARGETOS
 ARG TARGETARCH
 RUN OS=$TARGETOS ARCH=$TARGETARCH make $TARGETOS/$TARGETARCH
 
-FROM amazonlinux:2 AS linux-amazon
-RUN yum update -y && \
-    yum install ca-certificates e2fsprogs xfsprogs util-linux -y && \
-    yum clean all
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest.2 AS linux-amazon
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
 

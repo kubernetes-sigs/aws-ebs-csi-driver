@@ -96,7 +96,6 @@ sub-image-%:
 image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
 .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION):
 	docker buildx build \
-		--no-cache-filter=linux-amazon \
 		--platform=$(OS)/$(ARCH) \
 		--progress=plain \
 		--target=$(OS)-$(OSVERSION) \
