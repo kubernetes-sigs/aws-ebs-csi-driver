@@ -1,3 +1,8 @@
+# v1.6.3
+## Notable changes
+* Address CVE ALAS2-2022-1801, ALAS2-2022-1802, ALAS2-2022-1805
+* Update documentation ([#1263](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1263), [@torredil](https://github.com/torredil))
+
 # v1.6.2
 ## Notable changes
 * Address CVE ALAS-2022-1792
