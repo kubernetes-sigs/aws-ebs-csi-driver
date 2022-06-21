@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.6.11
+* Bump app/driver to version `v1.7.0`
+* Set handle-volume-inuse-error to `false`
+
 ## v2.6.10
 
 * Add quotes around the `extra-tags` argument in order to prevent special characters such as `":"` from breaking the manifest YAML after template rendering.
