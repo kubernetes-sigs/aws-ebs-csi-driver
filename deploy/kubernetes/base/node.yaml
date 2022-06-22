@@ -45,7 +45,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.7.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
           imagePullPolicy: IfNotPresent
           args:
             - node
@@ -80,7 +80,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.1
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -97,7 +97,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: k8s.gcr.io/sig-storage/livenessprobe:v2.5.0
+          image: k8s.gcr.io/sig-storage/livenessprobe
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
