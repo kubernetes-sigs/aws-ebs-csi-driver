@@ -84,7 +84,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: kubelet-dir
-              mountPath: /var/lib/kubelet
+              mountPath: {{ .Values.node.kubeletPath }}
               mountPropagation: "Bidirectional"
             - name: plugin-dir
               mountPath: /csi
