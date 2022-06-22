@@ -1,3 +1,45 @@
+# v1.7.0
+## Announcement
+* To improve the security of the container images, the base image will be switched from [Amazon Linux 2](https://hub.docker.com/_/amazonlinux) to [EKS Distro Minimal](https://gallery.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs) in an upcoming release. The new minimal base image only contains the necessary driver dependencies which means it will not include a shell. **Please be aware that while this change won't break workloads, it may break processes for debugging if you are using a shell**.
+
+### Notable Changes
+* Set handle-volume-inuse-error to false which fixes csi-resizer getting OOMKilled ([#1280](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1280), [@stijndehaes](https://github.com/stijndehaes))
+* Update sidecars ([#1260](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1260), [@gtxu](https://github.com/gtxu))
+* Remove container-image.yaml ([#1239](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1239), [@torredil](https://github.com/torredil))
+* Replace Windows 2004(EOL) with ltsc2019 ([#1231](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1231), [@torredil](https://github.com/torredil))
+
+### Features
+* Enable unit testing on windows ([#1219](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1219), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Fix unable to create CSI snapshot-EBS csi driver ([#1257](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1257), [@torredil](https://github.com/torredil))
+* Temporarily fix CI ([#1240](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1240), [@torredil](https://github.com/torredil))
+* Fix IOPS parameter bug when no volume type is defined ([#1236](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1236), [@torredil](https://github.com/torredil))
+* Add quotes around the extra-tags argument in chart template ([#1198](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1198), [@Kaezon](https://github.com/Kaezon))
+
+### Vulnerability Fixes
+* Address ALAS2-2022-1801, ALAS2-2022-1802, ALAS2-2022-1805
+* Update golang.org/x/crypto for CVE-2022-27191 ([#1210](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1210), [@jsafrane](https://github.com/jsafrane))
+
+### Miscellaneous
+* Bump up Helm chart to v2.6.10 ([#1272](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1272), [@torredil](https://github.com/torredil))
+* Upgrade eksctl to v0.101.0 ([#1271](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1271), [@torredil](https://github.com/torredil))
+* Avoid git tag conflicts when vendoring hack/e2e in other repos (efs/fsx) ([#1270](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1270), [@wongma7](https://github.com/wongma7))
+* Update parameters.md ([#1269](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1269), [@torredil](https://github.com/torredil))
+* Update documentation ([#1263](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1263), [@torredil](https://github.com/torredil))
+* Bump up helm chart to v2.6.9 ([#1262](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1262), [@torredil](https://github.com/torredil))
+* Post-release v1.6.2 ([#1244](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1244), [@gtxu](https://github.com/gtxu))
+* Prepare release v1.6.2 ([#1241](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1241), [@gtxu](https://github.com/gtxu))
+* Cleanup OWNERS list ([#1238](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1238), [@torredil](https://github.com/torredil))
+* Update gcb-docker-gcloud to latest ([#1230](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1230), [@rdpsin](https://github.com/rdpsin))
+* Use docker buildx 0.8.x --no-cache-filter to avoid using cached amazon linux image ([#1221](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1221), [@wongma7](https://github.com/wongma7))
+* Add self to OWNERS ([#1229](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1229), [@torredil](https://github.com/torredil))
+* Add self to OWNERS ([#1228](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1228), [@rdpsin](https://github.com/rdpsin))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@jsafrane](https://github.com/jsafrane), [@Kaezon](https://github.com/Kaezon), [@stijndehaes](https://github.com/stijndehaes)
+
 # v1.6.2
 ## Notable changes
 * Address CVE ALAS-2022-1792
