@@ -106,6 +106,12 @@ spec:
                   name: aws-secret
                   key: access_key
                   optional: true
+            - name: AWS_EC2_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: aws-meta
+                  key: endpoint
+                  optional: true
             {{- with .Values.controller.region }}
             - name: AWS_REGION
               value: {{ . }}
