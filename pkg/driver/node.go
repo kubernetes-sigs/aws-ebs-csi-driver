@@ -210,7 +210,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
 	}
-	//TODO: use the common function from vendor pkg kubernetes/mount-util
 
 	needResize, err := d.mounter.NeedResize(source, target)
 	if err != nil {
