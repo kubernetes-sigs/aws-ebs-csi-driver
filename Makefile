@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION=v1.7.0
+VERSION=v1.8.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -96,7 +96,6 @@ sub-image-%:
 image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
 .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION):
 	docker buildx build \
-		--no-cache-filter=linux-amazon \
 		--platform=$(OS)/$(ARCH) \
 		--progress=plain \
 		--target=$(OS)-$(OSVERSION) \
