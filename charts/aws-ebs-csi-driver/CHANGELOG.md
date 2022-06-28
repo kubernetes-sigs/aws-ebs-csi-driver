@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.7.1
+* Bump app/driver to version `v1.8.0`
+
 ## v2.7.0
 * Support optional ec2 endpoint configuration.
 * Fix node driver registrar socket path.
