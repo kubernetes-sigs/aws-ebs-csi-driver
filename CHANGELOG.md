@@ -1,3 +1,11 @@
+# v1.8.0
+## Notable Changes
+* Change base image from Amazon Linux 2 to EKS minimal for linux builds
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@jaxesn](https://github.com/jaxesn)
+
 # v1.7.0
 ## Announcement
 * To improve the security of the container images, the base image will be switched from [Amazon Linux 2](https://hub.docker.com/_/amazonlinux) to [EKS Distro Minimal](https://gallery.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs) in an upcoming release. The new minimal base image only contains the necessary driver dependencies which means it will not include a shell. **Please be aware that while this change won't break workloads, it may break processes for debugging if you are using a shell**.
