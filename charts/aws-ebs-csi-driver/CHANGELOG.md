@@ -1,5 +1,13 @@
 # Helm chart
 
+## v2.7.1
+* Bump app/driver to version `v1.8.0`
+
+## v2.7.0
+* Support optional ec2 endpoint configuration.
+* Fix node driver registrar socket path.
+* Fix hardcoded kubelet path.
+
 ## v2.6.11
 * Bump app/driver to version `v1.7.0`
 * Set handle-volume-inuse-error to `false`
