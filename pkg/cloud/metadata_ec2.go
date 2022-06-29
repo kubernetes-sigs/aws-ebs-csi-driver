@@ -42,16 +42,19 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 	}
 
 	enis, err := svc.GetMetadata(enisEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("could not get number of attached ENIs: %v", err)
+	}
 	// the ENIs should not be empty; if (somehow) it is empty, return an error
-	if enis == "" || err != nil {
-		return nil, fmt.Errorf("could not get number of attached ENIs")
+	if enis == "" {
+		return nil, fmt.Errorf("the ENIs should not be empty")
 	}
 
 	attachedENIs := strings.Count(enis, "\n") + 1
 
 	mappings, err := svc.GetMetadata(blockDevicesEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("could not get number of block device mappings")
+		return nil, fmt.Errorf("could not get number of block device mappings: %v", err)
 	}
 	// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
 	blockDevMappings := strings.Count(mappings, "\n")
