@@ -109,7 +109,7 @@ func getVolumeOpCounts(c clientset.Interface, config *rest.Config, pluginName st
 
 	nodeLimit := 25
 
-	metricsGrabber, err := e2emetrics.NewMetricsGrabber(c, nil, config, true, false, true, false, false)
+	metricsGrabber, err := e2emetrics.NewMetricsGrabber(c, nil, config, true, false, true, false, false, false)
 
 	if err != nil {
 		framework.ExpectNoError(err, "Error creating metrics grabber: %v", err)
@@ -209,6 +209,14 @@ func newMigrationOpCheck(cs clientset.Interface, config *rest.Config, pluginName
 		moc.skipCheck = true
 		return &moc
 	}
+
+	// TODO: temporarily skip metrics check due to issue #[102893](https://github.com/kubernetes/kubernetes/issues/102893)
+	// Will remove it once the issue is fixed
+	if framework.NodeOSDistroIs("windows") {
+		moc.skipCheck = true
+		return &moc
+	}
+
 	moc.oldInTreeOps, moc.oldMigratedOps = getMigrationVolumeOpCounts(cs, config, pluginName)
 	return &moc
 }
