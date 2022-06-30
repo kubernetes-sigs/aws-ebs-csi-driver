@@ -43,13 +43,13 @@ func registerTestsInGinkgo(sc *SanityContext) {
 	for _, test := range tests {
 		Describe(test.text, func() {
 			BeforeEach(func() {
-				sc.setup()
+				sc.Setup()
 			})
 
 			test.body(sc)
 
 			AfterEach(func() {
-				sc.teardown()
+				sc.Teardown()
 			})
 		})
 	}
