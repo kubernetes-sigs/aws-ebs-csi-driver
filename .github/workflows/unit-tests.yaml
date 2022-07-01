@@ -1,0 +1,32 @@
+name: Unit Tests
+
+on:
+  push:
+jobs:
+  buildx:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    steps:
+      - id: go-cache-paths
+        run: |
+          echo "::set-output name=go-build::$(go env GOCACHE)"
+          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+
+      - name: Go Build Cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.go-cache-paths.outputs.go-build }}
+          key: ${{ runner.os }}-cache-${{ hashFiles('**/go.sum') }}
+
+      - name: Run tests
+        run: |
+          go test -v  ./cmd/... ./pkg/...
