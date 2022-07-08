@@ -31,7 +31,7 @@ spec:
           tolerationSeconds: 300 
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.8.0
+          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -87,7 +87,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: csi-provisioner
-          image: k8s.gcr.io/sig-storage/csi-provisioner:v3.1.0
+          image: k8s.gcr.io/sig-storage/csi-provisioner
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -103,7 +103,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: k8s.gcr.io/sig-storage/csi-attacher:v3.4.0
+          image: k8s.gcr.io/sig-storage/csi-attacher
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -116,7 +116,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
-          image: k8s.gcr.io/sig-storage/csi-snapshotter:v6.0.1
+          image: k8s.gcr.io/sig-storage/csi-snapshotter
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -128,7 +128,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-resizer
-          image: k8s.gcr.io/sig-storage/csi-resizer:v1.4.0
+          image: k8s.gcr.io/sig-storage/csi-resizer
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -141,7 +141,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
-          image: k8s.gcr.io/sig-storage/livenessprobe:v2.5.0
+          image: k8s.gcr.io/sig-storage/livenessprobe
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
