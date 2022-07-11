@@ -7,19 +7,19 @@ images:
     newName: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-provisioner
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-    tagSuffix: -eks-1-20-15
+    newTag: v3.1.0-eks-1-20-15
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-attacher
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-    tagSuffix: -eks-1-20-15
+    newTag: v3.4.0-eks-1-20-15
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/livenessprobe
     newName: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-    tagSuffix: -eks-1-20-15
+    newTag: v2.6.0-eks-1-20-15
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-    tagSuffix: -eks-1-20-17
+    newTag: v6.0.1-eks-1-20-17
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
     newName: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-    tagSuffix: -eks-1-20-15
+    newTag: v1.4.0-eks-1-20-15
   - name: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-node-driver-registrar
     newName: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-    tagSuffix: -eks-1-20-17
+    newTag: v2.5.1-eks-1-20-17
