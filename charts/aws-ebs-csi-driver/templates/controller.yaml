@@ -122,6 +122,10 @@ spec:
             {{- with .Values.controller.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -170,6 +174,10 @@ spec:
             {{- with .Values.sidecars.provisioner.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -193,6 +201,10 @@ spec:
             {{- with .Values.sidecars.attacher.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -214,6 +226,10 @@ spec:
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
             {{- with .Values.sidecars.snapshotter.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           volumeMounts:
@@ -240,6 +256,10 @@ spec:
             {{- with .Values.sidecars.resizer.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -252,6 +272,10 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
