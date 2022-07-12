@@ -1,3 +1,38 @@
+# v1.9.0
+### Notable Changes
+* Upgrade dependencies ([#1296](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1296), [@torredil](https://github.com/torredil))
+    - k8s.io/kubernetes `v1.21.11` -> `v1.22.11`
+    - github.com/aws/aws-sdk-go `v1.43.37` -> `v1.44.45`
+    - github.com/container-storage-interface/spec `v1.3.0` -> `v1.6.0`
+    - github.com/golang/mock `v1.5.0` -> `v1.6.0`
+    - github.com/golang/protobuf `v1.5.0` -> `v1.5.2`
+    - github.com/google/go-cmp `v0.5.5` -> `v0.5.8`
+    - github.com/kubernetes-csi/csi-proxy/client `v1.0.1` -> `v1.1.1`
+    - github.com/kubernetes-csi/csi-test `v2.0.0+incompatible` -> `v2.2.0+incompatible`
+    - github.com/kubernetes-csi/external-snapshotter/client/v4 `v4.0.0` -> `v4.2.0`
+    - github.com/onsi/ginkgo `v1.11.0` -> `v1.16.5`
+    - github.com/onsi/gomega `v1.7.1` -> `v1.19.0`
+    - github.com/stretchr/testify `v1.6.1` -> `v1.8.0`
+    - golang.org/x/sys `v0.0.0-20211216021012-1d35b9e2eb4e` -> `v0.0.0-20220627191245-f75cf1eec38b`
+    - google.golang.org/grpc `v1.34.0` -> `v1.47.0`
+* Add GitHub actions ([#1297](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1297), [@torredil](https://github.com/torredil))
+    - Fix broken CHANGELOG link in release.yaml
+    - Add codeql-analysis.yaml for additional vulnerability scanning
+    - Add unit-tests.yaml for multi-platform unit testing (Linux/Windows)
+    - Add verify.yaml which runs `make verify`
+
+### Bug Fixes
+* Fix version of K8s manifest images ([#1303](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1303), [@t0rr3sp3dr0](https://github.com/t0rr3sp3dr0))
+* Fix image tags in ecr-public kustomization ([#1305](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1305), [@torredil](https://github.com/torredil))
+
+### Miscellaneous
+* Use mount utils to check if volume needs resizing ([#1165](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1165), [@RomanBednar](https://github.com/RomanBednar))
+* Improve metadata_ec2.go error logging ([#1294](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1294), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@RomanBednar](https://github.com/RomanBednar) and [@t0rr3sp3dr0](https://github.com/t0rr3sp3dr0)
+
 # v1.8.0
 ## Notable Changes
 * Change base image from Amazon Linux 2 to EKS minimal for linux builds
