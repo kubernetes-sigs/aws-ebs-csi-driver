@@ -20,6 +20,7 @@
     - Add codeql-analysis.yaml for additional vulnerability scanning
     - Add unit-tests.yaml for multi-platform unit testing (Linux/Windows)
     - Add verify.yaml which runs `make verify`
+* Update livenessprobe to `v2.6.0` ([#1303](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1303), [@t0rr3sp3dr0](https://github.com/t0rr3sp3dr0))
 
 ### Bug Fixes
 * Fix version of K8s manifest images ([#1303](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1303), [@t0rr3sp3dr0](https://github.com/t0rr3sp3dr0))
