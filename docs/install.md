@@ -3,7 +3,7 @@
 ## Prerequisites
 * If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
 * Get yourself familiar with how to setup Kubernetes on AWS and have a working Kubernetes cluster:
-  * Enable flag `--allow-privileged=true` for `kubelet` and `kube-apiserver`
+  * Enable flag `--allow-privileged=true` for `kube-apiserver`
   * Enable `kube-apiserver` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true`
   * Enable `kubelet` feature gates `--feature-gates=CSINodeInfo=true,CSIDriverRegistry=true,CSIBlockVolume=true`
 * If you intend to use the csi-snapshotter functionality you will need to first install the [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter).
