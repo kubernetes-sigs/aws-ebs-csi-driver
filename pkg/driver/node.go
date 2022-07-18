@@ -26,6 +26,7 @@ import (
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
@@ -56,6 +57,9 @@ const (
 
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
+
+	//sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
+	sbeDeviceVolumeAttachmentLimit = 10
 )
 
 var (
@@ -90,7 +94,9 @@ type nodeService struct {
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
 	klog.V(5).Infof("[Debug] Retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
+	region := os.Getenv("AWS_REGION")
+	klog.Infof("regionFromSession Node service %v", region)
+	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
 	if err != nil {
 		panic(err)
 	}
@@ -179,6 +185,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 			klog.Warningf("NodeStageVolume: invalid partition config, will ignore. partition = %v", part)
 		}
 	}
+
 	source, err := d.findDevicePath(devicePath, volumeID, partition)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
@@ -712,6 +719,10 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 func (d *nodeService) getVolumesLimit() int64 {
 	if d.driverOptions.volumeAttachLimit >= 0 {
 		return d.driverOptions.volumeAttachLimit
+	}
+
+	if util.IsSBE(d.metadata.GetRegion()) {
+		return sbeDeviceVolumeAttachmentLimit
 	}
 
 	instanceType := d.metadata.GetInstanceType()

@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"golang.org/x/sys/unix"
 	"k8s.io/klog"
 )
@@ -93,8 +94,14 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	if err == nil {
 		klog.V(5).Infof("[Debug] successfully resolved nvmeName=%q to %q", nvmeName, nvmeDevicePath)
 		canonicalDevicePath = nvmeDevicePath
+		return d.appendPartition(canonicalDevicePath, partition), nil
 	} else {
 		klog.V(5).Infof("[Debug] error searching for nvme path %q: %v", nvmeName, err)
+	}
+
+	if util.IsSBE(d.metadata.GetRegion()) {
+		klog.V(5).Infof("[Debug] Falling back to snow volume lookup for: %q", devicePath)
+		canonicalDevicePath = "/dev/vd" + strings.TrimPrefix(devicePath, "/dev/xvdb")
 	}
 
 	if canonicalDevicePath == "" {
@@ -106,7 +113,7 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 }
 
 func errNoDevicePathFound(devicePath, volumeID string) error {
-	return fmt.Errorf("no device path for device %q volume %q found!", devicePath, volumeID)
+	return fmt.Errorf("no device path for device %q volume %q found", devicePath, volumeID)
 }
 
 // findNvmeVolume looks for the nvme volume with the specified name

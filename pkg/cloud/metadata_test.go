@@ -34,11 +34,13 @@ import (
 )
 
 const (
-	nodeName            = "ip-123-45-67-890.us-west-2.compute.internal"
-	stdInstanceID       = "i-abcdefgh123456789"
-	stdInstanceType     = "t2.medium"
-	stdRegion           = "us-west-2"
-	stdAvailabilityZone = "us-west-2b"
+	nodeName             = "ip-123-45-67-890.us-west-2.compute.internal"
+	stdInstanceID        = "i-abcdefgh123456789"
+	stdInstanceType      = "t2.medium"
+	stdRegion            = "us-west-2"
+	stdAvailabilityZone  = "us-west-2b"
+	snowRegion           = "snow"
+	snowAvailabilityZone = "snow"
 )
 
 func TestNewMetadataService(t *testing.T) {
@@ -63,6 +65,7 @@ func TestNewMetadataService(t *testing.T) {
 		expectedErr                      error
 		node                             v1.Node
 		nodeNameEnvVar                   string
+		regionFromSession                string
 	}{
 		{
 			name:                 "success: normal",
@@ -314,6 +317,20 @@ func TestNewMetadataService(t *testing.T) {
 			imdsBlockDeviceOutput: "ami\nroot\nebs1\nebs2",
 			expectedBlockDevices:  3,
 		},
+		{
+			name:                 "success: region from session is snow",
+			ec2metadataAvailable: true,
+			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
+				InstanceID:       stdInstanceID,
+				InstanceType:     stdInstanceType,
+				Region:           "",
+				AvailabilityZone: "",
+			},
+			imdsENIOutput:        "00:00:00:00:00:00",
+			expectedENIs:         1,
+			regionFromSession:    snowRegion,
+			expectedBlockDevices: 1,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -339,7 +356,7 @@ func TestNewMetadataService(t *testing.T) {
 				// output
 				if tc.getInstanceIdentityDocumentError == nil && !tc.invalidInstanceIdentityDocument {
 					mockEC2Metadata.EXPECT().GetMetadata(enisEndpoint).Return(tc.imdsENIOutput, nil)
-					mockEC2Metadata.EXPECT().GetMetadata(blockDevicesEndpoint).Return(tc.imdsBlockDeviceOutput, nil)
+					mockEC2Metadata.EXPECT().GetMetadata(blockDevicesEndpoint).Return(tc.imdsBlockDeviceOutput, nil).AnyTimes()
 
 					if tc.getMetadataValue != "" || tc.getMetadataError != nil {
 						mockEC2Metadata.EXPECT().GetMetadata(outpostArnEndpoint).Return(tc.getMetadataValue, tc.getMetadataError)
@@ -358,8 +375,13 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			os.Setenv("CSI_NODE_NAME", tc.nodeNameEnvVar)
-
-			m, err := NewMetadataService(ec2MetadataClient, k8sAPIClient)
+			var m MetadataService
+			var err error
+			if tc.regionFromSession == snowRegion {
+				m, err = NewMetadataService(ec2MetadataClient, k8sAPIClient, snowRegion)
+			} else {
+				m, err = NewMetadataService(ec2MetadataClient, k8sAPIClient, stdRegion)
+			}
 			if err != nil {
 				if tc.expectedErr == nil {
 					t.Errorf("got error %q, expected no error", err)
@@ -376,10 +398,10 @@ func TestNewMetadataService(t *testing.T) {
 				if m.GetInstanceType() != stdInstanceType {
 					t.Errorf("GetInstanceType() failed: got wrong instance type %v, expected %v", m.GetInstanceType(), stdInstanceType)
 				}
-				if m.GetRegion() != stdRegion {
+				if m.GetRegion() != stdRegion && m.GetRegion() != snowRegion {
 					t.Errorf("NewMetadataService() failed: got wrong region %v, expected %v", m.GetRegion(), stdRegion)
 				}
-				if m.GetAvailabilityZone() != stdAvailabilityZone {
+				if m.GetAvailabilityZone() != stdAvailabilityZone && m.GetAvailabilityZone() != snowAvailabilityZone {
 					t.Errorf("NewMetadataService() failed: got wrong AZ %v, expected %v", m.GetAvailabilityZone(), stdAvailabilityZone)
 				}
 				if m.GetOutpostArn() != tc.expectedOutpostArn {
