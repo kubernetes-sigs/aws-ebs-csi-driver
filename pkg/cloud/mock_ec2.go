@@ -76,6 +76,26 @@ func (mr *MockEC2MockRecorder) CreateSnapshotWithContext(ctx, input interface{},
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshotWithContext", reflect.TypeOf((*MockEC2)(nil).CreateSnapshotWithContext), varargs...)
 }
 
+// CreateTagsWithContext mocks base method.
+func (m *MockEC2) CreateTagsWithContext(ctx aws.Context, input *ec2.CreateTagsInput, opts ...request.Option) (*ec2.CreateTagsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateTagsWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.CreateTagsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateTagsWithContext indicates an expected call of CreateTagsWithContext.
+func (mr *MockEC2MockRecorder) CreateTagsWithContext(ctx, input interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTagsWithContext", reflect.TypeOf((*MockEC2)(nil).CreateTagsWithContext), varargs...)
+}
+
 // CreateVolumeWithContext mocks base method.
 func (m *MockEC2) CreateVolumeWithContext(ctx aws.Context, input *ec2.CreateVolumeInput, opts ...request.Option) (*ec2.Volume, error) {
 	m.ctrl.T.Helper()

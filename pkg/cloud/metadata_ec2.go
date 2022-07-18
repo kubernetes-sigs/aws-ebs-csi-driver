@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog"
 )
 
@@ -19,8 +20,9 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 	return svc, nil
 }
 
-func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
+func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
 	doc, err := svc.GetInstanceIdentityDocument()
+	klog.Infof("regionFromSession %v", regionFromSession)
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %v", err)
 	}
@@ -34,11 +36,19 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 	}
 
 	if len(doc.Region) == 0 {
-		return nil, fmt.Errorf("could not get valid EC2 region")
+		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
+			doc.Region = regionFromSession
+		} else {
+			return nil, fmt.Errorf("could not get valid EC2 region")
+		}
 	}
 
 	if len(doc.AvailabilityZone) == 0 {
-		return nil, fmt.Errorf("could not get valid EC2 availability zone")
+		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
+			doc.AvailabilityZone = regionFromSession
+		} else {
+			return nil, fmt.Errorf("could not get valid EC2 availability zone")
+		}
 	}
 
 	enis, err := svc.GetMetadata(enisEndpoint)
@@ -52,12 +62,17 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 
 	attachedENIs := strings.Count(enis, "\n") + 1
 
-	mappings, err := svc.GetMetadata(blockDevicesEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("could not get number of block device mappings: %v", err)
+	//As block device mapping contains 1 volume for the AMI.
+	blockDevMappings := 1
+
+	if !util.IsSBE(doc.Region) {
+		mappings, err := svc.GetMetadata(blockDevicesEndpoint)
+		// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
+		blockDevMappings = strings.Count(mappings, "\n")
+		if err != nil {
+			return nil, fmt.Errorf("could not get number of block device mappings: %v", err)
+		}
 	}
-	// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
-	blockDevMappings := strings.Count(mappings, "\n")
 
 	instanceInfo := Metadata{
 		InstanceID:             doc.InstanceID,
