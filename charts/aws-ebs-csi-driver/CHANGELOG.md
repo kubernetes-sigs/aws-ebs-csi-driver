@@ -1,10 +1,13 @@
 # Helm chart
 
-## 2.8.1 
+## v2.8.2
 * Update controller and node templates to include envFrom property
 
-## v2.8.0
+## v2.8.1
+* Bump app/driver to version `v1.9.0`
+* Update livenessprobe to version `v2.6.0`
 
+## v2.8.0
 * Feature: Support custom affinity definition on node daemon set ([#1277](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1277), [@vauchok](https://github.com/vauchok))
 
 ## v2.7.1
