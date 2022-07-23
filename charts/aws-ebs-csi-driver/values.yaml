@@ -42,7 +42,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/livenessprobe
-      tag: "v2.5.0"
+      tag: "v2.6.0"
     resources: {}
   resizer:
     env: []
