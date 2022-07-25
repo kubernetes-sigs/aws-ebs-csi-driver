@@ -1,3 +1,10 @@
+# v1.9.1
+### Notable Changes
+* Validate fs type before mounting ([#1319](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1319), [@torredil](https://github.com/torredil))
+
+### Miscellaneous
+* Update install.md ([#1313](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1313), [@torredil](https://github.com/torredil))
+
 # v1.9.0
 ### Notable Changes
 * Upgrade dependencies ([#1296](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1296), [@torredil](https://github.com/torredil))
