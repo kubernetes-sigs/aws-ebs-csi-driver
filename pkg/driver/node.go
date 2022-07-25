@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -38,8 +39,10 @@ const (
 	FSTypeExt3 = "ext3"
 	// FSTypeExt4 represents the ext4 filesystem type
 	FSTypeExt4 = "ext4"
-	// FSTypeXfs represents te xfs filesystem type
+	// FSTypeXfs represents the xfs filesystem type
 	FSTypeXfs = "xfs"
+	// FSTypeNtfs represents the ntfs filesystem type
+	FSTypeNtfs = "ntfs"
 
 	// default file system type to be used when it is not provided
 	defaultFsType = FSTypeExt4
@@ -56,7 +59,13 @@ const (
 )
 
 var (
-	ValidFSTypes = []string{FSTypeExt2, FSTypeExt3, FSTypeExt4, FSTypeXfs}
+	ValidFSTypes = map[string]struct{}{
+		FSTypeExt2: {},
+		FSTypeExt3: {},
+		FSTypeExt4: {},
+		FSTypeXfs:  {},
+		FSTypeNtfs: {},
+	}
 )
 
 var (
@@ -140,6 +149,11 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	fsType := mountVolume.GetFsType()
 	if len(fsType) == 0 {
 		fsType = defaultFsType
+	}
+
+	_, ok := ValidFSTypes[strings.ToLower(fsType)]
+	if !ok {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: invalid fstype %s", fsType)
 	}
 
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
@@ -677,6 +691,11 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		fsType := mode.Mount.GetFsType()
 		if len(fsType) == 0 {
 			fsType = defaultFsType
+		}
+
+		_, ok := ValidFSTypes[strings.ToLower(fsType)]
+		if !ok {
+			return status.Errorf(codes.InvalidArgument, "NodePublishVolume: invalid fstype %s", fsType)
 		}
 
 		mountOptions = collectMountOptions(fsType, mountOptions)
