@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.8.2
+* Update controller and node templates to include envFrom property
+
 ## v2.8.1
 * Bump app/driver to version `v1.9.0`
 * Update livenessprobe to version `v2.6.0`

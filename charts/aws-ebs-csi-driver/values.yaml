@@ -77,6 +77,8 @@ controller:
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
   env: []
+  # Use envFrom to reference ConfigMaps and Secrets across all containers in the deployment
+  envFrom: []
   # If set, add pv/pvc metadata to plugin create requests as parameters.
   extraCreateMetadata: true
   # Extra volume tags to attach to each dynamically provisioned volume.
@@ -140,6 +142,7 @@ controller:
 
 node:
   env: []
+  envFrom: []
   kubeletPath: /var/lib/kubelet
   logLevel: 2
   priorityClassName:
