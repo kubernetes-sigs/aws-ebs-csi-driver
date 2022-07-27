@@ -47,7 +47,9 @@ var _ NameAllocator = &nameAllocator{}
 
 // GetNext gets next available device given existing names that are being used
 // This function iterate through the device names in deterministic order of:
-//     ba, ... ,bz, ca, ... , cz
+//
+//	ba, ... ,bz, ca, ... , cz
+//
 // and return the first one that is not used yet.
 func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
 	for _, c1 := range []string{"b", "c"} {

@@ -94,7 +94,8 @@ const (
 
 // AWS provisioning limits.
 // Source:
-//   https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
+//
+//	https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
 const (
 	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
 	MaxNumTagsPerResource = 50
