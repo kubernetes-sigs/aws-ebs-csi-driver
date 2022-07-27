@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-/// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
+// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 const (
 	highMemoryMetalInstancesMaxVolumes   = 19
 	highMemoryVirtualInstancesMaxVolumes = 27
@@ -14,14 +14,14 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
-/// It is possible to have an instance family where the virtualized instances are Nitro
-/// and metal instances are not
+// / It is possible to have an instance family where the virtualized instances are Nitro
+// / and metal instances are not
 var nonNitroInstances = map[string]struct{}{
 	"c6i.metal": {},
 	"g5g.metal": {},
 }
 
-/// List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
+// / List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var nonNitroInstanceFamilies = map[string]struct{}{
 	"t2":     {},
 	"c7g":    {},
@@ -63,8 +63,8 @@ func GetMaxAttachments(nitro bool) int {
 	return nonNitroMaxAttachments
 }
 
-/// Some instance types have a maximum limit of EBS volumes
-/// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
+// / Some instance types have a maximum limit of EBS volumes
+// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var maxVolumeLimits = map[string]int{
 	"d3.8xlarge":    3,
 	"d3.12xlarge":   3,
@@ -111,9 +111,9 @@ func GetNVMeInstanceStoreVolumesForInstanceType(it string) int {
 	return 0
 }
 
-/// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes
-/// IMDS does not provide NVMe instance store data; we'll just list all instances here
-/// TODO: See if we can get these values from DescribeInstanceTypes API
+// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html#instance-store-volumes
+// / IMDS does not provide NVMe instance store data; we'll just list all instances here
+// / TODO: See if we can get these values from DescribeInstanceTypes API
 var nvmeInstanceStoreVolumes = map[string]int{
 	"c5ad.large":     1,
 	"c5ad.xlarge":    1,
