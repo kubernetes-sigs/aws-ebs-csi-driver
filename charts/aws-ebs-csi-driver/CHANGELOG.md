@@ -1,7 +1,8 @@
 # Helm chart
 
-## v2.8.2
-* Update controller and node templates to include envFrom property
+## v2.9.0
+* Bump app/driver to version `v1.10.0`
+* Feature: Reference `configMaps` across multiple resources using `envFrom` ([#1312](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1312), [@jebbens](https://github.com/jebbens))
 
 ## v2.8.1
 * Bump app/driver to version `v1.9.0`
