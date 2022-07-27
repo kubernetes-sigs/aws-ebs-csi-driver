@@ -165,8 +165,9 @@ func (mounter *CSIProxyMounter) IsMountPointMatch(mp mount.MountPoint, dir strin
 }
 
 // IsLikelyMountPoint - If the directory does not exists, the function will return os.ErrNotExist error.
-//   If the path exists, call to CSI proxy will check if its a link, if its a link then existence of target
-//   path is checked.
+//
+//	If the path exists, call to CSI proxy will check if its a link, if its a link then existence of target
+//	path is checked.
 func (mounter *CSIProxyMounter) IsLikelyNotMountPoint(path string) (bool, error) {
 	isExists, err := mounter.ExistsPath(path)
 	if err != nil {
