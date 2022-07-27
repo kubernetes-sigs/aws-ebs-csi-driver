@@ -1,8 +1,9 @@
 # v1.10.0
-### Notable Changes
-* Validate fs type before mounting ([#1319](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1319), [@torredil](https://github.com/torredil))
+## Announcement
+* OS/Architecture specific tags are no longer being pushed to public ECR ([#1315](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1315))
 
 ### Miscellaneous
+* Validate `csi.storage.k8s.io/fstype` before mounting ([#1319](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1319), [@torredil](https://github.com/torredil))
 * Update install.md ([#1313](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1313), [@torredil](https://github.com/torredil))
 
 # v1.9.0
