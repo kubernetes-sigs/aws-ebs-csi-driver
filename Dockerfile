@@ -17,6 +17,8 @@
 # for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
 FROM --platform=$BUILDPLATFORM golang:1.17 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+COPY go.* .
+RUN go mod download
 COPY . .
 ARG TARGETOS
 ARG TARGETARCH
