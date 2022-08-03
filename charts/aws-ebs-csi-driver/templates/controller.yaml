@@ -61,7 +61,7 @@ spec:
       {{- with .Values.controller.securityContext }}
       securityContext:  
         {{- toYaml . | nindent 8 }}
-      {{- end }} 
+      {{- end }}
       containers:
         - name: ebs-plugin
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
@@ -153,6 +153,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.controller.containerSecurityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: csi-provisioner
           image: {{ printf "%s:%s" .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy }}
@@ -185,6 +189,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.sidecars.provisioner.securityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: csi-attacher
           image: {{ printf "%s:%s" .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
@@ -212,6 +220,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.sidecars.attacher.securityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         {{- if or (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
           image: {{ printf "%s:%s" .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
@@ -237,6 +249,10 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
           {{- with default .Values.controller.resources .Values.sidecars.snapshotter.resources }}
           resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.snapshotter.securityContext }}
+          securityContext:  
             {{- toYaml . | nindent 12 }}
           {{- end }}
         {{- end }}
@@ -267,6 +283,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.sidecars.resizer.securityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
@@ -281,6 +301,10 @@ spec:
               mountPath: /csi
           {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
           resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.livenessProbe.securityContext }}
+          securityContext:  
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}

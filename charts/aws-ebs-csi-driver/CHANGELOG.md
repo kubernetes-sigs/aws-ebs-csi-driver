@@ -1,5 +1,10 @@
 # Helm chart
 
+## 2.10.0
+* Implement securityContext for containers
+* Add securityContext for node pod
+* Utilize more secure defaults for securityContext
+
 ## v2.9.0
 * Bump app/driver to version `v1.10.0`
 * Feature: Reference `configMaps` across multiple resources using `envFrom` ([#1312](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1312), [@jebbens](https://github.com/jebbens))

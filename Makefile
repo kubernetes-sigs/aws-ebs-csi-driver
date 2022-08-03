@@ -229,9 +229,9 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-provisioner.yaml > ../../deploy/kubernetes/base/clusterrolebinding-provisioner.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-resizer.yaml > ../../deploy/kubernetes/base/clusterrolebinding-resizer.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-snapshotter.yaml > ../../deploy/kubernetes/base/clusterrolebinding-snapshotter.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller.yaml --api-versions 'snapshot.storage.k8s.io/v1' > ../../deploy/kubernetes/base/controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller.yaml --set "image.repository=k8s.gcr.io/provider-aws/aws-ebs-csi-driver" --api-versions 'snapshot.storage.k8s.io/v1' | sed -e "/namespace: /d" | sed -e "s/:v.*$$//g" > ../../deploy/kubernetes/base/controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/csidriver.yaml > ../../deploy/kubernetes/base/csidriver.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/node.yaml  > ../../deploy/kubernetes/base/node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/poddisruptionbudget-controller.yaml > ../../deploy/kubernetes/base/poddisruptionbudget-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/node.yaml --set "image.repository=k8s.gcr.io/provider-aws/aws-ebs-csi-driver" | sed -e "/namespace: /d" | sed -e "s/:v.*$$//g" > ../../deploy/kubernetes/base/node.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/poddisruptionbudget-controller.yaml --api-versions 'policy/v1/PodDisruptionBudget' | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/poddisruptionbudget-controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
+	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml

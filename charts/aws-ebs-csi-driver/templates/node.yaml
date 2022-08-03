@@ -49,10 +49,12 @@ spec:
         {{- with .Values.node.tolerations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- with .Values.node.securityContext }}
+      securityContext:  
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: ebs-plugin
-          securityContext:
-            privileged: true
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
@@ -104,6 +106,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.node.containerSecurityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: node-driver-registrar
           image: {{ printf "%s:%s" .Values.sidecars.nodeDriverRegistrar.image.repository .Values.sidecars.nodeDriverRegistrar.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.nodeDriverRegistrar.image.pullPolicy }}
@@ -135,6 +141,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.sidecars.nodeDriverRegistrar.securityContext }}
+          securityContext:  
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: liveness-probe
           image: {{ printf "%s:%s" .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
@@ -149,6 +159,10 @@ spec:
               mountPath: /csi
           {{- with default .Values.node.resources .Values.sidecars.livenessProbe.resources }}
           resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.livenessProbe.securityContext }}
+          securityContext:  
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}
