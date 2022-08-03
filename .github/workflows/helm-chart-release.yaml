@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - "charts/**"
+      - "charts/**/Chart.yaml"
 
 jobs:
   release:
