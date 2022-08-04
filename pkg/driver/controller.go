@@ -566,6 +566,29 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		cloud.SnapshotNameTagKey: snapshotName,
 		cloud.AwsEbsDriverTagKey: isManagedByDriver,
 	}
+
+	var vscTags []string
+	for key, value := range req.GetParameters() {
+		if strings.HasPrefix(key, TagKeyPrefix) {
+			vscTags = append(vscTags, value)
+		} else {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateSnapshot", key)
+		}
+	}
+
+	addTags, err := template.Evaluate(vscTags, nil, d.driverOptions.warnOnInvalidTag)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+	}
+
+	if err := validateExtraTags(addTags, d.driverOptions.warnOnInvalidTag); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+
+	for k, v := range addTags {
+		snapshotTags[k] = v
+	}
+
 	if d.driverOptions.kubernetesClusterID != "" {
 		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
 		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned
