@@ -181,6 +181,7 @@ test-e2e-migration:
 	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="\[ebs-csi-migration\]" \
+	GINKGO_SKIP="\[Disruptive\]|Pre-provisioned" \
 	EBS_CHECK_MIGRATION=true \
 	./hack/e2e/run.sh
 
