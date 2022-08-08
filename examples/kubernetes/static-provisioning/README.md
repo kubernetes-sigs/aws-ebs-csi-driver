@@ -48,8 +48,8 @@ This example shows you how to create and consume a `PersistentVolume` from an ex
     ```sh
     $ kubectl get pvc ebs-claim
 
-    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-    ebs-claim   Bound    pvc-119a0c81-f45a-4bec-a116-c36cc428cc57   5Gi        RWO            gp2            53s
+    NAME        STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    ebs-claim   Bound    test-pv   5Gi        RWO                           53s
     ```
 
 4. Validate the pod successfully wrote data to the statically provisioned volume:
