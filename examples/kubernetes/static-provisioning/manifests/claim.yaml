@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: ebs-claim
 spec:
+  storageClassName: "" # Empty string must be explicitly set otherwise default StorageClass will be set
+  volumeName: test-pv
   accessModes:
     - ReadWriteOnce
   resources:
