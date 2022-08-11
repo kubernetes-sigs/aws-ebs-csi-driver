@@ -10,11 +10,16 @@ source "${BASE_DIR}"/util.sh
 function kops_install() {
   INSTALL_PATH=${1}
   KOPS_VERSION=${2}
-  if [[ ! -e ${INSTALL_PATH}/kops ]]; then
-    KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/v${KOPS_VERSION}/kops-${OS_ARCH}
-    curl -L -X GET "${KOPS_DOWNLOAD_URL}" -o "${INSTALL_PATH}"/kops
-    chmod +x "${INSTALL_PATH}"/kops
+  if [[ -e "${INSTALL_PATH}"/kops ]]; then
+    INSTALLED_KOPS_VERSION=$("${INSTALL_PATH}"/kops version)
+    if [[ "$INSTALLED_KOPS_VERSION" == *"$KOPS_VERSION"* ]]; then
+      echo "KOPS $INSTALLED_KOPS_VERSION already installed!"
+      return
+    fi
   fi
+  KOPS_DOWNLOAD_URL=https://github.com/kubernetes/kops/releases/download/v${KOPS_VERSION}/kops-${OS_ARCH}
+  curl -L -X GET "${KOPS_DOWNLOAD_URL}" -o "${INSTALL_PATH}"/kops
+  chmod +x "${INSTALL_PATH}"/kops
 }
 
 function kops_create_cluster() {

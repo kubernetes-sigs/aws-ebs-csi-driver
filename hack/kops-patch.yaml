@@ -172,3 +172,6 @@ spec:
       ExpandCSIVolumes: "true"
       CSIInlineVolume: "true"
     anonymousAuth: false
+  cloudConfig:
+    awsEBSCSIDriver:
+      enabled: false
