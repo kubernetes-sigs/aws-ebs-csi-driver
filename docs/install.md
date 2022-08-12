@@ -9,8 +9,9 @@
 * Important: If you intend to use the Volume Snapshot feature, the [Kubernetes Volume Snapshot CRDs](https://github.com/kubernetes-csi/external-snapshotter/tree/master/client/config/crd) must be installed **before** the EBS CSI driver. For installation instructions, see [CSI Snapshotter Usage](https://github.com/kubernetes-csi/external-snapshotter#usage).
 
 ## Installation
-### Set up driver permissions
-The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
+
+### Set up driver permission
+The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. A [stricter example policy](./example-iam-policy-strict.json) is also provided, but needs to be modified before use (specifically, replace `<<CLUSTER_ID>>` with the ID of your cluster). AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`.
 
 Note: Add the below statement to the example policy if you want to encrypt the EBS drives. 
 ```
