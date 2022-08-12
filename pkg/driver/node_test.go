@@ -1913,6 +1913,7 @@ func TestNodeGetInfo(t *testing.T) {
 		instanceID        string
 		instanceType      string
 		availabilityZone  string
+		region            string
 		attachedENIs      int
 		blockDevices      int
 		volumeAttachLimit int64
@@ -1924,6 +1925,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "t2.medium",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			expMaxVolumes:     39,
 			attachedENIs:      1,
@@ -1934,6 +1936,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "t2.medium",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: 42,
 			expMaxVolumes:     42,
 			outpostArn:        emptyOutpostArn,
@@ -1943,6 +1946,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "t3.xlarge",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      2,
 			expMaxVolumes:     26, // 28 (max) - 2 (enis)
@@ -1953,6 +1957,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "m5d.large",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      2,
 			expMaxVolumes:     25,
@@ -1963,6 +1968,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "m5d.large",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: 30,
 			expMaxVolumes:     30,
 			outpostArn:        emptyOutpostArn,
@@ -1972,6 +1978,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "m5d.large",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: 30,
 			expMaxVolumes:     30,
 			outpostArn:        validOutpostArn,
@@ -1981,6 +1988,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "c6i.metal",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			expMaxVolumes:     31,
@@ -1991,6 +1999,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "u-12tb1.metal",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			expMaxVolumes:     19,
@@ -2001,6 +2010,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "mac1.metal",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			expMaxVolumes:     16,
@@ -2011,6 +2021,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "inf1.24xlarge",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			expMaxVolumes:     11,
@@ -2021,6 +2032,7 @@ func TestNodeGetInfo(t *testing.T) {
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "t3.xlarge",
 			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			blockDevices:      2,
@@ -2044,6 +2056,7 @@ func TestNodeGetInfo(t *testing.T) {
 			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
 			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
 			mockMetadata.EXPECT().GetOutpostArn().Return(tc.outpostArn)
+			mockMetadata.EXPECT().GetRegion().Return(tc.region).AnyTimes()
 
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)

@@ -89,3 +89,7 @@ func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 	}
 	return &modes
 }
+
+func IsSBE(region string) bool {
+	return region == "snow"
+}
