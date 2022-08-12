@@ -32,8 +32,9 @@ import (
 )
 
 func TestFindDevicePath(t *testing.T) {
-	devicePath := "/dev/xvbda"
+	devicePath := "/dev/xvdba"
 	nvmeDevicePath := "/dev/nvme1n1"
+	snowDevicePath := "/dev/vda"
 	volumeID := "vol-test"
 	nvmeName := "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_voltest"
 	deviceFileInfo := fs.FileInfo(&fakeFileInfo{devicePath, os.ModeDevice})
@@ -105,6 +106,20 @@ func TestFindDevicePath(t *testing.T) {
 			},
 			expectError: errNoDevicePathFound(devicePath, volumeID).Error(),
 		},
+		{
+			name:       "success: device path doesn't exist and snow path exists",
+			devicePath: devicePath,
+			volumeID:   volumeID,
+			partition:  "",
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(false, nil),
+
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist),
+				)
+			},
+			expectDevicePath: snowDevicePath,
+		},
 	}
 	// The partition variant of each case should be the same except the partition
 	// is expected to be appended to devicePath
@@ -112,7 +127,7 @@ func TestFindDevicePath(t *testing.T) {
 	for _, tc := range testCases {
 		tc.name += " (with partition)"
 		tc.partition = "1"
-		if tc.expectDevicePath == devicePath {
+		if tc.expectDevicePath == devicePath || tc.expectDevicePath == snowDevicePath {
 			tc.expectDevicePath += tc.partition
 		} else if tc.expectDevicePath == nvmeDevicePath {
 			tc.expectDevicePath += "p" + tc.partition
@@ -134,6 +149,16 @@ func TestFindDevicePath(t *testing.T) {
 				deviceIdentifier: mockDeviceIdentifier,
 				inFlight:         internal.NewInFlight(),
 				driverOptions:    &DriverOptions{},
+			}
+
+			if tc.expectDevicePath == snowDevicePath+tc.partition {
+				nodeDriver = nodeService{
+					metadata:         &cloud.Metadata{Region: "snow"},
+					mounter:          mockMounter,
+					deviceIdentifier: mockDeviceIdentifier,
+					inFlight:         internal.NewInFlight(),
+					driverOptions:    &DriverOptions{},
+				}
 			}
 
 			if tc.expectMock != nil {

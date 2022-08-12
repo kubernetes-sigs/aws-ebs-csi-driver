@@ -79,7 +79,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
-		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient)
+		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
 		if err != nil {
 			panic(err)
 		}

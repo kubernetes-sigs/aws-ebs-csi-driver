@@ -111,7 +111,7 @@ func newMetadata() (cloud.MetadataService, error) {
 		return nil, err
 	}
 
-	return cloud.NewMetadataService(func() (cloud.EC2Metadata, error) { return ec2metadata.New(s), nil }, func() (kubernetes.Interface, error) { return fake.NewSimpleClientset(), nil })
+	return cloud.NewMetadataService(func() (cloud.EC2Metadata, error) { return ec2metadata.New(s), nil }, func() (kubernetes.Interface, error) { return fake.NewSimpleClientset(), nil }, "")
 }
 
 func newEC2Client() (*ec2.EC2, error) {

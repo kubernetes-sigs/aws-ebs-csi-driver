@@ -51,6 +51,10 @@ const (
 	VolumeTypeSC1 = "sc1"
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
 	VolumeTypeST1 = "st1"
+	// VolumeTypeSBG1 represents a capacity-optimized HDD type of volume. Only for SBE devices.
+	VolumeTypeSBG1 = "sbg1"
+	// VolumeTypeSBP1 represents a performance-optimized SSD type of volume. Only for SBE devices.
+	VolumeTypeSBP1 = "sbp1"
 	// VolumeTypeStandard represents a previous type of  volume.
 	VolumeTypeStandard = "standard"
 )
@@ -280,7 +284,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
+	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeSBG1, VolumeTypeSBP1, VolumeTypeStandard:
 		createType = diskOptions.VolumeType
 	case VolumeTypeIO1:
 		createType = diskOptions.VolumeType
@@ -331,12 +335,15 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(volumeName))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone:  aws.String(zone),
-		ClientToken:       aws.String(hex.EncodeToString(clientToken[:])),
-		Size:              aws.Int64(capacityGiB),
-		VolumeType:        aws.String(createType),
-		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
-		Encrypted:         aws.Bool(diskOptions.Encrypted),
+		AvailabilityZone: aws.String(zone),
+		ClientToken:      aws.String(hex.EncodeToString(clientToken[:])),
+		Size:             aws.Int64(capacityGiB),
+		VolumeType:       aws.String(createType),
+		Encrypted:        aws.Bool(diskOptions.Encrypted),
+	}
+
+	if !util.IsSBE(zone) {
+		requestInput.TagSpecifications = []*ec2.TagSpecification{&tagSpec}
 	}
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
@@ -392,7 +399,24 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	outpostArn := aws.StringValue(response.OutpostArn)
-
+	var resources []*string
+	if util.IsSBE(zone) {
+		requestTagsInput := &ec2.CreateTagsInput{
+			Resources: append(resources, &volumeID),
+			Tags:      tags,
+		}
+		_, err := c.ec2.CreateTagsWithContext(ctx, requestTagsInput)
+		if err != nil {
+			// To avoid leaking volume, we should delete the volume just created
+			// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
+			if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
+				klog.Errorf("%v failed to be deleted, this may cause volume leak", volumeID)
+			} else {
+				klog.V(5).Infof("[Debug] %v is deleted because there was an error while attaching the tags", volumeID)
+			}
+			return nil, fmt.Errorf("could not attach tags to volume: %v. %v", volumeID, err)
+		}
+	}
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
 }
 

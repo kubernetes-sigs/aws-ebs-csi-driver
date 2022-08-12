@@ -36,6 +36,7 @@ import (
 const (
 	defaultZone = "test-az"
 	expZone     = "us-west-2b"
+	snowZone    = "snow"
 )
 
 func TestCreateDisk(t *testing.T) {
@@ -49,6 +50,7 @@ func TestCreateDisk(t *testing.T) {
 		expErr               error
 		expCreateVolumeErr   error
 		expDescVolumeErr     error
+		expCreateTagsErr     error
 		expCreateVolumeInput *ec2.CreateVolumeInput
 	}{
 		{
@@ -438,6 +440,41 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: nil,
 		},
+		{
+			name:       "success: create volume when zone is snow and add tags",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: snowZone,
+				VolumeType:       "sbp1",
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: snowZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "fail: zone is snow and add tags throws error",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: snowZone,
+				VolumeType:       "sbg1",
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateTagsErr:     fmt.Errorf("CreateTags generic error"),
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: snowZone,
+			},
+			expErr: fmt.Errorf("could not attach tags to volume: vol-test. CreateTags generic error"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -469,6 +506,10 @@ func TestCreateDisk(t *testing.T) {
 				matcher := eqCreateVolume(tc.expCreateVolumeInput)
 				mockEC2.EXPECT().CreateVolumeWithContext(gomock.Eq(ctx), matcher).Return(vol, tc.expCreateVolumeErr)
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, tc.expDescVolumeErr).AnyTimes()
+				if tc.diskOptions.AvailabilityZone == "snow" {
+					mockEC2.EXPECT().CreateTagsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.CreateTagsOutput{}, tc.expCreateTagsErr)
+					mockEC2.EXPECT().DeleteVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil).AnyTimes()
+				}
 				if len(tc.diskOptions.SnapshotID) > 0 {
 					mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []*ec2.Snapshot{snapshot}}, nil).AnyTimes()
 				}
