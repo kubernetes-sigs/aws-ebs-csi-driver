@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION=v1.10.0
+VERSION?=v1.10.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -21,7 +21,7 @@ BUILD_DATE?=$(shell date -u -Iseconds)
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
 GO111MODULE=on
-GOPROXY?=direct
+GOPROXY?=https://proxy.golang.org
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
@@ -75,7 +75,7 @@ push-manifest: create-manifest
 	docker manifest push --purge $(IMAGE):$(TAG)
 
 .PHONY: create-manifest
-create-manifest:
+create-manifest: all-image-registry
 # sed expression:
 # LHS: match 0 or more not space characters
 # RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
