@@ -102,6 +102,7 @@ image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
 		--output=type=$(OUTPUT_TYPE) \
 		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
 		--build-arg=GOPROXY=$(GOPROXY) \
+		--build-arg=VERSION=$(VERSION) \
 		.
 	touch $@
 
