@@ -36,6 +36,7 @@ jobs:
       run: |
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
           echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
     - name: Build, tag, and push manifest to Amazon ECR
       run: make -j `nproc` all-push
