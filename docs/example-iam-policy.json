@@ -140,15 +140,6 @@
           "ec2:ResourceTag/ebs.csi.aws.com/cluster": "true"
         }
       }
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-          "kms:Decrypt",
-          "kms:GenerateDataKeyWithoutPlaintext",
-          "kms:CreateGrant"
-      ],
-      "Resource": "*"
     }
   ]
 }
