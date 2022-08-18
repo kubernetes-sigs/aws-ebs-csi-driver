@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.10.1
+* Bump app/driver to version `v1.11.2`
+
 ## 2.10.0
 * Implement securityContext for containers
 * Add securityContext for node pod
