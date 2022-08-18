@@ -10,7 +10,22 @@
 
 ## Installation
 #### Set up driver permission
-The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. There are several methods to grant the driver IAM permission:
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. 
+
+Note: Add the below statement to the example policy if you want to encrypt the EBS drives. 
+```
+{
+  "Effect": "Allow",
+  "Action": [
+      "kms:Decrypt",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:CreateGrant"
+  ],
+  "Resource": "*"
+}
+```
+
+There are several methods to grant the driver IAM permission:
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
 * EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via Helm is determined by value `controller.serviceAccount.name`, `ebs-csi-controller-sa` by default
 * Using secret object - create an IAM user, attach the policy to it, then create a generic secret called `aws-secret` in the `kube-system` namespace with the user's credentials
