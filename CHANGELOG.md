@@ -1,3 +1,32 @@
+# v1.11.2
+### Notable Changes
+* Enable EBS CSI driver for AWS Snow devices ([#1314](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1314), [@jigisha620](https://github.com/jigisha620))
+* Implement securityContext for containers ([#1333](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1333), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug Fixes
+* Apply fix from helm chart to kustomize manifests ([#1350](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1350), [@ConnorJC3](https://github.com/ConnorJC3))
+* Explicitly pass VERSION as a build-arg ([#1351](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1351), [@torredil](https://github.com/torredil))
+
+### Miscellaneous
+* Automate ECR release ([#1339](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1339), [@torredil](https://github.com/torredil))
+* Remove /vendor directory ([#1328](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1338), [@torredil](https://github.com/torredil))
+* Set release draft to true ([#1351](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1351), [@torredil](https://github.com/torredil))
+* Set VERSION env variable in publish-ecr workflow ([#1346](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1346), [@torredil](https://github.com/torredil))
+* doc: update pvc binding ([#1337](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1337), [@vikram-katkar](https://github.com/vikram-katkar))
+* Skip Testpattern: Pre-provisioned PV in migration tests ([#1329](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1329), [@torredil](https://github.com/torredil))
+* Only run helm action when Chart.yaml modified ([#1334](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1334), [@ConnorJC3](https://github.com/ConnorJC3))
+* Update parameters.md ([#1329](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1329), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* Update to kOps v1.23.0 ([#1329](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1329), [@wongma7](https://github.com/wongma7), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* Improve build time ([#1331](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1331), [@torredil](https://github.com/torredil))
+* Pass GOPROXY to image builder ([#1330](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1330), [@wongma7](https://github.com/wongma7))
+* Run hack/update-gofm with go1.19rc2 ([#1325](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1325), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@jigisha620](https://github.com/jigisha620), [@ConnorJC3](https://github.com/ConnorJC3), [@wongma7](https://github.com/wongma7), [@olemarkus](https://github.com/olemarkus), [@vikram](https://github.com/vikram)
+
+*Versions [v1.11.0, v1.11.1] were skipped due to incorrect version metadata in the container.*
+
 # v1.10.0
 ## Announcement
 * OS/Architecture specific tags are no longer being pushed to public ECR ([#1315](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1315))
