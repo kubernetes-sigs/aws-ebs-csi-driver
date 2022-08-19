@@ -219,6 +219,12 @@ verify-vendor:
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
 
+.PHONY: verify-kustomize
+verify: verify-kustomize
+verify-kustomize:
+	@ echo; echo "### $@:"
+	@ ./hack/verify-kustomize
+
 .PHONY: generate-kustomize
 generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../../deploy/kubernetes/base/clusterrole-attacher.yaml
