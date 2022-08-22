@@ -21,7 +21,7 @@ Please go through [CSI Spec](https://github.com/container-storage-interface/spec
 * Docker 17.05+ for releasing
 
 ### Dependency
-Dependencies are managed through go module. To build the project, first turn on go mod using `export GO111MODULE=on`, then build the project using: `make`
+Dependencies are managed through go module. To build the project simply type: `make`
 
 ### Testing
 * To execute all unit tests, run: `make test`
