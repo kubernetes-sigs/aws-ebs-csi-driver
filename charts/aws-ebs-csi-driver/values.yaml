@@ -90,7 +90,16 @@ fullnameOverride:
 controller:
   # If arbitrary args like "--aws-sdk-debug-log=true" need to be passed, use this value
   additionalArgs: []
-  affinity: {}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: eks.amazonaws.com/compute-type
+            operator: NotIn
+            values:
+            - fargate
   # The default filesystem type of the volume to provision when fstype is unspecified in the StorageClass.
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
