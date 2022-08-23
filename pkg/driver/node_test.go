@@ -1991,7 +1991,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
-			expMaxVolumes:     31,
+			expMaxVolumes:     27, // 28 (max) - 1 (eni)
 			outpostArn:        emptyOutpostArn,
 		},
 		{
