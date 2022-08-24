@@ -14,13 +14,6 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
-// / It is possible to have an instance family where the virtualized instances are Nitro
-// / and metal instances are not
-var nonNitroInstances = map[string]struct{}{
-	"c6i.metal": {},
-	"g5g.metal": {},
-}
-
 // / List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var nonNitroInstanceFamilies = map[string]struct{}{
 	"t2":     {},
@@ -41,10 +34,6 @@ var nonNitroInstanceFamilies = map[string]struct{}{
 }
 
 func IsNitroInstanceType(it string) bool {
-	if _, ok := nonNitroInstances[it]; ok {
-		return false
-	}
-
 	strs := strings.Split(it, ".")
 
 	if len(strs) != 2 {
