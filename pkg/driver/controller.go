@@ -81,6 +81,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
 		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
 		if err != nil {
+			klog.Errorf("Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
 			panic(err)
 		}
 		region = metadata.GetRegion()
