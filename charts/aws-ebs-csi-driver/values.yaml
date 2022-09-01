@@ -22,6 +22,16 @@ sidecars:
       tag: "v3.1.0"
     logLevel: 2
     resources: {}
+    # Tune leader lease election for csi-provisioner.
+    # Leader election is on by default.
+    leaderElection:
+      enabled: true
+      # Optional values to tune lease behavior.
+      # The arguments provided must be in an acceptable time.ParseDuration format.
+      # Ref: https://pkg.go.dev/flag#Duration
+      # leaseDuration: "15s"
+      # renewDeadline: "10s"
+      # retryPeriod: "5s"
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
@@ -31,6 +41,16 @@ sidecars:
       pullPolicy: IfNotPresent
       repository: k8s.gcr.io/sig-storage/csi-attacher
       tag: "v3.4.0"
+    # Tune leader lease election for csi-attacher.
+    # Leader election is on by default.
+    leaderElection:
+      enabled: true
+      # Optional values to tune lease behavior.
+      # The arguments provided must be in an acceptable time.ParseDuration format.
+      # Ref: https://pkg.go.dev/flag#Duration
+      # leaseDuration: "15s"
+      # renewDeadline: "10s"
+      # retryPeriod: "5s"
     logLevel: 2
     resources: {}
     securityContext:
