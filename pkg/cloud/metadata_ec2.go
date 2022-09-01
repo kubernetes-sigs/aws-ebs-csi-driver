@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 type EC2MetadataClient func() (EC2Metadata, error)
