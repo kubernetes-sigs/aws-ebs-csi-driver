@@ -18,7 +18,6 @@ require (
 	k8s.io/apimachinery v0.22.11
 	k8s.io/client-go v1.22.11
 	k8s.io/component-base v0.22.11
-	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.70.0
 	k8s.io/kubernetes v1.22.11
 	k8s.io/mount-utils v0.22.11

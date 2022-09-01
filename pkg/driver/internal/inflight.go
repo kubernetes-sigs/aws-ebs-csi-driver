@@ -17,8 +17,9 @@ limitations under the License.
 package internal
 
 import (
-	"k8s.io/klog"
 	"sync"
+
+	"k8s.io/klog/v2"
 )
 
 // Idempotent is the interface required to manage in flight requests.
