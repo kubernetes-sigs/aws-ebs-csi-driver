@@ -160,8 +160,9 @@ func IOPSForVolumeType(volumeType string) string {
 	switch volumeType {
 	case "gp3":
 		// Maximum IOPS for gp3 is 16000. However, maximum IOPS/GB for gp3 is 500.
-		// Since the tests will run using minimum volume capacity (1GB), set to 500.
-		return "500"
+		// Since the tests will run using minimum volume capacity (1GB), set to 3000
+		// because minimum IOPS for gp3 is 3000.
+		return "3000"
 	default:
 		return ""
 	}
