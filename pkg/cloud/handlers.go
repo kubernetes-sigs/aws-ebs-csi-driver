@@ -21,7 +21,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/request"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // RecordRequestsComplete is added to the Complete chain; called after any request

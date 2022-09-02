@@ -21,7 +21,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // Metadata is info about the ec2 instance on which the driver is running
