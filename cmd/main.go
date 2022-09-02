@@ -24,7 +24,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"k8s.io/component-base/metrics/legacyregistry"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func main() {
