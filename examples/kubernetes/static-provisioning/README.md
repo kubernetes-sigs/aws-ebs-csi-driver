@@ -1,4 +1,4 @@
-# Static Provisioning 
+# Static Provisioning
 
 ## Prerequisites
 
@@ -24,6 +24,7 @@ This example shows you how to create and consume a `PersistentVolume` from an ex
         storage: 5Gi
       csi:
         driver: ebs.csi.aws.com
+        fsType: ext4
         volumeHandle: {EBS volume ID}
       nodeAffinity:
         required:
