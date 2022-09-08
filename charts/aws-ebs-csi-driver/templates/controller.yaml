@@ -167,7 +167,18 @@ spec:
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
-            - --leader-election=true
+            - --leader-election={{ .Values.sidecars.provisioner.leaderElection.enabled | required "leader election state for csi-provisioner is required, must be set to true || false." }}
+            {{- if .Values.sidecars.provisioner.leaderElection.enabled }}
+            {{- if .Values.sidecars.provisioner.leaderElection.leaseDuration }}
+            - --leader-election-lease-duration={{ .Values.sidecars.provisioner.leaderElection.leaseDuration }}
+            {{- end }}
+            {{- if .Values.sidecars.provisioner.leaderElection.renewDeadline}}
+            - --leader-election-renew-deadline={{ .Values.sidecars.provisioner.leaderElection.renewDeadline }}
+            {{- end }}
+            {{- if .Values.sidecars.provisioner.leaderElection.retryPeriod }}
+            - --leader-election-retry-period={{ .Values.sidecars.provisioner.leaderElection.retryPeriod }}
+            {{- end }}
+            {{- end }}
             - --default-fstype={{ .Values.controller.defaultFsType }}
           env:
             - name: ADDRESS
@@ -199,7 +210,18 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.attacher.logLevel }}
-            - --leader-election=true
+            - --leader-election={{ .Values.sidecars.attacher.leaderElection.enabled | required "leader election state for csi-attacher is required, must be set to true || false." }}
+            {{- if .Values.sidecars.attacher.leaderElection.enabled }}
+            {{- if .Values.sidecars.attacher.leaderElection.leaseDuration }}
+            - --leader-election-lease-duration={{ .Values.sidecars.attacher.leaderElection.leaseDuration }}
+            {{- end }}
+            {{- if .Values.sidecars.attacher.leaderElection.renewDeadline}}
+            - --leader-election-renew-deadline={{ .Values.sidecars.attacher.leaderElection.renewDeadline }}
+            {{- end }}
+            {{- if .Values.sidecars.attacher.leaderElection.retryPeriod }}
+            - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
+            {{- end }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
