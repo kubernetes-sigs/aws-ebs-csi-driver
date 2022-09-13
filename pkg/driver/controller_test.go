@@ -2295,6 +2295,63 @@ func TestCreateSnapshot(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.Aborted)
 			},
 		},
+		{
+			name: "success with VolumeSnapshotClass tags",
+			testFunc: func(t *testing.T) {
+				const (
+					snapshotName  = "test-snapshot"
+					extraTagKey   = "test-key"
+					extraTagValue = "test-value"
+				)
+
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						"tagSpecification_1": fmt.Sprintf("%s=%s", extraTagKey, extraTagValue),
+					},
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := context.Background()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.SourceVolumeId,
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				snapshotOptions := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: isManagedByDriver,
+						extraTagKey:              extraTagValue,
+					},
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
