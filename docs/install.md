@@ -10,7 +10,7 @@
 
 ## Installation
 #### Set up driver permission
-The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. 
+The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
 
 Note: Add the below statement to the example policy if you want to encrypt the EBS drives. 
 ```
@@ -24,6 +24,8 @@ Note: Add the below statement to the example policy if you want to encrypt the E
   "Resource": "*"
 }
 ```
+
+For more information, review ["Creating the Amazon EBS CSI driver IAM role for service accounts" from the EKS User Guide.](https://docs.aws.amazon.com/eks/latest/userguide/csi-iam-role.html) 
 
 There are several methods to grant the driver IAM permission:
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
@@ -66,6 +68,8 @@ helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
     aws-ebs-csi-driver/aws-ebs-csi-driver
 ```
+
+Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
 
 #### Upgrading from version 1.X to 2.X of the Helm chart
 Version 2.0.0 removed support for Helm v2 and now requires Helm v3 or above.
