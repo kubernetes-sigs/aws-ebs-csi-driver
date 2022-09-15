@@ -21,7 +21,6 @@ BUILD_DATE?=$(shell date -u -Iseconds)
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
 GO111MODULE=on
-GOPROXY?=https://proxy.golang.org
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
@@ -218,6 +217,12 @@ verify: verify-vendor
 verify-vendor:
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
+
+.PHONY: verify-kustomize
+verify: verify-kustomize
+verify-kustomize:
+	@ echo; echo "### $@:"
+	@ ./hack/verify-kustomize
 
 .PHONY: generate-kustomize
 generate-kustomize: bin/helm
