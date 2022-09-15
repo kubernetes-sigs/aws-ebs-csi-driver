@@ -1,9 +1,15 @@
 # Helm chart
 
+# v2.11.0
+* Bump app/driver to version `v1.11.3`
+* Add support for leader election tuning for `csi-provisioner` and `csi-attacher` ([#1371](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1371), [@moogzy](https://github.com/moogzy))
+* Change `fsGroupPolicy` to `File` ([#1377](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1377), [@ConnorJC3](https://github.com/ConnorJC3))
+* Allow all taint for `csi-node` by default ([#1381](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1381), [@gtxu](https://github.com/gtxu))
+
 ## v2.10.1
 * Bump app/driver to version `v1.11.2`
 
-## 2.10.0
+## v2.10.0
 * Implement securityContext for containers
 * Add securityContext for node pod
 * Utilize more secure defaults for securityContext
