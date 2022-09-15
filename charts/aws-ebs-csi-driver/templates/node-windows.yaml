@@ -40,8 +40,6 @@ spec:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
         {{- else }}
-        - key: CriticalAddonsOnly
-          operator: Exists
         - operator: Exists
           effect: NoExecute
           tolerationSeconds: 300
