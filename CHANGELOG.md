@@ -1,3 +1,9 @@
+# v1.11.3
+### Vulnerability Fixes
+* Address CVEs ([#1384](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1384), [@torredil](https://github.com/torredil))
+    - Upgrade github.com/prometheus/client_golang `v1.11.0` -> `v1.11.1` to address [CVE-2022-21698](https://github.com/advisories/GHSA-cg3q-j54f-5p7p).
+    - Upgrade golang.org/x/net `v0.0.0-20220225172249-27dd8689420f` -> `v0.0.0-20220906165146-f3363e06e74c` to address [CVE-2022-27664](https://github.com/advisories/GHSA-69cg-p879-7622).
+
 # v1.11.2
 ### Notable Changes
 * Enable EBS CSI driver for AWS Snow devices ([#1314](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1314), [@jigisha620](https://github.com/jigisha620))
