@@ -32,7 +32,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -81,6 +81,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		klog.V(5).Infof("[Debug] Retrieving region from metadata service")
 		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
 		if err != nil {
+			klog.Errorf("Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
 			panic(err)
 		}
 		region = metadata.GetRegion()
@@ -566,6 +567,29 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		cloud.SnapshotNameTagKey: snapshotName,
 		cloud.AwsEbsDriverTagKey: isManagedByDriver,
 	}
+
+	var vscTags []string
+	for key, value := range req.GetParameters() {
+		if strings.HasPrefix(key, TagKeyPrefix) {
+			vscTags = append(vscTags, value)
+		} else {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateSnapshot", key)
+		}
+	}
+
+	addTags, err := template.Evaluate(vscTags, nil, d.driverOptions.warnOnInvalidTag)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+	}
+
+	if err := validateExtraTags(addTags, d.driverOptions.warnOnInvalidTag); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+
+	for k, v := range addTags {
+		snapshotTags[k] = v
+	}
+
 	if d.driverOptions.kubernetesClusterID != "" {
 		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
 		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned

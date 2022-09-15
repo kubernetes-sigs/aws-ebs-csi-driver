@@ -28,7 +28,7 @@ import (
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"golang.org/x/sys/unix"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func (d *nodeService) appendPartition(devicePath, partition string) string {

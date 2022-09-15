@@ -5,7 +5,7 @@ package resizefs
 
 import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // resizeFs provides support for resizing file systems

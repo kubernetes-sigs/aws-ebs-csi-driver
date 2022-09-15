@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func ValidateDriverOptions(options *DriverOptions) error {
