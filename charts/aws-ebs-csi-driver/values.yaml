@@ -184,6 +184,14 @@ controller:
   containerSecurityContext:
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
+  initContainers: []
+  # containers to be run before the controller's container starts.
+  #
+  # Example:
+  #
+  # - name: wait
+  #   image: busybox
+  #   command: [ 'sh', '-c', "sleep 20" ]
 
 node:
   env: []
