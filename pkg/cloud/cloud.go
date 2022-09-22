@@ -28,6 +28,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -248,7 +249,16 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
-		awsConfig.Endpoint = aws.String(endpoint)
+		customResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+			if service == endpoints.Ec2ServiceID {
+				return endpoints.ResolvedEndpoint{
+					URL:           endpoint,
+					SigningRegion: region,
+				}, nil
+			}
+			return endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+		}
+		awsConfig.EndpointResolver = endpoints.ResolverFunc(customResolver)
 	}
 
 	if awsSdkDebugLog {
