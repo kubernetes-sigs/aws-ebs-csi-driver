@@ -83,6 +83,9 @@ spec:
             {{- with .Values.controller.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ . }}
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not .Values.controller.httpEndpoint) }}
+            - --http-endpoint=0.0.0.0:3301
+            {{- end}}
             {{- with .Values.controller.httpEndpoint }}
             - --http-endpoint={{ . }}
             {{- end }}
@@ -137,6 +140,11 @@ spec:
             - name: healthz
               containerPort: 9808
               protocol: TCP
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3301
+              protocol: TCP
+            {{- end}}
           livenessProbe:
             httpGet:
               path: /healthz
