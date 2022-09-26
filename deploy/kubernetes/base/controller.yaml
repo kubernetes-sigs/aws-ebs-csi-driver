@@ -23,6 +23,16 @@ spec:
         kubernetes.io/os: linux
       serviceAccountName: ebs-csi-controller-sa
       priorityClassName: system-cluster-critical
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                - fargate
+            weight: 1
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists

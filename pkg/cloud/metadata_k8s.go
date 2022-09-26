@@ -45,31 +45,33 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, fmt.Errorf("node providerID empty, cannot parse")
 	}
 
-	awsRegionRegex := "(snow)|(([a-z]{2}(-gov)?)-(central|(north|south)?(east|west)?)-[0-9])"
-	awsAvailabilityZoneRegex := "(snow)|(([a-z]{2}(-gov)?)-(central|(north|south)?(east|west)?)-[0-9][a-z])"
 	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|i-[a-z0-9]+$"
 
-	re := regexp.MustCompile(awsRegionRegex)
-	region := re.FindString(providerID)
-	if region == "" {
-		return nil, fmt.Errorf("did not find aws region in node providerID string")
-	}
-
-	re = regexp.MustCompile(awsAvailabilityZoneRegex)
-	availabilityZone := re.FindString(providerID)
-	if availabilityZone == "" {
-		return nil, fmt.Errorf("did not find aws availability zone in node providerID string")
-	}
-
-	re = regexp.MustCompile(awsInstanceIDRegex)
+	re := regexp.MustCompile(awsInstanceIDRegex)
 	instanceID := re.FindString(providerID)
 	if instanceID == "" {
 		return nil, fmt.Errorf("did not find aws instance ID in node providerID string")
 	}
 
 	var instanceType string
-	if it, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
-		instanceType = it
+	if val, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
+		instanceType = val
+	} else {
+		return nil, fmt.Errorf("could not retrieve instance type from topology label")
+	}
+
+	var region string
+	if val, ok := node.GetLabels()[corev1.LabelTopologyRegion]; ok {
+		region = val
+	} else {
+		return nil, fmt.Errorf("could not retrieve region from topology label")
+	}
+
+	var availabilityZone string
+	if val, ok := node.GetLabels()[corev1.LabelTopologyZone]; ok {
+		availabilityZone = val
+	} else {
+		return nil, fmt.Errorf("could not retrieve AZ from topology label")
 	}
 
 	instanceInfo := Metadata{
