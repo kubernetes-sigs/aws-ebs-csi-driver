@@ -229,7 +229,10 @@ node:
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
-  tolerations: []
+  tolerations:
+  - operator: Exists
+    effect: NoExecute
+    tolerationSeconds: 300
   resources: {}
   serviceAccount:
     create: true
