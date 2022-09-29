@@ -1,0 +1,48 @@
+name: Trivy Scanner - Container Images
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'deploy/kubernetes/overlays/stable/gcr/kustomization.yaml'
+  schedule:
+    - cron: '0 */24 * * *'
+
+jobs:
+  build-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set-matrix.outputs.result }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - id: set-matrix
+        uses: mikefarah/yq@master
+        with:
+          # Dynamically build the matrix of images to scan using `deploy/kubernetes/overlays/stable/gcr/kustomization.yaml`
+          # matrix format: ['k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.3', 'k8s.gcr.io/sig-storage/csi-attacher:v3.4.0', ...]
+          cmd: yq '.images | map(.name + ":" + .newTag) | . style="flow"' < deploy/kubernetes/overlays/stable/gcr/kustomization.yaml
+  
+  trivy-scan:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ${{ fromJson(needs.build-matrix.outputs.images) }}
+    
+    steps:
+      - name: Scan container image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ matrix.image }}'
+          output: 'results.sarif'
+          format: 'sarif'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'results.sarif'
