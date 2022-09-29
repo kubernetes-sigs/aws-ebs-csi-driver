@@ -1,3 +1,13 @@
+# v1.11.4
+### Improvements
+* Update go version; Update dependencies ([#1394](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1394), [@torredil](https://github.com/torredil))
+    - go `1.17` -> `1.19`
+    - github.com/aws/aws-sdk-go `v1.44.45` -> `v1.44.101`
+    - github.com/google/go-cmp `v0.5.8` -> `v0.5.9`
+    - github.com/onsi/gomega `v1.19.0` -> `v1.20.2`
+    - golang.org/x/sys `v0.0.0-20220728004956-3c1f35247d10` -> `v0.0.0-20220919091848-fb04ddd9f9c8`
+    - google.golang.org/grpc `v1.47.0` -> `v1.49.0`
+
 # v1.11.3
 ### Vulnerability Fixes
 * Address CVEs ([#1384](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1384), [@torredil](https://github.com/torredil))
