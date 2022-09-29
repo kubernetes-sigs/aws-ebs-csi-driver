@@ -41,3 +41,7 @@ ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
 FROM mcr.microsoft.com/windows/servercore:ltsc2019 AS windows-ltsc2019
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
+
+FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS windows-ltsc2022
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
+ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
