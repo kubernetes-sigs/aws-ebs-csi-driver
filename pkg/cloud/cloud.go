@@ -63,15 +63,16 @@ const (
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
-	io1MinTotalIOPS = 100
-	io1MaxTotalIOPS = 64000
-	io1MaxIOPSPerGB = 50
-	io2MinTotalIOPS = 100
-	io2MaxTotalIOPS = 64000
-	io2MaxIOPSPerGB = 500
-	gp3MaxTotalIOPS = 16000
-	gp3MinTotalIOPS = 3000
-	gp3MaxIOPSPerGB = 500
+	io1MinTotalIOPS             = 100
+	io1MaxTotalIOPS             = 64000
+	io1MaxIOPSPerGB             = 50
+	io2MinTotalIOPS             = 100
+	io2MaxTotalIOPS             = 64000
+	io2BlockExpressMaxTotalIOPS = 256000
+	io2MaxIOPSPerGB             = 500
+	gp3MaxTotalIOPS             = 16000
+	gp3MinTotalIOPS             = 3000
+	gp3MaxIOPSPerGB             = 500
 )
 
 var (
@@ -192,6 +193,7 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
+	BlockExpress           bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -316,7 +318,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		minIops = io1MinTotalIOPS
 		maxIopsPerGb = io1MaxIOPSPerGB
 	case VolumeTypeIO2:
-		maxIops = io2MaxTotalIOPS
+		if diskOptions.BlockExpress {
+			maxIops = io2BlockExpressMaxTotalIOPS
+		} else {
+			maxIops = io2MaxTotalIOPS
+		}
 		minIops = io2MinTotalIOPS
 		maxIopsPerGb = io2MaxIOPSPerGB
 	case VolumeTypeGP3:
