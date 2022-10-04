@@ -68,6 +68,24 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 **Note**: If your cluster isn't in the `us-west-2` Region, please change `602401143452.dkr.ecr.us-west-2.amazonaws.com` to the [address](https://github.com/awsdocs/amazon-eks-user-guide/blob/master/doc_source/add-ons-images.md) that corresponds to your Region.
 </details>
 
+## Releases
+
+The EBS CSI Driver publishes monthly releases and bi-weekly Helm chart releases. Security vulnerabilities will be addressed as soon as possible.
+
+The EBS CSI Driver follows [semantic versioning](https://semver.org/). The version will be bumped following the rules below:
+
+* Significant breaking changes will be released as a `MAJOR` update.
+* New features will be released as a `MINOR` update.
+* Bug or vulnerability fixes will be released as a `PATCH` update.
+
+## Support
+
+EBS CSI Driver container images are officially hosted in [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) and [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver).
+
+Support will be provided for the latest version and one prior version. Bugs or vulnerabilities found in the latest version will be backported to the previous release in a new minor version.
+
+This policy is non-binding and subject to change.
+
 ## Kubernetes Compatibility Matrix
 
 | AWS EBS CSI Driver / Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
