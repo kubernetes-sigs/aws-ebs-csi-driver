@@ -16,17 +16,18 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 * **Volume Snapshots** - Create and restore [snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) taken from a volume in Kubernetes.
 * **Volume Resizing** - Expand the volume size by specifying a new size in the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#PersistentVolumeClaim:~:text=PersistentVolumeClaim%20(PVC)) (PVC).
 
-## Container Images:
+## Container Images
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
-|v1.11.4                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.4| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.4                    |
+|v1.12.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.0                    |
 
 <details>
 <summary>Previous Images</summary>
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.11.4                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.4| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.4                    |
 |v1.11.3                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.3| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.3                    |
 |v1.11.2                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.2| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.2                    |
 |v1.10.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.10.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.10.0                    |
@@ -72,7 +73,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver / Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no    | no    | no    | no    | yes   | yes   |
-| v0.9.x-v1.11.x                          | no    | no    | no    | no    | no    | yes   | yes   |
+| v0.9.x-v1.12.x                          | no    | no    | no    | no    | no    | yes   | yes   |
 | v0.5.0-v0.8.x                          | no    | no    | yes   | yes   | yes   | yes   | yes   |
 | v0.4.0                                 | no    | no    | yes   | yes   | no    | no    | no    |
 | v0.3.0                                 | no    | no    | yes   | no    | no    | no    | no    |
@@ -83,7 +84,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | AWS EBS CSI Driver / CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.4.0-v1.11.x                          | no    | no     | yes    |
+| v0.4.0-v1.12.x                          | no    | no     | yes    |
 | v0.2.0-v0.3.0                          | no    | yes    | no     |
 | v0.1.0                                 | yes   | no     | no     |
 
