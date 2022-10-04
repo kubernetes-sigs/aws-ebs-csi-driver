@@ -1,5 +1,12 @@
 # Helm chart
 
+## v2.12.0
+* Bump app/driver to version `v1.12.0`
+* Move default toleration to values.yaml so it can be overriden if desired by users ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1400), [@cnmcavoy](https://github.com/cnmcavoy))
+* Add enableMetrics configuration ([#1380](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1380), [@torredil](https://github.com/torredil))
+* add initContainer to the controller's template ([#1379](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1379), [@InsomniaCoder](https://github.com/InsomniaCoder))
+* Add controller nodeAffinity to prefer EC2 over Fargate ([#1360](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1360), [@torredil](https://github.com/torredil))
+
 ## v2.11.1
 * Add `useOldCSIDriver` parameter to use old `CSIDriver` object.
 
