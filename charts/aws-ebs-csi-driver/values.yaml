@@ -57,6 +57,8 @@ sidecars:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   snapshotter:
+    # Enables the snapshotter sidecar even if the snapshot CRDs are not installed
+    forceEnable: false
     env: []
     image:
       pullPolicy: IfNotPresent
