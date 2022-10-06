@@ -17,15 +17,16 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"time"
 
-	. "github.com/onsi/ginkgo"
-	"k8s.io/api/core/v1"
+	. "github.com/onsi/ginkgo/v2"
 	clientset "k8s.io/client-go/kubernetes"
 )
 
