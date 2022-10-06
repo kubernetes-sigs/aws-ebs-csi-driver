@@ -28,10 +28,11 @@ import (
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
+	admissionapi "k8s.io/pod-security-admission/api"
 )
 
 const (
@@ -51,6 +52,7 @@ var (
 // Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set
 var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs           clientset.Interface
