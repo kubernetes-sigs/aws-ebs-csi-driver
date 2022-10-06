@@ -1,7 +1,5 @@
 # Kubernetes tests
 
-This directory imports tests from kubernetes/kubernetes and enables:
-
 * External CSI tests, https://github.com/kubernetes/kubernetes/tree/master/test/e2e/storage/external
 * CSI migration tests
 

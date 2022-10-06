@@ -1,9 +1,0 @@
-# SnapshotClass for Kubernetes external tests.
-# See https://github.com/kubernetes/kubernetes/tree/master/test/e2e/storage/external
-
-apiVersion: snapshot.storage.k8s.io/v1beta1
-kind: VolumeSnapshotClass
-metadata:
-  name: csi-aws-vsc
-driver: ebs.csi.aws.com
-deletionPolicy: Delete
