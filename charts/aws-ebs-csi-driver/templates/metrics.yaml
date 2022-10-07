@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ebs-csi-controller
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: ebs-csi-controller
 spec:
@@ -16,22 +16,24 @@ spec:
       targetPort: 3301
   type: ClusterIP
 ---
-{{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") -}}
+{{- if or .Values.controller.serviceMonitor.forceEnable (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: ebs-csi-controller
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: ebs-csi-controller
-    release: prometheus
+    {{- if .Values.controller.serviceMonitor.labels }}
+    {{- toYaml .Values.controller.serviceMonitor.labels | nindent 4 }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
       app: ebs-csi-controller
   namespaceSelector:
     matchNames:
-      - kube-system
+      - {{ .Release.Namespace }}
   endpoints:
     - targetPort: 3301
       path: /metrics
