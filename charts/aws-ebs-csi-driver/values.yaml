@@ -140,6 +140,12 @@ controller:
   # The default is empty string, which means metrics endpoint is disabled.
   # ---
   enableMetrics: false
+  serviceMonitor:
+    # Enables the ServiceMonitor resource even if the prometheus-operator CRDs are not installed
+    forceEnable: false
+    # Additional labels for ServiceMonitor object
+    labels:
+      release: prometheus
   # If set to true, AWS API call metrics will be exported to the following 
   # TCP endpoint: "0.0.0.0:3301"
   # ---
