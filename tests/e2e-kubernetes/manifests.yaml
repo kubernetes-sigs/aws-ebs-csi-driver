@@ -5,7 +5,7 @@ ShortName: ebs
 StorageClass:
   FromFile: storageclass.yaml
 SnapshotClass:
-  FromFile: snapshotclass.yaml
+  FromName: true
 DriverInfo:
   Name: ebs.csi.aws.com
   SupportedSizeRange:

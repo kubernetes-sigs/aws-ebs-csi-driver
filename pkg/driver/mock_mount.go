@@ -14,6 +14,7 @@ import (
 
 // MockMounter is a mock of Mounter interface.
 type MockMounter struct {
+	mount_utils.Interface
 	ctrl     *gomock.Controller
 	recorder *MockMounterMockRecorder
 }
@@ -107,6 +108,21 @@ func (m *MockMounter) IsLikelyNotMountPoint(file string) (bool, error) {
 func (mr *MockMounterMockRecorder) IsLikelyNotMountPoint(file interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLikelyNotMountPoint", reflect.TypeOf((*MockMounter)(nil).IsLikelyNotMountPoint), file)
+}
+
+// IsMountPoint mocks base method.
+func (m *MockMounter) IsMountPoint(file string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsMountPoint", file)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsMountPoint indicates an expected call of IsMountPoint.
+func (mr *MockMounterMockRecorder) IsMountPoint(file interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMountPoint", reflect.TypeOf((*MockMounter)(nil).IsMountPoint), file)
 }
 
 // List mocks base method.
@@ -293,6 +309,20 @@ func (m *MockMounter) Unstage(path string) error {
 func (mr *MockMounterMockRecorder) Unstage(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unstage", reflect.TypeOf((*MockMounter)(nil).Unstage), path)
+}
+
+// canSafelySkipMountPointCheck mocks base method.
+func (m *MockMounter) canSafelySkipMountPointCheck() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "canSafelySkipMountPointCheck")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// canSafelySkipMountPointCheck indicates an expected call of canSafelySkipMountPointCheck.
+func (mr *MockMounterMockRecorder) canSafelySkipMountPointCheck() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "canSafelySkipMountPointCheck", reflect.TypeOf((*MockMounter)(nil).canSafelySkipMountPointCheck))
 }
 
 // MockResizefs is a mock of Resizefs interface.
