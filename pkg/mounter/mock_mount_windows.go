@@ -13,6 +13,7 @@ import (
 
 // MockProxyMounter is a mock of ProxyMounter interface.
 type MockProxyMounter struct {
+	mount.Interface
 	ctrl     *gomock.Controller
 	recorder *MockProxyMounterMockRecorder
 }
@@ -151,6 +152,21 @@ func (m *MockProxyMounter) IsLikelyNotMountPoint(file string) (bool, error) {
 func (mr *MockProxyMounterMockRecorder) IsLikelyNotMountPoint(file interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLikelyNotMountPoint", reflect.TypeOf((*MockProxyMounter)(nil).IsLikelyNotMountPoint), file)
+}
+
+// IsMountPoint mocks base method.
+func (m *MockProxyMounter) IsMountPoint(file string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsMountPoint", file)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsMountPoint indicates an expected call of IsMountPoint.
+func (mr *MockProxyMounterMockRecorder) IsMountPoint(file interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMountPoint", reflect.TypeOf((*MockProxyMounter)(nil).IsMountPoint), file)
 }
 
 // IsMountPointMatch mocks base method.
@@ -319,4 +335,18 @@ func (m *MockProxyMounter) WriteVolumeCache(target string) {
 func (mr *MockProxyMounterMockRecorder) WriteVolumeCache(target interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteVolumeCache", reflect.TypeOf((*MockProxyMounter)(nil).WriteVolumeCache), target)
+}
+
+// canSafelySkipMountPointCheck mocks base method.
+func (m *MockProxyMounter) canSafelySkipMountPointCheck() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "canSafelySkipMountPointCheck")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// canSafelySkipMountPointCheck indicates an expected call of canSafelySkipMountPointCheck.
+func (mr *MockProxyMounterMockRecorder) canSafelySkipMountPointCheck() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "canSafelySkipMountPointCheck", reflect.TypeOf((*MockProxyMounter)(nil).canSafelySkipMountPointCheck))
 }
