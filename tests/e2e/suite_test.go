@@ -16,22 +16,16 @@ package e2e
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
-
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/kubernetes/test/e2e/framework"
 	frameworkconfig "k8s.io/kubernetes/test/e2e/framework/config"
 )
@@ -61,13 +55,12 @@ func TestE2E(t *testing.T) {
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
 	var r []Reporter
 	if framework.TestContext.ReportDir != "" {
+		// Create the directory if it doesn't already exists
+		// NOTE: junit report can be created with new --junit-report flag
+		// https://github.com/kubernetes/kubernetes/blob/4569e646ef161c0262d433aed324fec97a525572/test/e2e_kubeadm/e2e_kubeadm_suite_test.go
 		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
 			log.Fatalf("Failed creating report directory: %v", err)
-		} else {
-			r = append(r, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", framework.TestContext.ReportPrefix, config.GinkgoConfig.ParallelNode))))
 		}
 	}
-	log.Printf("Starting e2e run %q on Ginkgo node %d", uuid.NewUUID(), config.GinkgoConfig.ParallelNode) // TODO use framework.RunID like upstream
-
 	RunSpecsWithDefaultAndCustomReporters(t, "AWS EBS CSI Driver End-to-End Tests", r)
 }

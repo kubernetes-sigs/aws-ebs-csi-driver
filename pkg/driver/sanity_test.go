@@ -19,7 +19,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/mount-utils"
-	"k8s.io/utils/exec"
+	mount_utils "k8s.io/mount-utils"
 )
 
 func TestSanity(t *testing.T) {
@@ -296,17 +296,19 @@ func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, new
 }
 
 type fakeMounter struct {
-	exec.Interface
+	mount_utils.Interface
 }
 
 func newFakeMounter() *fakeMounter {
-	return &fakeMounter{
-		exec.New(),
-	}
+	return &fakeMounter{}
 }
 
 func (f *fakeMounter) IsCorruptedMnt(err error) bool {
 	return false
+}
+
+func (f *fakeMounter) IsMountPoint(file string) (bool, error) {
+	return false, nil
 }
 
 func (f *fakeMounter) Mount(source string, target string, fstype string, options []string) error {
