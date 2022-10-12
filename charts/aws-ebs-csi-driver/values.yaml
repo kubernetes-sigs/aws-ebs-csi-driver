@@ -57,6 +57,8 @@ sidecars:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   snapshotter:
+    # Enables the snapshotter sidecar even if the snapshot CRDs are not installed
+    forceEnable: false
     env: []
     image:
       pullPolicy: IfNotPresent
@@ -110,7 +112,16 @@ fullnameOverride:
 controller:
   # If arbitrary args like "--aws-sdk-debug-log=true" need to be passed, use this value
   additionalArgs: []
-  affinity: {}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: eks.amazonaws.com/compute-type
+            operator: NotIn
+            values:
+            - fargate
   # The default filesystem type of the volume to provision when fstype is unspecified in the StorageClass.
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
@@ -126,6 +137,20 @@ controller:
   #   key2: value2
   extraVolumeTags: {}
   httpEndpoint:
+  # (deprecated) The TCP network address where the prometheus metrics endpoint
+  # will run (example: `:8080` which corresponds to port 8080 on local host). 
+  # The default is empty string, which means metrics endpoint is disabled.
+  # ---
+  enableMetrics: false
+  serviceMonitor:
+    # Enables the ServiceMonitor resource even if the prometheus-operator CRDs are not installed
+    forceEnable: false
+    # Additional labels for ServiceMonitor object
+    labels:
+      release: prometheus
+  # If set to true, AWS API call metrics will be exported to the following 
+  # TCP endpoint: "0.0.0.0:3301"
+  # ---
   # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
   k8sTagClusterId:
   logLevel: 2
@@ -184,6 +209,14 @@ controller:
   containerSecurityContext:
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
+  initContainers: []
+  # containers to be run before the controller's container starts.
+  #
+  # Example:
+  #
+  # - name: wait
+  #   image: busybox
+  #   command: [ 'sh', '-c', "sleep 20" ]
 
 node:
   env: []
@@ -204,7 +237,10 @@ node:
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
-  tolerations: []
+  tolerations:
+  - operator: Exists
+    effect: NoExecute
+    tolerationSeconds: 300
   resources: {}
   serviceAccount:
     create: true
@@ -244,3 +280,8 @@ storageClasses: []
 #   reclaimPolicy: Retain
 #   parameters:
 #     encrypted: "true"
+
+# Use old CSIDriver without an fsGroupPolicy set
+# Intended for use with older clusters that cannot easily replace the CSIDriver object
+# This parameter should always be false for new installations
+useOldCSIDriver: false

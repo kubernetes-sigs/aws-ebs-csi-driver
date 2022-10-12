@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION?=v1.11.4
+VERSION?=v1.12.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -41,7 +41,7 @@ ALL_OSVERSION_linux?=amazon
 ALL_OS_ARCH_OSVERSION_linux=$(foreach arch, $(ALL_ARCH_linux), $(foreach osversion, ${ALL_OSVERSION_linux}, linux-$(arch)-${osversion}))
 
 ALL_ARCH_windows?=amd64
-ALL_OSVERSION_windows?=1809 20H2 ltsc2019
+ALL_OSVERSION_windows?=1809 20H2 ltsc2019 ltsc2022
 ALL_OS_ARCH_OSVERSION_windows=$(foreach arch, $(ALL_ARCH_windows), $(foreach osversion, ${ALL_OSVERSION_windows}, windows-$(arch)-${osversion}))
 
 ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
@@ -175,15 +175,9 @@ test-e2e-multi-az:
 
 .PHONY: test-e2e-migration
 test-e2e-migration:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EBS_INSTALL_SNAPSHOT="true" \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="\[ebs-csi-migration\]" \
-	GINKGO_SKIP="\[Disruptive\]|Pre-provisioned" \
-	EBS_CHECK_MIGRATION=true \
-	./hack/e2e/run.sh
+# TODO: Remove once this test is removed from test-infra upstream
+# https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes-sigs/aws-ebs-csi-driver/aws-ebs-csi-driver-presubmits.yaml
+	echo "succeed"
 
 .PHONY: test-e2e-external
 test-e2e-external:
@@ -199,7 +193,6 @@ test-e2e-external:
 .PHONY: test-e2e-external-eks
 test-e2e-external-eks:
 	CLUSTER_TYPE=eksctl \
-	K8S_VERSION="1.20" \
 	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
 	EBS_INSTALL_SNAPSHOT="true" \

@@ -25,7 +25,7 @@ import (
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -574,7 +574,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 		return
 	}
 	e2elog.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
-	err = e2epod.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
+	err = e2epod.WaitForPodNotFoundInNamespace(t.client, t.podName, t.namespace.Name, 3*time.Minute)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
 			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))

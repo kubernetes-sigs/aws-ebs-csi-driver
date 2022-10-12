@@ -27,3 +27,6 @@ Vagrantfile
 
 # Vendor dir
 vendor/
+
+# .image-* files used by Makefile
+.image-*

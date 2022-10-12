@@ -124,6 +124,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		iops                   int
 		throughput             int
 		isEncrypted            bool
+		blockExpress           bool
 		kmsKeyID               string
 		scTags                 []string
 		volumeTags             = map[string]string{
@@ -160,8 +161,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case EncryptedKey:
 			if value == "true" {
 				isEncrypted = true
-			} else {
-				isEncrypted = false
 			}
 		case KmsKeyIDKey:
 			kmsKeyID = value
@@ -174,6 +173,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case PVNameKey:
 			volumeTags[PVNameTag] = value
 			tProps.PVName = value
+		case BlockExpressKey:
+			if value == "true" {
+				blockExpress = true
+			}
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				scTags = append(scTags, value)
@@ -187,6 +190,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		if iopsPerGB == 0 {
 			return nil, status.Errorf(codes.InvalidArgument, "The parameter IOPSPerGB must be specified for io1 volumes")
 		}
+	}
+
+	if blockExpress && volumeType != cloud.VolumeTypeIO2 {
+		return nil, status.Errorf(codes.InvalidArgument, "Block Express is only supported on io2 volumes")
 	}
 
 	snapshotID := ""
@@ -241,6 +248,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AvailabilityZone:       zone,
 		OutpostArn:             outpostArn,
 		Encrypted:              isEncrypted,
+		BlockExpress:           blockExpress,
 		KmsKeyID:               kmsKeyID,
 		SnapshotID:             snapshotID,
 	}

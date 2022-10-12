@@ -28,6 +28,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -62,15 +63,16 @@ const (
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
-	io1MinTotalIOPS = 100
-	io1MaxTotalIOPS = 64000
-	io1MaxIOPSPerGB = 50
-	io2MinTotalIOPS = 100
-	io2MaxTotalIOPS = 64000
-	io2MaxIOPSPerGB = 500
-	gp3MaxTotalIOPS = 16000
-	gp3MinTotalIOPS = 3000
-	gp3MaxIOPSPerGB = 500
+	io1MinTotalIOPS             = 100
+	io1MaxTotalIOPS             = 64000
+	io1MaxIOPSPerGB             = 50
+	io2MinTotalIOPS             = 100
+	io2MaxTotalIOPS             = 64000
+	io2BlockExpressMaxTotalIOPS = 256000
+	io2MaxIOPSPerGB             = 500
+	gp3MaxTotalIOPS             = 16000
+	gp3MinTotalIOPS             = 3000
+	gp3MaxIOPSPerGB             = 500
 )
 
 var (
@@ -191,6 +193,7 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
+	BlockExpress           bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -248,7 +251,16 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
-		awsConfig.Endpoint = aws.String(endpoint)
+		customResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+			if service == endpoints.Ec2ServiceID {
+				return endpoints.ResolvedEndpoint{
+					URL:           endpoint,
+					SigningRegion: region,
+				}, nil
+			}
+			return endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+		}
+		awsConfig.EndpointResolver = endpoints.ResolverFunc(customResolver)
 	}
 
 	if awsSdkDebugLog {
@@ -306,7 +318,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		minIops = io1MinTotalIOPS
 		maxIopsPerGb = io1MaxIOPSPerGB
 	case VolumeTypeIO2:
-		maxIops = io2MaxTotalIOPS
+		if diskOptions.BlockExpress {
+			maxIops = io2BlockExpressMaxTotalIOPS
+		} else {
+			maxIops = io2MaxTotalIOPS
+		}
 		minIops = io2MinTotalIOPS
 		maxIopsPerGb = io2MaxIOPSPerGB
 	case VolumeTypeGP3:

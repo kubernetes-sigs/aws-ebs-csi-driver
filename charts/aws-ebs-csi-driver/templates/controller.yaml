@@ -62,6 +62,10 @@ spec:
       securityContext:  
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.controller.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: ebs-plugin
           image: {{ printf "%s:%s" .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
@@ -79,6 +83,9 @@ spec:
             {{- with .Values.controller.k8sTagClusterId }}
             - --k8s-tag-cluster-id={{ . }}
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not .Values.controller.httpEndpoint) }}
+            - --http-endpoint=0.0.0.0:3301
+            {{- end}}
             {{- with .Values.controller.httpEndpoint }}
             - --http-endpoint={{ . }}
             {{- end }}
@@ -133,6 +140,11 @@ spec:
             - name: healthz
               containerPort: 9808
               protocol: TCP
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3301
+              protocol: TCP
+            {{- end}}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -246,7 +258,7 @@ spec:
           securityContext:  
             {{- toYaml . | nindent 12 }}
           {{- end }}
-        {{- if or (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
+        {{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
           image: {{ printf "%s:%s" .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.snapshotter.image.pullPolicy }}

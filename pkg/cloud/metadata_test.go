@@ -130,6 +130,8 @@ func TestNewMetadataService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"node.kubernetes.io/instance-type": stdInstanceType,
+						"topology.kubernetes.io/region":    stdRegion,
+						"topology.kubernetes.io/zone":      stdAvailabilityZone,
 					},
 					Name: nodeName,
 				},
@@ -179,38 +181,46 @@ func TestNewMetadataService(t *testing.T) {
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:                 "failure: metadata not available, invalid region",
+			name:                 "failure: metadata not available, could not retrieve region",
 			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("did not find aws region in node providerID string"),
+			expectedErr:          fmt.Errorf("could not retrieve region from topology label"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"node.kubernetes.io/instance-type": stdInstanceType,
+						"topology.kubernetes.io/zone":      stdAvailabilityZone,
+					},
 					Name: nodeName,
 				},
 				Spec: v1.NodeSpec{
-					ProviderID: "aws:///us-est-2b/i-abcdefgh123456789", // invalid region
+					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
 				},
 				Status: v1.NodeStatus{},
 			},
 			nodeNameEnvVar: nodeName,
 		},
 		{
-			name:                 "failure: metadata not available, invalid az",
+			name:                 "failure: metadata not available, could not retrieve AZ",
 			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("did not find aws availability zone in node providerID string"),
+			expectedErr:          fmt.Errorf("could not retrieve AZ from topology label"),
 			node: v1.Node{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Node",
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"node.kubernetes.io/instance-type": stdInstanceType,
+						"topology.kubernetes.io/region":    stdRegion,
+					},
 					Name: nodeName,
 				},
 				Spec: v1.NodeSpec{
-					ProviderID: "aws:///us-west-21/i-abcdefgh123456789", // invalid AZ
+					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
 				},
 				Status: v1.NodeStatus{},
 			},
@@ -226,6 +236,11 @@ func TestNewMetadataService(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"node.kubernetes.io/instance-type": stdInstanceType,
+						"topology.kubernetes.io/region":    stdRegion,
+						"topology.kubernetes.io/zone":      stdAvailabilityZone,
+					},
 					Name: nodeName,
 				},
 				Spec: v1.NodeSpec{

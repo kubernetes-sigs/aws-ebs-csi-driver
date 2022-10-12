@@ -36,18 +36,18 @@ import (
 	volumeclient "github.com/kubernetes-csi/csi-proxy/client/groups/volume/v1"
 
 	"k8s.io/klog/v2"
-	"k8s.io/mount-utils"
+	mount_utils "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
 )
 
 var _ ProxyMounter = &CSIProxyMounter{}
 
 type ProxyMounter interface {
-	mount.Interface
+	mount_utils.Interface
 
 	Rmdir(path string) error
 	WriteVolumeCache(target string)
-	IsMountPointMatch(mp mount.MountPoint, dir string) bool
+	IsMountPointMatch(mp mount_utils.MountPoint, dir string) bool
 	GetDeviceNameFromMount(mountPath, pluginMountDir string) (string, error)
 	MakeFile(pathname string) error
 	ExistsPath(path string) (bool, error)
@@ -57,9 +57,11 @@ type ProxyMounter interface {
 	ResizeVolume(deviceMountPath string) (bool, error)
 	GetVolumeSizeInBytes(deviceMountPath string) (int64, error)
 	GetDeviceSize(devicePath string) (int64, error)
+	IsMountPoint(pathname string) (bool, error)
 }
 
 type CSIProxyMounter struct {
+	mount_utils.Interface
 	FsClient     *fsclient.Client
 	DiskClient   *diskclient.Client
 	VolumeClient *volumeclient.Client
@@ -156,12 +158,21 @@ func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
 	}
 }
 
-func (mounter *CSIProxyMounter) List() ([]mount.MountPoint, error) {
-	return []mount.MountPoint{}, fmt.Errorf("List not implemented for CSIProxyMounter")
+func (mounter *CSIProxyMounter) List() ([]mount_utils.MountPoint, error) {
+	return []mount_utils.MountPoint{}, fmt.Errorf("List not implemented for CSIProxyMounter")
 }
 
-func (mounter *CSIProxyMounter) IsMountPointMatch(mp mount.MountPoint, dir string) bool {
+func (mounter *CSIProxyMounter) IsMountPointMatch(mp mount_utils.MountPoint, dir string) bool {
 	return mp.Path == dir
+}
+
+// IsMountPoint: determines if a directory is a mountpoint.
+func (mounter *CSIProxyMounter) IsMountPoint(file string) (bool, error) {
+	isNotMnt, err := mounter.IsLikelyNotMountPoint(file)
+	if err != nil {
+		return false, err
+	}
+	return !isNotMnt, nil
 }
 
 // IsLikelyMountPoint - If the directory does not exists, the function will return os.ErrNotExist error.
@@ -462,12 +473,12 @@ func NewCSIProxyMounter() (*CSIProxyMounter, error) {
 	}, nil
 }
 
-func NewSafeMounter() (*mount.SafeFormatAndMount, error) {
+func NewSafeMounter() (*mount_utils.SafeFormatAndMount, error) {
 	csiProxyMounter, err := NewCSIProxyMounter()
 	if err != nil {
 		return nil, err
 	}
-	return &mount.SafeFormatAndMount{
+	return &mount_utils.SafeFormatAndMount{
 		Interface: csiProxyMounter,
 		Exec:      utilexec.New(),
 	}, nil
