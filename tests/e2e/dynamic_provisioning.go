@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -35,10 +35,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	admissionapi "k8s.io/pod-security-admission/api"
 )
 
 var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs          clientset.Interface
@@ -432,6 +434,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 
 var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
 	f := framework.NewDefaultFramework("ebs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs          clientset.Interface
@@ -492,6 +495,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
 
 var _ = Describe("[ebs-csi-e2e] [multi-az] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs        clientset.Interface
