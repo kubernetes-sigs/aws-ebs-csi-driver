@@ -41,11 +41,6 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - operator: Exists
-          effect: NoExecute
-          tolerationSeconds: 300
         {{- with .Values.controller.tolerations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
