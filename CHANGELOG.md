@@ -1,3 +1,11 @@
+# v1.12.1
+### Security
+* Addreses [ALAS2-2022-1854](https://alas.aws.amazon.com/AL2/ALAS-2022-1854.html) and [ALAS2-2022-1849](https://alas.aws.amazon.com/AL2/ALAS-2022-1849.html)
+
+# v1.11.5
+### Backported Security
+* Addreses [ALAS2-2022-1854](https://alas.aws.amazon.com/AL2/ALAS-2022-1854.html) and [ALAS2-2022-1849](https://alas.aws.amazon.com/AL2/ALAS-2022-1849.html)
+
 # v1.12.0
 ### Notable Changes
 * Unify IOPS handling across volume types ([#1366](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1366), [@torredil](https://github.com/torredil))

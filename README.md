@@ -20,13 +20,15 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
-|v1.12.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.0                    |
+|v1.12.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.1| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.1                    |
 
 <details>
 <summary>Previous Images</summary>
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.12.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.0                    |
+|v1.11.5                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.5| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.5                    |
 |v1.11.4                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.4| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.4                    |
 |v1.11.3                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.3| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.3                    |
 |v1.11.2                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.2| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.2                    |
