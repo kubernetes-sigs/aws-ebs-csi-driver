@@ -186,7 +186,12 @@ controller:
     create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
     name: ebs-csi-controller-sa # Name of the service-account to be used/created.
     annotations: {}
-  tolerations: []
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+    - effect: NoExecute
+      operator: Exists
+      tolerationSeconds: 300
   # TSCs without the label selector stanza
   #
   # Example:

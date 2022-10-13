@@ -36,8 +36,8 @@ spec:
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
-        - operator: Exists
-          effect: NoExecute
+        - effect: NoExecute
+          operator: Exists
           tolerationSeconds: 300
       securityContext:
         fsGroup: 1000
