@@ -70,7 +70,7 @@ const (
 	PVNameKey = "csi.storage.k8s.io/pv/name"
 
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
-	BlockExpressKey = "blockExpress"
+	BlockExpressKey = "blockexpress"
 
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
