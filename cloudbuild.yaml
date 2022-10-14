@@ -1,4 +1,4 @@
-timeout: 3600s
+timeout: 5400s
 steps:
   - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20220506-774f302a94
     entrypoint: ./hack/prow.sh
