@@ -138,7 +138,7 @@ controller:
   extraVolumeTags: {}
   httpEndpoint:
   # (deprecated) The TCP network address where the prometheus metrics endpoint
-  # will run (example: `:8080` which corresponds to port 8080 on local host). 
+  # will run (example: `:8080` which corresponds to port 8080 on local host).
   # The default is empty string, which means metrics endpoint is disabled.
   # ---
   enableMetrics: false
@@ -148,7 +148,7 @@ controller:
     # Additional labels for ServiceMonitor object
     labels:
       release: prometheus
-  # If set to true, AWS API call metrics will be exported to the following 
+  # If set to true, AWS API call metrics will be exported to the following
   # TCP endpoint: "0.0.0.0:3301"
   # ---
   # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
@@ -210,6 +210,8 @@ controller:
     runAsUser: 1000
     runAsGroup: 1000
     fsGroup: 1000
+  volumes: []
+  volumeMounts: []
   # securityContext on the controller container (see sidecars for securityContext on sidecar containers)
   containerSecurityContext:
     readOnlyRootFilesystem: true
