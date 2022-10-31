@@ -24,8 +24,6 @@ import (
 	mountutils "k8s.io/mount-utils"
 )
 
-type mountInterface = mountutils.Interface
-
 // Mounter is the interface implemented by NodeMounter.
 // A mix & match of functions defined in upstream libraries. (FormatAndMount
 // from struct SafeFormatAndMount, PathExists from an old edition of

@@ -24,7 +24,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	doc, err := svc.GetInstanceIdentityDocument()
 	klog.Infof("regionFromSession %v", regionFromSession)
 	if err != nil {
-		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %v", err)
+		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
 	}
 
 	if len(doc.InstanceID) == 0 {
@@ -53,7 +53,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 
 	enis, err := svc.GetMetadata(enisEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("could not get number of attached ENIs: %v", err)
+		return nil, fmt.Errorf("could not get number of attached ENIs: %w", err)
 	}
 	// the ENIs should not be empty; if (somehow) it is empty, return an error
 	if enis == "" {
@@ -66,11 +66,11 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	blockDevMappings := 1
 
 	if !util.IsSBE(doc.Region) {
-		mappings, err := svc.GetMetadata(blockDevicesEndpoint)
+		mappings, mapErr := svc.GetMetadata(blockDevicesEndpoint)
 		// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
 		blockDevMappings = strings.Count(mappings, "\n")
-		if err != nil {
-			return nil, fmt.Errorf("could not get number of block device mappings: %v", err)
+		if mapErr != nil {
+			return nil, fmt.Errorf("could not get number of block device mappings: %w", err)
 		}
 	}
 
@@ -88,7 +88,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
 	if err != nil && !strings.Contains(err.Error(), "404") {
-		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn: %s", err.Error())
+		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn: %w", err)
 	} else if err == nil {
 		klog.Infof("Running in an outpost environment with arn: %s", outpostArn)
 		outpostArn = strings.ReplaceAll(outpostArn, "outpost/", "")

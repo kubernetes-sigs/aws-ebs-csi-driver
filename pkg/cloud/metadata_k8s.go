@@ -37,7 +37,7 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 	// get node with k8s API
 	node, err := clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("error getting Node %v: %v", nodeName, err)
+		return nil, fmt.Errorf("error getting Node %v: %w", nodeName, err)
 	}
 
 	providerID := node.Spec.ProviderID

@@ -1582,8 +1582,9 @@ func TestListSnapshots(t *testing.T) {
 
 				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Eq(ctx), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{}, nil)
 
-				if _, err := c.ListSnapshots(ctx, "", 0, ""); err != nil {
-					if err != ErrNotFound {
+				_, err := c.ListSnapshots(ctx, "", 0, "")
+				if err != nil {
+					if !errors.Is(err, ErrNotFound) {
 						t.Fatalf("Expected error %v, got %v", ErrNotFound, err)
 					}
 				} else {

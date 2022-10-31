@@ -48,13 +48,6 @@ const (
 	// default file system type to be used when it is not provided
 	defaultFsType = FSTypeExt4
 
-	// defaultMaxEBSVolumes is the maximum number of volumes that an AWS instance can have attached.
-	// More info at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
-	defaultMaxEBSVolumes = 39
-
-	// defaultMaxEBSNitroVolumes is the limit of volumes for some smaller instances, like c5 and m5.
-	defaultMaxEBSNitroVolumes = 25
-
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 
@@ -164,7 +157,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
 
-	if ok := d.inFlight.Insert(volumeID); !ok {
+	if ok = d.inFlight.Insert(volumeID); !ok {
 		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
 	}
 	defer func() {
@@ -203,7 +196,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if !exists {
 		// If target path does not exist we need to create the directory where volume will be staged
 		klog.V(4).Infof("NodeStageVolume: creating target dir %q", target)
-		if err := d.mounter.MakeDir(target); err != nil {
+		if err = d.mounter.MakeDir(target); err != nil {
 			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
 			return nil, status.Error(codes.Internal, msg)
 		}
@@ -358,7 +351,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	}
 
 	// TODO: lock per volume ID to have some idempotency
-	if _, err := r.Resize(devicePath, volumePath); err != nil {
+	if _, err = r.Resize(devicePath, volumePath); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, devicePath, err)
 	}
 
@@ -473,8 +466,8 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		return nil, status.Errorf(codes.Internal, "failed to determine whether %s is block device: %v", req.VolumePath, err)
 	}
 	if isBlock {
-		bcap, err := d.getBlockSizeBytes(req.VolumePath)
-		if err != nil {
+		bcap, blockErr := d.getBlockSizeBytes(req.VolumePath)
+		if blockErr != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
 		}
 		return &csi.NodeGetVolumeStatsResponse{
@@ -596,14 +589,14 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	if !exists {
-		if err := d.mounter.MakeDir(globalMountPath); err != nil {
+		if err = d.mounter.MakeDir(globalMountPath); err != nil {
 			return status.Errorf(codes.Internal, "Could not create dir %q: %v", globalMountPath, err)
 		}
 	}
 
 	// Create the mount point as a file since bind mount device node requires it to be a file
 	klog.V(4).Infof("NodePublishVolume [block]: making target file %s", target)
-	if err := d.mounter.MakeFile(target); err != nil {
+	if err = d.mounter.MakeFile(target); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
 		}
@@ -633,7 +626,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 
 // isMounted checks if target is mounted. It does NOT return an error if target
 // doesn't exist.
-func (d *nodeService) isMounted(source string, target string) (bool, error) {
+func (d *nodeService) isMounted(_ string, target string) (bool, error) {
 	/*
 		Checking if it's a mount point using IsLikelyNotMountPoint. There are three different return values,
 		1. true, err when the directory does not exist or corrupted.

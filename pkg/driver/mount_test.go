@@ -20,11 +20,11 @@ limitations under the License.
 package driver
 
 import (
-	"io/ioutil"
-	"k8s.io/mount-utils"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"k8s.io/mount-utils"
 
 	utilexec "k8s.io/utils/exec"
 	fakeexec "k8s.io/utils/exec/testing"
@@ -316,7 +316,7 @@ func TestNeedResize(t *testing.T) {
 
 func TestMakeDir(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "mount-ebs-csi")
+	dir, err := os.MkdirTemp("", "mount-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
@@ -344,7 +344,7 @@ func TestMakeDir(t *testing.T) {
 
 func TestMakeFile(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "mount-ebs-csi")
+	dir, err := os.MkdirTemp("", "mount-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
@@ -373,7 +373,7 @@ func TestMakeFile(t *testing.T) {
 
 func TestPathExists(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "mount-ebs-csi")
+	dir, err := os.MkdirTemp("", "mount-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
@@ -400,7 +400,7 @@ func TestPathExists(t *testing.T) {
 
 func TestGetDeviceName(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "mount-ebs-csi")
+	dir, err := os.MkdirTemp("", "mount-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
