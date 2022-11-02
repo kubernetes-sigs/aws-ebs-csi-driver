@@ -6,7 +6,6 @@ package driver
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -24,7 +23,7 @@ import (
 
 func TestSanity(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "sanity-ebs-csi")
+	dir, err := os.MkdirTemp("", "sanity-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}

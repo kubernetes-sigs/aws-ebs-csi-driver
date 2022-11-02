@@ -81,7 +81,7 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	}
 
 	if err := ValidateDriverOptions(&driverOptions); err != nil {
-		return nil, fmt.Errorf("Invalid driver options: %v", err)
+		return nil, fmt.Errorf("Invalid driver options: %w", err)
 	}
 
 	driver := Driver{

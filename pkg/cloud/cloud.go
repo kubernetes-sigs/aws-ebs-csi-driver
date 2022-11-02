@@ -359,11 +359,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
-		var err error
 		zone, err = c.randomAvailabilityZone(ctx)
 		klog.V(5).Infof("[Debug] AZ is not provided. Using node AZ [%s]", zone)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get availability zone %s", err)
+			return nil, fmt.Errorf("failed to get availability zone %w", err)
 		}
 	}
 
@@ -410,7 +409,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if isAWSErrorIdempotentParameterMismatch(err) {
 			return nil, ErrIdempotentParameterMismatch
 		}
-		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
+		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
 
 	volumeID := aws.StringValue(response.VolumeId)
@@ -431,7 +430,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		} else {
 			klog.V(5).Infof("[Debug] %v is deleted because it is not in desired state within retry limit", volumeID)
 		}
-		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
+		return nil, fmt.Errorf("failed to get an available volume in EC2: %w", err)
 	}
 
 	outpostArn := aws.StringValue(response.OutpostArn)
@@ -450,7 +449,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			} else {
 				klog.V(5).Infof("[Debug] %v is deleted because there was an error while attaching the tags", volumeID)
 			}
-			return nil, fmt.Errorf("could not attach tags to volume: %v. %v", volumeID, err)
+			return nil, fmt.Errorf("could not attach tags to volume: %v. %w", volumeID, err)
 		}
 	}
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
@@ -462,7 +461,7 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 		if isAWSErrorVolumeNotFound(err) {
 			return false, ErrNotFound
 		}
-		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
+		return false, fmt.Errorf("DeleteDisk could not delete volume: %w", err)
 	}
 	return true, nil
 }
@@ -486,17 +485,17 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			VolumeId:   aws.String(volumeID),
 		}
 
-		resp, err := c.ec2.AttachVolumeWithContext(ctx, request)
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok {
+		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
+		if attachErr != nil {
+			var awsErr awserr.Error
+			if errors.As(attachErr, &awsErr) {
 				if awsErr.Code() == "VolumeInUse" {
 					return "", ErrVolumeInUse
 				}
 			}
-			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
 		klog.V(5).Infof("[Debug] AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
-
 	}
 
 	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
@@ -557,7 +556,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 			isAWSErrorVolumeNotFound(err) {
 			return ErrNotFound
 		}
-		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
+		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
 	}
 
 	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeDetachedState, *instance.InstanceId, "", false)
@@ -756,7 +755,7 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 
 	res, err := c.ec2.CreateSnapshotWithContext(ctx, request)
 	if err != nil {
-		return nil, fmt.Errorf("error creating snapshot of volume %s: %v", volumeID, err)
+		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
 	if res == nil {
 		return nil, fmt.Errorf("nil CreateSnapshotResponse")
@@ -773,7 +772,7 @@ func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success 
 		if isAWSErrorSnapshotNotFound(err) {
 			return false, ErrNotFound
 		}
-		return false, fmt.Errorf("DeleteSnapshot could not delete volume: %v", err)
+		return false, fmt.Errorf("DeleteSnapshot could not delete volume: %w", err)
 	}
 	return true, nil
 }
@@ -913,7 +912,7 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 			if isAWSErrorInstanceNotFound(err) {
 				return nil, ErrNotFound
 			}
-			return nil, fmt.Errorf("error listing AWS instances: %q", err)
+			return nil, fmt.Errorf("error listing AWS instances: %w", err)
 		}
 
 		for _, reservation := range response.Reservations {
@@ -1017,8 +1016,9 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 // and has the given code. More information on AWS error codes at:
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
 func isAWSError(err error, code string) bool {
-	if awsError, ok := err.(awserr.Error); ok {
-		if awsError.Code() == code {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		if awsErr.Code() == code {
 			return true
 		}
 	}
@@ -1095,7 +1095,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	if latestMod != nil && modFetchError == nil {
 		state := aws.StringValue(latestMod.ModificationState)
 		if state == ec2.VolumeModificationStateModifying {
-			_, err = c.waitForVolumeSize(ctx, volumeID)
+			err = c.waitForVolumeSize(ctx, volumeID)
 			if err != nil {
 				return oldSizeGiB, err
 			}
@@ -1105,16 +1105,16 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 
 	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
 	// that means we have an API problem.
-	if modFetchError != nil && modFetchError != VolumeNotBeingModified {
-		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
+	if modFetchError != nil && !errors.Is(modFetchError, VolumeNotBeingModified) {
+		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, modFetchError)
 	}
 
 	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
 	// volume modifications objects or volume has completed previously issued modification request.
 	if oldSizeGiB >= newSizeGiB {
 		klog.V(5).Infof("[Debug] Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
-		_, err = c.waitForVolumeSize(ctx, volumeID)
-		if err != nil && err != VolumeNotBeingModified {
+		err = c.waitForVolumeSize(ctx, volumeID)
+		if err != nil && !errors.Is(err, VolumeNotBeingModified) {
 			return oldSizeGiB, err
 		}
 		return oldSizeGiB, nil
@@ -1128,7 +1128,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
-		return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
+		return 0, fmt.Errorf("could not modify AWS volume %q: %w", volumeID, err)
 	}
 
 	mod := response.VolumeModification
@@ -1138,7 +1138,7 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
 	}
 
-	_, err = c.waitForVolumeSize(ctx, volumeID)
+	err = c.waitForVolumeSize(ctx, volumeID)
 	if err != nil {
 		return oldSizeGiB, err
 	}
@@ -1167,15 +1167,14 @@ func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGi
 	return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, newSizeGiB)
 }
 
-// waitForVolumeSize waits for a volume modification to finish and return its size.
-func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
+// waitForVolumeSize waits for a volume modification to finish.
+func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) error {
 	backoff := wait.Backoff{
 		Duration: volumeModificationDuration,
 		Factor:   volumeModificationWaitFactor,
 		Steps:    volumeModificationWaitSteps,
 	}
 
-	var modVolSizeGiB int64
 	waitErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		m, err := c.getLatestVolumeModification(ctx, volumeID)
 		if err != nil {
@@ -1184,7 +1183,6 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 
 		state := aws.StringValue(m.ModificationState)
 		if volumeModificationDone(state) {
-			modVolSizeGiB = aws.Int64Value(m.TargetSize)
 			return true, nil
 		}
 
@@ -1192,10 +1190,10 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 	})
 
 	if waitErr != nil {
-		return 0, waitErr
+		return waitErr
 	}
 
-	return modVolSizeGiB, nil
+	return nil
 }
 
 // getLatestVolumeModification returns the last modification of the volume.
@@ -1210,7 +1208,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 		if isAWSErrorModificationNotFound(err) {
 			return nil, VolumeNotBeingModified
 		}
-		return nil, fmt.Errorf("error describing modifications in volume %q: %v", volumeID, err)
+		return nil, fmt.Errorf("error describing modifications in volume %q: %w", volumeID, err)
 	}
 
 	volumeMods := mod.VolumesModifications

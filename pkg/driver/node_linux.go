@@ -57,19 +57,19 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	// path below must happen and must rely on volume ID
 	exists, err := d.mounter.PathExists(devicePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to check if path %q exists: %v", devicePath, err)
+		return "", fmt.Errorf("failed to check if path %q exists: %w", devicePath, err)
 	}
 
 	if exists {
-		stat, err := d.deviceIdentifier.Lstat(devicePath)
-		if err != nil {
-			return "", fmt.Errorf("failed to lstat %q: %v", devicePath, err)
+		stat, lstatErr := d.deviceIdentifier.Lstat(devicePath)
+		if lstatErr != nil {
+			return "", fmt.Errorf("failed to lstat %q: %w", devicePath, err)
 		}
 
 		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
 			canonicalDevicePath, err = d.deviceIdentifier.EvalSymlinks(devicePath)
 			if err != nil {
-				return "", fmt.Errorf("failed to evaluate symlink %q: %v", devicePath, err)
+				return "", fmt.Errorf("failed to evaluate symlink %q: %w", devicePath, err)
 			}
 		} else {
 			canonicalDevicePath = devicePath
@@ -126,7 +126,7 @@ func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device 
 			klog.V(5).Infof("[Debug] nvme path %q not found", p)
 			return "", fmt.Errorf("nvme path %q not found", p)
 		}
-		return "", fmt.Errorf("error getting stat of %q: %v", p, err)
+		return "", fmt.Errorf("error getting stat of %q: %w", p, err)
 	}
 
 	if stat.Mode()&os.ModeSymlink != os.ModeSymlink {
@@ -137,7 +137,7 @@ func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device 
 	// For example, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23 -> ../../nvme2n1
 	resolved, err := deviceIdentifier.EvalSymlinks(p)
 	if err != nil {
-		return "", fmt.Errorf("error reading target of symlink %q: %v", p, err)
+		return "", fmt.Errorf("error reading target of symlink %q: %w", p, err)
 	}
 
 	if !strings.HasPrefix(resolved, "/dev") {
@@ -150,7 +150,7 @@ func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device 
 func (d *nodeService) preparePublishTarget(target string) error {
 	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
 	if err := d.mounter.MakeDir(target); err != nil {
-		return fmt.Errorf("Could not create dir %q: %v", target, err)
+		return fmt.Errorf("Could not create dir %q: %w", target, err)
 	}
 	return nil
 }
@@ -170,7 +170,7 @@ func (d *nodeService) getBlockSizeBytes(devicePath string) (int64, error) {
 	cmd := d.mounter.(*NodeMounter).Exec.Command("blockdev", "--getsize64", devicePath)
 	output, err := cmd.Output()
 	if err != nil {
-		return -1, fmt.Errorf("error when getting size of block volume at path %s: output: %s, err: %v", devicePath, string(output), err)
+		return -1, fmt.Errorf("error when getting size of block volume at path %s: output: %s, err: %w", devicePath, string(output), err)
 	}
 	strOut := strings.TrimSpace(string(output))
 	gotSizeBytes, err := strconv.ParseInt(strOut, 10, 64)
