@@ -16,8 +16,8 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -158,10 +158,10 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 		// Write a file
 		testFileContents := []byte("sample content")
 		testFile := filepath.Join(publishDir, "testfile")
-		err := ioutil.WriteFile(testFile, testFileContents, 0644)
+		err := os.WriteFile(testFile, testFileContents, 0644)
 		Expect(err).To(BeNil(), "Failed to write file")
 		// Read the file and check if content is correct
-		data, err := ioutil.ReadFile(testFile)
+		data, err := os.ReadFile(testFile)
 		Expect(err).To(BeNil(), "Failed to read file")
 		Expect(data).To(Equal(testFileContents), "File content is incorrect")
 	}
@@ -181,7 +181,8 @@ func waitForVolume(volumeID string, nVolumes int) {
 		volumes, err := describeVolumes(params)
 		if err != nil {
 			if nVolumes == 0 {
-				if awsErr, ok := err.(awserr.Error); ok {
+				var awsErr awserr.Error
+				if errors.As(err, &awsErr) {
 					if awsErr.Code() == "InvalidVolume.NotFound" {
 						return true, nil
 					}

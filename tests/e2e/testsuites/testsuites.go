@@ -183,7 +183,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 
 func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapshot *volumesnapshotv1.VolumeSnapshot, volumeSnapshotContent *volumesnapshotv1.VolumeSnapshotContent) {
 	volumeSnapshotContent.Spec.VolumeSnapshotRef.Name = volumeSnapshot.Name
-	volumeSnapshotContent, err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Update(context.TODO(), volumeSnapshotContent, metav1.UpdateOptions{})
+	_, err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Update(context.TODO(), volumeSnapshotContent, metav1.UpdateOptions{})
 	framework.ExpectNoError(err)
 
 }
@@ -192,7 +192,7 @@ func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *volumesnapshotv1.VolumeSn
 	err := wait.Poll(15*time.Second, 5*time.Minute, func() (bool, error) {
 		vs, err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshots(t.namespace.Name).Get(context.TODO(), snapshot.Name, metav1.GetOptions{})
 		if err != nil {
-			return false, fmt.Errorf("did not see ReadyToUse: %v", err)
+			return false, fmt.Errorf("did not see ReadyToUse: %w", err)
 		}
 
 		if vs.Status == nil || vs.Status.ReadyToUse == nil {
@@ -214,8 +214,7 @@ func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *volumesnapshotv1.VolumeSnap
 
 func (t *TestVolumeSnapshotClass) DeleteVolumeSnapshotContent(vsc *volumesnapshotv1.VolumeSnapshotContent) {
 	By("deleting a VolumeSnapshotContent " + vsc.Name)
-	snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Delete(context.TODO(), vsc.Name, metav1.DeleteOptions{})
-
+	snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Delete(context.TODO(), vsc.Name, metav1.DeleteOptions{}) //nolint
 	err := t.waitForVolumeSnapshotContentDeleted(vsc.Name, 5*time.Second, 5*time.Minute)
 	framework.ExpectNoError(err)
 }
@@ -569,7 +568,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %v", t.podName, err))
+			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %w", t.podName, err))
 		}
 		return
 	}
@@ -577,7 +576,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 	err = e2epod.WaitForPodNotFoundInNamespace(t.client, t.podName, t.namespace.Name, 3*time.Minute)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
+			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %w", t.podName, err))
 		}
 	}
 }
@@ -671,6 +670,8 @@ var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 		return true, nil
 	case v1.PodSucceeded:
 		return true, fmt.Errorf("pod %q successed with reason: %q, message: %q", pod.Name, pod.Status.Reason, pod.Status.Message)
+	case v1.PodPending, v1.PodRunning, v1.PodUnknown:
+		return false, nil
 	default:
 		return false, nil
 	}

@@ -24,8 +24,6 @@ import (
 	k8srestclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
 
-	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-
 	. "github.com/onsi/ginkgo/v2"
 )
 
@@ -33,10 +31,6 @@ type PreProvisionedVolumeSnapshotTest struct {
 	CSIDriver driver.PVTestDriver
 	Pod       PodDetails
 }
-
-var (
-	tCloud awscloud.Cloud
-)
 
 func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient k8srestclient.Interface, namespace *v1.Namespace, snapshotId string) {
 
