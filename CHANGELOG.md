@@ -1,3 +1,23 @@
+# v1.13.0
+### Bug Fixes
+
+* Add version information from tag to GCR build ([#1426](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1426), [@ConnorJC3](https://github.com/ConnorJC3))
+* `pkg/driver/controller.go` uses ToLower ([#1429](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1429), [@yevhenvolchenko](https://github.com/yevhenvolchenko))
+* Increase cloudbuild timeout ([#1430](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1430), [@torredil](https://github.com/torredil))
+* Use `PULL_BASE_REF` for `VERSION` instead of `GIT_TAG` for GCR builds ([#1439](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1439), [@ConnorJC3](https://github.com/ConnorJC3))
+* Grab version via tag directly from git ([#1441](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1441), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Upgrade K8s to `v1.25`; Upgrade ginkgo to `v2`; Use upstream binary for `e2e-kubernetes` ([#1341](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1341), [@torredil](https://github.com/torredil))
+* Add release and support policy to README.md ([#1392](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1392), [@torredil](https://github.com/torredil))
+* Update and run update-gomock ([#1422](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1422), [@torredil](https://github.com/torredil))
+* Upgrade Go/CI dependencies ([#1433](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1433), [@torredil](https://github.com/torredil))
+* Upgrade golangci-lint; Fix linter errors ([#1435](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1435), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@yevhenvolchenko](https://github.com/yevhenvolchenko)
+
 # v1.12.1
 ### Security
 * Addreses [ALAS2-2022-1854](https://alas.aws.amazon.com/AL2/ALAS-2022-1854.html) and [ALAS2-2022-1849](https://alas.aws.amazon.com/AL2/ALAS-2022-1849.html)
