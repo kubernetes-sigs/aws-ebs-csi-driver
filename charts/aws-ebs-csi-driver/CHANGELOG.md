@@ -1,5 +1,15 @@
 # Helm chart
 
+## v2.13.0
+* Bump app/driver to version `v1.13.0`
+* Expose volumes and volumeMounts for the ebs-csi-controller deployment ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1436), [@cnmcavoy](https://github.com/cnmcavoy))
+* refactor: Move the default controller tolerations in the helm chart values ([#1427](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1427), [@cnmcavoy](https://github.com/Linutux42))
+* Add serviceMonitor.labels parameter ([#1419](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1419), [@torredil](https://github.com/torredil))
+* Add parameter to force enable snapshotter sidecar ([#1418](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1418), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## v2.12.1
+* Bump app/driver to version `v1.12.1`
+
 ## v2.12.0
 * Bump app/driver to version `v1.12.0`
 * Move default toleration to values.yaml so it can be overriden if desired by users ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1400), [@cnmcavoy](https://github.com/cnmcavoy))
