@@ -32,7 +32,7 @@ import (
 type Mounter interface {
 	mountutils.Interface
 
-	FormatAndMount(source string, target string, fstype string, options []string) error
+	FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error
 	IsCorruptedMnt(err error) bool
 	GetDeviceNameFromMount(mountPath string) (string, int, error)
 	MakeFile(path string) error

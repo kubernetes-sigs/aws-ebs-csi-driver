@@ -1585,6 +1585,57 @@ func TestCreateVolume(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.AlreadyExists)
 			},
 		},
+		{
+			name: "success with block size",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						BlockSizeKey: "4096",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				response, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				context := response.Volume.VolumeContext
+				if blockSize, ok := context[BlockSizeKey]; ok {
+					if blockSize != "4096" {
+						t.Fatalf("Invalid %s in VolumeContext (got %s expected 4096)", BlockSizeKey, blockSize)
+					}
+				} else {
+					t.Fatalf("Missing key %s in VolumeContext", BlockSizeKey)
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
