@@ -152,7 +152,5 @@ To make sure dynamically provisioned EBS volumes have all tags that the in-tree 
 * Run the external-provisioner sidecar with `--extra-create-metadata=true` cmdline option. The Helm chart sets this option true by default.
 * Run the CSI driver with `--k8s-tag-cluster-id=<ID of the Kubernetes cluster>` command line option.
 
-To make sure that the CSI driver has permission to Attach, Detach, and Delete volumes that were dynamically provisioned and tagged by the in-tree plugin prior to migration being turned on, the IAM policy has to grant permission to operate on volumes with tag `kubernetes.io/cluster/<ID of the Kubernetes cluster>": "owned"` like in [the example policy](./example-iam-policy.json#L85).
-
 **Warning**:
 * kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
