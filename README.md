@@ -81,6 +81,8 @@ The EBS CSI Driver follows [semantic versioning](https://semver.org/). The versi
 * New features will be released as a `MINOR` update.
 * Bug or vulnerability fixes will be released as a `PATCH` update.
 
+Monthly releases will contain at minimum a `MINOR` version bump, even if the content would normally be treated as a `PATCH` version.
+
 ## Support
 
 EBS CSI Driver container images are officially hosted in [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) and [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver).
