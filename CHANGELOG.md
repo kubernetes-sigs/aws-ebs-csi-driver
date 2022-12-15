@@ -1,3 +1,8 @@
+# v1.14.0
+### Improvements
+* Bumped golang dependencies
+* Rebuilt driver container with newer base image (containing security fixes)
+
 # v1.13.0
 ### Bug Fixes
 
