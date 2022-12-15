@@ -38,8 +38,8 @@ import (
 	restclientset "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2edeployment "k8s.io/kubernetes/test/e2e/framework/deployment"
-	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2epodoutput "k8s.io/kubernetes/test/e2e/framework/pod/output"
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
@@ -79,7 +79,7 @@ func (t *TestStorageClass) Create() storagev1.StorageClass {
 }
 
 func (t *TestStorageClass) Cleanup() {
-	e2elog.Logf("deleting StorageClass %s", t.storageClass.Name)
+	framework.Logf("deleting StorageClass %s", t.storageClass.Name)
 	err := t.client.StorageV1().StorageClasses().Delete(context.TODO(), t.storageClass.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
 }
@@ -220,38 +220,38 @@ func (t *TestVolumeSnapshotClass) DeleteVolumeSnapshotContent(vsc *volumesnapsho
 }
 
 func (t *TestVolumeSnapshotClass) Cleanup() {
-	e2elog.Logf("deleting VolumeSnapshotClass %s", t.volumeSnapshotClass.Name)
+	framework.Logf("deleting VolumeSnapshotClass %s", t.volumeSnapshotClass.Name)
 	err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotClasses().Delete(context.TODO(), t.volumeSnapshotClass.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
 }
 
 func (t *TestVolumeSnapshotClass) waitForSnapshotDeleted(ns string, snapshotName string, poll, timeout time.Duration) error {
-	e2elog.Logf("Waiting up to %v for VolumeSnapshot %s to be removed", timeout, snapshotName)
+	framework.Logf("Waiting up to %v for VolumeSnapshot %s to be removed", timeout, snapshotName)
 	c := snapshotclientset.New(t.client).SnapshotV1()
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := c.VolumeSnapshots(ns).Get(context.TODO(), snapshotName, metav1.GetOptions{})
 		if err != nil {
 			if apierrs.IsNotFound(err) {
-				e2elog.Logf("Snapshot %q in namespace %q doesn't exist in the system", snapshotName, ns)
+				framework.Logf("Snapshot %q in namespace %q doesn't exist in the system", snapshotName, ns)
 				return nil
 			}
-			e2elog.Logf("Failed to get snapshot %q in namespace %q, retrying in %v. Error: %v", snapshotName, ns, poll, err)
+			framework.Logf("Failed to get snapshot %q in namespace %q, retrying in %v. Error: %v", snapshotName, ns, poll, err)
 		}
 	}
 	return fmt.Errorf("VolumeSnapshot %s is not removed from the system within %v", snapshotName, timeout)
 }
 
 func (t *TestVolumeSnapshotClass) waitForVolumeSnapshotContentDeleted(vscName string, poll, timeout time.Duration) error {
-	e2elog.Logf("Waiting up to %v for VolumeSnapshotContent %s to be removed", timeout, vscName)
+	framework.Logf("Waiting up to %v for VolumeSnapshotContent %s to be removed", timeout, vscName)
 	c := snapshotclientset.New(t.client).SnapshotV1()
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := c.VolumeSnapshotContents().Get(context.TODO(), vscName, metav1.GetOptions{})
 		if err != nil {
 			if apierrs.IsNotFound(err) {
-				e2elog.Logf("VolumeSnapshotContent %q doesn't exist in the system", vscName)
+				framework.Logf("VolumeSnapshotContent %q doesn't exist in the system", vscName)
 				return nil
 			}
-			e2elog.Logf("Failed to get VolumeSnapshotContent %q, retrying in %v. Error: %v", vscName, poll, err)
+			framework.Logf("Failed to get VolumeSnapshotContent %q, retrying in %v. Error: %v", vscName, poll, err)
 		}
 	}
 	return fmt.Errorf("VolumeSnapshot %s is not removed from the system within %v", vscName, timeout)
@@ -429,7 +429,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 }
 
 func (t *TestPersistentVolumeClaim) Cleanup() {
-	e2elog.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
+	framework.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
 	err := e2epv.DeletePersistentVolumeClaim(t.client, t.persistentVolumeClaim.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 	// Wait for the PV to get deleted if reclaim policy is Delete. (If it's
@@ -559,12 +559,12 @@ func (t *TestDeployment) WaitForPodReady() {
 }
 
 func (t *TestDeployment) Exec(command []string, expectedString string) {
-	_, err := framework.LookForStringInPodExec(t.namespace.Name, t.podName, command, expectedString, execTimeout)
+	_, err := e2epodoutput.LookForStringInPodExec(t.namespace.Name, t.podName, command, expectedString, execTimeout)
 	framework.ExpectNoError(err)
 }
 
 func (t *TestDeployment) DeletePodAndWait() {
-	e2elog.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
+	framework.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
 	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
@@ -572,7 +572,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 		}
 		return
 	}
-	e2elog.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
+	framework.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
 	err = e2epod.WaitForPodNotFoundInNamespace(t.client, t.podName, t.namespace.Name, 3*time.Minute)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
@@ -582,12 +582,12 @@ func (t *TestDeployment) DeletePodAndWait() {
 }
 
 func (t *TestDeployment) Cleanup() {
-	e2elog.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
+	framework.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
 	body, err := t.Logs()
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %v", t.podName, err)
+		framework.Logf("Error getting logs for pod %s: %v", t.podName, err)
 	} else {
-		e2elog.Logf("Pod %s has the following logs: %s", t.podName, body)
+		framework.Logf("Pod %s has the following logs: %s", t.podName, body)
 	}
 	err = t.client.AppsV1().Deployments(t.namespace.Name).Delete(context.TODO(), t.deployment.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
@@ -732,12 +732,12 @@ func (t *TestPod) Logs() ([]byte, error) {
 }
 
 func cleanupPodOrFail(client clientset.Interface, name, namespace string) {
-	e2elog.Logf("deleting Pod %q/%q", namespace, name)
+	framework.Logf("deleting Pod %q/%q", namespace, name)
 	body, err := podLogs(client, name, namespace)
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %v", name, err)
+		framework.Logf("Error getting logs for pod %s: %v", name, err)
 	} else {
-		e2elog.Logf("Pod %s has the following logs: %s", name, body)
+		framework.Logf("Pod %s has the following logs: %s", name, body)
 	}
 	e2epod.DeletePodOrFail(client, namespace, name)
 }
