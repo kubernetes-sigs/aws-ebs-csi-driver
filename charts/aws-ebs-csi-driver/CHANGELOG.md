@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.14.1
+* Add `controller.sdkDebugLog` parameter
+
 ## v2.14.0
 * Bump driver version to `v1.14.0`
 
