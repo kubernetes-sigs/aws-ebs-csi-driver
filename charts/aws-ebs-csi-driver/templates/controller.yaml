@@ -84,6 +84,9 @@ spec:
             {{- with .Values.controller.httpEndpoint }}
             - --http-endpoint={{ . }}
             {{- end }}
+            {{- if .Values.controller.sdkDebugLog }}
+            - --aws-sdk-debug-log=true
+            {{- end}}
             - --logtostderr
             - --v={{ .Values.controller.logLevel }}
             {{- range .Values.controller.additionalArgs }}
