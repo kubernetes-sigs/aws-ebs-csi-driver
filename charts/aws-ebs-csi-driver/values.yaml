@@ -122,6 +122,17 @@ controller:
             operator: NotIn
             values:
             - fargate
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - ebs-csi-controller
+          topologyKey: kubernetes.io/hostname
+        weight: 100
   # The default filesystem type of the volume to provision when fstype is unspecified in the StorageClass.
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
