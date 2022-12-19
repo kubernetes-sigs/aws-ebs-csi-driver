@@ -1,5 +1,11 @@
 # Helm chart
 
+## v2.14.1
+* Add `controller.sdkDebugLog` parameter
+
+## v2.14.0
+* Bump driver version to `v1.14.0`
+
 ## v2.13.0
 * Bump app/driver to version `v1.13.0`
 * Expose volumes and volumeMounts for the ebs-csi-controller deployment ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1436), [@cnmcavoy](https://github.com/cnmcavoy))

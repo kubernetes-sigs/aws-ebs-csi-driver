@@ -20,13 +20,14 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
-|v1.13.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.13.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.13.0                    |
+|v1.14.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.14.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.14.0                    |
 
 <details>
 <summary>Previous Images</summary>
 
 |Driver Version | [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver ) Image | [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |---------------------------|--------------------------------------------------|-----------------------------------------------------------------------------|
+|v1.13.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.13.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.13.0                    |
 |v1.12.1                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.1| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.1                    |
 |v1.12.0                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.12.0| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.0                    |
 |v1.11.5                    |k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.5| public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.5                    |
@@ -81,6 +82,8 @@ The EBS CSI Driver follows [semantic versioning](https://semver.org/). The versi
 * New features will be released as a `MINOR` update.
 * Bug or vulnerability fixes will be released as a `PATCH` update.
 
+Monthly releases will contain at minimum a `MINOR` version bump, even if the content would normally be treated as a `PATCH` version.
+
 ## Support
 
 EBS CSI Driver container images are officially hosted in [ECR](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) and [GCR](https://us.gcr.io/k8s-artifacts-prod/provider-aws/aws-ebs-csi-driver).
@@ -94,7 +97,7 @@ This policy is non-binding and subject to change.
 | AWS EBS CSI Driver / Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
 |----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
 | master branch                          | no    | no    | no    | no    | no    | yes   | yes   |
-| v0.9.x-v1.13.x                          | no    | no    | no    | no    | no    | yes   | yes   |
+| v0.9.x-v1.14.x                          | no    | no    | no    | no    | no    | yes   | yes   |
 | v0.5.0-v0.8.x                          | no    | no    | yes   | yes   | yes   | yes   | yes   |
 | v0.4.0                                 | no    | no    | yes   | yes   | no    | no    | no    |
 | v0.3.0                                 | no    | no    | yes   | no    | no    | no    | no    |
@@ -105,7 +108,7 @@ This policy is non-binding and subject to change.
 | AWS EBS CSI Driver / CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
 |----------------------------------------|-------|--------|--------|
 | master branch                          | no    | no     | yes    |
-| v0.4.0-v1.13.x                          | no    | no     | yes    |
+| v0.4.0-v1.14.x                          | no    | no     | yes    |
 | v0.2.0-v0.3.0                          | no    | yes    | no     |
 | v0.1.0                                 | yes   | no     | no     |
 
