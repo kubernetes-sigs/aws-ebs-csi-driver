@@ -1,5 +1,11 @@
 # Helm chart
 
+## v2.15.0
+* Set sensible default resource requests/limits
+* Add sensible default update strategy
+* Add podAntiAffinity so controller pods prefer scheduling on separate nodes if possible
+* Add container registry parameter
+
 ## v2.14.2
 * Bump driver version to `v1.14.1`
 
