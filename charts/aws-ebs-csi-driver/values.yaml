@@ -3,6 +3,8 @@
 # Declare variables to be passed into your templates.
 
 image:
+  # Container registry to be used, will prefix all repositories (including sidecars)
+  containerRegistry: ""
   repository: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   tag: ""
