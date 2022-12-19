@@ -10,7 +10,7 @@ spec:
   replicas: {{ .Values.controller.replicaCount }}
   {{- with .Values.controller.updateStrategy }}
   strategy:
-    {{ toYaml . | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
   selector:
     matchLabels:

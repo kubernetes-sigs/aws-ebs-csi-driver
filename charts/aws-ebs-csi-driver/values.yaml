@@ -164,7 +164,10 @@ controller:
   # region: us-east-1
   region:
   replicaCount: 2
-  updateStrategy: {}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   # type: RollingUpdate
   # rollingUpdate:
   #   maxSurge: 0
