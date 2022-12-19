@@ -1,3 +1,9 @@
+# v1.14.0
+### Improvements
+* Bumped golang dependencies
+* Rebuilt driver container with newer base image (containing security fixes)
+* In the next minor release (v1.15.0, scheduled for January) the default sidecars will be changed, see https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1456
+
 # v1.13.0
 ### Bug Fixes
 
