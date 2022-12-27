@@ -74,7 +74,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 ## Releases
 
-The EBS CSI Driver publishes monthly releases and bi-weekly Helm chart releases. Security vulnerabilities will be addressed as soon as possible.
+The EBS CSI Driver publishes monthly releases. Unscheduled releases may be published for patches to security vulnerabilities and other fixes deemed urgent.
 
 The EBS CSI Driver follows [semantic versioning](https://semver.org/). The version will be bumped following the rules below:
 
@@ -92,25 +92,9 @@ Support will be provided for the latest version and one prior version. Bugs or v
 
 This policy is non-binding and subject to change.
 
-## Kubernetes Compatibility Matrix
+## Compatibility
 
-| AWS EBS CSI Driver / Kubernetes Version| v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17 | v1.18+|
-|----------------------------------------|-------|-------|-------|-------|-------|-------|-------|
-| master branch                          | no    | no    | no    | no    | no    | yes   | yes   |
-| v0.9.x-v1.14.x                          | no    | no    | no    | no    | no    | yes   | yes   |
-| v0.5.0-v0.8.x                          | no    | no    | yes   | yes   | yes   | yes   | yes   |
-| v0.4.0                                 | no    | no    | yes   | yes   | no    | no    | no    |
-| v0.3.0                                 | no    | no    | yes   | no    | no    | no    | no    |
-| v0.2.0                                 | no    | yes   | yes   | no    | no    | no    | no    |
-| v0.1.0                                 | yes   | yes   | yes   | no    | no    | no    | no    |
- 
-## CSI Specification Compatibility Matrix
-| AWS EBS CSI Driver / CSI Version       | v0.3.0| v1.0.0 | v1.1.0 |
-|----------------------------------------|-------|--------|--------|
-| master branch                          | no    | no     | yes    |
-| v0.4.0-v1.14.x                          | no    | no     | yes    |
-| v0.2.0-v0.3.0                          | no    | yes    | no     |
-| v0.1.0                                 | yes   | no     | no     |
+The EBS CSI Driver is compatible with Kubernetes versions v1.17+ and implements the CSI Specification v1.1.0.
 
 ## Documentation
 
