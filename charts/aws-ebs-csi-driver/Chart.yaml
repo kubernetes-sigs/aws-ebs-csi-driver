@@ -12,11 +12,5 @@ keywords:
   - ebs
   - csi
 maintainers:
-  - name: leakingtapan
-    email: chengpan@amazon.com
-  - name: krmichel
-    url: https://github.com/krmichel
-annotations:
-  artifacthub.io/changes: |
-    - kind: added
-      description: Custom controller.updateStrategy to set controller deployment strategy.
+  - name: Kubernetes Authors
+    url: https://github.com/kubernetes-sigs/aws-ebs-csi-driver/
