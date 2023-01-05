@@ -1,3 +1,7 @@
+# v1.14.1
+### Bug Fixes
+* (Cherry-Pick) Fixed handling of volume limits for instance types m6id and x2idn
+
 # v1.14.0
 ### Improvements
 * Bumped golang dependencies
