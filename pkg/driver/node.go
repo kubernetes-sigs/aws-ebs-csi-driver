@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -34,17 +35,6 @@ import (
 )
 
 const (
-	// FSTypeExt2 represents the ext2 filesystem type
-	FSTypeExt2 = "ext2"
-	// FSTypeExt3 represents the ext3 filesystem type
-	FSTypeExt3 = "ext3"
-	// FSTypeExt4 represents the ext4 filesystem type
-	FSTypeExt4 = "ext4"
-	// FSTypeXfs represents the xfs filesystem type
-	FSTypeXfs = "xfs"
-	// FSTypeNtfs represents the ntfs filesystem type
-	FSTypeNtfs = "ntfs"
-
 	// default file system type to be used when it is not provided
 	defaultFsType = FSTypeExt4
 
@@ -155,6 +145,24 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: invalid fstype %s", fsType)
 	}
 
+	context := req.GetVolumeContext()
+	blockSize, ok := context[BlockSizeKey]
+	if ok {
+		// This check is already performed on the controller side
+		// However, because it is potentially security-sensitive, we redo it here to be safe
+		_, err := strconv.Atoi(blockSize)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid blockSize (aborting!): %v", err)
+		}
+
+		// In the case that the default fstype does not support custom block sizes we could
+		// be using an invalid fstype, so recheck that here
+		if _, ok = BlockSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot use block size with fstype %s", fsType)
+		}
+
+	}
+
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
 
 	if ok = d.inFlight.Insert(volumeID); !ok {
@@ -219,7 +227,11 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	// FormatAndMount will format only if needed
 	klog.V(4).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
-	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
+	formatOptions := []string{}
+	if len(blockSize) > 0 {
+		formatOptions = append(formatOptions, "-b", blockSize)
+	}
+	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
 		return nil, status.Error(codes.Internal, msg)
