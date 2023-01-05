@@ -36,18 +36,18 @@ func (m *MockMounter) EXPECT() *MockMounterMockRecorder {
 	return m.recorder
 }
 
-// FormatAndMount mocks base method.
-func (m *MockMounter) FormatAndMount(source, target, fstype string, options []string) error {
+// FormatAndMountSensitiveWithFormatOptions mocks base method.
+func (m *MockMounter) FormatAndMountSensitiveWithFormatOptions(source, target, fstype string, options, sensitiveOptions, formatOptions []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FormatAndMount", source, target, fstype, options)
+	ret := m.ctrl.Call(m, "FormatAndMountSensitiveWithFormatOptions", source, target, fstype, options, sensitiveOptions, formatOptions)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// FormatAndMount indicates an expected call of FormatAndMount.
-func (mr *MockMounterMockRecorder) FormatAndMount(source, target, fstype, options interface{}) *gomock.Call {
+// FormatAndMountSensitiveWithFormatOptions indicates an expected call of FormatAndMountSensitiveWithFormatOptions.
+func (mr *MockMounterMockRecorder) FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatAndMount", reflect.TypeOf((*MockMounter)(nil).FormatAndMount), source, target, fstype, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatAndMountSensitiveWithFormatOptions", reflect.TypeOf((*MockMounter)(nil).FormatAndMountSensitiveWithFormatOptions), source, target, fstype, options, sensitiveOptions, formatOptions)
 }
 
 // GetDeviceNameFromMount mocks base method.

@@ -354,7 +354,7 @@ func (f *fakeMounter) GetMountRefs(pathname string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (f *fakeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (f *fakeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
 	return nil
 }
 

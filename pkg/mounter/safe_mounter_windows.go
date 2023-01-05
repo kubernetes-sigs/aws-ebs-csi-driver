@@ -21,6 +21,7 @@ package mounter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -53,7 +54,7 @@ type ProxyMounter interface {
 	ExistsPath(path string) (bool, error)
 	Rescan() error
 	FindDiskByLun(lun string) (diskNum string, err error)
-	FormatAndMount(source, target, fstype string, options []string) error
+	FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error
 	ResizeVolume(deviceMountPath string) (bool, error)
 	GetVolumeSizeInBytes(deviceMountPath string) (int64, error)
 	GetDeviceSize(devicePath string) (int64, error)
@@ -313,7 +314,17 @@ func (mounter *CSIProxyMounter) FindDiskByLun(lun string) (diskNum string, err e
 }
 
 // FormatAndMount - accepts the source disk number, target path to mount, the fstype to format with and options to be used.
-func (mounter *CSIProxyMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
+	// sensitiveOptions is not supported on Windows because we have no reasonable way to control what the csi-proxy does
+	if len(sensitiveOptions) > 0 {
+		return errors.New("sensitiveOptions not supported on Windows!")
+	}
+	// formatOptions is not supported on Windows because the csi-proxy does not allow supplying format arguments
+	// This limitation will be addressed in the future with privileged Windows containers
+	if len(formatOptions) > 0 {
+		return errors.New("formatOptions not supported on Windows!")
+	}
+
 	diskNumber, err := strconv.Atoi(source)
 	if err != nil {
 		return err

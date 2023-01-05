@@ -27,12 +27,12 @@ import (
 	"regexp"
 )
 
-func (m NodeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
 	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*mounter.CSIProxyMounter)
 	if !ok {
 		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
 	}
-	return proxyMounter.FormatAndMount(source, target, fstype, options)
+	return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
 }
 
 // GetDeviceNameFromMount returns the volume ID for a mount path.
