@@ -22,6 +22,7 @@ source "${BASE_DIR}"/eksctl.sh
 source "${BASE_DIR}"/helm.sh
 source "${BASE_DIR}"/kops.sh
 source "${BASE_DIR}"/util.sh
+source "${BASE_DIR}"/chart-testing.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
 CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
@@ -76,6 +77,8 @@ TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
 EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.1.0"}
 
+HELM_CT_TEST=${HELM_CT_TEST:-"false"}
+CHART_TESTING_VERSION=${CHART_TESTING_VERSION:-3.7.1}
 CLEAN=${CLEAN:-"true"}
 
 loudecho "Testing in region ${REGION} and zones ${ZONES}"
@@ -99,27 +102,32 @@ loudecho "Installing helm to ${BIN_DIR}"
 helm_install "${BIN_DIR}"
 HELM_BIN=${BIN_DIR}/helm
 
-loudecho "Installing ginkgo to ${BIN_DIR}"
-GINKGO_BIN=${BIN_DIR}/ginkgo
-if [[ ! -e ${GINKGO_BIN} ]]; then
-  pushd /tmp
-  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
-  popd
-  ginkgo version
-fi
+if [[ "${HELM_CT_TEST}" == true ]]; then
+  loudecho "Installing chart-testing ${CHART_TESTING_VERSION} to ${BIN_DIR}"
+  ct_install "${BIN_DIR}" "${CHART_TESTING_VERSION}"
+  CHART_TESTING_BIN=${BIN_DIR}/ct
+else
+  loudecho "Installing ginkgo to ${BIN_DIR}"
+  GINKGO_BIN=${BIN_DIR}/ginkgo
+  if [[ ! -e ${GINKGO_BIN} ]]; then
+    pushd /tmp
+    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.2.0
+    popd
+    ginkgo version
+  fi
+  loudecho "Installing kubetest2 to ${BIN_DIR}"
+  KUBETEST2_BIN=${BIN_DIR}/kubetest2
+  if [[ ! -e ${KUBETEST2_BIN} ]]; then
+    pushd /tmp
+    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install sigs.k8s.io/kubetest2/...@latest
+    popd
+  fi
 
-loudecho "Installing kubetest2 to ${BIN_DIR}"
-KUBETEST2_BIN=${BIN_DIR}/kubetest2
-if [[ ! -e ${KUBETEST2_BIN} ]]; then
-  pushd /tmp
-  GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install sigs.k8s.io/kubetest2/...@latest
-  popd
+  ecr_build_and_push "${REGION}" \
+    "${AWS_ACCOUNT_ID}" \
+    "${IMAGE_NAME}" \
+    "${IMAGE_TAG}"
 fi
-
-ecr_build_and_push "${REGION}" \
-  "${AWS_ACCOUNT_ID}" \
-  "${IMAGE_NAME}" \
-  "${IMAGE_TAG}"
 
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_create_cluster \
@@ -165,89 +173,102 @@ if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
   kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
 fi
 
-loudecho "Deploying driver"
-startSec=$(date +'%s')
-
-HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
-  --namespace kube-system
-  --set image.repository="${IMAGE_NAME}"
-  --set image.tag="${IMAGE_TAG}"
-  --wait
-  --kubeconfig "${KUBECONFIG}"
-  ./charts/"${DRIVER_NAME}")
-if [[ -f "$HELM_VALUES_FILE" ]]; then
-  HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
-fi
-eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
-if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
-  HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
-fi
-set -x
-"${HELM_BIN}" "${HELM_ARGS[@]}"
-set +x
-
-endSec=$(date +'%s')
-secondUsed=$(((endSec - startSec) / 1))
-# Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
-if [ $secondUsed -gt $DRIVER_START_TIME_THRESHOLD_SECONDS ]; then
-  loudecho "Driver start timeout, took $secondUsed but the threshold is $DRIVER_START_TIME_THRESHOLD_SECONDS. Fail the test."
-  exit 1
-fi
-loudecho "Driver deployment complete, time used: $secondUsed seconds"
-
-loudecho "Testing focus ${GINKGO_FOCUS}"
-
-if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
-  pushd ${PWD}/tests/e2e-kubernetes
-  packageVersion=$(echo $(cut -d '.' -f 1,2 <<< $K8S_VERSION))
-
+if [[ "${HELM_CT_TEST}" == true ]]; then
+  loudecho "Test and lint Helm chart with chart-testing"
   set -x
   set +e
-  kubetest2 noop \
-    --run-id="e2e-kubernetes" \
-    --test=ginkgo \
-    -- \
-    --skip-regex="${GINKGO_SKIP}" \
-    --focus-regex="${GINKGO_FOCUS}" \
-    --test-package-version=$(curl https://storage.googleapis.com/kubernetes-release/release/stable-$packageVersion.txt) \
-    --parallel=25 \
-    --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=$KUBECONFIG"
-
+  export KUBECONFIG="${KUBECONFIG}"
+  ${CHART_TESTING_BIN} lint-and-install --config ${PWD}/tests/ct-config.yaml
   TEST_PASSED=$?
   set -e
   set +x
-  popd
-fi
+else
+  loudecho "Deploying driver"
+  startSec=$(date +'%s')
 
-if [[ $TEST_PATH == "./tests/e2e/..." ]]; then
-  eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
+  HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
+    --namespace kube-system
+    --set image.repository="${IMAGE_NAME}"
+    --set image.tag="${IMAGE_TAG}"
+    --wait
+    --kubeconfig "${KUBECONFIG}"
+    ./charts/"${DRIVER_NAME}")
+  if [[ -f "$HELM_VALUES_FILE" ]]; then
+    HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+  fi
+  eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
+  if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
+    HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+  fi
   set -x
-  set +e
-  ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
-  TEST_PASSED=$?
-  set -e
+  "${HELM_BIN}" "${HELM_ARGS[@]}"
   set +x
+
+  endSec=$(date +'%s')
+  secondUsed=$(((endSec - startSec) / 1))
+  # Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
+  if [ $secondUsed -gt $DRIVER_START_TIME_THRESHOLD_SECONDS ]; then
+    loudecho "Driver start timeout, took $secondUsed but the threshold is $DRIVER_START_TIME_THRESHOLD_SECONDS. Fail the test."
+    exit 1
+  fi
+  loudecho "Driver deployment complete, time used: $secondUsed seconds"
+
+  loudecho "Testing focus ${GINKGO_FOCUS}"
+
+  if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
+    pushd ${PWD}/tests/e2e-kubernetes
+    packageVersion=$(echo $(cut -d '.' -f 1,2 <<< $K8S_VERSION))
+
+    set -x
+    set +e
+    kubetest2 noop \
+      --run-id="e2e-kubernetes" \
+      --test=ginkgo \
+      -- \
+      --skip-regex="${GINKGO_SKIP}" \
+      --focus-regex="${GINKGO_FOCUS}" \
+      --test-package-version=$(curl https://storage.googleapis.com/kubernetes-release/release/stable-$packageVersion.txt) \
+      --parallel=25 \
+      --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=$KUBECONFIG"
+
+    TEST_PASSED=$?
+    set -e
+    set +x
+    popd
+  fi
+
+  if [[ $TEST_PATH == "./tests/e2e/..." ]]; then
+    eval "EXPANDED_TEST_EXTRA_FLAGS=$TEST_EXTRA_FLAGS"
+    set -x
+    set +e
+    ${GINKGO_BIN} -p -nodes="${GINKGO_NODES}" -v --focus="${GINKGO_FOCUS}" --skip="${GINKGO_SKIP}" "${TEST_PATH}" -- -kubeconfig="${KUBECONFIG}" -report-dir="${ARTIFACTS}" -gce-zone="${FIRST_ZONE}" "${EXPANDED_TEST_EXTRA_FLAGS}"
+    TEST_PASSED=$?
+    set -e
+    set +x
+  fi
+
+  PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=${DRIVER_NAME},app.kubernetes.io/instance=${DRIVER_NAME}" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
+
+  while IFS= read -r POD; do
+    loudecho "Printing pod ${POD} ${CONTAINER_NAME} container logs"
+    set +e
+    kubectl logs "${POD}" -n kube-system "${CONTAINER_NAME}" \
+      --kubeconfig "${KUBECONFIG}"
+    set -e
+  done <<< "${PODS}"
 fi
 
 OVERALL_TEST_PASSED="${TEST_PASSED}"
 
-PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=${DRIVER_NAME},app.kubernetes.io/instance=${DRIVER_NAME}" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
-
-while IFS= read -r POD; do
-  loudecho "Printing pod ${POD} ${CONTAINER_NAME} container logs"
-  set +e
-  kubectl logs "${POD}" -n kube-system "${CONTAINER_NAME}" \
-    --kubeconfig "${KUBECONFIG}"
-  set -e
-done <<< "${PODS}"
-
 if [[ "${CLEAN}" == true ]]; then
   loudecho "Cleaning"
 
-  loudecho "Removing driver"
-  ${HELM_BIN} del "${DRIVER_NAME}" \
-    --namespace kube-system \
-    --kubeconfig "${KUBECONFIG}"
+  if [[ "${HELM_CT_TEST}" != true ]]; then
+    loudecho "Removing driver"
+    ${HELM_BIN} del "${DRIVER_NAME}" \
+      --namespace kube-system \
+      --kubeconfig "${KUBECONFIG}"
+  fi
 
   if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
     kops_delete_cluster \

@@ -1,0 +1,18 @@
+remote: origin
+since: HEAD~1
+github-instance: https://github.com
+lint-conf: tests/ct-lintconfig.yaml
+validate-chart-schema: false
+validate-yaml: false
+check-version-increment: false
+charts:
+  - charts/aws-ebs-csi-driver
+helm-extra-args: "--timeout 3000s"
+upgrade: true
+skip-missing-values: true
+namespace: kube-system
+release-label: release
+kubectl-timeout: 3000s
+skip-clean-up: false
+print-logs: true
+debug: false
