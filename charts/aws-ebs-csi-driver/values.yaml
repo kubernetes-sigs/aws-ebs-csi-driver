@@ -183,8 +183,9 @@ controller:
   #   cpu: 100m
   #   memory: 128Mi
   serviceAccount:
-    create: true # A service account will be created for you if set to true. Set to false if you want to use your own.
-    name: ebs-csi-controller-sa # Name of the service-account to be used/created.
+  # A service account will be created for you if set to true. Set to false if you want to use your own.
+    create: true
+    name: ebs-csi-controller-sa
     annotations: {}
   tolerations:
     - key: CriticalAddonsOnly

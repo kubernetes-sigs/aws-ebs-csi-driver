@@ -204,6 +204,14 @@ test-e2e-external-eks:
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
+.PHONY: test-helm-chart
+test-helm-chart:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
+	EBS_INSTALL_SNAPSHOT="true" \
+	HELM_CT_TEST="true" \
+	./hack/e2e/run.sh
+
 .PHONY: verify-vendor
 test: verify-vendor
 verify: verify-vendor
