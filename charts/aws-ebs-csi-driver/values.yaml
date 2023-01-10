@@ -3,6 +3,8 @@
 # Declare variables to be passed into your templates.
 
 image:
+  # Container registry to be used, will prefix all repositories (including sidecars)
+  containerRegistry: ""
   repository: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   tag: ""
@@ -122,6 +124,17 @@ controller:
             operator: NotIn
             values:
             - fargate
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - ebs-csi-controller
+          topologyKey: kubernetes.io/hostname
+        weight: 100
   # The default filesystem type of the volume to provision when fstype is unspecified in the StorageClass.
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
@@ -164,24 +177,21 @@ controller:
   # region: us-east-1
   region:
   replicaCount: 2
-  updateStrategy: {}
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   # type: RollingUpdate
   # rollingUpdate:
   #   maxSurge: 0
   #   maxUnavailable: 1
-  resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # Note that you will need to set resource requests if you want the cluster autoscaler to
-  # scale your nodes when you increase/decrease the number of ebs-csi-controller replicas.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+  resources:
+    requests:
+      cpu: 10m
+      memory: 40Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
   serviceAccount:
   # A service account will be created for you if set to true. Set to false if you want to use your own.
     create: true
@@ -249,7 +259,13 @@ node:
   - operator: Exists
     effect: NoExecute
     tolerationSeconds: 300
-  resources: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 40Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
   serviceAccount:
     create: true
     name: ebs-csi-node-sa
