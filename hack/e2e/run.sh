@@ -175,6 +175,14 @@ fi
 
 if [[ "${HELM_CT_TEST}" == true ]]; then
   loudecho "Test and lint Helm chart with chart-testing"
+  if [ -n "${PROW_JOB_ID:-}" ]; then
+    # Prow-specific setup
+    # Required becuase chart_testing ALWAYS needs a remote
+    git remote add ct https://github.com/kubernetes-sigs/aws-ebs-csi-driver.git
+    git fetch ct "${PULL_BASE_REF}"
+    export CT_REMOTE="ct"
+    export CT_TARGET_BRANCH="${PULL_BASE_REF}"
+  fi
   set -x
   set +e
   export KUBECONFIG="${KUBECONFIG}"
