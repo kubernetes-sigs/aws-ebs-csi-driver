@@ -3,8 +3,6 @@
 # Declare variables to be passed into your templates.
 
 image:
-  # Container registry to be used, will prefix all repositories (including sidecars)
-  containerRegistry: ""
   repository: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   tag: ""
@@ -20,8 +18,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/csi-provisioner
-      tag: "v3.1.0"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
+      tag: "v3.3.0-eks-1-25-latest"
     logLevel: 2
     resources: {}
     # Tune leader lease election for csi-provisioner.
@@ -41,8 +39,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/csi-attacher
-      tag: "v3.4.0"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
+      tag: "v4.0.0-eks-1-25-latest"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -64,8 +62,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/csi-snapshotter
-      tag: "v6.0.1"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+      tag: "v6.1.0-eks-1-25-latest"
     logLevel: 2
     resources: {}
     securityContext:
@@ -74,8 +72,8 @@ sidecars:
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/livenessprobe
-      tag: "v2.6.0"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
+      tag: "v2.8.0-eks-1-25-latest"
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -84,8 +82,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/csi-resizer
-      tag: "v1.4.0"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+      tag: "v1.6.0-eks-1-25-latest"
     logLevel: 2
     resources: {}
     securityContext:
@@ -95,8 +93,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-      tag: "v2.5.1"
+      repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
+      tag: "v2.6.2-eks-1-25-latest"
     logLevel: 2
     resources: {}
     securityContext:
