@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.15.1
+* Bugfix: Prevent deployment of testing resources during normal installation by adding `helm.sh/hook: test` annotation.
+
 ## v2.15.0
 * Set sensible default resource requests/limits
 * Add sensible default update strategy
