@@ -2,12 +2,18 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: helm-sa
+  name: ebs-csi-driver-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: test-role
+  name: ebs-csi-driver-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 rules:
   - apiGroups: [ "" ]
     resources:
@@ -118,14 +124,17 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: test-role-binding
+  name: ebs-csi-driver-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 subjects:
   - kind: ServiceAccount
-    name: helm-sa
+    name: ebs-csi-driver-test
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: test-role
+  name: ebs-csi-driver-test
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: v1
@@ -168,17 +177,21 @@ data:
     provisioner: ebs.csi.aws.com
     volumeBindingMode: WaitForFirstConsumer
 metadata:
-  name: manifest-config
+  name: ebs-csi-driver-test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: helm-test
+  name: ebs-csi-driver-test
   annotations:
     "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 spec:
   containers:
-    - name: helm-test
+    - name: kubetest2
       image: gcr.io/k8s-staging-test-infra/kubekins-e2e:v20220624-1a63fdd9f2-master
       command: [ "/bin/sh", "-c" ]
       args:
@@ -194,9 +207,9 @@ spec:
       volumeMounts:
       - name: config-vol
         mountPath: /etc/config
-  serviceAccountName: helm-sa
+  serviceAccountName: ebs-csi-driver-test
   volumes:
     - name: config-vol
       configMap:
-        name: manifest-config
+        name: ebs-csi-driver-test
   restartPolicy: Never
