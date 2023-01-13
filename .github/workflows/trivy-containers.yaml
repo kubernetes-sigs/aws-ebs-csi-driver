@@ -20,7 +20,7 @@ jobs:
         uses: mikefarah/yq@master
         with:
           # Dynamically build the matrix of images to scan
-          cmd: "yq '[{\"repository\": .image.repository, \"tag\": \"'$(yq '.version' charts/aws-ebs-csi-driver/Chart.yaml)'\"}] + (.sidecars | map(.image)) | map(.repository + \":\" + .tag) | . style=\"flow\"' charts/aws-ebs-csi-driver/values.yaml"
+          cmd: "yq '[{\"repository\": .image.repository, \"tag\": \"v'$(yq '.appVersion' charts/aws-ebs-csi-driver/Chart.yaml)'\"}] + (.sidecars | map(.image)) | map(.repository + \":\" + .tag) | . style=\"flow\"' charts/aws-ebs-csi-driver/values.yaml"
   
   trivy-scan:
     needs: build-matrix
