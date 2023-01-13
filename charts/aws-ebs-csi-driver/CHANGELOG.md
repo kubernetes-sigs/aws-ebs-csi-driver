@@ -1,5 +1,16 @@
 # Helm chart
 
+## v2.16.0
+* Bump driver version to `v1.15.0`
+* Change default sidecars to EKS-D ([#1475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1475), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.3.0`
+    - csi-attacher: `v4.0.0`
+    - csi-snapshotter: `v6.1.0`
+    - livenessprobe: `v2.8.0`
+    - csi-resizer: `v1.6.0`
+    - node-driver-registrar: `v2.6.2`
+
 ## v2.15.1
 * Bugfix: Prevent deployment of testing resources during normal installation by adding `helm.sh/hook: test` annotation.
 
