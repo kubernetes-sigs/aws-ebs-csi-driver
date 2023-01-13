@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'deploy/kubernetes/overlays/stable/gcr/kustomization.yaml'
   schedule:
     - cron: '0 */24 * * *'
 
