@@ -1,3 +1,26 @@
+# v1.15.0
+### Notable Changes
+* Support specifying block size for filesystem format ([#1452](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1452), [@ConnorJC3](https://github.com/ConnorJC3))
+* Change default sidecars to EKS-D ([#1475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1475), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.3.0`
+    - csi-attacher: `v4.0.0`
+    - csi-snapshotter: `v6.1.0`
+    - livenessprobe: `v2.8.0`
+    - csi-resizer: `v1.6.0`
+    - node-driver-registrar: `v2.6.2`
+
+### Bug Fixes
+* Manually setup remote for CT on Prow ([#1473](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1473), [@ConnorJC3](https://github.com/ConnorJC3))
+* Fix volume limits for `m6id` and `x2idn` instance types ([#1463](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1463), [@talnevo](https://github.com/talnevo))
+
+### Improvements
+* Update compatibility info in README ([#1465](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1465), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@talnevo](https://github.com/talnevo)
+
 # v1.14.1
 ### Bug Fixes
 * (Cherry-Pick) Fixed handling of volume limits for instance types m6id and x2idn
