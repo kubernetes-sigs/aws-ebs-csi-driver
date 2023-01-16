@@ -606,6 +606,8 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 					klog.Warningf("Waiting for volume %q to be attached but the volume does not exist", volumeID)
 					return false, err
 				}
+			} else if errors.Is(err, context.Canceled) {
+				return true, nil
 			}
 
 			klog.Warningf("Ignoring error from describe volume for volume %q; will retry: %q", volumeID, err)
