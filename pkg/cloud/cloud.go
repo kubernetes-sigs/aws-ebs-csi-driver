@@ -75,6 +75,11 @@ const (
 	gp3MaxIOPSPerGB             = 500
 )
 
+const (
+	gp3MinTotalThroughput = 250  // in MiB/s
+	gp3MaxTotalThroughput = 1000 // in MiB/s
+)
+
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
@@ -1125,6 +1130,38 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 		Size:     aws.Int64(newSizeGiB),
 	}
 
+	// If the volume type is gp3 we are going to mimic the old gp2 behavior in which both IOPS and Throughput were
+	// coupled to disk size. We're going to calculate the corresponding values respecting the current gp3 limits:
+	//
+	// * Iops: 	  3,000 to 16,000
+	// * Throughput:    125 to  1,000 MiB/s
+	//
+	// The respectives values are calculated according to the following equations
+	//
+	// 	Iops = 3 IOPS per GiB
+	//
+	// 	Throughput = (VolumeSize GiB) * (3 IOPS/GiB) * (256 KiB/IO)
+	// 	Throughput = (VolumeSize * 1024 MiB) * (3/1024 IOPS/MiB) * (256/1024 MiB/IO)
+	//      Throughput = VolumeSize * 3 * 256 / 1024
+	//      Throughput = VolumeSize * 0.75
+	volumeType := aws.StringValue(volume.VolumeType)
+	if volumeType == ec2.VolumeTypeGp3 {
+		newIops := newSizeGiB * 3
+		newIops, err = capIOPS(volumeType, newSizeGiB, newIops, gp3MinTotalIOPS, gp3MaxTotalIOPS, gp3MaxIOPSPerGB, true)
+		if err != nil {
+			return oldSizeGiB, err
+		}
+
+		newThroughput := int64(float64(newSizeGiB) * 0.75)
+		newThroughput, err = capThroughput(volumeType, newSizeGiB, newThroughput, gp3MinTotalThroughput, gp3MaxTotalThroughput, true)
+		if err != nil {
+			return oldSizeGiB, err
+		}
+
+		req.Iops = aws.Int64(newIops)
+		req.Throughput = aws.Int64(newThroughput)
+	}
+
 	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
@@ -1281,4 +1318,29 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
 	}
 	return iops, nil
+}
+
+// Calculate actual Throughput for a volume an cap it at supported AWS limits.
+func capThroughput(volumeType string, requestedCapacityGiB, requestedThroughput, minTotalThroughput, maxTotalThroughput int64, allowIncrease bool) (int64, error) {
+	// If requestedThroughput is zero, the user did not request a specific amount, and the default will be used
+	if requestedThroughput == 0 {
+		return 0, nil
+	}
+
+	throughput := requestedThroughput
+
+	if throughput < minTotalThroughput {
+		if allowIncrease {
+			throughput = minTotalThroughput
+			klog.V(5).Infof("[Debug] Increased Throughput for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, throughput)
+		} else {
+			return 0, fmt.Errorf("invalid Throughput: %d is too low, it must be at least %d", throughput, minTotalThroughput)
+		}
+	}
+	if throughput > maxTotalThroughput {
+		throughput = maxTotalThroughput
+		klog.V(5).Infof("[Debug] Capped Throughput for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, throughput)
+	}
+
+	return throughput, nil
 }
