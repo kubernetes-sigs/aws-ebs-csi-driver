@@ -44,7 +44,6 @@ kubectl create secret generic aws-secret \
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
 
 #### Deploy driver
-Please see the compatibility matrix before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
