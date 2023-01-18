@@ -70,7 +70,7 @@ type DriverOptions struct {
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
-	klog.V(4).Infof("Driver: %v Version: %v", DriverName, driverVersion)
+	klog.V(4).InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
 	driverOptions := DriverOptions{
 		endpoint: DefaultCSIEndpoint,
@@ -117,7 +117,7 @@ func (d *Driver) Run() error {
 	logErr := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		resp, err := handler(ctx, req)
 		if err != nil {
-			klog.Errorf("GRPC error: %v", err)
+			klog.ErrorS(err, "GRPC error")
 		}
 		return resp, err
 	}
@@ -140,7 +140,7 @@ func (d *Driver) Run() error {
 		return fmt.Errorf("unknown mode: %s", d.options.mode)
 	}
 
-	klog.V(4).Infof("Listening for connections on address: %#v", listener.Addr())
+	klog.V(4).InfoS("Listening for connections", "address", listener.Addr())
 	return d.srv.Serve(listener)
 }
 
@@ -163,7 +163,7 @@ func WithExtraTags(extraTags map[string]string) func(*DriverOptions) {
 func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		if o.extraTags == nil && extraVolumeTags != nil {
-			klog.Warning("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
+			klog.InfoS("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
 			o.extraTags = extraVolumeTags
 		}
 	}

@@ -69,7 +69,7 @@ func (d *nodeService) preparePublishTarget(target string) error {
 	// directory at target now. Otherwise mklink will error: "Cannot create a file when that file already exists".
 	// Instead, delete the target if it already exists (like if it was created by kubelet <1.20)
 	// https://github.com/kubernetes/kubernetes/pull/88759
-	klog.V(4).Infof("NodePublishVolume: removing dir %s", target)
+	klog.V(4).InfoS("NodePublishVolume: removing dir", "target", target)
 	exists, err := d.mounter.PathExists(target)
 	if err != nil {
 		return fmt.Errorf("error checking path %q exists: %v", target, err)

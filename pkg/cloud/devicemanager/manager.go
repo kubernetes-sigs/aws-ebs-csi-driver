@@ -41,7 +41,7 @@ type Device struct {
 func (d *Device) Release(force bool) {
 	if !d.isTainted || force {
 		if err := d.releaseFunc(); err != nil {
-			klog.Errorf("Error releasing device: %v", err)
+			klog.ErrorS(err, "Error releasing device")
 		}
 	}
 }
@@ -194,7 +194,7 @@ func (d *deviceManager) release(device *Device) error {
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
-	klog.V(5).Infof("[Debug] Releasing in-process attachment entry: %v -> volume %s", device.Path, device.VolumeID)
+	klog.V(5).InfoS("[Debug] Releasing in-process", "attachment entry", device.Path, "volume", device.VolumeID)
 	d.inFlight.Del(nodeID, name)
 
 	return nil
@@ -212,7 +212,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]s
 		name = strings.TrimPrefix(name, "/dev/xvd")
 
 		if len(name) < 1 || len(name) > 2 {
-			klog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
+			klog.InfoS("Unexpected EBS DeviceName", "DeviceName", aws.StringValue(blockDevice.DeviceName))
 		}
 		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}

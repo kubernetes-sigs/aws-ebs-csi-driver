@@ -148,13 +148,13 @@ func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
 	request := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(target)}
 	response, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), request)
 	if err != nil || response == nil {
-		klog.Warningf("GetVolumeIDFromTargetPath(%s) failed with error: %v, response: %v", target, err, response)
+		klog.InfoS("GetVolumeIDFromTargetPath failed", "target", target, "err", err, "response", response)
 	} else {
 		request := &volume.WriteVolumeCacheRequest{
 			VolumeId: response.VolumeId,
 		}
 		if res, err := mounter.VolumeClient.WriteVolumeCache(context.Background(), request); err != nil {
-			klog.Warningf("WriteVolumeCache(%s) failed with error: %v, response: %v", response.VolumeId, err, res)
+			klog.InfoS("WriteVolumeCache failed", "volumeID", response.VolumeId, "err", err, "res", res)
 		}
 	}
 }
@@ -236,7 +236,7 @@ func (mounter *CSIProxyMounter) MakeDir(pathname string) error {
 	}
 	_, err := mounter.FsClient.Mkdir(context.Background(), mkdirReq)
 	if err != nil {
-		klog.V(4).Infof("Error: %v", err)
+		klog.V(4).InfoS("Error", err)
 		return err
 	}
 
