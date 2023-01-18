@@ -122,12 +122,12 @@ else
     GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install sigs.k8s.io/kubetest2/...@latest
     popd
   fi
-
-  ecr_build_and_push "${REGION}" \
-    "${AWS_ACCOUNT_ID}" \
-    "${IMAGE_NAME}" \
-    "${IMAGE_TAG}"
 fi
+
+ecr_build_and_push "${REGION}" \
+  "${AWS_ACCOUNT_ID}" \
+  "${IMAGE_NAME}" \
+  "${IMAGE_TAG}"
 
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_create_cluster \
@@ -183,6 +183,7 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
     export CT_REMOTE="ct"
     export CT_TARGET_BRANCH="${PULL_BASE_REF}"
   fi
+  yq -i ".image.repository = \"$IMAGE_NAME\" | .image.tag = \"$IMAGE_TAG\"" ${PWD}/charts/aws-ebs-csi-driver/values.yaml
   set -x
   set +e
   export KUBECONFIG="${KUBECONFIG}"
@@ -190,6 +191,7 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   TEST_PASSED=$?
   set -e
   set +x
+  git checkout -- ${PWD}/charts/aws-ebs-csi-driver/values.yaml
 else
   loudecho "Deploying driver"
   startSec=$(date +'%s')
