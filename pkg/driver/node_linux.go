@@ -75,11 +75,11 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 			canonicalDevicePath = devicePath
 		}
 
-		klog.V(5).Infof("[Debug] The canonical device path for %q was resolved to: %q", devicePath, canonicalDevicePath)
+		klog.V(5).InfoS("[Debug] The canonical device path was resolved", "devicePath", devicePath, "cacanonicalDevicePath", canonicalDevicePath)
 		return d.appendPartition(canonicalDevicePath, partition), nil
 	}
 
-	klog.V(5).Infof("[Debug] Falling back to nvme volume ID lookup for: %q", devicePath)
+	klog.V(5).InfoS("[Debug] Falling back to nvme volume ID lookup", "devicePath", devicePath)
 
 	// AWS recommends identifying devices by volume ID
 	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/nvme-ebs-volumes.html),
@@ -92,15 +92,15 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	nvmeDevicePath, err := findNvmeVolume(d.deviceIdentifier, nvmeName)
 
 	if err == nil {
-		klog.V(5).Infof("[Debug] successfully resolved nvmeName=%q to %q", nvmeName, nvmeDevicePath)
+		klog.V(5).InfoS("[Debug] successfully resolved", "nvmeName", nvmeName, "nvmeDevicePath", nvmeDevicePath)
 		canonicalDevicePath = nvmeDevicePath
 		return d.appendPartition(canonicalDevicePath, partition), nil
 	} else {
-		klog.V(5).Infof("[Debug] error searching for nvme path %q: %v", nvmeName, err)
+		klog.V(5).InfoS("[Debug] error searching for nvme path", "nvmeName", nvmeName, "err", err)
 	}
 
 	if util.IsSBE(d.metadata.GetRegion()) {
-		klog.V(5).Infof("[Debug] Falling back to snow volume lookup for: %q", devicePath)
+		klog.V(5).InfoS("[Debug] Falling back to snow volume lookup", "devicePath", devicePath)
 		canonicalDevicePath = "/dev/vd" + strings.TrimPrefix(devicePath, "/dev/xvdb")
 	}
 
@@ -123,14 +123,14 @@ func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device 
 	stat, err := deviceIdentifier.Lstat(p)
 	if err != nil {
 		if os.IsNotExist(err) {
-			klog.V(5).Infof("[Debug] nvme path %q not found", p)
+			klog.V(5).InfoS("[Debug] nvme path not found", "path", p)
 			return "", fmt.Errorf("nvme path %q not found", p)
 		}
 		return "", fmt.Errorf("error getting stat of %q: %w", p, err)
 	}
 
 	if stat.Mode()&os.ModeSymlink != os.ModeSymlink {
-		klog.Warningf("nvme file %q found, but was not a symlink", p)
+		klog.InfoS("nvme file found, but was not a symlink", "path", p)
 		return "", fmt.Errorf("nvme file %q found, but was not a symlink", p)
 	}
 	// Find the target, resolving to an absolute path
@@ -148,7 +148,7 @@ func findNvmeVolume(deviceIdentifier DeviceIdentifier, findName string) (device 
 }
 
 func (d *nodeService) preparePublishTarget(target string) error {
-	klog.V(4).Infof("NodePublishVolume: creating dir %s", target)
+	klog.V(4).InfoS("NodePublishVolume: creating dir", "target", target)
 	if err := d.mounter.MakeDir(target); err != nil {
 		return fmt.Errorf("Could not create dir %q: %w", target, err)
 	}

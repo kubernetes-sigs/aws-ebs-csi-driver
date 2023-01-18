@@ -33,8 +33,7 @@ func RecordRequestsHandler(r *request.Request) {
 func RecordThrottledRequestsHandler(r *request.Request) {
 	if r.IsErrorThrottle() {
 		recordAWSThrottlesMetric(operationName(r))
-		klog.Warningf("Got RequestLimitExceeded error on AWS request (%s)",
-			describeRequest(r))
+		klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", describeRequest(r))
 	}
 }
 

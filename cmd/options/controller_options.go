@@ -17,7 +17,7 @@ limitations under the License.
 package options
 
 import (
-	"flag"
+	flag "github.com/spf13/pflag"
 
 	cliflag "k8s.io/component-base/cli/flag"
 )

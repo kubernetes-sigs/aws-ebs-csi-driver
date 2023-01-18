@@ -20,6 +20,6 @@ func NewResizeFs(p mounter.ProxyMounter) *resizeFs {
 
 // Resize performs resize of file system
 func (r *resizeFs) Resize(_, deviceMountPath string) (bool, error) {
-	klog.V(3).Infof("Resize - Expanding mounted volume %s", deviceMountPath)
+	klog.V(3).InfoS("Resize - Expanding mounted volume", "deviceMountPath", deviceMountPath)
 	return r.proxy.ResizeVolume(deviceMountPath)
 }
