@@ -84,7 +84,7 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		err := validate(k, v)
 		if err != nil {
 			if warnOnly {
-				klog.Warningf("Skipping tag: the following key-value pair is not valid: (%s, %s): (%w)", k, v, err)
+				klog.InfoS("Skipping tag: the following key-value pair is not valid", "key", k, "value", v, "err", err)
 			} else {
 				return err
 			}

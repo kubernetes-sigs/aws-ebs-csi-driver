@@ -17,7 +17,7 @@ limitations under the License.
 package options
 
 import (
-	"flag"
+	flag "github.com/spf13/pflag"
 )
 
 // NodeOptions contains options and configuration settings for the node service.
