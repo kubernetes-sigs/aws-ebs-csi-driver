@@ -112,6 +112,7 @@ fullnameOverride:
 controller:
   additionalArgs: []
   sdkDebugLog: false
+  loggingFormat: text
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -238,6 +239,7 @@ node:
   env: []
   envFrom: []
   kubeletPath: /var/lib/kubelet
+  loggingFormat: text
   logLevel: 2
   priorityClassName:
   affinity:

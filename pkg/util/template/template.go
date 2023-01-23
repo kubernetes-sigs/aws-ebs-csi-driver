@@ -28,7 +28,7 @@ func Evaluate(tm []string, props *Props, warnOnly bool) (map[string]string, erro
 		val, err := execTemplate(value, props, t)
 		if err != nil {
 			if warnOnly {
-				klog.Warningf("Unable to interpolate the value for tag (%s, %s): %v", key, value, err)
+				klog.InfoS("Unable to interpolate value", "key", key, "value", value, "err", err)
 			} else {
 				return nil, err
 			}
