@@ -10,6 +10,10 @@ metadata:
   {{- with .labels }}
   labels: {{- . | toYaml | trim | nindent 4 }}
   {{- end }}
+{{- if .allowedTopologies }}
+allowedTopologies:
+{{- toYaml .allowedTopologies | nindent 0 }}
+{{- end }}
 provisioner: ebs.csi.aws.com
 {{ omit (dict "volumeBindingMode" "WaitForFirstConsumer" | merge .) "name" "annotations" "labels" | toYaml }}
 {{- end }}

@@ -302,6 +302,11 @@ storageClasses: []
 #   volumeBindingMode: WaitForFirstConsumer
 #   # defaults to Delete
 #   reclaimPolicy: Retain
+#   allowedTopologies:
+#   - matchLabelExpressions:
+#     - key: topology.ebs.csi.aws.com/zone
+#       values:
+#       - us-east-2a
 #   parameters:
 #     encrypted: "true"
 
