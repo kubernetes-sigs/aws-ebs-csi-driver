@@ -173,12 +173,6 @@ test-e2e-multi-az:
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-migration
-test-e2e-migration:
-# TODO: Remove once this test is removed from test-infra upstream
-# https://github.com/kubernetes/test-infra/blob/master/config/jobs/kubernetes-sigs/aws-ebs-csi-driver/aws-ebs-csi-driver-presubmits.yaml
-	echo "succeed"
-
 .PHONY: test-e2e-external
 test-e2e-external:
 	AWS_REGION=us-west-2 \
