@@ -60,13 +60,14 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint            string
-	extraTags           map[string]string
-	mode                Mode
-	volumeAttachLimit   int64
-	kubernetesClusterID string
-	awsSdkDebugLog      bool
-	warnOnInvalidTag    bool
+	endpoint               string
+	extraTags              map[string]string
+	mode                   Mode
+	volumeAttachLimit      int64
+	kubernetesClusterID    string
+	awsSdkDebugLog         bool
+	warnOnInvalidTag       bool
+	volumeHealthMonitoring bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -196,5 +197,11 @@ func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
 func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.warnOnInvalidTag = warnOnInvalidTag
+	}
+}
+
+func WithVolumeHealthMonitoring(volumeHealthMonitoring bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.volumeHealthMonitoring = volumeHealthMonitoring
 	}
 }

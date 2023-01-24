@@ -44,6 +44,11 @@ func TestControllerOptions(t *testing.T) {
 			found: true,
 		},
 		{
+			name:  "lookup volume-health-monitoring",
+			flag:  "volume-health-monitoring",
+			found: true,
+		},
+		{
 			name:  "fail for non-desired flag",
 			flag:  "some-other-flag",
 			found: false,
