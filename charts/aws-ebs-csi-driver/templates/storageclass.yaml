@@ -12,7 +12,7 @@ metadata:
   {{- end }}
 {{- if .allowedTopologies }}
 allowedTopologies:
-{{- toYaml .allowedTopologies | nindent 0 }}
+{{- toYaml .allowedTopologies | nindent 2 }}
 {{- end }}
 provisioner: ebs.csi.aws.com
 {{ omit (dict "volumeBindingMode" "WaitForFirstConsumer" | merge .) "name" "annotations" "labels" "allowedTopologies" | toYaml }}
