@@ -15,5 +15,5 @@ allowedTopologies:
 {{- toYaml .allowedTopologies | nindent 0 }}
 {{- end }}
 provisioner: ebs.csi.aws.com
-{{ omit (dict "volumeBindingMode" "WaitForFirstConsumer" | merge .) "name" "annotations" "labels" | toYaml }}
+{{ omit (dict "volumeBindingMode" "WaitForFirstConsumer" | merge .) "name" "annotations" "labels" "allowedTopologies" | toYaml }}
 {{- end }}
