@@ -53,6 +53,7 @@ var (
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+		csi.ControllerServiceCapability_RPC_GET_VOLUME,
 	}
 )
 
@@ -91,6 +92,10 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog)
 	if err != nil {
 		panic(err)
+	}
+
+	if driverOptions.volumeHealthMonitoring {
+		controllerCaps = append(controllerCaps, csi.ControllerServiceCapability_RPC_VOLUME_CONDITION)
 	}
 
 	return controllerService{
@@ -531,7 +536,56 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerGetVolume: called", "args", *req)
-	return nil, status.Error(codes.Unimplemented, "")
+
+	volumeID := req.GetVolumeId()
+
+	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
+	if err != nil {
+		if errors.Is(err, cloud.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "Volume not found")
+		}
+		klog.ErrorS(err, "Failed to retrieve volume", "volumeId", volumeID)
+		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
+	}
+
+	volume := &csi.Volume{
+		VolumeId:           volumeID,
+		CapacityBytes:      util.GiBToBytes(disk.CapacityGiB),
+		AccessibleTopology: topologyFromDisk(disk),
+	}
+	var volumeStatus *csi.ControllerGetVolumeResponse_VolumeStatus
+
+	if d.driverOptions.volumeHealthMonitoring {
+		abnormal := false
+		message := "Volume is operating normally"
+
+		diskStatus, err := d.cloud.GetDiskStatusByID(ctx, volumeID)
+		if err != nil {
+			klog.ErrorS(err, "Failed to retrieve volume status", "volumeId", volumeID)
+			return nil, status.Errorf(codes.Internal, "Could not get volume status with ID %q: %v", volumeID, err)
+		}
+
+		if diskStatus.Status == "impaired" {
+			abnormal = true
+			if diskStatus.Description != "" {
+				message = diskStatus.Description
+			} else {
+				message = "Volume has an unknown error"
+			}
+		}
+
+		volumeStatus = &csi.ControllerGetVolumeResponse_VolumeStatus{
+			VolumeCondition: &csi.VolumeCondition{
+				Abnormal: abnormal,
+				Message:  message,
+			},
+		}
+	}
+
+	return &csi.ControllerGetVolumeResponse{
+		Volume: volume,
+		Status: volumeStatus,
+	}, nil
 }
 
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
@@ -781,6 +835,24 @@ func getOutpostArn(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
+func topologyFromDisk(disk *cloud.Disk) []*csi.Topology {
+	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+
+	arn, err := arn.Parse(disk.OutpostArn)
+
+	if err == nil {
+		segments[AwsRegionKey] = arn.Region
+		segments[AwsPartitionKey] = arn.Partition
+		segments[AwsAccountIDKey] = arn.AccountID
+		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
+	}
+	return []*csi.Topology{
+		{
+			Segments: segments,
+		},
+	}
+}
+
 func newCreateVolumeResponse(disk *cloud.Disk, blockSize string) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
 	if disk.SnapshotID != "" {
@@ -793,17 +865,6 @@ func newCreateVolumeResponse(disk *cloud.Disk, blockSize string) *csi.CreateVolu
 		}
 	}
 
-	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
-
-	arn, err := arn.Parse(disk.OutpostArn)
-
-	if err == nil {
-		segments[AwsRegionKey] = arn.Region
-		segments[AwsPartitionKey] = arn.Partition
-		segments[AwsAccountIDKey] = arn.AccountID
-		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
-	}
-
 	context := map[string]string{}
 	if len(blockSize) > 0 {
 		context[BlockSizeKey] = blockSize
@@ -811,15 +872,11 @@ func newCreateVolumeResponse(disk *cloud.Disk, blockSize string) *csi.CreateVolu
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId:      disk.VolumeID,
-			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
-			VolumeContext: context,
-			AccessibleTopology: []*csi.Topology{
-				{
-					Segments: segments,
-				},
-			},
-			ContentSource: src,
+			VolumeId:           disk.VolumeID,
+			CapacityBytes:      util.GiBToBytes(disk.CapacityGiB),
+			VolumeContext:      context,
+			AccessibleTopology: topologyFromDisk(disk),
+			ContentSource:      src,
 		},
 	}
 }

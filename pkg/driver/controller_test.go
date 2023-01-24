@@ -3255,6 +3255,191 @@ func TestControllerExpandVolume(t *testing.T) {
 	}
 }
 
+func TestControllerGetVolume(t *testing.T) {
+	testCases := []struct {
+		name        string
+		volumeID    string
+		enableVHM   bool
+		status      string
+		description string
+		failFind    bool
+		failStatus  bool
+		expError    bool
+		expAbnormal bool
+		expMessage  string
+	}{
+		{
+			name:        "success: normal",
+			volumeID:    "vol-test",
+			enableVHM:   false,
+			status:      "",
+			description: "",
+			failFind:    false,
+			failStatus:  false,
+			expError:    false,
+			expAbnormal: false,
+			expMessage:  "",
+		},
+		{
+			name:        "success: VHM normal",
+			volumeID:    "vol-test",
+			enableVHM:   true,
+			status:      "ok",
+			description: "ignore me",
+			failFind:    false,
+			failStatus:  false,
+			expError:    false,
+			expAbnormal: false,
+			expMessage:  "Volume is operating normally",
+		},
+		{
+			name:        "success: VHM normal on warning",
+			volumeID:    "vol-test",
+			enableVHM:   true,
+			status:      "warning",
+			description: "ignore me",
+			failFind:    false,
+			failStatus:  false,
+			expError:    false,
+			expAbnormal: false,
+			expMessage:  "Volume is operating normally",
+		},
+		{
+			name:        "success: VHM abnormal",
+			volumeID:    "vol-test",
+			enableVHM:   true,
+			status:      "impaired",
+			description: "lp0 on fire",
+			failFind:    false,
+			failStatus:  false,
+			expError:    false,
+			expAbnormal: true,
+			expMessage:  "lp0 on fire",
+		},
+		{
+			name:        "success: VHM abnormal with no events",
+			volumeID:    "vol-test",
+			enableVHM:   true,
+			status:      "impaired",
+			description: "",
+			failFind:    false,
+			failStatus:  false,
+			expError:    false,
+			expAbnormal: true,
+			expMessage:  "Volume has an unknown error",
+		},
+		{
+			name:        "fail: does not exist",
+			volumeID:    "vol-test",
+			enableVHM:   false,
+			status:      "",
+			description: "",
+			failFind:    true,
+			failStatus:  false,
+			expError:    true,
+			expAbnormal: false,
+			expMessage:  "",
+		},
+		{
+			name:        "fail: VHM does not exist",
+			volumeID:    "vol-test",
+			enableVHM:   false,
+			status:      "",
+			description: "",
+			failFind:    true,
+			failStatus:  false,
+			expError:    true,
+			expAbnormal: false,
+			expMessage:  "",
+		},
+		{
+			name:        "fail: VHM no status",
+			volumeID:    "vol-test",
+			enableVHM:   true,
+			status:      "",
+			description: "",
+			failFind:    false,
+			failStatus:  true,
+			expError:    true,
+			expAbnormal: false,
+			expMessage:  "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			disk := &cloud.Disk{
+				VolumeID:         tc.volumeID,
+				CapacityGiB:      1048596,
+				AvailabilityZone: "us-east-1a",
+			}
+
+			mockCloud := cloud.NewMockCloud(mockCtl)
+			if tc.failFind {
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Eq(tc.volumeID)).Return(nil, errors.New("Resource was not found"))
+			} else {
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Eq(tc.volumeID)).Return(disk, nil)
+			}
+			if tc.enableVHM {
+				diskStatus := &cloud.DiskStatus{
+					Status:      tc.status,
+					Description: tc.description,
+				}
+				if tc.failStatus {
+					mockCloud.EXPECT().GetDiskStatusByID(gomock.Eq(ctx), gomock.Eq(tc.volumeID)).Return(nil, errors.New("Resource was not found"))
+				} else {
+					mockCloud.EXPECT().GetDiskStatusByID(gomock.Eq(ctx), gomock.Eq(tc.volumeID)).Return(diskStatus, nil)
+				}
+			}
+
+			awsDriver := controllerService{
+				cloud:    mockCloud,
+				inFlight: internal.NewInFlight(),
+				driverOptions: &DriverOptions{
+					volumeHealthMonitoring: tc.enableVHM,
+				},
+			}
+
+			req := &csi.ControllerGetVolumeRequest{
+				VolumeId: tc.volumeID,
+			}
+
+			resp, err := awsDriver.ControllerGetVolume(ctx, req)
+			if err != nil {
+				if !tc.expError {
+					t.Fatalf("ControllerGetVolume() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expError {
+					t.Fatalf("ControllerGetVolume() failed: expected error, got nothing")
+				}
+				if resp.Volume.VolumeId != tc.volumeID {
+					t.Fatalf("GetDiskStatusByID() failed: expected VolumeId %q, got %q", tc.volumeID, resp.Volume.VolumeId)
+				}
+				if resp.Volume.CapacityBytes != util.GiBToBytes(1048596) {
+					t.Fatalf("GetDiskStatusByID() failed: expected CapacityBytes %q, got %q", util.GiBToBytes(1048596), resp.Volume.CapacityBytes)
+				}
+				if tc.enableVHM {
+					if resp.Status.VolumeCondition.Abnormal != tc.expAbnormal {
+						t.Fatalf("GetDiskStatusByID() failed: expected Abnormal %t, got %t", tc.expAbnormal, resp.Status.VolumeCondition.Abnormal)
+					}
+					if resp.Status.VolumeCondition.Message != tc.expMessage {
+						t.Fatalf("GetDiskStatusByID() failed: expected Message %q, got %q", tc.expMessage, resp.Status.VolumeCondition.Message)
+					}
+				} else {
+					if resp.Status != nil {
+						t.Fatalf("GetDiskStatusByID() failed: expected no Status, got %q", resp.Status)
+					}
+				}
+			}
+		})
+	}
+}
+
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
 	if err == nil {
 		t.Fatalf("Expected operation to fail but got no error")
