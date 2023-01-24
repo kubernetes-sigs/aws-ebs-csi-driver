@@ -166,6 +166,9 @@ var (
 
 	// VolumeNotBeingModified is returned if volume being described is not being modified
 	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
+
+	// ErrInternal is an error that is returned when "impossible" events occur.
+	ErrInternal = errors.New("Internal error (please submit a bug report)")
 )
 
 // Set during build time via -ldflags
@@ -198,6 +201,13 @@ type DiskOptions struct {
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
 	SnapshotID string
+}
+
+// DiskStatus contains information about an EBS volume's status
+type DiskStatus struct {
+	Status string
+	// The description of the most recent event (or blank if no events), regardless of status
+	Description string
 }
 
 // Snapshot represents an EBS volume snapshot
@@ -722,6 +732,44 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
 		OutpostArn:       aws.StringValue(volume.OutpostArn),
 		Attachments:      getVolumeAttachmentsList(volume),
+	}, nil
+}
+
+func (c *cloud) GetDiskStatusByID(ctx context.Context, volumeID string) (*DiskStatus, error) {
+	request := &ec2.DescribeVolumeStatusInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+
+	response, err := c.ec2.DescribeVolumeStatusWithContext(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	if l := len(response.VolumeStatuses); l > 1 {
+		return nil, ErrMultiDisks
+	} else if l < 1 {
+		return nil, ErrNotFound
+	}
+
+	statusItem := response.VolumeStatuses[0]
+	if *statusItem.VolumeId != volumeID {
+		return nil, ErrInternal
+	}
+
+	statusInfo := statusItem.VolumeStatus
+
+	status := *statusInfo.Status
+	description := ""
+
+	if len(statusItem.Events) > 0 {
+		description = *statusItem.Events[0].Description
+	}
+
+	return &DiskStatus{
+		Status:      status,
+		Description: description,
 	}, nil
 }
 

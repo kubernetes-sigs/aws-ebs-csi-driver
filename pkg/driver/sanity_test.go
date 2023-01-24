@@ -198,6 +198,13 @@ func (c *fakeCloudProvider) GetDiskByID(ctx context.Context, volumeID string) (*
 	return nil, cloud.ErrNotFound
 }
 
+func (c *fakeCloudProvider) GetDiskStatusByID(ctx context.Context, volumeID string) (*cloud.DiskStatus, error) {
+	return &cloud.DiskStatus{
+		Status:      "ok",
+		Description: "",
+	}, nil
+}
+
 func (c *fakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
 	return nodeID == "instanceID"
 }

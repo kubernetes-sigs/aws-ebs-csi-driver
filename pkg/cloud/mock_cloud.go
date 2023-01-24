@@ -154,6 +154,21 @@ func (mr *MockCloudMockRecorder) GetDiskByName(ctx, name, capacityBytes interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), ctx, name, capacityBytes)
 }
 
+// GetDiskStatusByID mocks base method.
+func (m *MockCloud) GetDiskStatusByID(ctx context.Context, volumeID string) (*DiskStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDiskStatusByID", ctx, volumeID)
+	ret0, _ := ret[0].(*DiskStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDiskStatusByID indicates an expected call of GetDiskStatusByID.
+func (mr *MockCloudMockRecorder) GetDiskStatusByID(ctx, volumeID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskStatusByID", reflect.TypeOf((*MockCloud)(nil).GetDiskStatusByID), ctx, volumeID)
+}
+
 // GetSnapshotByID mocks base method.
 func (m *MockCloud) GetSnapshotByID(ctx context.Context, snapshotID string) (*Snapshot, error) {
 	m.ctrl.T.Helper()

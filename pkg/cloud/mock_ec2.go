@@ -216,6 +216,26 @@ func (mr *MockEC2MockRecorder) DescribeSnapshotsWithContext(ctx, input interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeSnapshotsWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeSnapshotsWithContext), varargs...)
 }
 
+// DescribeVolumeStatusWithContext mocks base method.
+func (m *MockEC2) DescribeVolumeStatusWithContext(ctx aws.Context, input *ec2.DescribeVolumeStatusInput, opts ...request.Option) (*ec2.DescribeVolumeStatusOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeVolumeStatusWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeVolumeStatusOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVolumeStatusWithContext indicates an expected call of DescribeVolumeStatusWithContext.
+func (mr *MockEC2MockRecorder) DescribeVolumeStatusWithContext(ctx, input interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVolumeStatusWithContext", reflect.TypeOf((*MockEC2)(nil).DescribeVolumeStatusWithContext), varargs...)
+}
+
 // DescribeVolumesModificationsWithContext mocks base method.
 func (m *MockEC2) DescribeVolumesModificationsWithContext(ctx aws.Context, input *ec2.DescribeVolumesModificationsInput, opts ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error) {
 	m.ctrl.T.Helper()

@@ -975,6 +975,115 @@ func TestGetDiskByID(t *testing.T) {
 	}
 }
 
+func TestGetDiskStatusByID(t *testing.T) {
+	testCases := []struct {
+		name              string
+		volumeID          string
+		statusCount       int
+		statusVolumeID    string
+		statusStatus      string
+		statusDescription string
+		expErr            error
+	}{
+		{
+			name:              "success: normal",
+			volumeID:          "vol-test-1234",
+			statusCount:       1,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "ok",
+			statusDescription: "",
+			expErr:            nil,
+		},
+		{
+			name:              "success: normal with degraded status",
+			volumeID:          "vol-test-1234",
+			statusCount:       1,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "warning",
+			statusDescription: "",
+			expErr:            nil,
+		},
+		{
+			name:              "success: normal with description",
+			volumeID:          "vol-test-1234",
+			statusCount:       1,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "ok",
+			statusDescription: "Volume ok!",
+			expErr:            nil,
+		},
+		{
+			name:              "success: normal with degraded status and description",
+			volumeID:          "vol-test-1234",
+			statusCount:       1,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "warning",
+			statusDescription: "Volume broken!",
+			expErr:            nil,
+		},
+		{
+			name:              "fail: volume not found",
+			volumeID:          "vol-test-1234",
+			statusCount:       0,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "ok",
+			statusDescription: "",
+			expErr:            errors.New("Resource was not found"),
+		},
+		{
+			name:              "fail: multiple volumes",
+			volumeID:          "vol-test-1234",
+			statusCount:       2,
+			statusVolumeID:    "vol-test-1234",
+			statusStatus:      "ok",
+			statusDescription: "",
+			expErr:            errors.New("Multiple disks with same name"),
+		},
+		{
+			name:              "fail: mismatched ID",
+			volumeID:          "vol-test-1234",
+			statusCount:       1,
+			statusVolumeID:    "vol-test-5467",
+			statusStatus:      "ok",
+			statusDescription: "",
+			expErr:            errors.New("Internal error (this should be impossible!)"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumeStatusWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+				newDescribeVolumeStatusOutput(tc.statusCount, tc.statusVolumeID, tc.statusStatus, tc.statusDescription),
+				tc.expErr,
+			)
+
+			diskStatus, err := c.GetDiskStatusByID(ctx, tc.volumeID)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("GetDiskStatusByID() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("GetDiskStatusByID() failed: expected error, got nothing")
+				}
+				if diskStatus.Status != tc.statusStatus {
+					t.Fatalf("GetDiskStatusByID() failed: expected Status %q, got %q", tc.statusStatus, diskStatus.Status)
+				}
+				if diskStatus.Description != tc.statusDescription {
+					t.Fatalf("GetDiskStatusByID() failed: expected Description %q, got %q", tc.statusDescription, diskStatus.Description)
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestCreateSnapshot(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -1774,6 +1883,26 @@ func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 				{InstanceId: aws.String(nodeID)},
 			},
 		}},
+	}
+}
+
+func newDescribeVolumeStatusOutput(statusCount int, statusVolumeID string, statusStatus string, statusDescription string) *ec2.DescribeVolumeStatusOutput {
+	event := &ec2.VolumeStatusEvent{
+		Description: &statusDescription,
+	}
+	statusItem := &ec2.VolumeStatusItem{
+		VolumeId: &statusVolumeID,
+		VolumeStatus: &ec2.VolumeStatusInfo{
+			Status: &statusStatus,
+		},
+		Events: []*ec2.VolumeStatusEvent{event},
+	}
+	statuses := make([]*ec2.VolumeStatusItem, statusCount)
+	for i := range statuses {
+		statuses[i] = statusItem
+	}
+	return &ec2.DescribeVolumeStatusOutput{
+		VolumeStatuses: statuses,
 	}
 }
 
