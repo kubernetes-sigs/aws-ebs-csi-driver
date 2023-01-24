@@ -87,6 +87,9 @@ spec:
             {{- if .Values.controller.sdkDebugLog }}
             - --aws-sdk-debug-log=true
             {{- end}}
+            {{- if .Values.controller.volumeHealthMonitoring }}
+            - --volume-health-monitoring=true
+            {{- end}}
             {{- with .Values.controller.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}
@@ -324,6 +327,42 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- if .Values.controller.volumeHealthMonitoring }}
+        - name: csi-health-monitor
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.healthMonitor.image.repository .Values.sidecars.healthMonitor.image.tag }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.healthMonitor.image.pullPolicy }}
+          args:
+            - --csi-address=$(ADDRESS)
+            - --leader-election=true
+            - --v={{ .Values.sidecars.healthMonitor.logLevel }}
+            - --monitor-interval=1m
+            - --list-volumes-interval=1m
+            - --worker-threads=1
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.healthMonitor.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          envFrom:
+            {{- with .Values.controller.envFrom }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with default .Values.controller.resources .Values.sidecars.healthMonitor.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.healthMonitor.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
         - name: liveness-probe
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}

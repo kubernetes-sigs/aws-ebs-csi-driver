@@ -89,6 +89,17 @@ sidecars:
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+  healthMonitor:
+    env: []
+    image:
+      pullPolicy: IfNotPresent
+      repository: registry.k8s.io/sig-storage/csi-external-health-monitor-controller
+      tag: "v0.8.0"
+    logLevel: 2
+    resources: {}
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
   nodeDriverRegistrar:
     env: []
     image:
@@ -113,6 +124,10 @@ controller:
   additionalArgs: []
   sdkDebugLog: false
   loggingFormat: text
+  # EXPERIMENTAL
+  # Enable support for Volume Health Monitoring (https://kubernetes.io/docs/concepts/storage/volume-health-monitoring/)
+  # Read `docs/volume-health-monitoring.md` before enabling!
+  volumeHealthMonitoring: false
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
