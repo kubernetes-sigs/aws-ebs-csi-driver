@@ -121,6 +121,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeType             string
 		iopsPerGB              int
 		allowIOPSPerGBIncrease bool
+		reconcileGP3Performance bool
 		iops                   int
 		throughput             int
 		isEncrypted            bool
@@ -148,6 +149,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 		case AllowAutoIOPSPerGBIncreaseKey:
 			allowIOPSPerGBIncrease = value == "true"
+		case ReconcileGP3PerformanceKey:
+			reconcileGP3Performance = value == "true"
 		case IopsKey:
 			iops, err = strconv.Atoi(value)
 			if err != nil {
@@ -224,6 +227,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[k] = v
 	}
 
+	// add the reconciliation tag identifier to the volume
+	if volumeType == cloud.VolumeTypeGP3 && reconcileGP3Performance {
+		volumeTags[cloud.AwsEbsReconcileGP3PerformanceTagKey] = "true"
+	}
+
 	addTags, err := template.Evaluate(scTags, tProps, d.driverOptions.warnOnInvalidTag)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
@@ -243,6 +251,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		VolumeType:             volumeType,
 		IOPSPerGB:              iopsPerGB,
 		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
+		ReconcileGP3Performance: reconcileGP3Performance,
 		IOPS:                   iops,
 		Throughput:             throughput,
 		AvailabilityZone:       zone,

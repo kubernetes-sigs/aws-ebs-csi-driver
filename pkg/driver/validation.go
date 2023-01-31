@@ -62,6 +62,9 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		if k == cloud.AwsEbsDriverTagKey {
 			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)
 		}
+		if k == cloud.AwsEbsReconcileGP3PerformanceTagKey {
+			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsReconcileGP3PerformanceTagKey)
+		}
 		if k == cloud.SnapshotNameTagKey {
 			return fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey)
 		}

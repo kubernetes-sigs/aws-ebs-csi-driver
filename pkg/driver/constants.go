@@ -47,6 +47,11 @@ const (
 	// AllowAutoIOPSPerGBIncreaseKey represents key for allowing automatic increase of IOPS
 	AllowAutoIOPSPerGBIncreaseKey = "allowautoiopspergbincrease"
 
+	// ReconcileGP3PerformanceKey represents key for allowing the controller
+	// to mimic the same GP2 performance reconciliation algorithm for GP3
+	// volumes
+	ReconcileGP3PerformanceKey = "reconcilegp3performance"
+
 	// Iops represents key for IOPS for volume
 	IopsKey = "iops"
 
