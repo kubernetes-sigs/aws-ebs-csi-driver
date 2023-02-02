@@ -183,9 +183,9 @@ func TestCreateDisk(t *testing.T) {
 			name:       "success: normal with gp3 performance reconciling option",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(1500),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeGP3,
+				CapacityBytes:           util.GiBToBytes(1500),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeGP3,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
@@ -389,10 +389,10 @@ func TestCreateDisk(t *testing.T) {
 			name:       "fail: invalid StorageClass parameters; specified both IOPS and ReconcileGP3Performance",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeGP3,
-				IOPS:          1,
+				CapacityBytes:           util.GiBToBytes(4),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeGP3,
+				IOPS:                    1,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
@@ -407,10 +407,10 @@ func TestCreateDisk(t *testing.T) {
 			name:       "fail: invalid StorageClass parameters; specified both Throughput and ReconcileGP3Performance",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeGP3,
-				Throughput:          1,
+				CapacityBytes:           util.GiBToBytes(4),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeGP3,
+				Throughput:              1,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
@@ -425,10 +425,10 @@ func TestCreateDisk(t *testing.T) {
 			name:       "fail: invalid StorageClass parameters; specified both IOPSPerGB and ReconcileGP3Performance",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeGP3,
-				IOPSPerGB:          1,
+				CapacityBytes:           util.GiBToBytes(4),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeGP3,
+				IOPSPerGB:               1,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
@@ -443,9 +443,9 @@ func TestCreateDisk(t *testing.T) {
 			name:       "fail: invalid StorageClass parameters; specified ReconcileGP3Performance for VolumeType other than gp3",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeGP2,
+				CapacityBytes:           util.GiBToBytes(4),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeGP2,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
@@ -1234,12 +1234,12 @@ func TestResizeDisk(t *testing.T) {
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
-				VolumeType: 	  aws.String(VolumeTypeGP3),
+				VolumeType:       aws.String(VolumeTypeGP3),
 				Size:             aws.Int64(1500),
 				Iops:             aws.Int64(4500),
-				Throughput: 	  aws.Int64(1000),
+				Throughput:       aws.Int64(1000),
 				AvailabilityZone: aws.String(defaultZone),
-				Tags: []*ec2.Tag{{Key: aws.String(AwsEbsReconcileGP3PerformanceTagKey), Value: aws.String("true")}},
+				Tags:             []*ec2.Tag{{Key: aws.String(AwsEbsReconcileGP3PerformanceTagKey), Value: aws.String("true")}},
 			},
 			modifiedVolume: &ec2.ModifyVolumeOutput{
 				VolumeModification: &ec2.VolumeModification{

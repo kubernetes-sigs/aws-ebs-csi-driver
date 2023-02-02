@@ -142,7 +142,7 @@ const (
 	// AwsEbsReconcileGP3PerformanceTagKey is the tag to identify if a gp3 volume performance
 	// should be reconciled by the controller. This tag is necessary to ensure the performance
 	// will be reconciled when modifying the volume size, because the available CSI interface
-	// doesn't expose annotations or any other method that could be used to check if the 
+	// doesn't expose annotations or any other method that could be used to check if the
 	// corresponding volume is configured to be automatically reconciled in modification requests
 	AwsEbsReconcileGP3PerformanceTagKey = "ebs.csi.aws.com/reconcile"
 )
@@ -194,18 +194,18 @@ type Disk struct {
 
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
-	CapacityBytes          int64
-	Tags                   map[string]string
-	VolumeType             string
-	IOPSPerGB              int
-	AllowIOPSPerGBIncrease bool
+	CapacityBytes           int64
+	Tags                    map[string]string
+	VolumeType              string
+	IOPSPerGB               int
+	AllowIOPSPerGBIncrease  bool
 	ReconcileGP3Performance bool
-	IOPS                   int
-	Throughput             int
-	AvailabilityZone       string
-	OutpostArn             string
-	Encrypted              bool
-	BlockExpress           bool
+	IOPS                    int
+	Throughput              int
+	AvailabilityZone        string
+	OutpostArn              string
+	Encrypted               bool
+	BlockExpress            bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -1324,7 +1324,7 @@ func calculateGP3ReconciledIOPS(sizeGiB int64) (int64, error) {
 //
 // * Iops: 	  3,000 to 16,000
 //
-// The New IOPS value is calculated according to the following equation
+// # The New IOPS value is calculated according to the following equation
 //
 // a) Iops = 3 IOPS per GiB
 func getGP3ReconciledIOPS(sizeGiB int64) int64 {
@@ -1348,10 +1348,10 @@ func calculateGP3ReconciledThroughput(sizeGiB int64) int64 {
 //
 // The new throughput value is calculated according to the following equation
 //
-// 	a) Throughput = (VolumeSize GiB) * (3 IOPS/GiB) * (256 KiB/IO)
-// 	b) Throughput = (VolumeSize * 1024 MiB) * (3/1024 IOPS/MiB) * (256/1024 MiB/IO)
-//  c) Throughput = VolumeSize * 3 * 256 / 1024
-//  d) Throughput = VolumeSize * 0.75
+//		a) Throughput = (VolumeSize GiB) * (3 IOPS/GiB) * (256 KiB/IO)
+//		b) Throughput = (VolumeSize * 1024 MiB) * (3/1024 IOPS/MiB) * (256/1024 MiB/IO)
+//	 c) Throughput = VolumeSize * 3 * 256 / 1024
+//	 d) Throughput = VolumeSize * 0.75
 func getGP3ReconciledThroughput(sizeGiB int64) int64 {
 	return int64(float64(sizeGiB) * 0.75)
 }

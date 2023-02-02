@@ -118,17 +118,17 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	defer d.inFlight.Delete(volName)
 
 	var (
-		volumeType             string
-		iopsPerGB              int
-		allowIOPSPerGBIncrease bool
+		volumeType              string
+		iopsPerGB               int
+		allowIOPSPerGBIncrease  bool
 		reconcileGP3Performance bool
-		iops                   int
-		throughput             int
-		isEncrypted            bool
-		blockExpress           bool
-		kmsKeyID               string
-		scTags                 []string
-		volumeTags             = map[string]string{
+		iops                    int
+		throughput              int
+		isEncrypted             bool
+		blockExpress            bool
+		kmsKeyID                string
+		scTags                  []string
+		volumeTags              = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
@@ -246,20 +246,20 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		CapacityBytes:          volSizeBytes,
-		Tags:                   volumeTags,
-		VolumeType:             volumeType,
-		IOPSPerGB:              iopsPerGB,
-		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
+		CapacityBytes:           volSizeBytes,
+		Tags:                    volumeTags,
+		VolumeType:              volumeType,
+		IOPSPerGB:               iopsPerGB,
+		AllowIOPSPerGBIncrease:  allowIOPSPerGBIncrease,
 		ReconcileGP3Performance: reconcileGP3Performance,
-		IOPS:                   iops,
-		Throughput:             throughput,
-		AvailabilityZone:       zone,
-		OutpostArn:             outpostArn,
-		Encrypted:              isEncrypted,
-		BlockExpress:           blockExpress,
-		KmsKeyID:               kmsKeyID,
-		SnapshotID:             snapshotID,
+		IOPS:                    iops,
+		Throughput:              throughput,
+		AvailabilityZone:        zone,
+		OutpostArn:              outpostArn,
+		Encrypted:               isEncrypted,
+		BlockExpress:            blockExpress,
+		KmsKeyID:                kmsKeyID,
+		SnapshotID:              snapshotID,
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)

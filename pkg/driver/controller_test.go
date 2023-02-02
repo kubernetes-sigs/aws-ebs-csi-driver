@@ -1051,7 +1051,7 @@ func TestCreateVolume(t *testing.T) {
 					CapacityRange:      stdCapRange,
 					VolumeCapabilities: stdVolCap,
 					Parameters: map[string]string{
-						VolumeTypeKey: cloud.VolumeTypeGP3,
+						VolumeTypeKey:              cloud.VolumeTypeGP3,
 						ReconcileGP3PerformanceKey: "true",
 					},
 				}
