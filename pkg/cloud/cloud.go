@@ -317,6 +317,22 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both")
 	}
 
+	if diskOptions.IOPS > 0 && diskOptions.ReconcileGP3Performance {
+		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPS or ReconcileGP3Performance, not both")
+	}
+
+	if diskOptions.Throughput > 0 && diskOptions.ReconcileGP3Performance {
+		return nil, fmt.Errorf("invalid StorageClass parameters; specify either Throughput or ReconcileGP3Performance, not both")
+	}
+
+	if diskOptions.IOPSPerGB > 0 && diskOptions.ReconcileGP3Performance {
+		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPSPerGb or ReconcileGP3Performance, not both")
+	}
+
+	if diskOptions.VolumeType != VolumeTypeGP3 && diskOptions.ReconcileGP3Performance {
+		return nil, fmt.Errorf("invalid StorageClass parameters; ReconcileGP3Performance is only allowed for gp3 volumes")
+	}
+
 	createType = diskOptions.VolumeType
 	// If no volume type is specified, GP3 is used as default for newly created volumes.
 	if createType == "" {
