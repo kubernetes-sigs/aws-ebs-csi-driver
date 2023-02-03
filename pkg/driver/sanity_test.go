@@ -205,6 +205,14 @@ func (c *fakeCloudProvider) GetDiskStatusByID(ctx context.Context, volumeID stri
 	}, nil
 }
 
+func (c *fakeCloudProvider) ListDisks(ctx context.Context, clusterTag string, maxResults int64, token string) (disks []*cloud.Disk, nextToken string, err error) {
+	return []*cloud.Disk{}, "", nil
+}
+
+func (c *fakeCloudProvider) ListDiskStatus(ctx context.Context, volumeIDs []*string) (diskStatus map[string]*cloud.DiskStatus, err error) {
+	return map[string]*cloud.DiskStatus{}, nil
+}
+
 func (c *fakeCloudProvider) IsExistInstance(ctx context.Context, nodeID string) bool {
 	return nodeID == "instanceID"
 }

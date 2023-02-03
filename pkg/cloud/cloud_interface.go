@@ -16,6 +16,8 @@ type Cloud interface {
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
 	GetDiskStatusByID(ctx context.Context, volumeID string) (diskStatus *DiskStatus, err error)
+	ListDisks(ctx context.Context, clusterTag string, maxResults int64, token string) (disks []*Disk, nextToken string, err error)
+	ListDiskStatus(ctx context.Context, volumeIDs []*string) (diskStatus map[string]*DiskStatus, err error)
 	IsExistInstance(ctx context.Context, nodeID string) (success bool)
 	CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error)
 	DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error)

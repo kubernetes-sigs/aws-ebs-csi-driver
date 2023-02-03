@@ -1084,6 +1084,218 @@ func TestGetDiskStatusByID(t *testing.T) {
 	}
 }
 
+func TestListDisks(t *testing.T) {
+	testCases := []struct {
+		name      string
+		volumes   []*ec2.Volume
+		nextToken *string
+		expDisks  []*Disk
+		expErr    error
+	}{
+		{
+			name: "success: normal",
+			volumes: []*ec2.Volume{
+				{
+					VolumeId:         aws.String("test-vol-5678"),
+					AvailabilityZone: aws.String("us-east-0"),
+				},
+			},
+			nextToken: nil,
+			expDisks: []*Disk{
+				{
+					VolumeID:         "test-vol-5678",
+					AvailabilityZone: "us-east-0",
+				},
+			},
+			expErr: nil,
+		},
+		{
+			name: "success: multiple volumes",
+			volumes: []*ec2.Volume{
+				{
+					VolumeId:         aws.String("test-vol-5678"),
+					AvailabilityZone: aws.String("us-east-0"),
+				},
+				{
+					VolumeId:         aws.String("test-vol-1234"),
+					AvailabilityZone: aws.String("us-west-0"),
+				},
+				{
+					VolumeId:         aws.String("test-vol-1337"),
+					AvailabilityZone: aws.String("us-east-0"),
+				},
+			},
+			nextToken: aws.String("next-token"),
+			expDisks: []*Disk{
+				{
+					VolumeID:         "test-vol-5678",
+					AvailabilityZone: "us-east-0",
+				},
+				{
+					VolumeID:         "test-vol-1234",
+					AvailabilityZone: "us-west-0",
+				},
+				{
+					VolumeID:         "test-vol-1337",
+					AvailabilityZone: "us-east-0",
+				},
+			},
+			expErr: nil,
+		},
+		{
+			name:      "fail: error",
+			volumes:   nil,
+			nextToken: nil,
+			expDisks:  nil,
+			expErr:    errors.New("Unable to shade polygon normals"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+				&ec2.DescribeVolumesOutput{
+					Volumes:   tc.volumes,
+					NextToken: tc.nextToken,
+				},
+				tc.expErr,
+			)
+
+			disks, nextToken, err := c.ListDisks(ctx, "", 1234, "token")
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("ListDisks() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("ListDisks() failed: expected error, got nothing")
+				}
+				if tc.nextToken == nil && nextToken != "" {
+					t.Fatalf("ListDisks() failed: expected empty nextToken, got %s", nextToken)
+				}
+				if tc.nextToken != nil && nextToken != *tc.nextToken {
+					t.Fatalf("ListDisks() failed: expected nextToken %s, got %s", *tc.nextToken, nextToken)
+				}
+				if !reflect.DeepEqual(disks, tc.expDisks) {
+					t.Fatalf("ListDisks() failed: mismatched disks")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
+func TestListDiskStatus(t *testing.T) {
+	testCases := []struct {
+		name          string
+		statusItems   []*ec2.VolumeStatusItem
+		expDiskStatus map[string]*DiskStatus
+		expErr        error
+	}{
+		{
+			name: "success: normal",
+			statusItems: []*ec2.VolumeStatusItem{
+				{
+					VolumeId: aws.String("test-vol-1234"),
+					VolumeStatus: &ec2.VolumeStatusInfo{
+						Status: aws.String("impaired"),
+					},
+					Events: []*ec2.VolumeStatusEvent{
+						{
+							Description: aws.String("Abort, Retry, Fail?"),
+						},
+					},
+				},
+			},
+			expDiskStatus: map[string]*DiskStatus{
+				"test-vol-1234": {
+					Status:      "impaired",
+					Description: "Abort, Retry, Fail?",
+				},
+			},
+			expErr: nil,
+		},
+		{
+			name: "success: multiple volumes",
+			statusItems: []*ec2.VolumeStatusItem{
+				{
+					VolumeId: aws.String("test-vol-1234"),
+					VolumeStatus: &ec2.VolumeStatusInfo{
+						Status: aws.String("warning"),
+					},
+					Events: []*ec2.VolumeStatusEvent{
+						{
+							Description: aws.String("Guru meditation"),
+						},
+					},
+				},
+				{
+					VolumeId: aws.String("test-vol-5678"),
+					VolumeStatus: &ec2.VolumeStatusInfo{
+						Status: aws.String("ok"),
+					},
+					Events: []*ec2.VolumeStatusEvent{},
+				},
+			},
+			expDiskStatus: map[string]*DiskStatus{
+				"test-vol-1234": {
+					Status:      "warning",
+					Description: "Guru meditation",
+				},
+				"test-vol-5678": {
+					Status:      "ok",
+					Description: "",
+				},
+			},
+			expErr: nil,
+		},
+		{
+			name:          "fail: error",
+			statusItems:   nil,
+			expDiskStatus: nil,
+			expErr:        errors.New("Reticulating splines..."),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumeStatusWithContext(gomock.Eq(ctx), gomock.Any()).Return(
+				&ec2.DescribeVolumeStatusOutput{
+					VolumeStatuses: tc.statusItems,
+				},
+				tc.expErr,
+			)
+
+			disks, err := c.ListDiskStatus(ctx, nil)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("ListDiskStatus() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("ListDiskStatus() failed: expected error, got nothing")
+				}
+				if !reflect.DeepEqual(disks, tc.expDiskStatus) {
+					t.Fatalf("ListDiskStatus() failed: mismatched diskStatus")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestCreateSnapshot(t *testing.T) {
 	testCases := []struct {
 		name            string

@@ -60,6 +60,20 @@ const (
 	VolumeTypeStandard = "standard"
 )
 
+// Constants from pkg/driver/constants.go
+// You MUST also change them there!
+const (
+	// ResourceLifecycleTagPrefix is prefix of tag for provisioned EBS volume that
+	// marks them as owned by the cluster. Used only when --cluster-id is set.
+	ResourceLifecycleTagPrefix = "kubernetes.io/cluster/"
+
+	// ResourceLifecycleOwned is the value we use when tagging resources to indicate
+	// that the resource is considered owned and managed by the cluster,
+	// and in particular that the lifecycle is tied to the lifecycle of the cluster.
+	// From k8s.io/legacy-cloud-providers/aws/tags.go.
+	ResourceLifecycleOwned = "owned"
+)
+
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
@@ -132,6 +146,8 @@ const (
 	KubernetesTagKeyPrefix = "kubernetes.io"
 	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
 	AWSTagKeyPrefix = "aws:"
+	// FilterTagPrefix is the prefix of a filter to find by tag
+	FilterTagPrefix = "tag:"
 	//AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
@@ -704,13 +720,7 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		return nil, ErrDiskExistsDiffSize
 	}
 
-	return &Disk{
-		VolumeID:         aws.StringValue(volume.VolumeId),
-		CapacityGiB:      volSizeBytes,
-		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
-		SnapshotID:       aws.StringValue(volume.SnapshotId),
-		OutpostArn:       aws.StringValue(volume.OutpostArn),
-	}, nil
+	return volumeToDisk(volume), nil
 }
 
 func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error) {
@@ -726,13 +736,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		return nil, err
 	}
 
-	return &Disk{
-		VolumeID:         aws.StringValue(volume.VolumeId),
-		CapacityGiB:      aws.Int64Value(volume.Size),
-		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
-		OutpostArn:       aws.StringValue(volume.OutpostArn),
-		Attachments:      getVolumeAttachmentsList(volume),
-	}, nil
+	return volumeToDisk(volume), nil
 }
 
 func (c *cloud) GetDiskStatusByID(ctx context.Context, volumeID string) (*DiskStatus, error) {
@@ -758,19 +762,64 @@ func (c *cloud) GetDiskStatusByID(ctx context.Context, volumeID string) (*DiskSt
 		return nil, ErrInternal
 	}
 
-	statusInfo := statusItem.VolumeStatus
+	return volumeStatusToDiskStatus(statusItem), nil
+}
 
-	status := *statusInfo.Status
-	description := ""
+func (c *cloud) ListDisks(ctx context.Context, clusterTag string, maxResults int64, token string) (disks []*Disk, nextToken string, err error) {
+	var requestToken *string
 
-	if len(statusItem.Events) > 0 {
-		description = *statusItem.Events[0].Description
+	if token != "" {
+		requestToken = &token
 	}
 
-	return &DiskStatus{
-		Status:      status,
-		Description: description,
-	}, nil
+	request := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String(FilterTagPrefix + ResourceLifecycleTagPrefix + clusterTag),
+				Values: []*string{
+					aws.String(ResourceLifecycleOwned),
+				},
+			},
+		},
+		MaxResults: aws.Int64(maxResults),
+		NextToken:  requestToken,
+	}
+
+	response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, volume := range response.Volumes {
+		disks = append(disks, volumeToDisk(volume))
+	}
+
+	nextToken = ""
+	if response.NextToken != nil {
+		nextToken = *response.NextToken
+	}
+
+	return disks, nextToken, nil
+}
+
+func (c *cloud) ListDiskStatus(ctx context.Context, volumeIDs []*string) (diskStatus map[string]*DiskStatus, err error) {
+	request := &ec2.DescribeVolumeStatusInput{
+		VolumeIds: volumeIDs,
+	}
+
+	response, err := c.ec2.DescribeVolumeStatusWithContext(ctx, request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	diskStatus = make(map[string]*DiskStatus)
+	for _, statusItem := range response.VolumeStatuses {
+		diskStatus[*statusItem.VolumeId] = volumeStatusToDiskStatus(statusItem)
+	}
+
+	return diskStatus, nil
 }
 
 func (c *cloud) IsExistInstance(ctx context.Context, nodeID string) bool {
@@ -1329,4 +1378,31 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
 	return iops, nil
+}
+
+func volumeToDisk(volume *ec2.Volume) *Disk {
+	return &Disk{
+		VolumeID:         aws.StringValue(volume.VolumeId),
+		CapacityGiB:      aws.Int64Value(volume.Size),
+		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
+		OutpostArn:       aws.StringValue(volume.OutpostArn),
+		Attachments:      getVolumeAttachmentsList(volume),
+	}
+}
+
+func volumeStatusToDiskStatus(statusItem *ec2.VolumeStatusItem) *DiskStatus {
+
+	statusInfo := statusItem.VolumeStatus
+
+	status := *statusInfo.Status
+	description := ""
+
+	if len(statusItem.Events) > 0 {
+		description = *statusItem.Events[0].Description
+	}
+
+	return &DiskStatus{
+		Status:      status,
+		Description: description,
+	}
 }

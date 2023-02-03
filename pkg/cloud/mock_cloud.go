@@ -213,6 +213,37 @@ func (mr *MockCloudMockRecorder) IsExistInstance(ctx, nodeID interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsExistInstance", reflect.TypeOf((*MockCloud)(nil).IsExistInstance), ctx, nodeID)
 }
 
+// ListDiskStatus mocks base method.
+func (m *MockCloud) ListDiskStatus(ctx context.Context, volumeIDs []*string) (map[string]*DiskStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDiskStatus", ctx, volumeIDs)
+	ret0, _ := ret[0].(map[string]*DiskStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDiskStatus indicates an expected call of ListDiskStatus.
+func (mr *MockCloudMockRecorder) ListDiskStatus(ctx, volumeIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDiskStatus", reflect.TypeOf((*MockCloud)(nil).ListDiskStatus), ctx, volumeIDs)
+}
+
+// ListDisks mocks base method.
+func (m *MockCloud) ListDisks(ctx context.Context, clusterTag string, maxResults int64, token string) ([]*Disk, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDisks", ctx, clusterTag, maxResults, token)
+	ret0, _ := ret[0].([]*Disk)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListDisks indicates an expected call of ListDisks.
+func (mr *MockCloudMockRecorder) ListDisks(ctx, clusterTag, maxResults, token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDisks", reflect.TypeOf((*MockCloud)(nil).ListDisks), ctx, clusterTag, maxResults, token)
+}
+
 // ListSnapshots mocks base method.
 func (m *MockCloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (*ListSnapshotsResponse, error) {
 	m.ctrl.T.Helper()
