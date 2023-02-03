@@ -2,6 +2,11 @@ name: Publish to ECR
 on:
   push:
     tags: ['*']
+
+env:
+  ALL_OS: ${{ vars.ALL_OS }}
+  ALL_ARCH_linux: ${{ vars.ALL_ARCH_LINUX }}
+
 jobs:
   ecr-private:
     name: Push to ECR Private
@@ -42,6 +47,7 @@ jobs:
       run: make -j `nproc` all-push
 
   ecr-public:
+    if: ${{ vars.SKIP_ECR_PUBLIC != 'true' }}
     name: Push to ECR Public
     runs-on: ubuntu-latest
     environment: ecr-public

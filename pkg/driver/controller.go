@@ -118,16 +118,17 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	defer d.inFlight.Delete(volName)
 
 	var (
-		volumeType             string
-		iopsPerGB              int
-		allowIOPSPerGBIncrease bool
-		iops                   int
-		throughput             int
-		isEncrypted            bool
-		blockExpress           bool
-		kmsKeyID               string
-		scTags                 []string
-		volumeTags             = map[string]string{
+		volumeType              string
+		iopsPerGB               int
+		allowIOPSPerGBIncrease  bool
+		reconcileGP3Performance bool
+		iops                    int
+		throughput              int
+		isEncrypted             bool
+		blockExpress            bool
+		kmsKeyID                string
+		scTags                  []string
+		volumeTags              = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
@@ -148,6 +149,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 		case AllowAutoIOPSPerGBIncreaseKey:
 			allowIOPSPerGBIncrease = value == "true"
+		case ReconcileGP3PerformanceKey:
+			reconcileGP3Performance = value == "true"
 		case IopsKey:
 			iops, err = strconv.Atoi(value)
 			if err != nil {
@@ -224,6 +227,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[k] = v
 	}
 
+	// add the reconciliation tag identifier to the volume
+	if volumeType == cloud.VolumeTypeGP3 && reconcileGP3Performance {
+		volumeTags[cloud.AwsEbsReconcileGP3PerformanceTagKey] = "true"
+	}
+
 	addTags, err := template.Evaluate(scTags, tProps, d.driverOptions.warnOnInvalidTag)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
@@ -238,19 +246,20 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		CapacityBytes:          volSizeBytes,
-		Tags:                   volumeTags,
-		VolumeType:             volumeType,
-		IOPSPerGB:              iopsPerGB,
-		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
-		IOPS:                   iops,
-		Throughput:             throughput,
-		AvailabilityZone:       zone,
-		OutpostArn:             outpostArn,
-		Encrypted:              isEncrypted,
-		BlockExpress:           blockExpress,
-		KmsKeyID:               kmsKeyID,
-		SnapshotID:             snapshotID,
+		CapacityBytes:           volSizeBytes,
+		Tags:                    volumeTags,
+		VolumeType:              volumeType,
+		IOPSPerGB:               iopsPerGB,
+		AllowIOPSPerGBIncrease:  allowIOPSPerGBIncrease,
+		ReconcileGP3Performance: reconcileGP3Performance,
+		IOPS:                    iops,
+		Throughput:              throughput,
+		AvailabilityZone:        zone,
+		OutpostArn:              outpostArn,
+		Encrypted:               isEncrypted,
+		BlockExpress:            blockExpress,
+		KmsKeyID:                kmsKeyID,
+		SnapshotID:              snapshotID,
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)

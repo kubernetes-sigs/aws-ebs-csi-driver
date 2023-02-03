@@ -99,6 +99,7 @@ image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
 		--progress=plain \
 		--target=$(OS)-$(OSVERSION) \
 		--output=type=$(OUTPUT_TYPE) \
+		--provenance=false \
 		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
 		--build-arg=GOPROXY=$(GOPROXY) \
 		--build-arg=VERSION=$(VERSION) \
