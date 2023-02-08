@@ -33,7 +33,7 @@ import (
 const kubeconfigEnvVar = "KUBECONFIG"
 
 func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 	testing.Init()
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults

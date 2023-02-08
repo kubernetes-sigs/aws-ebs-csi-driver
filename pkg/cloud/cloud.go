@@ -252,7 +252,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
 		customResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-			if service == endpoints.Ec2ServiceID {
+			if service == ec2.EndpointsID {
 				return endpoints.ResolvedEndpoint{
 					URL:           endpoint,
 					SigningRegion: region,
