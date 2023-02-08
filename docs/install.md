@@ -6,13 +6,11 @@
 
 * If you are using a self managed cluster, ensure the flag `--allow-privileged=true` for `kube-apiserver`.
 
-* Important: If you intend to use the csi-snapshotter functionality, the [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter). **must be installed before** the EBS CSI driver.
-
-* If you are managing EBS volumes using static provisioning, get yourself familiar with [EBS volume](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html).
+* Important: If you intend to use the Volume Snapshot feature, the [Kubernetes Volume Snapshot CRDs](https://github.com/kubernetes-csi/external-snapshotter/tree/master/client/config/crd) must be installed **before** the EBS CSI driver. For installation instructions, see [CSI Snapshotter Usage](https://github.com/kubernetes-csi/external-snapshotter#usage).
 
 ## Installation
-#### Set up driver permission
-The driver requires IAM permission to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
+### Set up driver permissions
+The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
 
 Note: Add the below statement to the example policy if you want to encrypt the EBS drives. 
 ```
@@ -29,7 +27,7 @@ Note: Add the below statement to the example policy if you want to encrypt the E
 
 For more information, review ["Creating the Amazon EBS CSI driver IAM role for service accounts" from the EKS User Guide.](https://docs.aws.amazon.com/eks/latest/userguide/csi-iam-role.html) 
 
-There are several methods to grant the driver IAM permission:
+There are several methods to grant the driver IAM permissions:
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
 * EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via Helm is determined by value `controller.serviceAccount.name`, `ebs-csi-controller-sa` by default
 * Using secret object - create an IAM user, attach the policy to it, then create a generic secret called `aws-secret` in the `kube-system` namespace with the user's credentials
@@ -40,30 +38,27 @@ kubectl create secret generic aws-secret \
     --from-literal "access_key=${AWS_SECRET_ACCESS_KEY}"
 ```
 
-#### Configure driver toleration settings
+### Configure driver toleration settings
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
 
-#### Deploy driver
+### Deploy driver
+You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS managed add-on](https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html).
 
-To deploy the CSI driver:
+#### Kustomize
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.14"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.15"
 ```
 
-Verify driver is running:
-```sh
-kubectl get pods -n kube-system
-```
+*Note: Using the master branch to deploy the driver is not supported as the master branch may contain upcoming features incompatible with the currently released stable version of the driver.*
 
-Alternatively, you could also install the driver using Helm:
-
-Add the aws-ebs-csi-driver Helm repository:
+#### Helm
+- Add the `aws-ebs-csi-driver` Helm repository.
 ```sh
 helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
 helm repo update
 ```
 
-Then install a release of the driver using the chart
+- Install the latest release of the driver.
 ```sh
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
@@ -72,7 +67,12 @@ helm upgrade --install aws-ebs-csi-driver \
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
 
-#### Upgrading from version 1.X to 2.X of the Helm chart
+#### Once the driver has been deployed, verify the pods are running:
+```sh
+kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-ebs-csi-driver
+```
+
+### Upgrading from version 1.X to 2.X of the Helm chart
 Version 2.0.0 removed support for Helm v2 and now requires Helm v3 or above.
 
 The [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter) controller and CRDs will no longer be installed as part of this chart and moving forward will be a prerequisite of using the snap shotting functionality.
