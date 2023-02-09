@@ -63,7 +63,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v6.1.0-eks-1-25-latest"
+      tag: "v6.2.1-eks-1-25-latest"
     logLevel: 2
     resources: {}
     securityContext:

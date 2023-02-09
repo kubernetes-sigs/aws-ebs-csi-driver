@@ -179,7 +179,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.1.0-eks-1-25-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.2.1-eks-1-25-latest
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
