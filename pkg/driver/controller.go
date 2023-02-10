@@ -97,6 +97,9 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	if driverOptions.volumeHealthMonitoring {
 		controllerCaps = append(controllerCaps, csi.ControllerServiceCapability_RPC_VOLUME_CONDITION)
 	}
+	if driverOptions.kubernetesClusterID != "" {
+		controllerCaps = append(controllerCaps, csi.ControllerServiceCapability_RPC_LIST_VOLUMES)
+	}
 
 	return controllerService{
 		cloud:         cloudSrv,
@@ -467,7 +470,71 @@ func (d *controllerService) GetCapacity(ctx context.Context, req *csi.GetCapacit
 
 func (d *controllerService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
 	klog.V(4).InfoS("ListVolumes: called", "args", *req)
-	return nil, status.Error(codes.Unimplemented, "")
+
+	// The only way to reliably get a list of volumes this driver controls is to use the user-provided cluster ID
+	// Thus, ListVolumes is only supported when --k8s-tag-cluster-id is supplied
+	if d.driverOptions.kubernetesClusterID == "" {
+		return nil, status.Error(codes.Unimplemented, "")
+	}
+
+	var maxResults int64
+	// DescribeVolumes is capped from 5-500: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeVolumes.html
+	// DescribeVolumeStatus is capped from 5-1000: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeVolumeStatus.html
+	if req.MaxEntries == 0 || req.MaxEntries > 500 {
+		maxResults = 500
+	} else if req.MaxEntries < 5 {
+		return nil, status.Error(codes.InvalidArgument, "MaxEntries must be at minimum 5")
+	} else {
+		maxResults = int64(req.MaxEntries)
+	}
+
+	disks, nextToken, err := d.cloud.ListDisks(ctx, d.driverOptions.kubernetesClusterID, maxResults, req.StartingToken)
+	if err != nil {
+		klog.ErrorS(err, "Failed to list volumes")
+		return nil, status.Errorf(codes.Internal, "Could not list volumes: %v", err)
+	}
+
+	var diskStatusList map[string]*cloud.DiskStatus
+	if d.driverOptions.volumeHealthMonitoring && len(disks) > 0 {
+		volumeIDs := make([]*string, 0)
+
+		for _, disk := range disks {
+			volumeIDs = append(volumeIDs, &disk.VolumeID)
+		}
+
+		diskStatusList, err = d.cloud.ListDiskStatus(ctx, volumeIDs)
+		if err != nil {
+			klog.ErrorS(err, "Failed to list volume status")
+			return nil, status.Errorf(codes.Internal, "Could not list volume status: %v", err)
+		}
+	}
+
+	entries := make([]*csi.ListVolumesResponse_Entry, 0)
+
+	for _, disk := range disks {
+		var volumeStatus *csi.ListVolumesResponse_VolumeStatus
+
+		if d.driverOptions.volumeHealthMonitoring {
+			diskStatus, ok := diskStatusList[disk.VolumeID]
+			if !ok {
+				klog.InfoS("Volume status missing", "volumeId", disk.VolumeID)
+				return nil, status.Errorf(codes.Internal, "Volume status missing with ID %q", disk.VolumeID)
+			}
+			volumeStatus = &csi.ListVolumesResponse_VolumeStatus{
+				VolumeCondition: diskStatusToVolumeCondition(diskStatus),
+			}
+		}
+
+		entries = append(entries, &csi.ListVolumesResponse_Entry{
+			Volume: diskToVolume(disk),
+			Status: volumeStatus,
+		})
+	}
+
+	return &csi.ListVolumesResponse{
+		Entries:   entries,
+		NextToken: nextToken,
+	}, nil
 }
 
 func (d *controllerService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
@@ -548,42 +615,22 @@ func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.Co
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
-	volume := &csi.Volume{
-		VolumeId:           volumeID,
-		CapacityBytes:      util.GiBToBytes(disk.CapacityGiB),
-		AccessibleTopology: topologyFromDisk(disk),
-	}
 	var volumeStatus *csi.ControllerGetVolumeResponse_VolumeStatus
 
 	if d.driverOptions.volumeHealthMonitoring {
-		abnormal := false
-		message := "Volume is operating normally"
-
 		diskStatus, err := d.cloud.GetDiskStatusByID(ctx, volumeID)
 		if err != nil {
 			klog.ErrorS(err, "Failed to retrieve volume status", "volumeId", volumeID)
 			return nil, status.Errorf(codes.Internal, "Could not get volume status with ID %q: %v", volumeID, err)
 		}
 
-		if diskStatus.Status == "impaired" {
-			abnormal = true
-			if diskStatus.Description != "" {
-				message = diskStatus.Description
-			} else {
-				message = "Volume has an unknown error"
-			}
-		}
-
 		volumeStatus = &csi.ControllerGetVolumeResponse_VolumeStatus{
-			VolumeCondition: &csi.VolumeCondition{
-				Abnormal: abnormal,
-				Message:  message,
-			},
+			VolumeCondition: diskStatusToVolumeCondition(diskStatus),
 		}
 	}
 
 	return &csi.ControllerGetVolumeResponse{
-		Volume: volume,
+		Volume: diskToVolume(disk),
 		Status: volumeStatus,
 	}, nil
 }
@@ -960,4 +1007,31 @@ func BuildOutpostArn(segments map[string]string) string {
 		segments[AwsAccountIDKey],
 		segments[AwsOutpostIDKey],
 	)
+}
+
+func diskToVolume(disk *cloud.Disk) *csi.Volume {
+	return &csi.Volume{
+		VolumeId:           disk.VolumeID,
+		CapacityBytes:      util.GiBToBytes(disk.CapacityGiB),
+		AccessibleTopology: topologyFromDisk(disk),
+	}
+}
+
+func diskStatusToVolumeCondition(diskStatus *cloud.DiskStatus) *csi.VolumeCondition {
+	abnormal := false
+	message := "Volume is operating normally"
+
+	if diskStatus.Status == "impaired" {
+		abnormal = true
+		if diskStatus.Description != "" {
+			message = diskStatus.Description
+		} else {
+			message = "Volume has an unknown error"
+		}
+	}
+
+	return &csi.VolumeCondition{
+		Abnormal: abnormal,
+		Message:  message,
+	}
 }

@@ -3440,6 +3440,172 @@ func TestControllerGetVolume(t *testing.T) {
 	}
 }
 
+func TestListVolumes(t *testing.T) {
+	testCases := []struct {
+		name       string
+		enableVHM  bool
+		clusterTag string
+		maxResults int32
+		nextToken  string
+		disks      []*cloud.Disk
+		diskStatus map[string]*cloud.DiskStatus
+		expEntries []*csi.ListVolumesResponse_Entry
+		expError   bool
+	}{
+		{
+			name:       "success: normal",
+			enableVHM:  false,
+			clusterTag: "test-cluster",
+			maxResults: 123,
+			nextToken:  "test-token",
+			disks: []*cloud.Disk{
+				{
+					VolumeID:         "test-vol",
+					CapacityGiB:      456,
+					AvailabilityZone: "us-west-1c",
+				},
+			},
+			diskStatus: nil,
+			expEntries: []*csi.ListVolumesResponse_Entry{
+				{
+					Volume: &csi.Volume{
+						VolumeId:      "test-vol",
+						CapacityBytes: util.GiBToBytes(456),
+						AccessibleTopology: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									TopologyKey: "us-west-1c",
+								},
+							},
+						},
+					},
+				},
+			},
+			expError: false,
+		},
+		{
+			name:       "success: normal with VHM",
+			enableVHM:  true,
+			clusterTag: "test-cluster",
+			maxResults: 123,
+			nextToken:  "test-token",
+			disks: []*cloud.Disk{
+				{
+					VolumeID:         "test-vol",
+					CapacityGiB:      456,
+					AvailabilityZone: "us-west-1c",
+				},
+			},
+			diskStatus: map[string]*cloud.DiskStatus{
+				"test-vol": {
+					Status:      "ok",
+					Description: "",
+				},
+			},
+			expEntries: []*csi.ListVolumesResponse_Entry{
+				{
+					Volume: &csi.Volume{
+						VolumeId:      "test-vol",
+						CapacityBytes: util.GiBToBytes(456),
+						AccessibleTopology: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									TopologyKey: "us-west-1c",
+								},
+							},
+						},
+					},
+					Status: &csi.ListVolumesResponse_VolumeStatus{
+						VolumeCondition: &csi.VolumeCondition{
+							Abnormal: false,
+							Message:  "Volume is operating normally",
+						},
+					},
+				},
+			},
+			expError: false,
+		},
+		{
+			name:       "success: zero volumes",
+			enableVHM:  true,
+			clusterTag: "test-cluster",
+			maxResults: 123,
+			nextToken:  "test-token",
+			disks:      []*cloud.Disk{},
+			diskStatus: nil,
+			expEntries: []*csi.ListVolumesResponse_Entry{},
+			expError:   false,
+		},
+		{
+			name:       "fail: missing disk status",
+			enableVHM:  true,
+			clusterTag: "test-cluster",
+			maxResults: 123,
+			nextToken:  "test-token",
+			disks: []*cloud.Disk{
+				{
+					VolumeID:         "test-vol",
+					CapacityGiB:      456,
+					AvailabilityZone: "us-west-1c",
+				},
+			},
+			diskStatus: map[string]*cloud.DiskStatus{
+				"wrong-vol": {
+					Status:      "ok",
+					Description: "",
+				},
+			},
+			expEntries: nil,
+			expError:   true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockCloud := cloud.NewMockCloud(mockCtl)
+			mockCloud.EXPECT().ListDisks(gomock.Eq(ctx), gomock.Eq(tc.clusterTag), gomock.Eq(int64(tc.maxResults)), gomock.Eq("token")).Return(tc.disks, tc.nextToken, nil)
+			if tc.enableVHM && len(tc.disks) > 0 {
+				mockCloud.EXPECT().ListDiskStatus(gomock.Eq(ctx), gomock.Any()).Return(tc.diskStatus, nil)
+			}
+
+			awsDriver := controllerService{
+				cloud:    mockCloud,
+				inFlight: internal.NewInFlight(),
+				driverOptions: &DriverOptions{
+					volumeHealthMonitoring: tc.enableVHM,
+					kubernetesClusterID:    tc.clusterTag,
+				},
+			}
+
+			req := &csi.ListVolumesRequest{
+				MaxEntries:    tc.maxResults,
+				StartingToken: "token",
+			}
+
+			resp, err := awsDriver.ListVolumes(ctx, req)
+			if err != nil {
+				if !tc.expError {
+					t.Fatalf("ListVolumes() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expError {
+					t.Fatalf("ListVolumes() failed: expected error, got nothing")
+				}
+				if resp.NextToken != tc.nextToken {
+					t.Fatalf("ListVolumes() failed: expected NextToken %q, got %q", tc.nextToken, resp.NextToken)
+				}
+				if !reflect.DeepEqual(resp.Entries, tc.expEntries) {
+					t.Fatalf("ListVolumes() failed: mismatched Entries")
+				}
+			}
+		})
+	}
+}
+
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
 	if err == nil {
 		t.Fatalf("Expected operation to fail but got no error")
