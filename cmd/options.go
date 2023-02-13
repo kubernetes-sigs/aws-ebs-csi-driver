@@ -111,11 +111,13 @@ func GetOptions(fs *flag.FlagSet) *Options {
 	}
 
 	if *version {
-		info, err := driver.GetVersionJSON()
+		versionInfo, err := driver.GetVersionJSON()
 		if err != nil {
-			klog.ErrorS(err, "failed to get version", "version", info)
+			klog.ErrorS(err, "failed to get version")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
+		fmt.Println(versionInfo)
+		osExit(0)
 	}
 
 	if *toStderr {
