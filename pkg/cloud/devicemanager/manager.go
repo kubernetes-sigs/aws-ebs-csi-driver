@@ -127,7 +127,15 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 		return nil, err
 	}
 
-	name, err := d.nameAllocator.GetNext(inUse)
+	inUseTrimmed := make(map[string]string)
+	for name, volume := range inUse {
+		// trims /dev/sd or /dev/xvd from device name
+		name = strings.TrimPrefix(name, "/dev/sd")
+		name = strings.TrimPrefix(name, "/dev/xvd")
+		inUseTrimmed[name] = volume
+	}
+
+	name, err := d.nameAllocator.GetNext(inUseTrimmed)
 	if err != nil {
 		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
 	}
@@ -207,18 +215,11 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]s
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
-		// trims /dev/sd or /dev/xvd from device name
-		name = strings.TrimPrefix(name, "/dev/sd")
-		name = strings.TrimPrefix(name, "/dev/xvd")
-
-		if len(name) < 1 || len(name) > 2 {
-			klog.InfoS("Unexpected EBS DeviceName", "DeviceName", aws.StringValue(blockDevice.DeviceName))
-		}
 		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}
 
 	for name, volumeID := range d.inFlight.GetNames(nodeID) {
-		inUse[name] = volumeID
+		inUse[devPreffix+name] = volumeID
 	}
 
 	return inUse
@@ -227,7 +228,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]s
 func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string {
 	for name, volID := range inUse {
 		if volumeID == volID {
-			return devPreffix + name
+			return name
 		}
 	}
 	return ""
