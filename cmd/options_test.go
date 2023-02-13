@@ -163,8 +163,10 @@ func TestGetOptions(t *testing.T) {
 				defer func() { osExit = oldOSExit }()
 
 				var exitCode int
+				calledExit := false
 				testExit := func(code int) {
 					exitCode = code
+					calledExit = true
 				}
 				osExit = testExit
 
@@ -180,6 +182,9 @@ func TestGetOptions(t *testing.T) {
 
 				if exitCode != 0 {
 					t.Fatalf("expected exit code 0 but got %d", exitCode)
+				}
+				if !calledExit {
+					t.Fatalf("expect osExit to be called, but wasn't")
 				}
 			},
 		},
