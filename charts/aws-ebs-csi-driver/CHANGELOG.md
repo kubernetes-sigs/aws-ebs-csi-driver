@@ -1,5 +1,20 @@
 # Helm chart
 
+## v2.17.0
+* Bump driver version to `v1.16.0`
+* Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
+    * `--logging-format` flag has been added to set the log format. Valid values are `text` and `json`. The default value is `text`.
+    * `--logtostderr` is deprecated.
+    * Long arguments prefixed with `-` are no longer supported, and must be prefixed with `--`. For example, `--volume-attach-limit` instead of `-volume-attach-limit`.
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.4.0`
+    - csi-attacher: `v4.1.0`
+    - csi-snapshotter: `v6.2.1`
+    - livenessprobe: `v2.9.0`
+    - csi-resizer: `v1.7.0`
+    - node-driver-registrar: `v2.7.0`
+
+
 ## v2.16.0
 * Bump driver version to `v1.15.0`
 * Change default sidecars to EKS-D ([#1475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1475), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
