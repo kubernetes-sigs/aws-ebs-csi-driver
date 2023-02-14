@@ -1,3 +1,28 @@
+# v1.16.0
+### Notable Changes
+* Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
+    * `--logging-format` flag has been added to set the log format. Valid values are `text` and `json`. The default value is `text`.
+    * `--logtostderr` is deprecated.
+    * Long arguments prefixed with `-` are no longer supported, and must be prefixed with `--`. For example, `--volume-attach-limit` instead of `-volume-attach-limit`.
+* k8s.gcr.io -> registry.k8s.io ([#1488](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1488), [@ConnorJC3](https://github.com/ConnorJC3))
+    * The GCR manifests now use `registry.k8s.io` instead of `k8s.gcr.io` for the image repository. For users that rely on it, the images will still be pushed to `k8s.gcr.io` for the forseeable future, but we recommend migration to `registry.k8s.io` as soon as reasonably possible. For more information, see [registry.k8s.io: faster, cheaper and Generally Available (GA)](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/).
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.4.0`
+    - csi-attacher: `v4.1.0`
+    - csi-snapshotter: `v6.2.1`
+    - livenessprobe: `v2.9.0`
+    - csi-resizer: `v1.7.0`
+    - node-driver-registrar: `v2.7.0`
+
+### Improvements
+* Bump CI k8s version to 1.26.1 (and other CI tools upgrades) ([#1487](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1487), [@ConnorJC3](https://github.com/ConnorJC3))
+* Bump GitHub Actions workflows ([#1491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1491), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade golangci-lint ([#1505](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1505), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Use test driver image when testing upgrades with CT ([#1486](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1486), [@torredil](https://github.com/torredil))
+* Disable buildx provenance ([#1491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1491), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.15.0
 ### Notable Changes
 * Support specifying block size for filesystem format ([#1452](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1452), [@ConnorJC3](https://github.com/ConnorJC3))

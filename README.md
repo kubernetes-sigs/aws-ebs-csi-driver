@@ -20,13 +20,14 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| v1.15.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.15.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.15.0                      |
+| v1.16.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.16.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.16.0                      |
 
 <details>
 <summary>Previous Images</summary>
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| v1.15.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.15.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.15.0                      |
 | v1.14.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.14.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.14.1                      |
 | v1.14.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.14.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.14.0                      |
 | v1.13.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.13.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.13.0                      |
