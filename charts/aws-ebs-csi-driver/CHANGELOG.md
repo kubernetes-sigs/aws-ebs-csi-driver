@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.17.1
+* Bump driver version to `v1.16.1`
+
 ## v2.17.0
 * Bump driver version to `v1.16.0`
 * Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
