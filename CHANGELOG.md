@@ -1,3 +1,7 @@
+# v1.15.1
+### Notable Changes
+* Security fixes
+
 # v1.15.0
 ### Notable Changes
 * Support specifying block size for filesystem format ([#1452](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1452), [@ConnorJC3](https://github.com/ConnorJC3))
