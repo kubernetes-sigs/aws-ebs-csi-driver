@@ -1,3 +1,7 @@
+# v1.16.1
+### Notable Changes
+* Security fixes
+
 # v1.16.0
 ### Notable Changes
 * Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
@@ -22,6 +26,10 @@
 ### Bug Fixes
 * Use test driver image when testing upgrades with CT ([#1486](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1486), [@torredil](https://github.com/torredil))
 * Disable buildx provenance ([#1491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1491), [@ConnorJC3](https://github.com/ConnorJC3))
+
+# v1.15.1
+### Notable Changes
+* Security fixes
 
 # v1.15.0
 ### Notable Changes
