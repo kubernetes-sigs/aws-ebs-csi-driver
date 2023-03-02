@@ -22,8 +22,7 @@ import (
 
 // ExistingNames is a map of assigned device names. Presence of a key with a device
 // name in the map means that the device is allocated. Value is irrelevant and
-// can be used for anything that NameAllocator user wants.  Only the relevant
-// part of device name should be in the map, e.g. "ba" for "/dev/xvdba".
+// can be used for anything that NameAllocator user wants.
 type ExistingNames map[string]string
 
 // On AWS, we should assign new (not yet used) device names to attached volumes.
@@ -36,9 +35,8 @@ type ExistingNames map[string]string
 // device name reuse.
 type NameAllocator interface {
 	// GetNext returns a free device name or error when there is no free device
-	// name. Only the device name is returned, e.g. "ba" for "/dev/xvdba".
-	// It's up to the called to add appropriate "/dev/sd" or "/dev/xvd" prefix.
-	GetNext(existingNames ExistingNames) (name string, err error)
+	// name. The prefix (such as "/dev/xvd" or "/dev/sd") is passed as a parameter.
+	GetNext(existingNames ExistingNames, prefix string) (name string, err error)
 }
 
 type nameAllocator struct{}
@@ -48,13 +46,13 @@ var _ NameAllocator = &nameAllocator{}
 // GetNext gets next available device given existing names that are being used
 // This function iterate through the device names in deterministic order of:
 //
-//	ba, ... ,bz, ca, ... , cz
+//	ba, ..., bz, ca, ..., cz, ..., ..., zz
 //
 // and return the first one that is not used yet.
-func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
-	for _, c1 := range []string{"b", "c"} {
+func (d *nameAllocator) GetNext(existingNames ExistingNames, prefix string) (string, error) {
+	for c1 := 'b'; c1 <= 'z'; c1++ {
 		for c2 := 'a'; c2 <= 'z'; c2++ {
-			name := fmt.Sprintf("%s%s", c1, string(c2))
+			name := fmt.Sprintf("%s%s%s", prefix, string(c1), string(c2))
 			if _, found := existingNames[name]; !found {
 				return name, nil
 			}
