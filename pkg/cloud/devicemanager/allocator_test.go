@@ -37,7 +37,7 @@ func TestNameAllocator(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expectedName, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames)
+			actual, err := allocator.GetNext(existingNames, "")
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", test.expectedName, err)
 			}
@@ -53,11 +53,14 @@ func TestNameAllocatorError(t *testing.T) {
 	allocator := nameAllocator{}
 	existingNames := map[string]string{}
 
-	for i := 0; i < 52; i++ {
-		name, _ := allocator.GetNext(existingNames)
+	// Allocator goes from ba, bb, bc, ..., bz, ca, ..., cz, ..., ..., zz
+	// Thus 25*26 for the maximum number of allocatable volumes (25 for the
+	// first letter as it starts on 'b'
+	for i := 0; i < 25*26; i++ {
+		name, _ := allocator.GetNext(existingNames, "/dev/xvd")
 		existingNames[name] = ""
 	}
-	name, err := allocator.GetNext(existingNames)
+	name, err := allocator.GetNext(existingNames, "/dev/xvd")
 	if err == nil {
 		t.Errorf("expected error, got device  %q", name)
 	}
