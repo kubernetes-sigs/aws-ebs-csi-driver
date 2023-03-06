@@ -229,6 +229,9 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	klog.V(4).InfoS("NodeStageVolume: formatting and mounting with fstype", "source", source, "target", target, "fstype", fsType)
 	formatOptions := []string{}
 	if len(blockSize) > 0 {
+		if fsType == FSTypeXfs {
+			blockSize = "size=" + blockSize
+		}
 		formatOptions = append(formatOptions, "-b", blockSize)
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
