@@ -1,6 +1,6 @@
 > **Warning**
 > 
-> [`k8s.gcr.io` will be frozen on April 3rd](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/), and may stop working in the near future. We strongly encourage any users still using `k8s.gcr.io` to [move to `registry.k8s.io`](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/) as soon as possible. `k8s.gcr.io` will not be supported in any capacity by the EBS CSI Driver after release `v1.17.0`.
+> [`k8s.gcr.io` will be redirected on Monday March 20th](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/), and may stop working entirely in the near future. We strongly encourage any users still using `k8s.gcr.io` to [move to `registry.k8s.io`](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/) as soon as possible. `k8s.gcr.io` will not be supported in any capacity by the EBS CSI Driver after release `v1.17.0`.
 
 # Amazon Elastic Block Store (EBS) CSI driver
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kubernetes-sigs/aws-ebs-csi-driver)](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases)
