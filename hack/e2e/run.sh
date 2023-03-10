@@ -50,15 +50,15 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-${K8S_VERSION:-1.26.1}}
-K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-${K8S_VERSION:-1.24}}
+K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-${K8S_VERSION:-1.26.2}}
+K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-${K8S_VERSION:-1.25}}
 
-KOPS_VERSION=${KOPS_VERSION:-1.25.3}
+KOPS_VERSION=${KOPS_VERSION:-1.26.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 
-EKSCTL_VERSION=${EKSCTL_VERSION:-0.125.0}
+EKSCTL_VERSION=${EKSCTL_VERSION:-0.133.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 # Creates a windows node group.
@@ -111,7 +111,7 @@ else
   GINKGO_BIN=${BIN_DIR}/ginkgo
   if [[ ! -e ${GINKGO_BIN} ]]; then
     pushd /tmp
-    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.7.0
+    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.0
     popd
     ginkgo version
   fi
