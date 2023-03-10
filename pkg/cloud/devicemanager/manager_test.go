@@ -103,16 +103,16 @@ func TestNewDeviceWithExistingDevice(t *testing.T) {
 		{
 			name:         "success: different volumes",
 			existingID:   "vol-1",
-			existingPath: "/dev/xvdba",
+			existingPath: "/dev/xvdaa",
 			volumeID:     "vol-2",
-			expectedPath: "/dev/xvdbb",
+			expectedPath: "/dev/xvdab",
 		},
 		{
 			name:         "success: same volumes",
 			existingID:   "vol-1",
-			existingPath: "/dev/xvdba",
+			existingPath: "/dev/xvdcc",
 			volumeID:     "vol-1",
-			expectedPath: "/dev/xvdba",
+			expectedPath: "/dev/xvdcc",
 		},
 		{
 			name:         "success: same volumes with /dev/sdX path",

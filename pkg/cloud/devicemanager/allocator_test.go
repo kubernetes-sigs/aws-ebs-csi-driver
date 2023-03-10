@@ -27,12 +27,18 @@ func TestNameAllocator(t *testing.T) {
 	tests := []struct {
 		expectedName string
 	}{
+		{"aa"}, {"ab"}, {"ac"}, {"ad"}, {"ae"}, {"af"}, {"ag"}, {"ah"}, {"ai"}, {"aj"},
+		{"ak"}, {"al"}, {"am"}, {"an"}, {"ao"}, {"ap"}, {"aq"}, {"ar"}, {"as"}, {"at"},
+		{"au"}, {"av"}, {"aw"}, {"ax"}, {"ay"}, {"az"},
 		{"ba"}, {"bb"}, {"bc"}, {"bd"}, {"be"}, {"bf"}, {"bg"}, {"bh"}, {"bi"}, {"bj"},
 		{"bk"}, {"bl"}, {"bm"}, {"bn"}, {"bo"}, {"bp"}, {"bq"}, {"br"}, {"bs"}, {"bt"},
 		{"bu"}, {"bv"}, {"bw"}, {"bx"}, {"by"}, {"bz"},
 		{"ca"}, {"cb"}, {"cc"}, {"cd"}, {"ce"}, {"cf"}, {"cg"}, {"ch"}, {"ci"}, {"cj"},
 		{"ck"}, {"cl"}, {"cm"}, {"cn"}, {"co"}, {"cp"}, {"cq"}, {"cr"}, {"cs"}, {"ct"},
 		{"cu"}, {"cv"}, {"cw"}, {"cx"}, {"cy"}, {"cz"},
+		{"da"}, {"db"}, {"dc"}, {"dd"}, {"de"}, {"df"}, {"dg"}, {"dh"}, {"di"}, {"dj"},
+		{"dk"}, {"dl"}, {"dm"}, {"dn"}, {"do"}, {"dp"}, {"dq"}, {"dr"}, {"ds"}, {"dt"},
+		{"du"}, {"dv"}, {"dw"}, {"dx"},
 	}
 
 	for _, test := range tests {
@@ -53,10 +59,8 @@ func TestNameAllocatorError(t *testing.T) {
 	allocator := nameAllocator{}
 	existingNames := map[string]string{}
 
-	// Allocator goes from ba, bb, bc, ..., bz, ca, ..., cz, ..., ..., zz
-	// Thus 25*26 for the maximum number of allocatable volumes (25 for the
-	// first letter as it starts on 'b'
-	for i := 0; i < 25*26; i++ {
+	// 102 == number of allocations from aa ... dx (see allocator.go for why we stop at dx)
+	for i := 0; i < 102; i++ {
 		name, _ := allocator.GetNext(existingNames, "/dev/xvd")
 		existingNames[name] = ""
 	}
