@@ -46,12 +46,18 @@ var _ NameAllocator = &nameAllocator{}
 // GetNext gets next available device given existing names that are being used
 // This function iterate through the device names in deterministic order of:
 //
-//	ba, ..., bz, ca, ..., cz, ..., ..., zz
+//	aa, ..., az, ba, ..., bz, ..., ..., dx
 //
 // and return the first one that is not used yet.
+// We stop at dx because EBS performs undocumented validation on the device
+// name that refuses to mount devices after /dev/xvddx
 func (d *nameAllocator) GetNext(existingNames ExistingNames, prefix string) (string, error) {
-	for c1 := 'b'; c1 <= 'z'; c1++ {
-		for c2 := 'a'; c2 <= 'z'; c2++ {
+	for c1 := 'a'; c1 <= 'd'; c1++ {
+		c2end := 'z'
+		if c1 == 'd' {
+			c2end = 'x'
+		}
+		for c2 := 'a'; c2 <= c2end; c2++ {
 			name := fmt.Sprintf("%s%s%s", prefix, string(c1), string(c2))
 			if _, found := existingNames[name]; !found {
 				return name, nil
