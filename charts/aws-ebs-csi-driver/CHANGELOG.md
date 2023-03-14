@@ -1,5 +1,10 @@
 # Helm chart
 
+## v2.17.2
+* Bump driver version to `v1.17.0`
+* Bump `external-resizer` version to `v4.2.0`
+* All other sidecars have been updated to the latest rebuild (without an associated version change)
+
 ## v2.17.1
 * Bump driver version to `v1.16.1`
 
