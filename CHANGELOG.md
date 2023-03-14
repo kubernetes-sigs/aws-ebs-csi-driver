@@ -1,3 +1,22 @@
+# v1.17.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+[`k8s.gcr.io` will be redirected on Monday March 20th](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/), and may stop working entirely in the near future. If you are using `k8s.gcr.io` you MUST [move to `registry.k8s.io`](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/) to continue receiving support.
+
+Issues related to `k8s.gcr.io` will no longer be accepted. `public.ecr.aws` and `registry.k8s.io` images are unaffected and remain supported as per [the support policy](https://github.com/kubernetes-sigs/aws-ebs-csi-driver#support).
+
+### Notable Changes
+* Add support for XFS custom block sizes ([#1523](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1523), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add support for instances with more than 52 volumes attached ([#1518](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1518), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug Fixes
+* Fix improper handling of manually-mounted volumes ([#1518](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1518), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Log driver version in lower verbosities ([#1525](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1525), [@torredil](https://github.com/torredil))
+* Upgrade dependencies ([#1529](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1529), [@torredil](https://github.com/torredil))
+
 # v1.16.1
 ### Notable Changes
 * Security fixes
