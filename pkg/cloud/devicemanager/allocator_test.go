@@ -27,17 +27,23 @@ func TestNameAllocator(t *testing.T) {
 	tests := []struct {
 		expectedName string
 	}{
+		{"aa"}, {"ab"}, {"ac"}, {"ad"}, {"ae"}, {"af"}, {"ag"}, {"ah"}, {"ai"}, {"aj"},
+		{"ak"}, {"al"}, {"am"}, {"an"}, {"ao"}, {"ap"}, {"aq"}, {"ar"}, {"as"}, {"at"},
+		{"au"}, {"av"}, {"aw"}, {"ax"}, {"ay"}, {"az"},
 		{"ba"}, {"bb"}, {"bc"}, {"bd"}, {"be"}, {"bf"}, {"bg"}, {"bh"}, {"bi"}, {"bj"},
 		{"bk"}, {"bl"}, {"bm"}, {"bn"}, {"bo"}, {"bp"}, {"bq"}, {"br"}, {"bs"}, {"bt"},
 		{"bu"}, {"bv"}, {"bw"}, {"bx"}, {"by"}, {"bz"},
 		{"ca"}, {"cb"}, {"cc"}, {"cd"}, {"ce"}, {"cf"}, {"cg"}, {"ch"}, {"ci"}, {"cj"},
 		{"ck"}, {"cl"}, {"cm"}, {"cn"}, {"co"}, {"cp"}, {"cq"}, {"cr"}, {"cs"}, {"ct"},
 		{"cu"}, {"cv"}, {"cw"}, {"cx"}, {"cy"}, {"cz"},
+		{"da"}, {"db"}, {"dc"}, {"dd"}, {"de"}, {"df"}, {"dg"}, {"dh"}, {"di"}, {"dj"},
+		{"dk"}, {"dl"}, {"dm"}, {"dn"}, {"do"}, {"dp"}, {"dq"}, {"dr"}, {"ds"}, {"dt"},
+		{"du"}, {"dv"}, {"dw"}, {"dx"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.expectedName, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames)
+			actual, err := allocator.GetNext(existingNames, "")
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", test.expectedName, err)
 			}
@@ -53,11 +59,12 @@ func TestNameAllocatorError(t *testing.T) {
 	allocator := nameAllocator{}
 	existingNames := map[string]string{}
 
-	for i := 0; i < 52; i++ {
-		name, _ := allocator.GetNext(existingNames)
+	// 102 == number of allocations from aa ... dx (see allocator.go for why we stop at dx)
+	for i := 0; i < 102; i++ {
+		name, _ := allocator.GetNext(existingNames, "/dev/xvd")
 		existingNames[name] = ""
 	}
-	name, err := allocator.GetNext(existingNames)
+	name, err := allocator.GetNext(existingNames, "/dev/xvd")
 	if err == nil {
 		t.Errorf("expected error, got device  %q", name)
 	}
