@@ -309,3 +309,9 @@ storageClasses: []
 # Intended for use with older clusters that cannot easily replace the CSIDriver object
 # This parameter should always be false for new installations
 useOldCSIDriver: false
+
+
+tests:
+  # Enable helm test hooks
+  enabled: true
+  
