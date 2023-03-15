@@ -1,3 +1,4 @@
+{{- if .Values.tests.enabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -213,3 +214,4 @@ spec:
       configMap:
         name: ebs-csi-driver-test
   restartPolicy: Never
+{{- end }}
