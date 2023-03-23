@@ -743,10 +743,14 @@ func (d *nodeService) getVolumesLimit() int64 {
 	if isNitro {
 		enis := d.metadata.GetNumAttachedENIs()
 		nvmeInstanceStoreVolumes := cloud.GetNVMeInstanceStoreVolumesForInstanceType(instanceType)
-		availableAttachments = availableAttachments - enis - blockVolumes - nvmeInstanceStoreVolumes
-	} else {
-		availableAttachments -= blockVolumes
+		availableAttachments = availableAttachments - enis - nvmeInstanceStoreVolumes
 	}
+	availableAttachments = availableAttachments - blockVolumes
+
+	if availableAttachments < 0 {
+		availableAttachments = 0
+	}
+
 	maxEBSAttachments, ok := cloud.GetEBSLimitForInstanceType(instanceType)
 	if ok {
 		availableAttachments = min(maxEBSAttachments, availableAttachments)
