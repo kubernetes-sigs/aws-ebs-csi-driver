@@ -622,10 +622,6 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
 
-	for k, v := range addTags {
-		snapshotTags[k] = v
-	}
-
 	if d.driverOptions.kubernetesClusterID != "" {
 		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
 		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned
@@ -634,6 +630,11 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	for k, v := range d.driverOptions.extraTags {
 		snapshotTags[k] = v
 	}
+
+	for k, v := range addTags {
+		snapshotTags[k] = v
+	}
+
 	opts := &cloud.SnapshotOptions{
 		Tags: snapshotTags,
 	}
