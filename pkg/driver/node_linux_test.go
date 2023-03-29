@@ -32,7 +32,7 @@ import (
 )
 
 func TestFindDevicePath(t *testing.T) {
-	devicePath := "/dev/xvdba"
+	devicePath := "/dev/xvdaa"
 	nvmeDevicePath := "/dev/nvme1n1"
 	snowDevicePath := "/dev/vda"
 	volumeID := "vol-test"
@@ -114,6 +114,20 @@ func TestFindDevicePath(t *testing.T) {
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				gomock.InOrder(
 					mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(false, nil),
+
+					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist),
+				)
+			},
+			expectDevicePath: snowDevicePath,
+		},
+		{
+			name:       "success: non-standard snow device path",
+			devicePath: "/dev/sda",
+			volumeID:   volumeID,
+			partition:  "",
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				gomock.InOrder(
+					mockMounter.EXPECT().PathExists(gomock.Eq("/dev/sda")).Return(false, nil),
 
 					mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(nil, os.ErrNotExist),
 				)
