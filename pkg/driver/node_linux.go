@@ -101,7 +101,11 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 
 	if util.IsSBE(d.metadata.GetRegion()) {
 		klog.V(5).InfoS("[Debug] Falling back to snow volume lookup", "devicePath", devicePath)
-		canonicalDevicePath = "/dev/vd" + strings.TrimPrefix(devicePath, "/dev/xvdb")
+		// Snow completely ignores the requested device path and mounts volumes starting at /dev/vda .. /dev/vdb .. etc
+		// Morph the device path to the snow form by chopping off the last letter and prefixing with /dev/vd
+		// VMs on snow devices are currently limited to 10 block devices each - if that ever exceeds 26 this will need
+		// to be adapted
+		canonicalDevicePath = "/dev/vd" + devicePath[len(devicePath)-1:]
 	}
 
 	if canonicalDevicePath == "" {
