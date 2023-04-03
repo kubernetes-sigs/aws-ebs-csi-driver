@@ -259,6 +259,10 @@ func (c *fakeCloudProvider) GetSnapshotByID(ctx context.Context, snapshotID stri
 	return ret.Snapshot, nil
 }
 
+func (c *fakeCloudProvider) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
+	return nil, nil
+}
+
 func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *cloud.ListSnapshotsResponse, err error) {
 	var snapshots []*cloud.Snapshot
 	var retToken string
@@ -282,6 +286,10 @@ func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, 
 		NextToken: retToken,
 	}, nil
 
+}
+
+func (c *fakeCloudProvider) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+	return nil, nil
 }
 
 func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, newSize int64) (int64, error) {

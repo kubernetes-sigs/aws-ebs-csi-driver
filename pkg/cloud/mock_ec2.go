@@ -276,6 +276,26 @@ func (mr *MockEC2MockRecorder) DetachVolumeWithContext(ctx, input interface{}, o
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachVolumeWithContext", reflect.TypeOf((*MockEC2)(nil).DetachVolumeWithContext), varargs...)
 }
 
+// EnableFastSnapshotRestoresWithContext mocks base method.
+func (m *MockEC2) EnableFastSnapshotRestoresWithContext(ctx aws.Context, input *ec2.EnableFastSnapshotRestoresInput, opts ...request.Option) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableFastSnapshotRestoresWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.EnableFastSnapshotRestoresOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableFastSnapshotRestoresWithContext indicates an expected call of EnableFastSnapshotRestoresWithContext.
+func (mr *MockEC2MockRecorder) EnableFastSnapshotRestoresWithContext(ctx, input interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableFastSnapshotRestoresWithContext", reflect.TypeOf((*MockEC2)(nil).EnableFastSnapshotRestoresWithContext), varargs...)
+}
+
 // ModifyVolumeWithContext mocks base method.
 func (m *MockEC2) ModifyVolumeWithContext(ctx aws.Context, input *ec2.ModifyVolumeInput, opts ...request.Option) (*ec2.ModifyVolumeOutput, error) {
 	m.ctrl.T.Helper()
