@@ -38,4 +38,5 @@ type EC2 interface {
 	DescribeVolumesModificationsWithContext(ctx aws.Context, input *ec2.DescribeVolumesModificationsInput, opts ...request.Option) (*ec2.DescribeVolumesModificationsOutput, error)
 	DescribeAvailabilityZonesWithContext(ctx aws.Context, input *ec2.DescribeAvailabilityZonesInput, opts ...request.Option) (*ec2.DescribeAvailabilityZonesOutput, error)
 	CreateTagsWithContext(ctx aws.Context, input *ec2.CreateTagsInput, opts ...request.Option) (*ec2.CreateTagsOutput, error)
+	EnableFastSnapshotRestoresWithContext(ctx aws.Context, input *ec2.EnableFastSnapshotRestoresInput, opts ...request.Option) (*ec2.EnableFastSnapshotRestoresOutput, error)
 }

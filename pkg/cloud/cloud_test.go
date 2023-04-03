@@ -1061,6 +1061,142 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 }
 
+func TestEnableFastSnapshotRestores(t *testing.T) {
+	testCases := []struct {
+		name              string
+		snapshotID        string
+		availabilityZones []string
+		expOutput         *ec2.EnableFastSnapshotRestoresOutput
+		expErr            error
+	}{
+		{
+			name:              "success: normal",
+			snapshotID:        "snap-test-id",
+			availabilityZones: []string{"us-west-2a", "us-west-2b"},
+			expOutput: &ec2.EnableFastSnapshotRestoresOutput{
+				Successful: []*ec2.EnableFastSnapshotRestoreSuccessItem{{
+					AvailabilityZone: aws.String("us-west-2a,us-west-2b"),
+					SnapshotId:       aws.String("snap-test-id")}},
+				Unsuccessful: []*ec2.EnableFastSnapshotRestoreErrorItem{},
+			},
+			expErr: nil,
+		},
+		{
+			name:              "fail: unsuccessful response",
+			snapshotID:        "snap-test-id",
+			availabilityZones: []string{"us-west-2a", "invalid-zone"},
+			expOutput: &ec2.EnableFastSnapshotRestoresOutput{
+				Unsuccessful: []*ec2.EnableFastSnapshotRestoreErrorItem{{
+					SnapshotId: aws.String("snap-test-id"),
+					FastSnapshotRestoreStateErrors: []*ec2.EnableFastSnapshotRestoreStateErrorItem{
+						{AvailabilityZone: aws.String("us-west-2a,invalid-zone"),
+							Error: &ec2.EnableFastSnapshotRestoreStateError{
+								Message: aws.String("failed to create fast snapshot restore")}},
+					},
+				}},
+			},
+			expErr: fmt.Errorf("failed to create fast snapshot restores for snapshot"),
+		},
+		{
+			name:              "fail: error",
+			snapshotID:        "",
+			availabilityZones: nil,
+			expOutput:         nil,
+			expErr:            fmt.Errorf("EnableFastSnapshotRestores error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			mockEC2.EXPECT().EnableFastSnapshotRestoresWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
+
+			response, err := c.EnableFastSnapshotRestores(ctx, tc.availabilityZones, tc.snapshotID)
+
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected no error, got: %v", err)
+				}
+				if err.Error() != tc.expErr.Error() {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected error %v, got %v", tc.expErr, err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected error %v, got nothing", tc.expErr)
+				}
+				if len(response.Successful) == 0 || len(response.Unsuccessful) > 0 {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected successful response, got %v", response)
+				}
+				if *response.Successful[0].SnapshotId != tc.snapshotID {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected successful response to have SnapshotId %s, got %s", tc.snapshotID, *response.Successful[0].SnapshotId)
+				}
+				az := strings.Split(*response.Successful[0].AvailabilityZone, ",")
+				if !reflect.DeepEqual(az, tc.availabilityZones) {
+					t.Fatalf("EnableFastSnapshotRestores() failed: expected successful response to have AvailabilityZone %v, got %v", az, tc.availabilityZones)
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
+func TestAvailabilityZones(t *testing.T) {
+	testCases := []struct {
+		name             string
+		availabilityZone string
+		expOutput        *ec2.DescribeAvailabilityZonesOutput
+		expErr           error
+	}{
+		{
+			name:             "success: normal",
+			availabilityZone: expZone,
+			expOutput: &ec2.DescribeAvailabilityZonesOutput{
+				AvailabilityZones: []*ec2.AvailabilityZone{
+					{ZoneName: aws.String(expZone)},
+				}},
+			expErr: nil,
+		},
+		{
+			name:             "fail: error",
+			availabilityZone: "",
+			expOutput:        nil,
+			expErr:           fmt.Errorf("TestAvailabilityZones error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeAvailabilityZonesWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
+
+			az, err := c.AvailabilityZones(ctx)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("AvailabilityZones() failed: expected no error, got: %v", err)
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatalf("AvailabilityZones() failed: expected error, got nothing")
+				}
+				if val, ok := az[tc.availabilityZone]; !ok {
+					t.Fatalf("AvailabilityZones() failed: expected to find %s, got %v", tc.availabilityZone, val)
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestDeleteSnapshot(t *testing.T) {
 	testCases := []struct {
 		name         string
