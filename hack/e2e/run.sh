@@ -183,15 +183,13 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
     export CT_REMOTE="ct"
     export CT_TARGET_BRANCH="${PULL_BASE_REF}"
   fi
-  yq -i ".image.repository = \"$IMAGE_NAME\" | .image.tag = \"$IMAGE_TAG\"" ${PWD}/charts/aws-ebs-csi-driver/values.yaml
   set -x
   set +e
   export KUBECONFIG="${KUBECONFIG}"
-  ${CHART_TESTING_BIN} lint-and-install --config ${PWD}/tests/ct-config.yaml
+  ${CHART_TESTING_BIN} lint-and-install --config ${PWD}/tests/ct-config.yaml --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG}"
   TEST_PASSED=$?
   set -e
   set +x
-  git checkout -- ${PWD}/charts/aws-ebs-csi-driver/values.yaml
 else
   loudecho "Deploying driver"
   startSec=$(date +'%s')
