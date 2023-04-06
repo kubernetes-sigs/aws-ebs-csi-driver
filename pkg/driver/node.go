@@ -747,8 +747,7 @@ func (d *nodeService) getVolumesLimit() int64 {
 		nvmeInstanceStoreVolumes := cloud.GetNVMeInstanceStoreVolumesForInstanceType(instanceType)
 		availableAttachments = availableAttachments - enis - nvmeInstanceStoreVolumes
 	}
-	availableAttachments = availableAttachments - blockVolumes
-
+	availableAttachments = availableAttachments - blockVolumes - 1 // -1 for root device
 	if availableAttachments < 0 {
 		availableAttachments = 0
 	}

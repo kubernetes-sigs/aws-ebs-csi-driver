@@ -61,17 +61,14 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	attachedENIs := strings.Count(enis, "\n") + 1
-
-	//As block device mapping contains 1 volume for the AMI.
-	blockDevMappings := 1
+	blockDevMappings := 0
 
 	if !util.IsSBE(doc.Region) {
 		mappings, mapErr := svc.GetMetadata(blockDevicesEndpoint)
-		// The output contains 1 volume for the AMI. Any other block device contributes to the attachment limit
-		blockDevMappings = strings.Count(mappings, "\n")
 		if mapErr != nil {
 			return nil, fmt.Errorf("could not get number of block device mappings: %w", err)
 		}
+		blockDevMappings = strings.Count(mappings, "ebs")
 	}
 
 	instanceInfo := Metadata{

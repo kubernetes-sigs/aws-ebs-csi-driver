@@ -330,7 +330,7 @@ func TestNewMetadataService(t *testing.T) {
 			imdsENIOutput:         "00:00:00:00:00:00",
 			expectedENIs:          1,
 			imdsBlockDeviceOutput: "ami\nroot\nebs1\nebs2",
-			expectedBlockDevices:  3,
+			expectedBlockDevices:  2,
 		},
 		{
 			name:                 "success: region from session is snow",
@@ -344,7 +344,7 @@ func TestNewMetadataService(t *testing.T) {
 			imdsENIOutput:        "00:00:00:00:00:00",
 			expectedENIs:         1,
 			regionFromSession:    snowRegion,
-			expectedBlockDevices: 1,
+			expectedBlockDevices: 0,
 		},
 	}
 
