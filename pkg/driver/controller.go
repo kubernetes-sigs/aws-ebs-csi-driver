@@ -135,7 +135,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		blockSize string
 	)
 
-	tProps := new(template.Props)
+	tProps := new(template.PVProps)
 
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
@@ -605,15 +605,25 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	var vscTags []string
+	vsProps := new(template.VolumeSnapshotProps)
 	for key, value := range req.GetParameters() {
-		if strings.HasPrefix(key, TagKeyPrefix) {
-			vscTags = append(vscTags, value)
-		} else {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateSnapshot", key)
+		switch key {
+		case VolumeSnapshotNameKey:
+			vsProps.VolumeSnapshotName = value
+		case VolumeSnapshotNamespaceKey:
+			vsProps.VolumeSnapshotNamespace = value
+		case VolumeSnapshotContentNameKey:
+			vsProps.VolumeSnapshotContentName = value
+		default:
+			if strings.HasPrefix(key, TagKeyPrefix) {
+				vscTags = append(vscTags, value)
+			} else {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateSnapshot", key)
+			}
 		}
 	}
 
-	addTags, err := template.Evaluate(vscTags, nil, d.driverOptions.warnOnInvalidTag)
+	addTags, err := template.Evaluate(vscTags, vsProps, d.driverOptions.warnOnInvalidTag)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
 	}
