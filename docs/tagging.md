@@ -96,6 +96,40 @@ backup=true
 billingID=ABCDEF
 ```
 
+# Snapshot Tagging
+The AWS EBS CSI Driver supports tagging snapshots through `VolumeSnapshotClass.parameters`, similarly to StorageClass tagging.
+
+The CSI driver supports runtime string interpolation on the snapshot tag values. You can specify placeholders for VolumeSnapshot namespace, VolumeSnapshot name and VolumeSnapshotContent name, which will then be dynamically computed at runtime. You can also use the functions provided by the CSI Driver to apply more expressive tags. **Note: Interpolated tags require the `--extra-create-metadata` flag to be enabled on the `external-snapshotter` sidecar.**
+
+**Example**
+```
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: csi-aws-vsc
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+parameters:
+  tagSpecification_1: "key1=value1"
+  tagSpecification_2: "key2="
+  # Interpolated tag
+  tagSpecification_3: "snapshotnamespace={{ .VolumeSnapshotNamespace }}"
+  tagSpecification_4: "snapshotname={{ .VolumeSnapshotName }}"
+  tagSpecification_5: "snapshotcontentname={{ .VolumeSnapshotContentName }}"
+  # Interpolated tag w/ function
+  tagSpecification_6: 'key6={{ .VolumeSnapshotNamespace | contains "prod" }}'
+```
+
+Provisioning a snapshot in namespace 'ns-prod' with `VolumeSnapshot` name being 'ebs-snapshot' using this VolumeSnapshotClass, will apply the following tags to the snapshot:
+
+```
+key1=value1
+key2=<empty string>
+snapshotnamespace=ns-prod
+snapshotname=ebs-snapshot
+snapshotcontentname=<the computed VolumeSnapshotContent name>
+key6=true
+```
 ____
 
 ## Failure Modes

@@ -69,6 +69,16 @@ const (
 	// provisioned volume
 	PVNameKey = "csi.storage.k8s.io/pv/name"
 
+	// VolumeSnapshotNameKey contains name of the snapshot
+	VolumeSnapshotNameKey = "csi.storage.k8s.io/volumesnapshot/name"
+
+	// VolumeSnapshotNamespaceKey contains namespace of the snapshot
+	VolumeSnapshotNamespaceKey = "csi.storage.k8s.io/volumesnapshot/namespace"
+
+	// VolumeSnapshotCotentNameKey contains name of the VolumeSnapshotContent that is the source
+	// for the snapshot
+	VolumeSnapshotContentNameKey = "csi.storage.k8s.io/volumesnapshotcontent/name"
+
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
 	BlockExpressKey = "blockexpress"
 

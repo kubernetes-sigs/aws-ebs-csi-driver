@@ -8,13 +8,19 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type Props struct {
+type PVProps struct {
 	PVCName      string
 	PVCNamespace string
 	PVName       string
 }
 
-func Evaluate(tm []string, props *Props, warnOnly bool) (map[string]string, error) {
+type VolumeSnapshotProps struct {
+	VolumeSnapshotName        string
+	VolumeSnapshotNamespace   string
+	VolumeSnapshotContentName string
+}
+
+func Evaluate(tm []string, props interface{}, warnOnly bool) (map[string]string, error) {
 	md := make(map[string]string)
 	for _, s := range tm {
 		st := strings.SplitN(s, "=", 2)
@@ -39,7 +45,7 @@ func Evaluate(tm []string, props *Props, warnOnly bool) (map[string]string, erro
 	return md, nil
 }
 
-func execTemplate(value string, props *Props, t *template.Template) (string, error) {
+func execTemplate(value string, props interface{}, t *template.Template) (string, error) {
 	tmpl, err := t.Parse(value)
 	if err != nil {
 		return "", err

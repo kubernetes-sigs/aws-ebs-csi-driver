@@ -184,6 +184,7 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
+            - --extra-create-metadata
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
