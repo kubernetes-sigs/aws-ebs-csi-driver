@@ -23,20 +23,17 @@ function kops_install() {
 }
 
 function kops_create_cluster() {
-  SSH_KEY_PATH=${1}
-  CLUSTER_NAME=${2}
-  BIN=${3}
-  ZONES=${4}
-  NODE_COUNT=${5}
-  INSTANCE_TYPE=${6}
-  K8S_VERSION=${7}
-  CLUSTER_FILE=${8}
-  KUBECONFIG=${9}
-  KOPS_PATCH_FILE=${10}
-  KOPS_PATCH_NODE_FILE=${11}
-  KOPS_STATE_FILE=${12}
-
-  generate_ssh_key "${SSH_KEY_PATH}"
+  CLUSTER_NAME=${1}
+  BIN=${2}
+  ZONES=${3}
+  NODE_COUNT=${4}
+  INSTANCE_TYPE=${5}
+  K8S_VERSION=${6}
+  CLUSTER_FILE=${7}
+  KUBECONFIG=${8}
+  KOPS_PATCH_FILE=${9}
+  KOPS_PATCH_NODE_FILE=${10}
+  KOPS_STATE_FILE=${11}
 
   if kops_cluster_exists "${CLUSTER_NAME}" "${BIN}" "${KOPS_STATE_FILE}"; then
     loudecho "Replacing cluster $CLUSTER_NAME with $CLUSTER_FILE"
@@ -44,7 +41,6 @@ function kops_create_cluster() {
   else
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
     ${BIN} create cluster --state "${KOPS_STATE_FILE}" \
-      --ssh-public-key="${SSH_KEY_PATH}".pub \
       --zones "${ZONES}" \
       --node-count="${NODE_COUNT}" \
       --node-size="${INSTANCE_TYPE}" \
@@ -62,7 +58,6 @@ function kops_create_cluster() {
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${BIN} create --state "${KOPS_STATE_FILE}" -f "${CLUSTER_FILE}"
-    kops create secret --state "${KOPS_STATE_FILE}" --name "${CLUSTER_NAME}" sshpublickey admin -i "${SSH_KEY_PATH}".pub
   fi
 
   loudecho "Updating cluster $CLUSTER_NAME with $CLUSTER_FILE"

@@ -34,7 +34,6 @@ CLUSTER_TYPE=${CLUSTER_TYPE:-kops}
 
 TEST_DIR=${BASE_DIR}/csi-test-artifacts
 BIN_DIR=${TEST_DIR}/bin
-SSH_KEY_PATH=${TEST_DIR}/id_rsa
 CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.yaml
 KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
 
@@ -131,7 +130,6 @@ ecr_build_and_push "${REGION}" \
 
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_create_cluster \
-    "$SSH_KEY_PATH" \
     "$CLUSTER_NAME" \
     "$KOPS_BIN" \
     "$ZONES" \
@@ -148,7 +146,6 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   fi
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_create_cluster \
-    "$SSH_KEY_PATH" \
     "$CLUSTER_NAME" \
     "$EKSCTL_BIN" \
     "$ZONES" \
