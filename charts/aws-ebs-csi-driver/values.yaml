@@ -273,6 +273,7 @@ node:
   enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
+  startUpTaint: false
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:

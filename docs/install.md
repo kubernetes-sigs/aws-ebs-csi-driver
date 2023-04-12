@@ -41,6 +41,19 @@ kubectl create secret generic aws-secret \
 ### Configure driver toleration settings
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
 
+### Configure node taint and driver start-up taint
+In some cases when new node frequesntly join the cluster, workload pods can be scheduled to a new node ahead of the csi-node start-up and ready on that node. This race condition between workload pod and csi-node pod will cause the workload pod fails to mount PVC at first place.
+
+To help overcome this situation, CSI Driver node can manipulate Kubernetes’s taints on a given node to help preventing pods from starting before CSI Driver's node pod runs on this node.
+
+To configure start-up taint, the cluster administrator can places a taint with key `node.ebs.csi.aws.com/agent-not-ready` on a given uninitialized node(or node group). This prevents pods that don’t have a matching toleration from either being scheduled or altogether running on the node until the taint is removed. If use Helm to install CSI Driver, set `.Value.node.startUpTaint` to `true`. Once the CSI Driver pod runs on the node, initializes and ready, it will removes the aforementioned taint. After that, workload pods will start being scheduled and running on the node, with CSI Driver full functional on that node.
+
+The taint effect can be set to `NoSchedule` or `NoExecute`,
+
+* If NoSchedule is used, pods won’t be scheduled to a node until CSI Driver remove the taint. However, one practical effect of this is that if some external process (such as a reboot) resets the configuration on the node, pods that were already scheduled will be allowed to start concurrently with csi-node when the node next reboots
+* If NoExecute is used (recommended), pods won’t be executed (nor scheduled) on a node until CSI Driver removes the taint. One practical effect of this is that whenever the taint is added back to the node by some external process (such as during an cluster upgrade), pods will be evicted from the node until CSI Driver remove the taint again after startup.
+
+
 ### Deploy driver
 You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS managed add-on](https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html).
 

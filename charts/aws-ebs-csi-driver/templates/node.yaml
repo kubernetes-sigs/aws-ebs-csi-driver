@@ -58,6 +58,9 @@ spec:
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
+            {{- if .Values.node.startUpTaint }}
+            - --start-up-taint=true
+            {{- end }}
             {{- with .Values.node.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}

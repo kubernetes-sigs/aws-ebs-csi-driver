@@ -41,7 +41,7 @@ const (
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 
-	//sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
+	// sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
 	sbeDeviceVolumeAttachmentLimit = 10
 )
 
@@ -87,6 +87,13 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 	nodeMounter, err := newNodeMounter()
 	if err != nil {
 		panic(err)
+	}
+
+	if driverOptions.startupTaintRemoval {
+		err := cloud.RemoveNodeTaint(cloud.DefaultKubernetesAPIClient, AgentNotReadyNodeTaintKey)
+		if err != nil {
+			klog.InfoS("Node agent-not-ready taint error", "error", err)
+		}
 	}
 
 	return nodeService{

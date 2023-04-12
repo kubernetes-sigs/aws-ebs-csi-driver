@@ -161,6 +161,13 @@ const (
 	FSTypeNtfs = "ntfs"
 )
 
+// constants for node agent not ready taint label
+const (
+	// AgentNotReadyNodeTaint is a node taint which prevents pods from being
+	// scheduled. Once csi-node startup it is removed from the node.
+	AgentNotReadyNodeTaintKey = "node.ebs.csi.aws.com/agent-not-ready"
+)
+
 // BlockSizeExcludedFSTypes contains the filesystems that a custom block size is *NOT* supported on
 var (
 	BlockSizeExcludedFSTypes = map[string]struct{}{

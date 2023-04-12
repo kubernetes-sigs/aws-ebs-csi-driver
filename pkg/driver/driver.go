@@ -67,6 +67,7 @@ type DriverOptions struct {
 	kubernetesClusterID string
 	awsSdkDebugLog      bool
 	warnOnInvalidTag    bool
+	startupTaintRemoval bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -196,5 +197,11 @@ func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
 func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.warnOnInvalidTag = warnOnInvalidTag
+	}
+}
+
+func WithStartupTaint(startupTaintRemoval bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.startupTaintRemoval = startupTaintRemoval
 	}
 }
