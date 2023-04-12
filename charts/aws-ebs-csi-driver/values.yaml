@@ -109,6 +109,11 @@ imagePullSecrets: []
 nameOverride:
 fullnameOverride:
 
+awsAccessSecret: 
+  name: aws-secret
+  keyId: key_id
+  accessKey: access_key
+
 controller:
   additionalArgs: []
   sdkDebugLog: false
