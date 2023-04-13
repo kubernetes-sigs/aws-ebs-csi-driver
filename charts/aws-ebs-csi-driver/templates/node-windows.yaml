@@ -117,11 +117,21 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /csi-node-driver-registrar.exe
+                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+                - --mode=kubelet-registration-probe
+            initialDelaySeconds: 30
+            timeoutSeconds: 15
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
             - name: registration-dir
               mountPath: C:\registration
+            - name: probe-dir
+              mountPath: C:\var\lib\kubelet\plugins\ebs.csi.aws.com
           {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -169,4 +179,6 @@ spec:
           hostPath:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
+        - name: probe-dir
+          emptyDir: {}
 {{- end }}
