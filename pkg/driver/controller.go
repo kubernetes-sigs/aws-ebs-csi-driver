@@ -605,15 +605,19 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	var vscTags []string
+	var fsrAvailabilityZones []string
 	vsProps := new(template.VolumeSnapshotProps)
 	for key, value := range req.GetParameters() {
-		switch key {
+		switch strings.ToLower(key) {
 		case VolumeSnapshotNameKey:
 			vsProps.VolumeSnapshotName = value
 		case VolumeSnapshotNamespaceKey:
 			vsProps.VolumeSnapshotNamespace = value
 		case VolumeSnapshotContentNameKey:
 			vsProps.VolumeSnapshotContentName = value
+		case FastSnapshotRestoreAvailabilityZones:
+			f := strings.ReplaceAll(value, " ", "")
+			fsrAvailabilityZones = strings.Split(f, ",")
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				vscTags = append(vscTags, value)
@@ -649,10 +653,34 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		Tags: snapshotTags,
 	}
 
-	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
+	// Check if the availability zone is supported for fast snapshot restore
+	if len(fsrAvailabilityZones) > 0 {
+		zones, error := d.cloud.AvailabilityZones(ctx)
+		if error != nil {
+			klog.ErrorS(error, "failed to get availability zones")
+		} else {
+			klog.V(4).InfoS("Availability Zones", "zone", zones)
+			for _, az := range fsrAvailabilityZones {
+				if _, ok := zones[az]; !ok {
+					return nil, status.Errorf(codes.InvalidArgument, "Availability zone %s is not supported for fast snapshot restore", az)
+				}
+			}
+		}
+	}
 
+	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create snapshot %q: %v", snapshotName, err)
+	}
+
+	if len(fsrAvailabilityZones) > 0 {
+		_, err := d.cloud.EnableFastSnapshotRestores(ctx, fsrAvailabilityZones, snapshot.SnapshotID)
+		if err != nil {
+			if _, err = d.cloud.DeleteSnapshot(ctx, snapshot.SnapshotID); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not delete snapshot ID %q: %v", snapshotName, err)
+			}
+			return nil, status.Errorf(codes.Internal, "Failed to create Fast Snapshot Restores for snapshot ID %q: %v", snapshotName, err)
+		}
 	}
 	return newCreateSnapshotResponse(snapshot)
 }
