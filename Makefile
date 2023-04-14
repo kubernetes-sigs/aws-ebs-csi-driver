@@ -199,6 +199,22 @@ test-e2e-external-eks:
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
 	./hack/e2e/run.sh
 
+.PHONY: test-e2e-external-eks-windows
+test-e2e-external-eks-windows:
+	CLUSTER_TYPE=eksctl \
+	WINDOWS=true \
+	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
+	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EKSCTL_ADMIN_ROLE="Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV" \
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
+	GINKGO_PARALLEL=15 \
+	NODE_OS_DISTRO="windows" \
+	./hack/e2e/run.sh
+
 .PHONY: test-helm-chart
 test-helm-chart:
 	AWS_REGION=us-west-2 \

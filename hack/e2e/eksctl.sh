@@ -23,6 +23,7 @@ function eksctl_create_cluster() {
   EKSCTL_PATCH_FILE=${8}
   EKSCTL_ADMIN_ROLE=${9}
   WINDOWS=${10}
+  VPC_CONFIGMAP_FILE=${11}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
@@ -63,15 +64,15 @@ function eksctl_create_cluster() {
 
   if [[ "$WINDOWS" == true ]]; then
     ${BIN} create nodegroup \
-      --managed=false \
+      --managed=true \
+      --ssh-access=false \
       --cluster="${CLUSTER_NAME}" \
-      --node-ami-family=WindowsServer2019FullContainer \
+      --node-ami-family=WindowsServer2022FullContainer \
       -n ng-windows \
-      -m 1 \
-      -M 1 \
-      --ssh-access \
-      --ssh-public-key "${SSH_KEY_PATH}".pub
-    ${BIN} utils install-vpc-controllers --cluster="${CLUSTER_NAME}" --approve
+      -m 3 \
+      -M 3 \
+
+    kubectl apply --kubeconfig "${KUBECONFIG}" -f "$VPC_CONFIGMAP_FILE"
   fi
 
   return $?
