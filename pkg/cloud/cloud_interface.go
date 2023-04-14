@@ -21,4 +21,6 @@ type Cloud interface {
 	GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error)
 	GetSnapshotByID(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error)
 	ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error)
+	EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error)
+	AvailabilityZones(ctx context.Context) (map[string]struct{}, error)
 }

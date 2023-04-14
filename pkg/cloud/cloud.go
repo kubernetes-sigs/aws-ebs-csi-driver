@@ -874,6 +874,24 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 	return snapshot
 }
 
+func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+	request := &ec2.EnableFastSnapshotRestoresInput{
+		AvailabilityZones: aws.StringSlice(availabilityZones),
+		SourceSnapshotIds: []*string{
+			aws.String(snapshotID),
+		},
+	}
+	klog.V(4).InfoS("Creating Fast Snapshot Restores", "snapshotID", snapshotID, "availabilityZones", availabilityZones)
+	response, err := c.ec2.EnableFastSnapshotRestoresWithContext(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if len(response.Unsuccessful) > 0 {
+		return response, fmt.Errorf("failed to create fast snapshot restores for snapshot %s: %v", snapshotID, response.Unsuccessful)
+	}
+	return response, nil
+}
+
 func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
@@ -1234,6 +1252,19 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	}
 
 	return zones[0], nil
+}
+
+// AvailabilityZones returns availability zones from the given region
+func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
+	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
+	if err != nil {
+		return nil, fmt.Errorf("error describing availability zones: %w", err)
+	}
+	zones := make(map[string]struct{})
+	for _, zone := range response.AvailabilityZones {
+		zones[*zone.ZoneName] = struct{}{}
+	}
+	return zones, nil
 }
 
 func volumeModificationDone(state string) bool {
