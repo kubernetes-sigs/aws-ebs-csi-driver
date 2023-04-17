@@ -1,3 +1,25 @@
+# v1.18.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This will be the last minor release of the AWS EBS CSI Driver to support Windows 20H2 hosts. Windows 20H2 is [no longer supported by Microsoft](https://learn.microsoft.com/en-us/lifecycle/announcements/windows-10-20h2-end-of-servicing). Future releases of the AWS EBS CSI Driver will no longer be built for Windows 20H2.
+
+### Notable Changes
+* Add support for Fast Snapshot Restore ([#1554](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1554), [@torredil](https://github.com/torredil))
+* Support for interpolated tags in `VolumeSnapshotClass` ([#1558](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1558), [@hanyuel](https://github.com/hanyuel))
+* Add target to run External Storage tests on Windows nodes ([#1521](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1521), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Add non-negative check on volume limit for `CSINode` ([#1542](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1542), [@gtxu](https://github.com/gtxu))
+* Fix volume mounts on AWS Snow devices ([#1546](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1546), [@ConnorJC3](https://github.com/ConnorJC3))
+* Improve consistency/idempotency of Windows mounting ([#1526](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1526), [@torredil](https://github.com/torredil))
+* Add liveness probe for node-driver-registrar container ([#1570](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1570), [@gtxu](https://github.com/gtxu))
+* Fix calculation of attached block devices from IMDS ([#1561](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1561), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Migrate Kustomize configuration from 'bases' to 'resources' ([#1539](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1539), [@torredil](https://github.com/torredil))
+* Reduce CI flakiness by removing unnecessary SSH certificates ([#1566](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1566), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.17.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
