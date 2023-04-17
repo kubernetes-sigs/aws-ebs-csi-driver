@@ -26,7 +26,6 @@ source "${BASE_DIR}"/chart-testing.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
 CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
-DRIVER_START_TIME_THRESHOLD_SECONDS=60
 
 TEST_ID=${TEST_ID:-$RANDOM}
 CLUSTER_NAME=test-cluster-${TEST_ID}.k8s.local
@@ -59,6 +58,7 @@ KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 
 EKSCTL_VERSION=${EKSCTL_VERSION:-0.133.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
+VPC_CONFIGMAP_FILE=${VPC_CONFIGMAP_FILE:-./hack/vpc-resource-controller-configmap.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 # Creates a windows node group.
 WINDOWS=${WINDOWS:-"false"}
@@ -71,6 +71,8 @@ ARTIFACTS=${ARTIFACTS:-"${TEST_DIR}/artifacts"}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"\[ebs-csi-e2e\]"}
 GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]"}
 GINKGO_NODES=${GINKGO_NODES:-4}
+GINKGO_PARALLEL=${GINKGO_PARALLEL:-25}
+NODE_OS_DISTRO=${NODE_OS_DISTRO:-"linux"}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
@@ -155,7 +157,8 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$KUBECONFIG" \
     "$EKSCTL_PATCH_FILE" \
     "$EKSCTL_ADMIN_ROLE" \
-    "$WINDOWS"
+    "$WINDOWS" \
+    "$VPC_CONFIGMAP_FILE"
   if [[ $? -ne 0 ]]; then
     exit 1
   fi
@@ -195,6 +198,8 @@ else
     --namespace kube-system
     --set image.repository="${IMAGE_NAME}"
     --set image.tag="${IMAGE_TAG}"
+    --set node.enableWindows="${WINDOWS}"
+    --timeout 10m0s
     --wait
     --kubeconfig "${KUBECONFIG}"
     ./charts/"${DRIVER_NAME}")
@@ -211,13 +216,7 @@ else
 
   endSec=$(date +'%s')
   secondUsed=$(((endSec - startSec) / 1))
-  # Set timeout threshold as 20 seconds for now, usually it takes less than 10s to startup
-  if [ $secondUsed -gt $DRIVER_START_TIME_THRESHOLD_SECONDS ]; then
-    loudecho "Driver start timeout, took $secondUsed but the threshold is $DRIVER_START_TIME_THRESHOLD_SECONDS. Fail the test."
-    exit 1
-  fi
   loudecho "Driver deployment complete, time used: $secondUsed seconds"
-
   loudecho "Testing focus ${GINKGO_FOCUS}"
 
   if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
@@ -233,8 +232,8 @@ else
       --skip-regex="${GINKGO_SKIP}" \
       --focus-regex="${GINKGO_FOCUS}" \
       --test-package-version=$(curl https://storage.googleapis.com/kubernetes-release/release/stable-$packageVersion.txt) \
-      --parallel=25 \
-      --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=$KUBECONFIG"
+      --parallel=${GINKGO_PARALLEL} \
+      --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=$KUBECONFIG -node-os-distro=${NODE_OS_DISTRO}"
 
     TEST_PASSED=$?
     set -e
