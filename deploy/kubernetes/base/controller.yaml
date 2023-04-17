@@ -61,7 +61,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.17.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.18.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -128,7 +128,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: csi-provisioner
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v3.4.0-eks-1-26-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v3.4.1-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -155,7 +155,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: csi-attacher
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.2.0-eks-1-26-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.2.0-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -179,7 +179,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.2.1-eks-1-26-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.2.1-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -203,7 +203,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: csi-resizer
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.7.0-eks-1-26-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.7.0-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -227,7 +227,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.9.0-eks-1-26-latest
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.9.0-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
