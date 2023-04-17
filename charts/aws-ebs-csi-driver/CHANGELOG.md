@@ -1,5 +1,24 @@
 # Helm chart
 
+## v2.18.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The Helm chart now defaults to using specific releases of the EKS-D sidecars, rather than the `-latest` versions. This is done so the chart will specify an exact container image, as well as for consistency with the EKS Addons version of the driver.
+
+The new sidecar tags are:
+* csi-provisioner: `v3.4.1-eks-1-26-7`
+* csi-attacher: `v4.2.0-eks-1-26-7`
+* csi-snapshotter: `v6.2.1-eks-1-26-7`
+* livenessprobe: `v2.9.0-eks-1-26-7`
+* csi-resizer: `v1.7.0-eks-1-26-7`
+* node-driver-registrar: `v2.7.0-eks-1-26-7`
+
+### Improvements
+* Bump driver version to `v1.18.0`
+* Increase speed and reliability of `helm test` ([#1533](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1533), [@torredil](https://github.com/torredil))
+* Support `VolumeSnapshotClass` in helm chart ([#1540](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1540), [@hanyuel](https://github.com/hanyuel))
+
 ## v2.17.2
 * Bump driver version to `v1.17.0`
 * Bump `external-resizer` version to `v4.2.0`
