@@ -16,20 +16,20 @@ const (
 
 // / List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var nonNitroInstanceFamilies = map[string]struct{}{
-	"t2":     {},
-	"c7g":    {},
-	"c4":     {},
-	"r4":     {},
-	"x2iedn": {},
-	"x2iezn": {},
-	"x1e":    {},
-	"x1":     {},
-	"p2":     {},
-	"tr1n":   {},
-	"g4dn":   {},
-	"g3":     {},
-	"d2":     {},
-	"h1":     {},
+	"t2":  {},
+	"c3":  {},
+	"m3":  {},
+	"r3":  {},
+	"c4":  {},
+	"m4":  {},
+	"r4":  {},
+	"x1e": {},
+	"x1":  {},
+	"p2":  {},
+	"p3":  {},
+	"g3":  {},
+	"d2":  {},
+	"h1":  {},
 }
 
 func IsNitroInstanceType(it string) bool {
@@ -52,10 +52,11 @@ func GetMaxAttachments(nitro bool) int {
 }
 
 // / Some instance types have a maximum limit of EBS volumes
-// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
+// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
 var maxVolumeLimits = map[string]int{
 	"d3.8xlarge":    3,
 	"d3.12xlarge":   3,
+	"g5.48xlarge":   9,
 	"inf1.xlarge":   26,
 	"inf1.2xlarge":  26,
 	"inf1.6xlarge":  23,
