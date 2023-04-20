@@ -184,13 +184,7 @@ controller:
   # rollingUpdate:
   #   maxSurge: 0
   #   maxUnavailable: 1
-  resources:
-    requests:
-      cpu: 10m
-      memory: 40Mi
-    limits:
-      cpu: 100m
-      memory: 256Mi
+  resources: {}
   serviceAccount:
   # A service account will be created for you if set to true. Set to false if you want to use your own.
     create: true
@@ -259,13 +253,7 @@ node:
   - operator: Exists
     effect: NoExecute
     tolerationSeconds: 300
-  resources:
-    requests:
-      cpu: 10m
-      memory: 40Mi
-    limits:
-      cpu: 100m
-      memory: 256Mi
+  resources: {}
   serviceAccount:
     create: true
     name: ebs-csi-node-sa
