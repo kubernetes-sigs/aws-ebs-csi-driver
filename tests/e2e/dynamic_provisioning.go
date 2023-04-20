@@ -140,23 +140,26 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 
 	It("should create multiple PV objects, bind to PVCs and attach all to a single pod", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && echo 'hello world' > /mnt/test-2/data && grep 'hello world' /mnt/test-1/data  && grep 'hello world' /mnt/test-2/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeGP2,
-						FSType:     ebscsidriver.FSTypeExt3,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeType:        awscloud.VolumeTypeGP2,
+						FSType:            ebscsidriver.FSTypeExt3,
+						VolumeBindingMode: &volumeBindingMode,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
 						},
 					},
 					{
-						VolumeType: awscloud.VolumeTypeIO1,
-						FSType:     ebscsidriver.FSTypeExt4,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeType:        awscloud.VolumeTypeIO1,
+						FSType:            ebscsidriver.FSTypeExt4,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeBindingMode: &volumeBindingMode,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -236,25 +239,28 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 
 	It("should create a raw block volume and a filesystem volume on demand and bind to the same pod", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "dd if=/dev/zero of=/dev/xvda bs=1024k count=100 && echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeIO1,
-						FSType:     ebscsidriver.FSTypeExt4,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeType:        awscloud.VolumeTypeIO1,
+						FSType:            ebscsidriver.FSTypeExt4,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeBindingMode: &volumeBindingMode,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
 						},
 					},
 					{
-						VolumeType:   awscloud.VolumeTypeGP2,
-						FSType:       ebscsidriver.FSTypeExt4,
-						MountOptions: []string{"rw"},
-						ClaimSize:    driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
-						VolumeMode:   testsuites.Block,
+						VolumeType:        awscloud.VolumeTypeGP2,
+						FSType:            ebscsidriver.FSTypeExt4,
+						MountOptions:      []string{"rw"},
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
 						VolumeDevice: testsuites.VolumeDeviceDetails{
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
