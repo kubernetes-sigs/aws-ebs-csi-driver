@@ -175,7 +175,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(3000),
+				Iops:       aws.Int64(3000),
+				Throughput: aws.Int64(125),
 			},
 			expErr: nil,
 		},
@@ -550,6 +551,24 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: snowZone,
 			},
 			expErr: fmt.Errorf("could not attach tags to volume: vol-test. CreateTags generic error"),
+		},
+		{
+			name:       "success: create default volume with throughput",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				Throughput:    250,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Throughput: aws.Int64(250),
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
 		},
 	}
 
@@ -1961,8 +1980,8 @@ func (m *eqCreateVolumeMatcher) Matches(x interface{}) bool {
 	if input == nil {
 		return false
 	}
-	// Compare only IOPS for now
-	ret := reflect.DeepEqual(m.expected.Iops, input.Iops)
+	// TODO: Check all inputs
+	ret := reflect.DeepEqual(m.expected.Iops, input.Iops) && reflect.DeepEqual(m.expected.Throughput, input.Throughput)
 	return ret
 }
 

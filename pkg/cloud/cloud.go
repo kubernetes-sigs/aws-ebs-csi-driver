@@ -393,7 +393,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if iops > 0 {
 		requestInput.Iops = aws.Int64(iops)
 	}
-	if throughput > 0 && diskOptions.VolumeType == VolumeTypeGP3 {
+	if throughput > 0 {
 		requestInput.Throughput = aws.Int64(throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
