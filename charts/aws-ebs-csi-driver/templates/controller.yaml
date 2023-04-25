@@ -194,6 +194,17 @@ spec:
             - --leader-election-retry-period={{ .Values.sidecars.provisioner.leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
+            {{- with .Values.sidecars.provisioner.retryInterval }}
+            {{- if .Values.sidecars.provisioner.retryInterval.startTime }}
+            - --retry-interval-start={{ .Values.sidecars.provisioner.retryInterval.startTime }}
+            {{- end }}
+            {{- if .Values.sidecars.provisioner.retryInterval.maxTime }}
+            - --retry-interval-max={{ .Values.sidecars.provisioner.retryInterval.maxTime }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.sidecars.provisioner.timout }}
+            - --timeout={{ .Values.sidecars.provisioner.timeout }}
+            {{- end }}
             - --default-fstype={{ .Values.controller.defaultFsType }}
           env:
             - name: ADDRESS
@@ -236,6 +247,17 @@ spec:
             {{- if .Values.sidecars.attacher.leaderElection.retryPeriod }}
             - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
             {{- end }}
+            {{- end }}
+            {{- with .Values.sidecars.attacher.retryInterval }}
+            {{- if .Values.sidecars.attacher.retryInterval.startTime }}
+            - --retry-interval-start={{ .Values.sidecars.attacher.retryInterval.startTime }}
+            {{- end }}
+            {{- if .Values.sidecars.attacher.retryInterval.maxTime }}
+            - --retry-interval-max={{ .Values.sidecars.attacher.retryInterval.maxTime }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.sidecars.attacher.timout }}
+            - --timeout={{ .Values.sidecars.attacher.timeout }}
             {{- end }}
           env:
             - name: ADDRESS

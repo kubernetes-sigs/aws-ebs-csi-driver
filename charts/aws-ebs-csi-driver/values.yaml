@@ -32,6 +32,12 @@ sidecars:
       # leaseDuration: "15s"
       # renewDeadline: "10s"
       # retryPeriod: "5s"
+    # Timeout and retry configuration for gRPC calls to CSI driver
+    # Ref: https://github.com/kubernetes-csi/external-provisioner#csi-error-and-timeout-handling
+    # timout: "15s"
+    # retryInterval:
+    #   startTime: "1s"
+    #   maxTime: "5m"
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
@@ -51,6 +57,12 @@ sidecars:
       # leaseDuration: "15s"
       # renewDeadline: "10s"
       # retryPeriod: "5s"
+    # Timeout and retry configuration for gRPC calls to CSI driver
+    # Ref: https://github.com/kubernetes-csi/external-attacher#csi-error-and-timeout-handling
+    # timout: "15s"
+    # retryInterval:
+    #   startTime: "1s"
+    #   maxTime: "5m"
     logLevel: 2
     resources: {}
     securityContext:
