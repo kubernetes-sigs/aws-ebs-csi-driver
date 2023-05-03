@@ -31,6 +31,7 @@ import (
 	"github.com/golang/mock/gomock"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -183,18 +184,19 @@ func TestCreateDisk(t *testing.T) {
 			name:       "success: normal with gp3 performance reconciling option",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
-				CapacityBytes:           util.GiBToBytes(1500),
+				CapacityBytes:           util.GiBToBytes(500),
 				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:              VolumeTypeGP3,
 				ReconcileGP3Performance: true,
 			},
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
-				CapacityGiB:      1500,
+				CapacityGiB:      500,
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
-				Iops: aws.Int64(4500),
+				Iops:       aws.Int64(3750),
+				Throughput: aws.Int64(170),
 			},
 			expErr: nil,
 		},
@@ -1868,6 +1870,30 @@ func TestWaitForAttachmentState(t *testing.T) {
 					}
 				}
 			}
+		})
+	}
+}
+
+func TestReconciledGP3Sizing(t *testing.T) {
+
+	testCases := []struct {
+		Size       int64
+		IOPs       int64
+		Throughput int64
+	}{
+		{Size: 125, IOPs: 3000, Throughput: 125},
+		{Size: 200, IOPs: 3000, Throughput: 125},
+		{Size: 400, IOPs: 3500, Throughput: 155},
+		{Size: 500, IOPs: 3750, Throughput: 170},
+		{Size: 800, IOPs: 4500, Throughput: 215},
+		{Size: 1000, IOPs: 5000, Throughput: 250},
+		{Size: 12000, IOPs: 5000, Throughput: 250},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%d", tc.Size), func(t *testing.T) {
+			assert.Equal(t, tc.IOPs, getGP3ReconciledIOPS(tc.Size))
+			assert.Equal(t, tc.Throughput, getGP3ReconciledThroughput(tc.Size))
 		})
 	}
 }

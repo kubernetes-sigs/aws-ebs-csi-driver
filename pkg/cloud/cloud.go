@@ -80,6 +80,15 @@ const (
 	gp3MaxTotalThroughput = 1000 // in MiB/s
 )
 
+const (
+	gp3ScalingMinSize       = 200  // Volume size at which we start linearly scaling IOPs/Throughput
+	gp3ScalingMinIOPs       = 3000 // IOPs for volume sizes less than or equal to the scaling min size.
+	gp3ScalingMinThroughput = 125  // Throughput for volume sizes less than or equal to the scaling min size.
+	gp3ScalingMaxSize       = 1000 // Volume size at which we stop linearly scaling IOPs/Throughput and hit max value.
+	gp3ScalingMaxIOPs       = 5000 // IOPs for volume sizes greater than or equal to the scaling max size.
+	gp3ScalingMaxThroughput = 250  // Throughput for volume sizes greater than or equal to the scaling max size.
+)
+
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeIO1,
@@ -359,7 +368,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		maxIopsPerGb = gp3MaxIOPSPerGB
 
 		if diskOptions.ReconcileGP3Performance {
-			throughput = calculateGP3ReconciledThroughput(capacityGiB)
+			throughput = getGP3ReconciledThroughput(capacityGiB)
 		} else {
 			throughput = int64(diskOptions.Throughput)
 		}
@@ -1165,14 +1174,8 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 	// both IOPS and Throughput were coupled to disk size.
 	volumeType := aws.StringValue(volume.VolumeType)
 	if volumeType == ec2.VolumeTypeGp3 && hasGP3PerformanceReconcileTag(volume) {
-		iops, err := calculateGP3ReconciledIOPS(newSizeGiB)
-		if err != nil {
-			return oldSizeGiB, err
-		}
-		req.Iops = aws.Int64(iops)
-
-		throughput := calculateGP3ReconciledThroughput(newSizeGiB)
-		req.Throughput = aws.Int64(throughput)
+		req.Iops = aws.Int64(getGP3ReconciledIOPS(newSizeGiB))
+		req.Throughput = aws.Int64(getGP3ReconciledThroughput(newSizeGiB))
 	}
 
 	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
@@ -1318,42 +1321,22 @@ func calculateGP3ReconciledIOPS(sizeGiB int64) (int64, error) {
 
 // Calculate the corresponding IOPS value for gp3 volumes
 //
-// If the volume type is gp3 we are going to mimic the old gp2 behavior
-// in which IOPS was coupled to disk size. We're going to calculate the
-// corresponding value respecting the current gp3 limits:
-//
-// * Iops: 	  3,000 to 16,000
-//
-// # The New IOPS value is calculated according to the following equation
-//
-// a) Iops = 3 IOPS per GiB
+// If the volume type is gp3 we provision IOPs proportionally to the disk size, capping it
+// at a reasonable level for most users.  Analysis shows that most users  don't use much more
+// than the baseline 3000 IOPs that we receive for free with gp3, and very few exceed 5000, so
+// we cap it there for cost reasons. The users that do use more IOPs generally have larger volumes,
+// with the increase starting around the 200GiB mark, so we start scaling there and reach a
+// maximum for 1TiB volumes and above, between those values we linearly interpolate.
+// We truncate values to the nearest 5 IOPs.
 func getGP3ReconciledIOPS(sizeGiB int64) int64 {
-	return sizeGiB * 3
-}
+	if sizeGiB < gp3ScalingMinSize {
+		return gp3ScalingMinIOPs
+	}
+	if sizeGiB > gp3ScalingMaxSize {
+		return gp3ScalingMaxIOPs
+	}
 
-func calculateGP3ReconciledThroughput(sizeGiB int64) int64 {
-	newThroughput := getGP3ReconciledThroughput(sizeGiB)
-	newThroughput = capThroughput(VolumeTypeGP3, sizeGiB, newThroughput, gp3MinTotalThroughput, gp3MaxTotalThroughput)
-
-	return newThroughput
-}
-
-// Calculate the corresponding Throughput value for gp3 volumes
-//
-// If the volume type is gp3 we are going to mimic the old gp2 behavior
-// in which Throughput was coupled to disk size. We're going to calculate
-// the corresponding value respecting the current gp3 limits:
-//
-// * Throughput:    125 to  1,000 MiB/s
-//
-// The new throughput value is calculated according to the following equation
-//
-//		a) Throughput = (VolumeSize GiB) * (3 IOPS/GiB) * (256 KiB/IO)
-//		b) Throughput = (VolumeSize * 1024 MiB) * (3/1024 IOPS/MiB) * (256/1024 MiB/IO)
-//	 c) Throughput = VolumeSize * 3 * 256 / 1024
-//	 d) Throughput = VolumeSize * 0.75
-func getGP3ReconciledThroughput(sizeGiB int64) int64 {
-	return int64(float64(sizeGiB) * 0.75)
+	return gp3ScalingMinIOPs + 5*(((sizeGiB-gp3ScalingMinSize)*(gp3ScalingMaxIOPs-gp3ScalingMinIOPs))/(gp3ScalingMaxSize-gp3ScalingMinSize)/5)
 }
 
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
@@ -1383,6 +1366,26 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
 	}
 	return iops, nil
+}
+
+// Calculate the corresponding throughput value for gp3 volumes
+//
+// If the volume type is gp3 we provision throughput proportionally to the disk size, capping it
+// at a reasonable level for most users.  Analysis shows that most users  don't use much more
+// than the baseline 125 MiB/s that we receive for free with gp3, and very few exceed 250 (which was the
+// previous max for GP2 volumes), so we cap it there for cost reasons. The users that do use more
+// throughput generally have larger volumes, with the increase starting around the 200GiB mark
+// so we start scaling there and reach a maximum for 1TiB volumes and above, between those values we linearly interpolate.
+// We truncate values to the nearest 5 MiB/s.
+func getGP3ReconciledThroughput(sizeGiB int64) int64 {
+	if sizeGiB < gp3ScalingMinSize {
+		return gp3ScalingMinThroughput
+	}
+	if sizeGiB > gp3ScalingMaxSize {
+		return gp3ScalingMaxThroughput
+	}
+
+	return gp3ScalingMinThroughput + 5*(((sizeGiB-gp3ScalingMinSize)*(gp3ScalingMaxThroughput-gp3ScalingMinThroughput))/(gp3ScalingMaxSize-gp3ScalingMinSize)/5)
 }
 
 // Calculate actual Throughput for a volume an cap it at supported AWS limits.
