@@ -4,6 +4,7 @@ approvers:
 - ConnorJC3
 - gnufied
 - gtxu
+- hanyuel
 - jsafrane
 - leakingtapan
 - rdpsin
@@ -12,5 +13,6 @@ approvers:
 reviewers:
 - ConnorJC3
 - gtxu
+- hanyuel
 - rdpsin
 - torredil
