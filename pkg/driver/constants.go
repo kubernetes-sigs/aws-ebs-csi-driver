@@ -167,3 +167,9 @@ var (
 		FSTypeNtfs: {},
 	}
 )
+
+// constants for node k8s API use
+const (
+	// AgentNotReadyTaintKey contains the key of taints to be removed on driver startup
+	AgentNotReadyNodeTaintKey = "ebs.csi.aws.com/agent-not-ready"
+)
