@@ -41,6 +41,11 @@ kubectl create secret generic aws-secret \
 ### Configure driver toleration settings
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
 
+### Configure node startup taint
+There are potential race conditions on node startup (especially when a node is first joining the cluster) where pods/processes that rely on the EBS CSI Driver can act on a node before the EBS CSI Driver is able to startup up and become fully ready. To combat this, the EBS CSI Driver contains a feature to automatically remove a taint from the node on startup. Users can taint their nodes when they join the cluster and/or on startup, to prevent other pods from running and/or being scheduled on the node prior to the EBS CSI Driver becoming ready.
+
+This feature is activated by default, and cluster administrators should use the taint `ebs.csi.aws.com/agent-not-ready:NoExecute` (any effect will work, but `NoExecute` is recommended). For example, EKS Managed Node Groups [support automatically tainting nodes](https://docs.aws.amazon.com/eks/latest/userguide/node-taints-managed-node-groups.html).
+
 ### Deploy driver
 You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS managed add-on](https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html).
 
