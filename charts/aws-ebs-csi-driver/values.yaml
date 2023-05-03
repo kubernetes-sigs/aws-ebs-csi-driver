@@ -167,7 +167,11 @@ controller:
   k8sTagClusterId:
   logLevel: 2
   nodeSelector: {}
-  podAnnotations: {}
+  podAnnotations: 
+    # Default allows the cluster-autoscaler to relocate the controller in accordance with the PDB 
+    # https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#what-types-of-pods-can-prevent-ca-from-removing-a-node 
+    cluster-autoscaler.kubernetes.io/safe-to-evict-local-volumes: "socket-dir"
+
   podLabels: {}
   priorityClassName: system-cluster-critical
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
