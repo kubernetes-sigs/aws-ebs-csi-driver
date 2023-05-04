@@ -797,7 +797,7 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "success with volume type io1",
+			name: "success with volume type io1 using iopsPerGB",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
@@ -839,7 +839,49 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "success with volume type io2",
+			name: "success with volume type io1 using iops",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeIO1,
+						IopsKey:       "5",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "success with volume type io2 using iopsPerGB",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
@@ -848,6 +890,48 @@ func TestCreateVolume(t *testing.T) {
 					Parameters: map[string]string{
 						VolumeTypeKey: cloud.VolumeTypeIO2,
 						IopsPerGBKey:  "5",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "success with volume type io2 using iops",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeIO2,
+						IopsKey:       "5",
 					},
 				}
 
@@ -1519,45 +1603,6 @@ func TestCreateVolume(t *testing.T) {
 				_, err := awsDriver.CreateVolume(ctx, req)
 
 				checkExpectedErrorCode(t, err, codes.Aborted)
-			},
-		},
-		{
-			name: "fail with missing iopsPerGB parameter",
-			testFunc: func(t *testing.T) {
-				req := &csi.CreateVolumeRequest{
-					Name:               "vol-test",
-					CapacityRange:      stdCapRange,
-					VolumeCapabilities: stdVolCap,
-					Parameters: map[string]string{
-						VolumeTypeKey: cloud.VolumeTypeIO1,
-					},
-				}
-
-				ctx := context.Background()
-
-				mockCtl := gomock.NewController(t)
-				defer mockCtl.Finish()
-
-				mockCloud := cloud.NewMockCloud(mockCtl)
-
-				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
-				}
-
-				_, err := awsDriver.CreateVolume(ctx, req)
-				if err == nil {
-					t.Fatalf("Expected CreateVolume to fail but got no error")
-				}
-
-				srvErr, ok := status.FromError(err)
-				if !ok {
-					t.Fatalf("Could not get error status code from error: %v", srvErr)
-				}
-				if srvErr.Code() != codes.InvalidArgument {
-					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
-				}
 			},
 		},
 		{
