@@ -32,6 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -228,7 +229,7 @@ type ec2ListSnapshotsResponse struct {
 
 type cloud struct {
 	region string
-	ec2    EC2
+	ec2    ec2iface.EC2API
 	dm     dm.DeviceManager
 }
 
