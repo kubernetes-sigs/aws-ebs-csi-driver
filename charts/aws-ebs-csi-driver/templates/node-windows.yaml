@@ -125,6 +125,7 @@ spec:
                 - --mode=kubelet-registration-probe
             initialDelaySeconds: 30
             timeoutSeconds: 15
+            periodSeconds: 90
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
