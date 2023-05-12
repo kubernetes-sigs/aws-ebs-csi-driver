@@ -119,7 +119,6 @@ spec:
             failureThreshold: 5
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
@@ -146,7 +145,6 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
@@ -170,7 +168,6 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
@@ -194,7 +191,6 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
@@ -218,7 +214,6 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
@@ -237,7 +232,6 @@ spec:
               mountPath: /csi
           resources:
             limits:
-              cpu: 100m
               memory: 256Mi
             requests:
               cpu: 10m
