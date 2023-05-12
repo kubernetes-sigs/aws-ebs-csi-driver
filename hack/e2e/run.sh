@@ -234,7 +234,7 @@ else
       -- \
       --skip-regex="${GINKGO_SKIP}" \
       --focus-regex="${GINKGO_FOCUS}" \
-      --test-package-version=$(curl https://storage.googleapis.com/kubernetes-release/release/stable-$packageVersion.txt) \
+      --test-package-version=$(curl -L https://dl.k8s.io/release/stable-$packageVersion.txt) \
       --parallel=${GINKGO_PARALLEL} \
       --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=$KUBECONFIG -node-os-distro=${NODE_OS_DISTRO}"
 
