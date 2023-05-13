@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
@@ -63,6 +64,8 @@ type controllerService struct {
 	cloud         cloud.Cloud
 	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
+
+	rpc.UnimplementedModifyServer
 }
 
 var (

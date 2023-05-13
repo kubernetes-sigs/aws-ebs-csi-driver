@@ -200,6 +200,13 @@ type DiskOptions struct {
 	SnapshotID string
 }
 
+// ModifyDiskOptions represents parameters to modify an EBS volume
+type ModifyDiskOptions struct {
+	VolumeType string
+	IOPS       int
+	Throughput int
+}
+
 // Snapshot represents an EBS volume snapshot
 type Snapshot struct {
 	SnapshotID     string
@@ -453,6 +460,37 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 	}
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
+}
+
+func (c *cloud) ModifyDisk(ctx context.Context, volumeID string, options *ModifyDiskOptions) error {
+	klog.V(4).InfoS("Received ModifyDisk request", "volumeID", volumeID, "options", options)
+	req := &ec2.ModifyVolumeInput{
+		VolumeId: aws.String(volumeID),
+	}
+
+	if options.IOPS != 0 {
+		req.Iops = aws.Int64(int64(options.IOPS))
+	}
+	if options.VolumeType != "" {
+		req.VolumeType = aws.String(options.VolumeType)
+	}
+	if options.VolumeType == VolumeTypeGP3 {
+		req.Throughput = aws.Int64(int64(options.Throughput))
+	}
+
+	res, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+	if err != nil {
+		return fmt.Errorf("unable to modify AWS volume %q: %w", volumeID, err)
+	}
+
+	mod := res.VolumeModification
+	state := aws.StringValue(mod.ModificationState)
+
+	if volumeModificationDone(state) {
+		return nil
+	}
+
+	return c.waitForVolumeSize(ctx, volumeID)
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
