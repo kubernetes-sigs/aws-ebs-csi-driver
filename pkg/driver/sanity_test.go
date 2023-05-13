@@ -99,7 +99,10 @@ type fakeCloudProvider struct {
 
 type fakeDisk struct {
 	*cloud.Disk
-	tags map[string]string
+	iops       int
+	throughput int
+	volumeType string
+	tags       map[string]string
 }
 
 type fakeSnapshot struct {
@@ -138,10 +141,24 @@ func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 			AvailabilityZone: diskOptions.AvailabilityZone,
 			SnapshotID:       diskOptions.SnapshotID,
 		},
-		tags: diskOptions.Tags,
+		iops:       diskOptions.IOPS,
+		throughput: diskOptions.Throughput,
+		volumeType: diskOptions.VolumeType,
+		tags:       diskOptions.Tags,
 	}
 	c.disks[volumeName] = d
 	return d.Disk, nil
+}
+
+func (c *fakeCloudProvider) ModifyDisk(ctx context.Context, volumeID string, options *cloud.ModifyDiskOptions) error {
+	if d, ok := c.disks[volumeID]; !ok {
+		return cloud.ErrNotFound
+	} else {
+		d.iops = options.IOPS
+		d.throughput = options.Throughput
+		d.volumeType = options.VolumeType
+	}
+	return nil
 }
 
 func (c *fakeCloudProvider) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {

@@ -2,6 +2,7 @@ module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
 	github.com/aws/aws-sdk-go v1.44.218
+	github.com/awslabs/volume-modifier-for-k8s v0.1.0
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.9
@@ -13,12 +14,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/sys v0.6.0
-	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.29.0
-	k8s.io/api v0.26.2
-	k8s.io/apimachinery v0.26.2
+	google.golang.org/grpc v1.54.0
+	google.golang.org/protobuf v1.30.0
+	k8s.io/api v0.27.1
+	k8s.io/apimachinery v0.27.1
 	k8s.io/client-go v1.22.11
-	k8s.io/component-base v0.26.2
+	k8s.io/component-base v0.27.1
 	k8s.io/klog/v2 v2.90.1
 	k8s.io/kubernetes v1.26.2
 	k8s.io/mount-utils v0.26.2
@@ -108,7 +109,7 @@ require (
 	k8s.io/cloud-provider v0.26.0 // indirect
 	k8s.io/component-helpers v0.26.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect
-	k8s.io/kubectl v0.0.0 // indirect
+	k8s.io/kubectl v0.27.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
