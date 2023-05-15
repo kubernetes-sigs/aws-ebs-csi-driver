@@ -137,11 +137,22 @@ func (m *NodeMounter) parseFsInfoOutput(cmdOutput string, spliter string, blockS
 }
 
 func (m *NodeMounter) Unpublish(path string) error {
-	return m.Unmount(path)
+	// On linux, unpublish and unstage both perform an unmount
+	return m.Unstage(path)
 }
 
 func (m *NodeMounter) Unstage(path string) error {
-	return m.Unmount(path)
+	err := m.Unmount(path)
+	// Ignore the error when it contains "not mounted", because that indicates the
+	// world is already in the desired state
+	//
+	// mount-utils attempts to detect this on its own but fails when running on
+	// a read-only root filesystem, which our manifests use by default
+	if err == nil || strings.Contains(fmt.Sprint(err), "not mounted") {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (m *NodeMounter) NewResizeFs() (Resizefs, error) {
