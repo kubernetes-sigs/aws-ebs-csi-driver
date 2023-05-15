@@ -90,6 +90,9 @@ spec:
             {{- with .Values.controller.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}
+            {{- with .Values.controller.userAgentExtra }}
+            - --user-agent-extra={{ . }}
+            {{- end }}
             - --v={{ .Values.controller.logLevel }}
             {{- range .Values.controller.additionalArgs }}
             - {{ . }}

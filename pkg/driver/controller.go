@@ -88,7 +88,7 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		region = metadata.GetRegion()
 	}
 
-	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog)
+	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra)
 	if err != nil {
 		panic(err)
 	}

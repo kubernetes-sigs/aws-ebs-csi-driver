@@ -236,12 +236,12 @@ var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Cloud, error) {
 	RegisterMetrics()
-	return newEC2Cloud(region, awsSdkDebugLog)
+	return newEC2Cloud(region, awsSdkDebugLog, userAgentExtra)
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Cloud, error) {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
@@ -268,7 +268,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	}
 
 	// Set the env var so that the session appends custom user agent string
-	os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
+	if userAgentExtra != "" {
+		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion+"-"+userAgentExtra)
+	} else {
+		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
+	}
 
 	svc := ec2.New(session.Must(session.NewSession(awsConfig)))
 	svc.Handlers.AfterRetry.PushFrontNamed(request.NamedHandler{
