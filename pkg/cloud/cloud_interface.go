@@ -8,6 +8,7 @@ import (
 
 type Cloud interface {
 	CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
+	ModifyDisk(ctx context.Context, volumeName string, modifyDiskOptions *ModifyDiskOptions) error
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)

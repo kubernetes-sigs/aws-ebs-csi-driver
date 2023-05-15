@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
@@ -132,11 +133,13 @@ func (d *Driver) Run() error {
 	switch d.options.mode {
 	case ControllerMode:
 		csi.RegisterControllerServer(d.srv, d)
+		rpc.RegisterModifyServer(d.srv, d)
 	case NodeMode:
 		csi.RegisterNodeServer(d.srv, d)
 	case AllMode:
 		csi.RegisterControllerServer(d.srv, d)
 		csi.RegisterNodeServer(d.srv, d)
+		rpc.RegisterModifyServer(d.srv, d)
 	default:
 		return fmt.Errorf("unknown mode: %s", d.options.mode)
 	}
