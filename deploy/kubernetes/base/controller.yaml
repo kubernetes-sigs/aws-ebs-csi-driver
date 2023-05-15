@@ -67,6 +67,7 @@ spec:
             # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
             - --logging-format=text
+            - --user-agent-extra=kustomize
             - --v=2
           env:
             - name: CSI_ENDPOINT
