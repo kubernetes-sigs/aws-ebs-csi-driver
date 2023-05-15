@@ -1059,7 +1059,7 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 		},
 	}
 
-	err := wait.Poll(checkInterval, checkTimeout, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(ctx, checkInterval, checkTimeout, false, func(ctx context.Context) (done bool, err error) {
 		vol, err := c.getVolume(ctx, request)
 		if err != nil {
 			return true, err

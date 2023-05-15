@@ -35,6 +35,20 @@ func (m *MockProxyMounter) EXPECT() *MockProxyMounterMockRecorder {
 	return m.recorder
 }
 
+// CanSafelySkipMountPointCheck mocks base method.
+func (m *MockProxyMounter) CanSafelySkipMountPointCheck() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CanSafelySkipMountPointCheck")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CanSafelySkipMountPointCheck indicates an expected call of CanSafelySkipMountPointCheck.
+func (mr *MockProxyMounterMockRecorder) CanSafelySkipMountPointCheck() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanSafelySkipMountPointCheck", reflect.TypeOf((*MockProxyMounter)(nil).CanSafelySkipMountPointCheck))
+}
+
 // ExistsPath mocks base method.
 func (m *MockProxyMounter) ExistsPath(path string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -335,18 +349,4 @@ func (m *MockProxyMounter) WriteVolumeCache(target string) {
 func (mr *MockProxyMounterMockRecorder) WriteVolumeCache(target interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteVolumeCache", reflect.TypeOf((*MockProxyMounter)(nil).WriteVolumeCache), target)
-}
-
-// canSafelySkipMountPointCheck mocks base method.
-func (m *MockProxyMounter) canSafelySkipMountPointCheck() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "canSafelySkipMountPointCheck")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// canSafelySkipMountPointCheck indicates an expected call of canSafelySkipMountPointCheck.
-func (mr *MockProxyMounterMockRecorder) canSafelySkipMountPointCheck() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "canSafelySkipMountPointCheck", reflect.TypeOf((*MockProxyMounter)(nil).canSafelySkipMountPointCheck))
 }
