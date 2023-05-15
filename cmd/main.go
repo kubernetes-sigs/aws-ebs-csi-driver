@@ -61,6 +61,7 @@ func main() {
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
+		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
 	)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")

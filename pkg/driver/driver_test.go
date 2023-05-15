@@ -94,3 +94,12 @@ func TestWithAwsSdkDebugLog(t *testing.T) {
 		t.Fatalf("expected awsSdkDebugLog option got set to %v but is set to %v", enableSdkDebugLog, options.awsSdkDebugLog)
 	}
 }
+
+func TestWithUserAgentExtra(t *testing.T) {
+	var userAgentExtra string = "test-user-agent"
+	options := &DriverOptions{}
+	WithUserAgentExtra(userAgentExtra)(options)
+	if options.userAgentExtra != userAgentExtra {
+		t.Fatalf("expected userAgentExtra option got set to %s but is set to %s", userAgentExtra, options.userAgentExtra)
+	}
+}
