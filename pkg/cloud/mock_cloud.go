@@ -243,6 +243,20 @@ func (mr *MockCloudMockRecorder) ListSnapshots(ctx, volumeID, maxResults, nextTo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshots", reflect.TypeOf((*MockCloud)(nil).ListSnapshots), ctx, volumeID, maxResults, nextToken)
 }
 
+// ModifyDisk mocks base method.
+func (m *MockCloud) ModifyDisk(ctx context.Context, volumeName string, modifyDiskOptions *ModifyDiskOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ModifyDisk", ctx, volumeName, modifyDiskOptions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ModifyDisk indicates an expected call of ModifyDisk.
+func (mr *MockCloudMockRecorder) ModifyDisk(ctx, volumeName, modifyDiskOptions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyDisk", reflect.TypeOf((*MockCloud)(nil).ModifyDisk), ctx, volumeName, modifyDiskOptions)
+}
+
 // ResizeDisk mocks base method.
 func (m *MockCloud) ResizeDisk(ctx context.Context, volumeID string, reqSize int64) (int64, error) {
 	m.ctrl.T.Helper()

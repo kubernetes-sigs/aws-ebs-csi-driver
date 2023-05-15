@@ -100,6 +100,25 @@ sidecars:
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+  volumemodifier:
+    env: []
+    image:
+      pullPolicy: IfNotPresent
+      repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
+      tag: "v0.1.0"
+    leaderElection:
+      enabled: true
+      # Optional values to tune lease behavior.
+      # The arguments provided must be in an acceptable time.ParseDuration format.
+      # Ref: https://pkg.go.dev/flag#Duration
+      # leaseDuration: "15s"
+      # renewDeadline: "10s"
+      # retryPeriod: "5s"
+    logLevel: 2
+    resources: {}
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
 
 proxy:
   http_proxy:
@@ -110,6 +129,8 @@ nameOverride:
 fullnameOverride:
 
 controller:
+  volumeModificationFeature:
+    enabled: false
   additionalArgs: []
   sdkDebugLog: false
   loggingFormat: text

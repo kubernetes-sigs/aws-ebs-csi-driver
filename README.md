@@ -85,5 +85,6 @@ The EBS CSI Driver is compatible with Kubernetes versions v1.17+ and implements 
 * [Driver Launch Options](docs/options.md)
 * [StorageClass Parameters](docs/parameters.md)
 * [Volume Tagging](docs/tagging.md)
+* [Volume Modification](docs/modify-volume.md)
 * [Kubernetes Examples](/examples/kubernetes)
 * [Development and Contributing](CONTRIBUTING.md)
