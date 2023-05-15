@@ -22,6 +22,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"reflect"
@@ -35,6 +36,8 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var (
@@ -2163,6 +2166,129 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveNotReadyTaint(t *testing.T) {
+	nodeName := "test-node-123"
+	testCases := []struct {
+		name      string
+		setup     func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error)
+		expResult error
+	}{
+		{
+			name: "missing CSI_NODE_NAME",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				return func() (kubernetes.Interface, error) {
+					t.Fatalf("Unexpected call to k8s client getter")
+					return nil, nil
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to setup k8s client",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				return func() (kubernetes.Interface, error) {
+					return nil, fmt.Errorf("Failed setup!")
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to get node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, nil, fmt.Errorf("Failed to get node!"))
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("Failed to get node!"),
+		},
+		{
+			name: "no taints to remove",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{}, nil)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to patch node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: "NoExecute",
+							},
+						},
+					},
+				}, nil)
+				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Failed to patch node!"))
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("Failed to patch node!"),
+		},
+		{
+			name: "success",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: "NoSchedule",
+							},
+						},
+					},
+				}, nil)
+				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: nil,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			k8sClientGetter := tc.setup(t, mockCtl)
+			result := removeNotReadyTaint(k8sClientGetter)
+
+			if !reflect.DeepEqual(result, tc.expResult) {
+				t.Fatalf("Expected result `%v`, got result `%v`", tc.expResult, result)
+			}
+		})
+	}
+}
+
+func getNodeMock(mockCtl *gomock.Controller, nodeName string, returnNode *corev1.Node, returnError error) (kubernetes.Interface, *MockNodeInterface) {
+	mockClient := NewMockKubernetesClient(mockCtl)
+	mockCoreV1 := NewMockCoreV1Interface(mockCtl)
+	mockNode := NewMockNodeInterface(mockCtl)
+
+	mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+	mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+	mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(returnNode, returnError).MinTimes(1)
+
+	return mockClient, mockNode
 }
 
 func expectErr(t *testing.T, actualErr error, expectedCode codes.Code) {
