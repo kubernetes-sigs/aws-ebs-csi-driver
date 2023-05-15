@@ -1,3 +1,24 @@
+# v1.19.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+Windows 20H2 hosts are no longer supported. Windows 20H2 is [no longer supported by Microsoft](https://learn.microsoft.com/en-us/lifecycle/announcements/windows-10-20h2-end-of-servicing).
+
+### Notable Changes
+* Add support for annotation-based volume modification via volume-modifier-for-k8s sidecar ([#1600](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1600), [@rdpsin](https://github.com/rdpsin))
+* Add startup taint removal feature ([#1588](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1588), [@ConnorJC3](https://github.com/ConnorJC3) and [@gtxu](https://github.com/gtxu))
+
+### Bug Fixes
+* Check for 'not mounted' in linux Unstage/Unpublish ([#1597](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1597), [@ConnorJC3](https://github.com/ConnorJC3))
+* Update list of nitro instances ([#1573](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1573), [@patderek](https://github.com/patderek))
+* Allow throughput with defaulted GP3 volume type ([#1584](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1584), [@ConnorJC3](https://github.com/ConnorJC3))
+* Use dl.k8s.io instead of kubernetes-release bucket ([#1593](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1593), [@ratnopamc](https://github.com/ratnopamc))
+
+### Improvements
+* Migrate to EKS-D Windows base images ([#1601](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1601), [@ConnorJC3](https://github.com/ConnorJC3))
+* Drop support for Windows 20H2 ([#1598](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1598), [@torredil](https://github.com/torredil))
+* Add option to append extra string to user agent ([#1599](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1599), [@torredil](https://github.com/torredil))
+
 # v1.18.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
