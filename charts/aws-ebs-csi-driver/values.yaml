@@ -189,7 +189,6 @@ controller:
       cpu: 10m
       memory: 40Mi
     limits:
-      cpu: 100m
       memory: 256Mi
   serviceAccount:
   # A service account will be created for you if set to true. Set to false if you want to use your own.
@@ -264,7 +263,6 @@ node:
       cpu: 10m
       memory: 40Mi
     limits:
-      cpu: 100m
       memory: 256Mi
   serviceAccount:
     create: true
