@@ -41,7 +41,7 @@ ALL_OSVERSION_linux?=amazon
 ALL_OS_ARCH_OSVERSION_linux=$(foreach arch, $(ALL_ARCH_linux), $(foreach osversion, ${ALL_OSVERSION_linux}, linux-$(arch)-${osversion}))
 
 ALL_ARCH_windows?=amd64
-ALL_OSVERSION_windows?=20H2 ltsc2019 ltsc2022
+ALL_OSVERSION_windows?=ltsc2019 ltsc2022
 ALL_OS_ARCH_OSVERSION_windows=$(foreach arch, $(ALL_ARCH_windows), $(foreach osversion, ${ALL_OSVERSION_windows}, windows-$(arch)-${osversion}))
 
 ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
