@@ -9,3 +9,4 @@ There are a couple of driver options that can be passed as arguments when starti
 | k8s-tag-cluster-id          | aws-cluster-id-1                                  |                                                     | ID of the Kubernetes cluster used for tagging provisioned EBS volumes|
 | aws-sdk-debug-log           | true                                              | false                                               | If set to true, the driver will enable the aws sdk debug log level|
 | logging-format              | json                                              | text                                                | Sets the log format. Permitted formats: text, json|
+| user-agent-extra            | csi-ebs                                           | helm                                                | Extra string appended to user agent|

@@ -166,6 +166,7 @@ controller:
   # ID of the Kubernetes cluster used for tagging provisioned EBS volumes (optional).
   k8sTagClusterId:
   logLevel: 2
+  userAgentExtra: "helm"
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}

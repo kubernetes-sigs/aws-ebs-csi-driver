@@ -51,6 +51,8 @@ func TestGetOptions(t *testing.T) {
 		awsSdkDebugFlagValue := true
 		VolumeAttachLimitFlagName := "volume-attach-limit"
 		var VolumeAttachLimit int64 = 42
+		userAgentExtraFlag := "user-agent-extra"
+		userAgentExtraFlagValue := "test"
 
 		args := append([]string{
 			"aws-ebs-csi-driver",
@@ -62,6 +64,7 @@ func TestGetOptions(t *testing.T) {
 		if withControllerOptions {
 			args = append(args, "--"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
 			args = append(args, "--"+awsSdkDebugFlagName+"="+strconv.FormatBool(awsSdkDebugFlagValue))
+			args = append(args, "--"+userAgentExtraFlag+"="+userAgentExtraFlagValue)
 		}
 		if withNodeOptions {
 			args = append(args, "--"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
@@ -96,6 +99,9 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.ControllerOptions.AwsSdkDebugLog != awsSdkDebugFlagValue {
 				t.Fatalf("expected sdk debug flag to be %v but it is %v", awsSdkDebugFlagValue, options.ControllerOptions.AwsSdkDebugLog)
+			}
+			if options.ControllerOptions.UserAgentExtra != userAgentExtraFlagValue {
+				t.Fatalf("expected user agent string to be %q but it is %q", userAgentExtraFlagValue, options.ControllerOptions.UserAgentExtra)
 			}
 		}
 
