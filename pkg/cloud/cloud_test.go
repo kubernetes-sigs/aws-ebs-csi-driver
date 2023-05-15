@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/golang/mock/gomock"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -575,7 +576,7 @@ func TestCreateDisk(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			volState := tc.volState
@@ -681,7 +682,7 @@ func TestDeleteDisk(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -735,7 +736,7 @@ func TestAttachDisk(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			vol := &ec2.Volume{
@@ -797,7 +798,7 @@ func TestDetachDisk(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			vol := &ec2.Volume{
@@ -866,7 +867,7 @@ func TestGetDiskByName(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			vol := &ec2.Volume{
@@ -948,7 +949,7 @@ func TestGetDiskByID(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -1047,7 +1048,7 @@ func TestCreateSnapshot(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ec2snapshot := &ec2.Snapshot{
@@ -1128,7 +1129,7 @@ func TestEnableFastSnapshotRestores(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -1191,7 +1192,7 @@ func TestAvailabilityZones(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -1242,7 +1243,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -1373,7 +1374,7 @@ func TestResizeDisk(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			// reduce number of steps to reduce test time
 			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
@@ -1459,7 +1460,7 @@ func TestGetSnapshotByName(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ec2snapshot := &ec2.Snapshot{
@@ -1515,7 +1516,7 @@ func TestGetSnapshotByID(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			ec2snapshot := &ec2.Snapshot{
@@ -1575,7 +1576,7 @@ func TestListSnapshots(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockEC2 := NewMockEC2(mockCtl)
+				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
 				ctx := context.Background()
@@ -1617,7 +1618,7 @@ func TestListSnapshots(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockEC2 := NewMockEC2(mockCtl)
+				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
 				ctx := context.Background()
@@ -1664,7 +1665,7 @@ func TestListSnapshots(t *testing.T) {
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockEC2 := NewMockEC2(mockCtl)
+				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
 				ctx := context.Background()
@@ -1713,7 +1714,7 @@ func TestListSnapshots(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockEC2 := NewMockEC2(mockCtl)
+				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
 				ctx := context.Background()
@@ -1730,7 +1731,7 @@ func TestListSnapshots(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
-				mockEC2 := NewMockEC2(mockCtl)
+				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
 				ctx := context.Background()
@@ -1852,7 +1853,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2(mockCtrl)
+			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
 			attachedVol := &ec2.Volume{
@@ -1914,7 +1915,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 	}
 }
 
-func newCloud(mockEC2 EC2) Cloud {
+func newCloud(mockEC2 ec2iface.EC2API) Cloud {
 	return &cloud{
 		region: "test-region",
 		dm:     dm.NewDeviceManager(),
