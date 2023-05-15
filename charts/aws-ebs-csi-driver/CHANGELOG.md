@@ -1,5 +1,15 @@
 # Helm chart
 
+## v2.19.0
+* Bump driver version to `v1.19.0`
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.5.0`
+    - csi-attacher: `v4.3.0`
+    - livenessprobe: `v2.10.0`
+    - csi-resizer: `v1.8.0`
+    - node-driver-registrar: `v2.8.0`
+* Remove CPU limits ([#1596](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1596), [@torredil](https://github.com/torredil))
+
 ## v2.18.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
