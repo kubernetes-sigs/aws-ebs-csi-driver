@@ -84,6 +84,16 @@ sidecars:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
       tag: "v1.8.0-eks-1-27-3"
+    # Tune leader lease election for csi-resizer.
+    # Leader election is on by default.
+    leaderElection:
+      enabled: true
+      # Optional values to tune lease behavior.
+      # The arguments provided must be in an acceptable time.ParseDuration format.
+      # Ref: https://pkg.go.dev/flag#Duration
+      # leaseDuration: "15s"
+      # renewDeadline: "10s"
+      # retryPeriod: "5s"
     logLevel: 2
     resources: {}
     securityContext:
