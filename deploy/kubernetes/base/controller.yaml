@@ -206,6 +206,7 @@ spec:
             - --csi-address=$(ADDRESS)
             - --v=2
             - --handle-volume-inuse-error=false
+            - --leader-election=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock

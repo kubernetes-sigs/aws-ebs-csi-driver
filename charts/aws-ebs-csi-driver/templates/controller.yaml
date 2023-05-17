@@ -350,6 +350,18 @@ spec:
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.resizer.logLevel }}
             - --handle-volume-inuse-error=false
+            {{- with .Values.sidecars.resizer.leaderElection }}
+            - --leader-election={{ .enabled | default true }}
+            {{- if .leaseDuration }}
+            - --leader-election-lease-duration={{ .leaseDuration }}
+            {{- end }}
+            {{- if .renewDeadline }}
+            - --leader-election-renew-deadline={{ .renewDeadline }}
+            {{- end }}
+            {{- if .retryPeriod }}
+            - --leader-election-retry-period={{ .retryPeriod }}
+            {{- end }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
