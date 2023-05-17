@@ -142,7 +142,7 @@ func (m *NodeMounter) Unpublish(path string) error {
 }
 
 func (m *NodeMounter) Unstage(path string) error {
-	err := m.Unmount(path)
+	err := mountutils.CleanupMountPoint(path, m, false)
 	// Ignore the error when it contains "not mounted", because that indicates the
 	// world is already in the desired state
 	//
