@@ -227,6 +227,7 @@ controller:
     create: true
     name: ebs-csi-controller-sa
     annotations: {}
+    automountServiceAccountToken: true
   tolerations:
     - key: CriticalAddonsOnly
       operator: Exists
@@ -300,6 +301,7 @@ node:
     create: true
     name: ebs-csi-node-sa
     annotations: {}
+    automountServiceAccountToken: true
   enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
