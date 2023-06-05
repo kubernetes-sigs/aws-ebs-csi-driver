@@ -36,7 +36,7 @@ type ExistingNames map[string]string
 type NameAllocator interface {
 	// GetNext returns a free device name or error when there is no free device
 	// name. The prefix (such as "/dev/xvd" or "/dev/sd") is passed as a parameter.
-	GetNext(existingNames ExistingNames, prefix string) (name string, err error)
+	GetNext(existingNames ExistingNames, prefix string, singleLetter bool) (name string, err error)
 }
 
 type nameAllocator struct{}
@@ -51,16 +51,28 @@ var _ NameAllocator = &nameAllocator{}
 // and return the first one that is not used yet.
 // We stop at dx because EBS performs undocumented validation on the device
 // name that refuses to mount devices after /dev/xvddx
-func (d *nameAllocator) GetNext(existingNames ExistingNames, prefix string) (string, error) {
-	for c1 := 'a'; c1 <= 'd'; c1++ {
-		c2end := 'z'
-		if c1 == 'd' {
-			c2end = 'x'
-		}
-		for c2 := 'a'; c2 <= c2end; c2++ {
-			name := fmt.Sprintf("%s%s%s", prefix, string(c1), string(c2))
+//
+// To expand past /dev/xvddx, GetNext also takes a "singleLetter" parameter, which
+// will allocate only from b, c, ..., z (intended for use with /dev/sd as the prefix)
+func (d *nameAllocator) GetNext(existingNames ExistingNames, prefix string, singleLetter bool) (string, error) {
+	if singleLetter {
+		for c := 'a'; c <= 'z'; c++ {
+			name := fmt.Sprintf("%s%s", prefix, string(c))
 			if _, found := existingNames[name]; !found {
 				return name, nil
+			}
+		}
+	} else {
+		for c1 := 'a'; c1 <= 'd'; c1++ {
+			c2end := 'z'
+			if c1 == 'd' {
+				c2end = 'x'
+			}
+			for c2 := 'a'; c2 <= c2end; c2++ {
+				name := fmt.Sprintf("%s%s%s", prefix, string(c1), string(c2))
+				if _, found := existingNames[name]; !found {
+					return name, nil
+				}
 			}
 		}
 	}

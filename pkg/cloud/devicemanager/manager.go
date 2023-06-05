@@ -26,6 +26,7 @@ import (
 )
 
 const devPrefix = "/dev/xvd"
+const secondaryDevPrefix = "/dev/sd"
 
 type Device struct {
 	Instance          *ec2.Instance
@@ -126,9 +127,13 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 		return nil, err
 	}
 
-	name, err := d.nameAllocator.GetNext(inUse, devPrefix)
+	name, err := d.nameAllocator.GetNext(inUse, devPrefix, false)
 	if err != nil {
-		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
+		// If all /dev/xvd... names are used, use /dev/sd...
+		name, err = d.nameAllocator.GetNext(inUse, secondaryDevPrefix, true)
+		if err != nil {
+			return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
+		}
 	}
 
 	// Add the chosen device and volume to the "attachments in progress" map

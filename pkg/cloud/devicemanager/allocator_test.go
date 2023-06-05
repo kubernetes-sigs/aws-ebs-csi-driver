@@ -43,7 +43,33 @@ func TestNameAllocator(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.expectedName, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames, "")
+			actual, err := allocator.GetNext(existingNames, "", false)
+			if err != nil {
+				t.Errorf("test %q: unexpected error: %v", test.expectedName, err)
+			}
+			if actual != test.expectedName {
+				t.Errorf("test %q: expected %q, got %q", test.expectedName, test.expectedName, actual)
+			}
+			existingNames[actual] = ""
+		})
+	}
+}
+
+func TestNameAllocatorSingleLetter(t *testing.T) {
+	existingNames := map[string]string{}
+	allocator := nameAllocator{}
+
+	tests := []struct {
+		expectedName string
+	}{
+		{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}, {"g"}, {"h"}, {"i"}, {"j"},
+		{"k"}, {"l"}, {"m"}, {"n"}, {"o"}, {"p"}, {"q"}, {"r"}, {"s"}, {"t"},
+		{"u"}, {"v"}, {"w"}, {"x"}, {"y"}, {"z"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.expectedName, func(t *testing.T) {
+			actual, err := allocator.GetNext(existingNames, "", true)
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", test.expectedName, err)
 			}
@@ -61,10 +87,20 @@ func TestNameAllocatorError(t *testing.T) {
 
 	// 102 == number of allocations from aa ... dx (see allocator.go for why we stop at dx)
 	for i := 0; i < 102; i++ {
-		name, _ := allocator.GetNext(existingNames, "/dev/xvd")
+		name, _ := allocator.GetNext(existingNames, "/dev/xvd", false)
 		existingNames[name] = ""
 	}
-	name, err := allocator.GetNext(existingNames, "/dev/xvd")
+	name, err := allocator.GetNext(existingNames, "/dev/xvd", false)
+	if err == nil {
+		t.Errorf("expected error, got device  %q", name)
+	}
+
+	// For single letters, there should be 26 names (a..z)
+	for i := 0; i < 26; i++ {
+		name, _ = allocator.GetNext(existingNames, "/dev/sd", true)
+		existingNames[name] = ""
+	}
+	name, err = allocator.GetNext(existingNames, "/dev/sd", true)
 	if err == nil {
 		t.Errorf("expected error, got device  %q", name)
 	}
