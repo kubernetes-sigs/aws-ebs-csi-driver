@@ -58,7 +58,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          envFrom:
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -100,7 +99,6 @@ spec:
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
-          envFrom:
           livenessProbe:
             exec:
               command:
@@ -131,7 +129,6 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
-          envFrom:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
