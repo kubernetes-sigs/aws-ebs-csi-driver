@@ -198,6 +198,9 @@ spec:
             {{- end }}
             {{- end }}
             - --default-fstype={{ .Values.controller.defaultFsType }}
+            {{- range .Values.sidecars.provisioner.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -240,6 +243,9 @@ spec:
             - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
+            {{- range .Values.sidecars.attacher.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -274,6 +280,9 @@ spec:
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
+            {{- range .Values.sidecars.snapshotter.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -317,6 +326,9 @@ spec:
             {{- if .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
             - --leader-election-retry-period={{ .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
             {{- end }}
+            {{- end }}
+            {{- range .Values.sidecars.volumemodifier.additionalArgs }}
+            - {{ . }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -362,6 +374,9 @@ spec:
             - --leader-election-retry-period={{ .retryPeriod }}
             {{- end }}
             {{- end }}
+            {{- range .Values.sidecars.resizer.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -391,6 +406,9 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
+            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           envFrom:
             {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
