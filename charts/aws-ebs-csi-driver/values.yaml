@@ -21,6 +21,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
       tag: "v3.5.0-eks-1-27-3"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     # Tune leader lease election for csi-provisioner.
     # Leader election is on by default.
@@ -52,6 +53,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -65,6 +67,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
       tag: "v6.2.1-eks-1-27-3"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -74,6 +77,7 @@ sidecars:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
       tag: "v2.10.0-eks-1-27-3"
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -95,6 +99,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -106,6 +111,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
       tag: "v2.8.0-eks-1-27-3"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -125,6 +131,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
