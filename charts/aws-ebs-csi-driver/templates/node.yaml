@@ -127,6 +127,9 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           envFrom:
             {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
@@ -163,6 +166,9 @@ spec:
           envFrom:
             {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
+            {{- end }}
+            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
+            - {{ . }}
             {{- end }}
           volumeMounts:
             - name: plugin-dir
