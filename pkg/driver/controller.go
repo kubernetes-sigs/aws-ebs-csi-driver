@@ -354,27 +354,20 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	volumeID := req.GetVolumeId()
 	nodeID := req.GetNodeId()
 
-	if !d.cloud.IsExistInstance(ctx, nodeID) {
-		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
+	if !d.inFlight.Insert(volumeID) {
+		return nil, status.Error(codes.Aborted, fmt.Sprintf(internal.VolumeOperationAlreadyExistsErrorMsg, volumeID))
 	}
-	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
-	if err != nil {
-		if errors.Is(err, cloud.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "Volume not found")
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
-	}
+	defer d.inFlight.Delete(volumeID)
 
-	// If given volumeId already assigned to given node, will directly return current device path
+	klog.V(2).InfoS("ControllerPublishVolume: attaching", "volumeID", volumeID, "nodeID", nodeID)
 	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
 		if errors.Is(err, cloud.ErrVolumeInUse) {
-			return nil, status.Error(codes.FailedPrecondition, strings.Join(disk.Attachments, ","))
+			return nil, status.Errorf(codes.FailedPrecondition, "Volume %q is already attached to a different node, expected node: %q", volumeID, nodeID)
 		}
-		// TODO: Check volume capability matches for ALREADY_EXISTS
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(5).InfoS("[Debug] ControllerPublishVolume: attached to node", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
+	klog.V(2).InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
@@ -413,13 +406,20 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 	volumeID := req.GetVolumeId()
 	nodeID := req.GetNodeId()
 
+	if !d.inFlight.Insert(volumeID) {
+		return nil, status.Error(codes.Aborted, fmt.Sprintf(internal.VolumeOperationAlreadyExistsErrorMsg, volumeID))
+	}
+	defer d.inFlight.Delete(volumeID)
+
+	klog.V(2).InfoS("ControllerUnpublishVolume: detaching", "volumeID", volumeID, "nodeID", nodeID)
 	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
 		if errors.Is(err, cloud.ErrNotFound) {
+			klog.V(2).InfoS("ControllerUnpublishVolume: attachment not found", "volumeID", volumeID, "nodeID", nodeID)
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(5).InfoS("[Debug] ControllerUnpublishVolume: detached from node", "volumeID", volumeID, "nodeID", nodeID)
+	klog.V(2).InfoS("ControllerUnpublishVolume: detached", "volumeID", volumeID, "nodeID", nodeID)
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
