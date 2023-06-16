@@ -44,7 +44,7 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.19.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.18.0
           imagePullPolicy: IfNotPresent
           args:
             - node
@@ -58,6 +58,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          envFrom:
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -88,7 +89,7 @@ spec:
             privileged: true
             readOnlyRootFilesystem: true
         - name: node-driver-registrar
-          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.8.0-eks-1-27-3
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.7.0-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -99,6 +100,7 @@ spec:
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
+          envFrom:
           livenessProbe:
             exec:
               command:
@@ -125,10 +127,11 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.10.0-eks-1-27-3
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.9.0-eks-1-26-7
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
+          envFrom:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi

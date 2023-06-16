@@ -77,10 +77,10 @@ spec:
             {{- with .Values.node.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
           envFrom:
+            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-          {{- end }}
+            {{- end }}
           volumeMounts:
             - name: kubelet-dir
               mountPath: {{ .Values.node.kubeletPath }}
@@ -127,13 +127,10 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-            {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
-            - {{ . }}
-            {{- end }}
-          {{- with .Values.controller.envFrom }}
           envFrom:
+            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-          {{- end }}
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -163,13 +160,10 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
-            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
-            - {{ . }}
-            {{- end }}
-          {{- with .Values.controller.envFrom }}
           envFrom:
+            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-          {{- end }}
+            {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi

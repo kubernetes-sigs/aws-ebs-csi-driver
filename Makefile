@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION?=v1.19.0
+VERSION?=v1.18.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -254,5 +254,3 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/poddisruptionbudget-controller.yaml --api-versions 'policy/v1/PodDisruptionBudget' | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/poddisruptionbudget-controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/role-leases.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/rolebinding-leases.yaml

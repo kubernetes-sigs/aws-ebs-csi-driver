@@ -628,7 +628,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 
 	var attachment *ec2.VolumeAttachment
 
-	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
+	verifyVolumeFunc := func() (bool, error) {
 		request := &ec2.DescribeVolumesInput{
 			VolumeIds: []*string{
 				aws.String(volumeID),
@@ -710,11 +710,11 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return true, nil
 		}
 		// continue waiting
-		klog.V(4).InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
+		klog.V(2).InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
 		return false, nil
 	}
 
-	return attachment, wait.ExponentialBackoffWithContext(ctx, backoff, verifyVolumeFunc)
+	return attachment, wait.ExponentialBackoff(backoff, verifyVolumeFunc)
 }
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {

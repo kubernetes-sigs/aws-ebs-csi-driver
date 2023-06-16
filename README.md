@@ -1,5 +1,12 @@
+> **Warning**
+> 
+> [`k8s.gcr.io` will be redirected on Monday March 20th](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/), and may stop working entirely in the near future. If you are using `k8s.gcr.io` you MUST [move to `registry.k8s.io`](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/) to continue receiving support.
+> 
+> Issues related to `k8s.gcr.io` will no longer be accepted. `public.ecr.aws` and `registry.k8s.io` images are unaffected and remain supported as per [the support policy](https://github.com/kubernetes-sigs/aws-ebs-csi-driver#support).
+
 # Amazon Elastic Block Store (EBS) CSI driver
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/kubernetes-sigs/aws-ebs-csi-driver)](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases)
+[![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/aws-ebs-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/aws-ebs-csi-driver?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-sigs/aws-ebs-csi-driver)](https://goreportcard.com/report/github.com/kubernetes-sigs/aws-ebs-csi-driver)
 
 ## Overview
@@ -19,14 +26,13 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| v1.19.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.19.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.19.0                      |
+| v1.18.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.18.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.18.0                      |
 
 <details>
 <summary>Previous Images</summary>
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| v1.18.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.18.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.18.0                      |
 | v1.17.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.17.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.17.0                      |
 | v1.16.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.16.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.16.1                      |
 | v1.16.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.16.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.16.0                      |

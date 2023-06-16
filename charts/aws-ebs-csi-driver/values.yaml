@@ -19,9 +19,8 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v3.5.0-eks-1-27-3"
+      tag: "v3.4.1-eks-1-26-7"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     # Tune leader lease election for csi-provisioner.
     # Leader election is on by default.
@@ -41,7 +40,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.3.0-eks-1-27-3"
+      tag: "v4.2.0-eks-1-26-7"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -53,7 +52,6 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -65,9 +63,8 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v6.2.1-eks-1-27-3"
+      tag: "v6.2.1-eks-1-26-7"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -76,8 +73,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.10.0-eks-1-27-3"
-    additionalArgs: []
+      tag: "v2.9.0-eks-1-26-7"
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -87,19 +83,8 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.8.0-eks-1-27-3"
-    # Tune leader lease election for csi-resizer.
-    # Leader election is on by default.
-    leaderElection:
-      enabled: true
-      # Optional values to tune lease behavior.
-      # The arguments provided must be in an acceptable time.ParseDuration format.
-      # Ref: https://pkg.go.dev/flag#Duration
-      # leaseDuration: "15s"
-      # renewDeadline: "10s"
-      # retryPeriod: "5s"
+      tag: "v1.7.0-eks-1-26-7"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -109,9 +94,8 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.8.0-eks-1-27-3"
+      tag: "v2.7.0-eks-1-26-7"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -131,7 +115,6 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
-    additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
