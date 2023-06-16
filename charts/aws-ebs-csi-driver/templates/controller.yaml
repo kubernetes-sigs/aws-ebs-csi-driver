@@ -132,10 +132,10 @@ spec:
             {{- with .Values.controller.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -210,10 +210,10 @@ spec:
             {{- with .Values.sidecars.provisioner.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -255,10 +255,10 @@ spec:
             {{- with .Values.sidecars.attacher.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -292,10 +292,10 @@ spec:
             {{- with .Values.sidecars.snapshotter.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -339,10 +339,10 @@ spec:
             {{- with .Values.sidecars.volumemodifier.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -386,10 +386,10 @@ spec:
             {{- with .Values.sidecars.resizer.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -409,10 +409,10 @@ spec:
             {{- range .Values.sidecars.livenessProbe.additionalArgs }}
             - {{ . }}
             {{- end }}
+          {{- with .Values.controller.envFrom }}
           envFrom:
-            {{- with .Values.controller.envFrom }}
             {{- . | toYaml | nindent 12 }}
-            {{- end }}
+          {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
