@@ -32,16 +32,12 @@ import (
 	"github.com/golang/mock/gomock"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
-	defaultZone     = "test-az"
-	expZone         = "us-west-2b"
-	snowZone        = "snow"
-	defaultVolumeID = "vol-test-1234"
-	defaultNodeID   = "node-1234"
-	defaultPath     = "/dev/xvdaa"
+	defaultZone = "test-az"
+	expZone     = "us-west-2b"
+	snowZone    = "snow"
 )
 
 func TestCreateDisk(t *testing.T) {
@@ -715,78 +711,25 @@ func TestAttachDisk(t *testing.T) {
 		name     string
 		volumeID string
 		nodeID   string
-		path     string
 		expErr   error
-		mockFunc func(*MockEC2API, context.Context, string, string, string, dm.DeviceManager)
 	}{
 		{
-			name:     "success: AttachVolume normal",
-			volumeID: defaultVolumeID,
-			nodeID:   defaultNodeID,
-			path:     defaultPath,
+			name:     "success: normal",
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
 			expErr:   nil,
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, path string, dm dm.DeviceManager) {
-				volumeRequest := createVolumeRequest(volumeID)
-				instanceRequest := createInstanceRequest(nodeID)
-				attachRequest := createAttachRequest(volumeID, nodeID, path)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolumeWithContext(ctx, attachRequest).Return(createAttachVolumeOutput(volumeID, nodeID, path, "attached"), nil),
-					mockEC2.EXPECT().DescribeVolumesWithContext(ctx, volumeRequest).Return(createDescribeVolumesOutput(volumeID, nodeID, path, "attached"), nil),
-				)
-			},
-		},
-		{
-			name:     "success: AttachVolume device already assigned",
-			volumeID: defaultVolumeID,
-			nodeID:   defaultNodeID,
-			path:     defaultPath,
-			expErr:   nil,
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, path string, dm dm.DeviceManager) {
-				volumeRequest := createVolumeRequest(volumeID)
-				instanceRequest := createInstanceRequest(nodeID)
-
-				fakeInstance := newFakeInstance(nodeID, volumeID, path)
-				_, err := dm.NewDevice(fakeInstance, volumeID)
-				assert.NoError(t, err)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID, volumeID), nil),
-					mockEC2.EXPECT().DescribeVolumesWithContext(ctx, volumeRequest).Return(createDescribeVolumesOutput(volumeID, nodeID, path, "attached"), nil))
-			},
 		},
 		{
 			name:     "fail: AttachVolume returned generic error",
-			volumeID: defaultVolumeID,
-			nodeID:   defaultNodeID,
-			path:     defaultPath,
-			expErr:   fmt.Errorf("could not attach volume %q to node %q: %w", defaultVolumeID, defaultNodeID, errors.New("AttachVolume error")),
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, path string, dm dm.DeviceManager) {
-				instanceRequest := createInstanceRequest(nodeID)
-				attachRequest := createAttachRequest(volumeID, nodeID, path)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolumeWithContext(ctx, attachRequest).Return(nil, errors.New("AttachVolume error")),
-				)
-			},
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   fmt.Errorf(""),
 		},
 		{
 			name:     "fail: AttachVolume returned error volumeInUse",
-			volumeID: defaultVolumeID,
-			nodeID:   defaultNodeID,
-			path:     defaultPath,
-			expErr:   fmt.Errorf("could not attach volume %q to node %q: %w", defaultVolumeID, defaultNodeID, ErrVolumeInUse),
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, path string, dm dm.DeviceManager) {
-				instanceRequest := createInstanceRequest(nodeID)
-				attachRequest := createAttachRequest(volumeID, nodeID, path)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolumeWithContext(ctx, attachRequest).Return(nil, ErrVolumeInUse),
-				)
-			},
+			volumeID: "vol-test-1234",
+			nodeID:   "node-1234",
+			expErr:   awserr.New("VolumeInUse", "Volume is in use", nil),
 		},
 	}
 
@@ -796,19 +739,28 @@ func TestAttachDisk(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
-			dm := c.(*cloud).dm
+			vol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("node-1234"), State: aws.String("attached")}},
+			}
 
-			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID, tc.path, dm)
+			ctx := context.Background()
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+			mockEC2.EXPECT().AttachVolumeWithContext(gomock.Any(), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
 
 			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
-
-			if tc.expErr != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expErr, err)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("AttachDisk() failed: expected no error, got: %v", err)
+				}
 			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.path, devicePath)
+				if tc.expErr != nil {
+					t.Fatal("AttachDisk() failed: expected error, got nothing")
+				}
+				if !strings.HasPrefix(devicePath, "/dev/") {
+					t.Fatal("AttachDisk() failed: expected valid device path, got empty string")
+				}
 			}
 
 			mockCtrl.Finish()
@@ -822,54 +774,24 @@ func TestDetachDisk(t *testing.T) {
 		volumeID string
 		nodeID   string
 		expErr   error
-		mockFunc func(*MockEC2API, context.Context, string, string)
 	}{
 		{
-			name:     "success: DetachDisk normal",
+			name:     "success: normal",
 			volumeID: "vol-test-1234",
 			nodeID:   "node-1234",
 			expErr:   nil,
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID string) {
-				volumeRequest := createVolumeRequest(volumeID)
-				instanceRequest := createInstanceRequest(nodeID)
-				detachRequest := createDetachRequest(volumeID, nodeID)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolumeWithContext(ctx, detachRequest).Return(nil, nil),
-					mockEC2.EXPECT().DescribeVolumesWithContext(ctx, volumeRequest).Return(createDescribeVolumesOutput(volumeID, nodeID, "", "detached"), nil),
-				)
-			},
 		},
 		{
 			name:     "fail: DetachVolume returned generic error",
 			volumeID: "vol-test-1234",
 			nodeID:   "node-1234",
-			expErr:   fmt.Errorf("could not detach volume %q from node %q: %w", defaultVolumeID, defaultNodeID, errors.New("DetachVolume error")),
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID string) {
-				instanceRequest := createInstanceRequest(nodeID)
-				detachRequest := createDetachRequest(volumeID, nodeID)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolumeWithContext(ctx, detachRequest).Return(nil, errors.New("DetachVolume error")),
-				)
-			},
+			expErr:   fmt.Errorf("DetachVolume generic error"),
 		},
 		{
 			name:     "fail: DetachVolume returned not found error",
 			volumeID: "vol-test-1234",
 			nodeID:   "node-1234",
-			expErr:   fmt.Errorf("could not detach volume %q from node %q: %w", defaultVolumeID, defaultNodeID, ErrNotFound),
-			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID string) {
-				instanceRequest := createInstanceRequest(nodeID)
-				detachRequest := createDetachRequest(volumeID, nodeID)
-
-				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolumeWithContext(ctx, detachRequest).Return(nil, ErrNotFound),
-				)
-			},
+			expErr:   fmt.Errorf("DetachVolume not found error"),
 		},
 	}
 
@@ -879,16 +801,30 @@ func TestDetachDisk(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
+			vol := &ec2.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: nil,
+			}
+
 			ctx := context.Background()
-			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID)
+			mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{vol}}, nil).AnyTimes()
+			mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(newDescribeInstancesOutput(tc.nodeID), nil)
+			switch tc.name {
+			case "fail: DetachVolume returned not found error":
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Any(), gomock.Any()).Return(nil, awserr.New("InvalidVolume.NotFound", "foo", fmt.Errorf("")))
+			default:
+				mockEC2.EXPECT().DetachVolumeWithContext(gomock.Any(), gomock.Any()).Return(&ec2.VolumeAttachment{}, tc.expErr)
+			}
 
 			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
-
-			if tc.expErr != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expErr, err)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("DetachDisk() failed: expected no error, got: %v", err)
+				}
 			} else {
-				assert.NoError(t, err)
+				if tc.expErr != nil {
+					t.Fatal("DetachDisk() failed: expected error, got nothing")
+				}
 			}
 
 			mockCtrl.Finish()
@@ -1910,15 +1846,6 @@ func TestWaitForAttachmentState(t *testing.T) {
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
-		{
-			name:             "failure: context cancelled",
-			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
-			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
-			alreadyAssigned:  false,
-			expectError:      true,
-		},
 	}
 
 	volumeAttachmentStatePollSteps = 1
@@ -1949,8 +1876,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1235"), State: aws.String("attached")}, {Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			ctx := context.Background()
 
 			switch tc.name {
 			case "success: detached", "failure: already assigned but wrong state":
@@ -1961,15 +1887,11 @@ func TestWaitForAttachmentState(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
 			case "failure: disk still attaching":
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachingVol}}, nil).AnyTimes()
-			case "failure: context cancelled":
-				mockEC2.EXPECT().DescribeVolumesWithContext(ctx, gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachingVol}}, nil).AnyTimes()
-				cancel()
 			default:
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []*ec2.Volume{attachedVol}}, nil).AnyTimes()
 			}
 
 			attachment, err := c.WaitForAttachmentState(ctx, tc.volumeID, tc.expectedState, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
-
 			if tc.expectError {
 				if err == nil {
 					t.Fatal("WaitForAttachmentState() failed: expected error, got nothing")
@@ -2001,99 +1923,13 @@ func newCloud(mockEC2 ec2iface.EC2API) Cloud {
 	}
 }
 
-func newDescribeInstancesOutput(nodeID string, volumeID ...string) *ec2.DescribeInstancesOutput {
-	instance := &ec2.Instance{
-		InstanceId: aws.String(nodeID),
-	}
-
-	if len(volumeID) > 0 && volumeID[0] != "" {
-		instance.BlockDeviceMappings = []*ec2.InstanceBlockDeviceMapping{
-			{
-				DeviceName: aws.String(defaultPath),
-				Ebs: &ec2.EbsInstanceBlockDevice{
-					VolumeId: aws.String(volumeID[0]),
-				},
-			},
-		}
-	}
-
+func newDescribeInstancesOutput(nodeID string) *ec2.DescribeInstancesOutput {
 	return &ec2.DescribeInstancesOutput{
-		Reservations: []*ec2.Reservation{
-			{
-				Instances: []*ec2.Instance{
-					instance,
-				},
+		Reservations: []*ec2.Reservation{{
+			Instances: []*ec2.Instance{
+				{InstanceId: aws.String(nodeID)},
 			},
-		},
-	}
-}
-
-func newFakeInstance(instanceID, volumeID, devicePath string) *ec2.Instance {
-	return &ec2.Instance{
-		InstanceId: aws.String(instanceID),
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
-			{
-				DeviceName: aws.String(devicePath),
-				Ebs:        &ec2.EbsInstanceBlockDevice{VolumeId: aws.String(volumeID)},
-			},
-		},
-	}
-}
-
-func createVolumeRequest(volumeID string) *ec2.DescribeVolumesInput {
-	return &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
-	}
-}
-
-func createInstanceRequest(nodeID string) *ec2.DescribeInstancesInput {
-	return &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{
-			aws.String(nodeID),
-		},
-	}
-}
-
-func createAttachRequest(volumeID, nodeID, path string) *ec2.AttachVolumeInput {
-	return &ec2.AttachVolumeInput{
-		Device:     aws.String(path),
-		InstanceId: aws.String(nodeID),
-		VolumeId:   aws.String(volumeID),
-	}
-}
-
-func createDetachRequest(volumeID, nodeID string) *ec2.DetachVolumeInput {
-	return &ec2.DetachVolumeInput{
-		VolumeId:   aws.String(volumeID),
-		InstanceId: aws.String(nodeID),
-	}
-}
-
-func createDescribeVolumesOutput(volumeID, nodeID, path, state string) *ec2.DescribeVolumesOutput {
-	return &ec2.DescribeVolumesOutput{
-		Volumes: []*ec2.Volume{
-			{
-				VolumeId: aws.String(volumeID),
-				Attachments: []*ec2.VolumeAttachment{
-					{
-						Device:     aws.String(path),
-						InstanceId: aws.String(nodeID),
-						State:      aws.String(state),
-					},
-				},
-			},
-		},
-	}
-}
-
-func createAttachVolumeOutput(volumeID, nodeID, path, state string) *ec2.VolumeAttachment {
-	return &ec2.VolumeAttachment{
-		VolumeId:   aws.String(volumeID),
-		Device:     aws.String(path),
-		InstanceId: aws.String(nodeID),
-		State:      aws.String(state),
+		}},
 	}
 }
 

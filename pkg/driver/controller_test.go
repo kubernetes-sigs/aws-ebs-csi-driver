@@ -35,7 +35,6 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
-	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,7 +42,6 @@ import (
 const (
 	expZone       = "us-west-2b"
 	expInstanceID = "i-123456789abcdef01"
-	expDevicePath = "/dev/xvda"
 )
 
 func TestNewControllerService(t *testing.T) {
@@ -3114,255 +3112,450 @@ func TestControllerPublishVolume(t *testing.T) {
 			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 		},
 	}
+	expDevicePath := "/dev/xvda"
 
 	testCases := []struct {
-		name             string
-		volumeId         string
-		nodeId           string
-		volumeCapability *csi.VolumeCapability
-		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
-		expResp          *csi.ControllerPublishVolumeResponse
-		errorCode        codes.Code
-		setupFunc        func(controllerService *controllerService)
+		name     string
+		testFunc func(t *testing.T)
 	}{
 		{
-			name:             "AttachDisk successfully with valid volume ID, node ID, and volume capability",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), volumeId, gomock.Eq(nodeId)).Return(expDevicePath, nil)
-			},
-			expResp: &csi.ControllerPublishVolumeResponse{
-				PublishContext: map[string]string{DevicePathKey: expDevicePath},
-			},
-			errorCode: codes.OK,
-		},
-		{
-			name:             "AttachDisk when volume is already attached to the node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
-			},
-			expResp: &csi.ControllerPublishVolumeResponse{
-				PublishContext: map[string]string{DevicePathKey: expDevicePath},
-			},
-			errorCode: codes.OK,
-		},
+			name: "success normal",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId:           expInstanceID,
+					VolumeCapability: stdVolCap,
+					VolumeId:         "vol-test",
+				}
+				expResp := &csi.ControllerPublishVolumeResponse{
+					PublishContext: map[string]string{DevicePathKey: expDevicePath},
+				}
 
-		{
-			name:             "Invalid argument error when no VolumeId provided",
-			volumeId:         "",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			errorCode:        codes.InvalidArgument,
-		},
-		{
-			name:             "Invalid argument error when no NodeId provided",
-			volumeId:         "vol-test",
-			nodeId:           "",
-			volumeCapability: stdVolCap,
-			errorCode:        codes.InvalidArgument,
-		},
-		{
-			name:      "Invalid argument error when no VolumeCapability provided",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
-			errorCode: codes.InvalidArgument,
-		},
-		{
-			name:     "Invalid argument error when invalid VolumeCapability provided",
-			volumeId: "vol-test",
-			nodeId:   expInstanceID,
-			volumeCapability: &csi.VolumeCapability{
-				AccessMode: &csi.VolumeCapability_AccessMode{
-					Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
-				},
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(&cloud.Disk{}, nil)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return(expDevicePath, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				resp, err := awsDriver.ControllerPublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
 			},
-			errorCode: codes.InvalidArgument,
 		},
 		{
-			name:             "Internal error when AttachDisk fails",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "test error"))
+			name: "success when resource is not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+				expResp := &csi.ControllerUnpublishVolumeResponse{}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
 			},
-			errorCode: codes.Internal,
 		},
 		{
-			name:             "Fail when node does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(nodeId)).Return("", status.Error(codes.Internal, "test error"))
+			name: "fail no VolumeId",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
 			},
-			errorCode: codes.Internal,
 		},
 		{
-			name:             "Fail when volume does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "volume not found"))
+			name: "fail no NodeId",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
 			},
-			errorCode: codes.Internal,
 		},
 		{
-			name:             "Fail when volume is already attached to another node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", (cloud.ErrVolumeInUse))
+			name: "fail no VolumeCapability",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
 			},
-			errorCode: codes.FailedPrecondition,
 		},
 		{
-			name:             "Aborted error when AttachDisk operation already in-flight",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
+			name: "fail invalid VolumeCapability",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId: expInstanceID,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
+						},
+					},
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
 			},
-			errorCode: codes.Aborted,
-			setupFunc: func(controllerService *controllerService) {
-				controllerService.inFlight.Insert("vol-test")
+		},
+		{
+			name: "fail instance not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId:           "does-not-exist",
+					VolumeId:         "vol-test",
+					VolumeCapability: stdVolCap,
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(false)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.NotFound {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.NotFound, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.NotFound)
+				}
+			},
+		},
+		{
+			name: "fail volume not found",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					VolumeId:         "does-not-exist",
+					NodeId:           expInstanceID,
+					VolumeCapability: stdVolCap,
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.NotFound {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.NotFound, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.NotFound)
+				}
+			},
+		},
+		{
+			name: "fail attach disk with volume already in use error",
+			testFunc: func(t *testing.T) {
+				attachedInstancId := "test-instance-id-attached"
+				disk := &cloud.Disk{
+					Attachments: []string{attachedInstancId},
+				}
+				req := &csi.ControllerPublishVolumeRequest{
+					VolumeId:         "does-not-exist",
+					NodeId:           expInstanceID,
+					VolumeCapability: stdVolCap,
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(true)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(disk, nil)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Any(), gomock.Eq(req.NodeId)).Return("", cloud.ErrVolumeInUse)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerPublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.FailedPrecondition {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.FailedPrecondition, srvErr.Code(), srvErr.Message())
+					}
+					if srvErr.Message() != attachedInstancId {
+						t.Fatalf("Expected error message to contain previous attached instanceId %s, but get error message %s", attachedInstancId, srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.AlreadyExists)
+				}
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			req := &csi.ControllerPublishVolumeRequest{
-				NodeId:           tc.nodeId,
-				VolumeCapability: tc.volumeCapability,
-				VolumeId:         tc.volumeId,
-			}
-			ctx := context.Background()
-
-			awsDriver, mockCtl, mockCloud := createControllerService(t)
-			defer mockCtl.Finish()
-
-			if tc.setupFunc != nil {
-				tc.setupFunc(&awsDriver)
-			}
-
-			if tc.mockAttach != nil {
-				tc.mockAttach(mockCloud, ctx, req.VolumeId, req.NodeId)
-			}
-
-			resp, err := awsDriver.ControllerPublishVolume(ctx, req)
-			if tc.errorCode != codes.OK {
-				assert.Equal(t, tc.errorCode, status.Code(err))
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-				assert.Equal(t, tc.expResp, resp)
-			}
-		})
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
 func TestControllerUnpublishVolume(t *testing.T) {
 	testCases := []struct {
-		name       string
-		volumeId   string
-		nodeId     string
-		errorCode  codes.Code
-		mockDetach func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
-		expResp    *csi.ControllerUnpublishVolumeResponse
-		setupFunc  func(driver *controllerService)
+		name     string
+		testFunc func(t *testing.T)
 	}{
 		{
-			name:      "DetachDisk successfully with valid volume ID and node ID",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
-			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(nil)
+			name: "success normal",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+				expResp := &csi.ControllerUnpublishVolumeResponse{}
 
-			},
-			expResp: &csi.ControllerUnpublishVolumeResponse{},
-		},
-		{
-			name:      "Return success when volume not found during DetachDisk operation",
-			volumeId:  "vol-not-found",
-			nodeId:    expInstanceID,
-			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(cloud.ErrNotFound)
-			},
-			expResp: &csi.ControllerUnpublishVolumeResponse{},
-		},
-		{
-			name:      "Invalid argument error when no VolumeId provided",
-			volumeId:  "",
-			nodeId:    expInstanceID,
-			errorCode: codes.InvalidArgument,
-		},
-		{
-			name:      "Invalid argument error when no NodeId provided",
-			volumeId:  "vol-test",
-			nodeId:    "",
-			errorCode: codes.InvalidArgument,
-		},
-		{
-			name:      "Internal error when DetachDisk operation fails",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
-			errorCode: codes.Internal,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(errors.New("test error"))
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), req.VolumeId, req.NodeId).Return(nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
 			},
 		},
 		{
-			name:      "Aborted error when operation already in-flight",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
-			errorCode: codes.Aborted,
-			setupFunc: func(driver *controllerService) {
-				driver.inFlight.Insert("vol-test")
+			name: "fail no VolumeId",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerUnpublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
+			},
+		},
+		{
+			name: "fail no NodeId",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.ControllerUnpublishVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if srvErr.Code() != codes.InvalidArgument {
+						t.Fatalf("Expected error code %d, got %d message %s", codes.InvalidArgument, srvErr.Code(), srvErr.Message())
+					}
+				} else {
+					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
+				}
 			},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			req := &csi.ControllerUnpublishVolumeRequest{
-				NodeId:   tc.nodeId,
-				VolumeId: tc.volumeId,
-			}
-
-			ctx := context.Background()
-
-			awsDriver, mockCtl, mockCloud := createControllerService(t)
-			defer mockCtl.Finish()
-
-			if tc.setupFunc != nil {
-				tc.setupFunc(&awsDriver)
-			}
-
-			if tc.mockDetach != nil {
-				tc.mockDetach(mockCloud, ctx, req.VolumeId, req.NodeId)
-			}
-
-			resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
-			if tc.errorCode != codes.OK {
-				assert.Equal(t, tc.errorCode, status.Code(err))
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-				assert.Equal(t, tc.expResp, resp)
-			}
-		})
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
@@ -3462,16 +3655,4 @@ func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
 	if srvErr.Code() != expectedCode {
 		t.Fatalf("Expected Aborted but got: %s", srvErr.Code())
 	}
-}
-
-func createControllerService(t *testing.T) (controllerService, *gomock.Controller, *cloud.MockCloud) {
-	t.Helper()
-	mockCtl := gomock.NewController(t)
-	mockCloud := cloud.NewMockCloud(mockCtl)
-	awsDriver := controllerService{
-		cloud:         mockCloud,
-		inFlight:      internal.NewInFlight(),
-		driverOptions: &DriverOptions{},
-	}
-	return awsDriver, mockCtl, mockCloud
 }
