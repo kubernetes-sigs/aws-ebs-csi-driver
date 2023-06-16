@@ -30,3 +30,5 @@ DriverInfo:
     nodeExpansion: true
     volumeLimits: true
     topology: true
+Timeouts:
+  PodStart: 30m
