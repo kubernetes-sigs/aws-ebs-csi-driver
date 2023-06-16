@@ -3536,6 +3536,56 @@ func (mr *MockEC2APIMockRecorder) CreateImageWithContext(arg0, arg1 interface{},
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateImageWithContext", reflect.TypeOf((*MockEC2API)(nil).CreateImageWithContext), varargs...)
 }
 
+// CreateInstanceConnectEndpoint mocks base method.
+func (m *MockEC2API) CreateInstanceConnectEndpoint(arg0 *ec2.CreateInstanceConnectEndpointInput) (*ec2.CreateInstanceConnectEndpointOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstanceConnectEndpoint", arg0)
+	ret0, _ := ret[0].(*ec2.CreateInstanceConnectEndpointOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstanceConnectEndpoint indicates an expected call of CreateInstanceConnectEndpoint.
+func (mr *MockEC2APIMockRecorder) CreateInstanceConnectEndpoint(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceConnectEndpoint", reflect.TypeOf((*MockEC2API)(nil).CreateInstanceConnectEndpoint), arg0)
+}
+
+// CreateInstanceConnectEndpointRequest mocks base method.
+func (m *MockEC2API) CreateInstanceConnectEndpointRequest(arg0 *ec2.CreateInstanceConnectEndpointInput) (*request.Request, *ec2.CreateInstanceConnectEndpointOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstanceConnectEndpointRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.CreateInstanceConnectEndpointOutput)
+	return ret0, ret1
+}
+
+// CreateInstanceConnectEndpointRequest indicates an expected call of CreateInstanceConnectEndpointRequest.
+func (mr *MockEC2APIMockRecorder) CreateInstanceConnectEndpointRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceConnectEndpointRequest", reflect.TypeOf((*MockEC2API)(nil).CreateInstanceConnectEndpointRequest), arg0)
+}
+
+// CreateInstanceConnectEndpointWithContext mocks base method.
+func (m *MockEC2API) CreateInstanceConnectEndpointWithContext(arg0 context.Context, arg1 *ec2.CreateInstanceConnectEndpointInput, arg2 ...request.Option) (*ec2.CreateInstanceConnectEndpointOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateInstanceConnectEndpointWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.CreateInstanceConnectEndpointOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstanceConnectEndpointWithContext indicates an expected call of CreateInstanceConnectEndpointWithContext.
+func (mr *MockEC2APIMockRecorder) CreateInstanceConnectEndpointWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceConnectEndpointWithContext", reflect.TypeOf((*MockEC2API)(nil).CreateInstanceConnectEndpointWithContext), varargs...)
+}
+
 // CreateInstanceEventWindow mocks base method.
 func (m *MockEC2API) CreateInstanceEventWindow(arg0 *ec2.CreateInstanceEventWindowInput) (*ec2.CreateInstanceEventWindowOutput, error) {
 	m.ctrl.T.Helper()
@@ -7334,6 +7384,56 @@ func (mr *MockEC2APIMockRecorder) DeleteFpgaImageWithContext(arg0, arg1 interfac
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFpgaImageWithContext", reflect.TypeOf((*MockEC2API)(nil).DeleteFpgaImageWithContext), varargs...)
+}
+
+// DeleteInstanceConnectEndpoint mocks base method.
+func (m *MockEC2API) DeleteInstanceConnectEndpoint(arg0 *ec2.DeleteInstanceConnectEndpointInput) (*ec2.DeleteInstanceConnectEndpointOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteInstanceConnectEndpoint", arg0)
+	ret0, _ := ret[0].(*ec2.DeleteInstanceConnectEndpointOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteInstanceConnectEndpoint indicates an expected call of DeleteInstanceConnectEndpoint.
+func (mr *MockEC2APIMockRecorder) DeleteInstanceConnectEndpoint(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstanceConnectEndpoint", reflect.TypeOf((*MockEC2API)(nil).DeleteInstanceConnectEndpoint), arg0)
+}
+
+// DeleteInstanceConnectEndpointRequest mocks base method.
+func (m *MockEC2API) DeleteInstanceConnectEndpointRequest(arg0 *ec2.DeleteInstanceConnectEndpointInput) (*request.Request, *ec2.DeleteInstanceConnectEndpointOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteInstanceConnectEndpointRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DeleteInstanceConnectEndpointOutput)
+	return ret0, ret1
+}
+
+// DeleteInstanceConnectEndpointRequest indicates an expected call of DeleteInstanceConnectEndpointRequest.
+func (mr *MockEC2APIMockRecorder) DeleteInstanceConnectEndpointRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstanceConnectEndpointRequest", reflect.TypeOf((*MockEC2API)(nil).DeleteInstanceConnectEndpointRequest), arg0)
+}
+
+// DeleteInstanceConnectEndpointWithContext mocks base method.
+func (m *MockEC2API) DeleteInstanceConnectEndpointWithContext(arg0 context.Context, arg1 *ec2.DeleteInstanceConnectEndpointInput, arg2 ...request.Option) (*ec2.DeleteInstanceConnectEndpointOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteInstanceConnectEndpointWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DeleteInstanceConnectEndpointOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteInstanceConnectEndpointWithContext indicates an expected call of DeleteInstanceConnectEndpointWithContext.
+func (mr *MockEC2APIMockRecorder) DeleteInstanceConnectEndpointWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstanceConnectEndpointWithContext", reflect.TypeOf((*MockEC2API)(nil).DeleteInstanceConnectEndpointWithContext), varargs...)
 }
 
 // DeleteInstanceEventWindow mocks base method.
@@ -13991,6 +14091,89 @@ func (mr *MockEC2APIMockRecorder) DescribeInstanceAttributeWithContext(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceAttributeWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceAttributeWithContext), varargs...)
+}
+
+// DescribeInstanceConnectEndpoints mocks base method.
+func (m *MockEC2API) DescribeInstanceConnectEndpoints(arg0 *ec2.DescribeInstanceConnectEndpointsInput) (*ec2.DescribeInstanceConnectEndpointsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceConnectEndpoints", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeInstanceConnectEndpointsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeInstanceConnectEndpoints indicates an expected call of DescribeInstanceConnectEndpoints.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceConnectEndpoints(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceConnectEndpoints", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceConnectEndpoints), arg0)
+}
+
+// DescribeInstanceConnectEndpointsPages mocks base method.
+func (m *MockEC2API) DescribeInstanceConnectEndpointsPages(arg0 *ec2.DescribeInstanceConnectEndpointsInput, arg1 func(*ec2.DescribeInstanceConnectEndpointsOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceConnectEndpointsPages", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeInstanceConnectEndpointsPages indicates an expected call of DescribeInstanceConnectEndpointsPages.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceConnectEndpointsPages(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceConnectEndpointsPages", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceConnectEndpointsPages), arg0, arg1)
+}
+
+// DescribeInstanceConnectEndpointsPagesWithContext mocks base method.
+func (m *MockEC2API) DescribeInstanceConnectEndpointsPagesWithContext(arg0 context.Context, arg1 *ec2.DescribeInstanceConnectEndpointsInput, arg2 func(*ec2.DescribeInstanceConnectEndpointsOutput, bool) bool, arg3 ...request.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeInstanceConnectEndpointsPagesWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeInstanceConnectEndpointsPagesWithContext indicates an expected call of DescribeInstanceConnectEndpointsPagesWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceConnectEndpointsPagesWithContext(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceConnectEndpointsPagesWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceConnectEndpointsPagesWithContext), varargs...)
+}
+
+// DescribeInstanceConnectEndpointsRequest mocks base method.
+func (m *MockEC2API) DescribeInstanceConnectEndpointsRequest(arg0 *ec2.DescribeInstanceConnectEndpointsInput) (*request.Request, *ec2.DescribeInstanceConnectEndpointsOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceConnectEndpointsRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DescribeInstanceConnectEndpointsOutput)
+	return ret0, ret1
+}
+
+// DescribeInstanceConnectEndpointsRequest indicates an expected call of DescribeInstanceConnectEndpointsRequest.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceConnectEndpointsRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceConnectEndpointsRequest", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceConnectEndpointsRequest), arg0)
+}
+
+// DescribeInstanceConnectEndpointsWithContext mocks base method.
+func (m *MockEC2API) DescribeInstanceConnectEndpointsWithContext(arg0 context.Context, arg1 *ec2.DescribeInstanceConnectEndpointsInput, arg2 ...request.Option) (*ec2.DescribeInstanceConnectEndpointsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeInstanceConnectEndpointsWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeInstanceConnectEndpointsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeInstanceConnectEndpointsWithContext indicates an expected call of DescribeInstanceConnectEndpointsWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceConnectEndpointsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceConnectEndpointsWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceConnectEndpointsWithContext), varargs...)
 }
 
 // DescribeInstanceCreditSpecifications mocks base method.
