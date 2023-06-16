@@ -143,6 +143,25 @@ spec:
           }
         }
       ]
+  kubeAPIServer:
+    featureGates:
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
+      CSIInlineVolume: "true"
+  kubeControllerManager:
+    featureGates:
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
+      CSIInlineVolume: "true"
+  kubelet:
+    featureGates:
+      CSIMigration: "true"
+      CSIMigrationAWS: "true"
+      ExpandCSIVolumes: "true"
+      CSIInlineVolume: "true"
+    anonymousAuth: false
   cloudConfig:
     awsEBSCSIDriver:
       enabled: true
