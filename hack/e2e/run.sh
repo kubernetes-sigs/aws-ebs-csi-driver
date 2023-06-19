@@ -49,14 +49,14 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
 K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-${K8S_VERSION:-1.27.0}}
-K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-${K8S_VERSION:-1.26}}
+K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-${K8S_VERSION:-1.27}}
 
 KOPS_VERSION=${KOPS_VERSION:-1.27.0-alpha.2}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 
-EKSCTL_VERSION=${EKSCTL_VERSION:-0.141.0}
+EKSCTL_VERSION=${EKSCTL_VERSION:-0.145.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 VPC_CONFIGMAP_FILE=${VPC_CONFIGMAP_FILE:-./hack/vpc-resource-controller-configmap.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
@@ -76,10 +76,10 @@ NODE_OS_DISTRO=${NODE_OS_DISTRO:-"linux"}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
-EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.2.1"}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.2.2"}
 
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
-CHART_TESTING_VERSION=${CHART_TESTING_VERSION:-3.7.1}
+CHART_TESTING_VERSION=${CHART_TESTING_VERSION:-3.8.0}
 CLEAN=${CLEAN:-"true"}
 
 loudecho "Testing in region ${REGION} and zones ${ZONES}"
@@ -112,7 +112,7 @@ else
   GINKGO_BIN=${BIN_DIR}/ginkgo
   if [[ ! -e ${GINKGO_BIN} ]]; then
     pushd /tmp
-    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.0
+    GOPATH=${TEST_DIR} GOBIN=${BIN_DIR} go install github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
     popd
     ginkgo version
   fi
