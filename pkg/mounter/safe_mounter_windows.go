@@ -84,7 +84,9 @@ func (mounter *CSIProxyMounter) Mount(source string, target string, fstype strin
 		SourcePath: normalizeWindowsPath(source),
 		TargetPath: normalizeWindowsPath(target),
 	}
+	klog.InfoS("[CSI Timings] START CreateSymlink", "id", normalizeWindowsPath(target))
 	_, err := mounter.FsClient.CreateSymlink(context.Background(), linkRequest)
+	klog.InfoS("[CSI Timings] -END- CreateSymlink", "id", normalizeWindowsPath(target))
 	if err != nil {
 		return err
 	}
@@ -96,7 +98,9 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
 		TargetPath: normalizeWindowsPath(target),
 	}
+	klog.InfoS("[CSI Timings] START GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(target))
 	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
+	klog.InfoS("[CSI Timings] -END- GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(target))
 	if err != nil {
 		return err
 	}
@@ -106,7 +110,9 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 		VolumeId:   volumeIdResponse.VolumeId,
 		TargetPath: normalizeWindowsPath(target),
 	}
+	klog.InfoS("[CSI Timings] START UnmountVolume", "id", volumeIdResponse.VolumeId)
 	_, err = mounter.VolumeClient.UnmountVolume(context.Background(), unmountVolumeRequest)
+	klog.InfoS("[CSI Timings] -END- UnmountVolume", "id", volumeIdResponse.VolumeId)
 	if err != nil {
 		return err
 	}
@@ -121,7 +127,9 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 	getDiskNumberRequest := &volume.GetDiskNumberFromVolumeIDRequest{
 		VolumeId: volumeIdResponse.VolumeId,
 	}
+	klog.InfoS("[CSI Timings] START GetDiskNumberFromVolumeID", "id", volumeIdResponse.VolumeId)
 	getDiskNumberResponse, err := mounter.VolumeClient.GetDiskNumberFromVolumeID(context.Background(), getDiskNumberRequest)
+	klog.InfoS("[CSI Timings] START GetDiskNumberFromVolumeID", "id", volumeIdResponse.VolumeId)
 	if err != nil {
 		return err
 	}
@@ -131,7 +139,9 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 		DiskNumber: getDiskNumberResponse.DiskNumber,
 		IsOnline:   false,
 	}
+	klog.InfoS("[CSI Timings] START SetDiskState", "id", getDiskNumberResponse.DiskNumber)
 	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
+	klog.InfoS("[CSI Timings] -END- SetDiskState", "id", getDiskNumberResponse.DiskNumber)
 	if err != nil {
 		return err
 	}
@@ -145,7 +155,9 @@ func (mounter *CSIProxyMounter) Rmdir(path string) error {
 		Path:  normalizeWindowsPath(path),
 		Force: true,
 	}
+	klog.InfoS("[CSI Timings] START Rmdir", "id", normalizeWindowsPath(path))
 	_, err := mounter.FsClient.Rmdir(context.Background(), rmdirRequest)
+	klog.InfoS("[CSI Timings] -END- Rmdir", "id", normalizeWindowsPath(path))
 	if err != nil {
 		return err
 	}
@@ -154,16 +166,20 @@ func (mounter *CSIProxyMounter) Rmdir(path string) error {
 
 func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
 	request := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(target)}
+	klog.InfoS("[CSI Timings] START GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(target))
 	response, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), request)
+	klog.InfoS("[CSI Timings] -END- GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(target))
 	if err != nil || response == nil {
 		klog.InfoS("GetVolumeIDFromTargetPath failed", "target", target, "err", err, "response", response)
 	} else {
 		request := &volume.WriteVolumeCacheRequest{
 			VolumeId: response.VolumeId,
 		}
+		klog.InfoS("[CSI Timings] START WriteVolumeCache", "id", response.VolumeId)
 		if res, err := mounter.VolumeClient.WriteVolumeCache(context.Background(), request); err != nil {
 			klog.InfoS("WriteVolumeCache failed", "volumeID", response.VolumeId, "err", err, "res", res)
 		}
+		klog.InfoS("[CSI Timings] -END- WriteVolumeCache", "id", response.VolumeId)
 	}
 }
 
@@ -198,10 +214,12 @@ func (mounter *CSIProxyMounter) IsLikelyNotMountPoint(path string) (bool, error)
 		return true, os.ErrNotExist
 	}
 
+	klog.InfoS("[CSI Timings] START IsSymlink", "id", normalizeWindowsPath(path))
 	response, err := mounter.FsClient.IsSymlink(context.Background(),
 		&fs.IsSymlinkRequest{
 			Path: normalizeWindowsPath(path),
 		})
+	klog.InfoS("[CSI Timings] -END- IsSymlink", "id", normalizeWindowsPath(path))
 	if err != nil {
 		return false, err
 	}
@@ -219,7 +237,9 @@ func (mounter *CSIProxyMounter) DeviceOpened(pathname string) (bool, error) {
 // GetDeviceNameFromMount returns the disk number for a mount path.
 func (mounter *CSIProxyMounter) GetDeviceNameFromMount(mountPath, _ string) (string, error) {
 	req := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(mountPath)}
+	klog.InfoS("[CSI Timings] START GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(mountPath))
 	resp, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), req)
+	klog.InfoS("[CSI Timings] -END- GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(mountPath))
 	if err != nil {
 		return "", err
 	}
@@ -227,7 +247,9 @@ func (mounter *CSIProxyMounter) GetDeviceNameFromMount(mountPath, _ string) (str
 	getDiskNumberRequest := &volume.GetDiskNumberFromVolumeIDRequest{
 		VolumeId: resp.VolumeId,
 	}
+	klog.InfoS("[CSI Timings] START GetDiskNumberFromVolumeID", "id", resp.VolumeId)
 	getDiskNumberResponse, err := mounter.VolumeClient.GetDiskNumberFromVolumeID(context.Background(), getDiskNumberRequest)
+	klog.InfoS("[CSI Timings] -END- GetDiskNumberFromVolumeID", "id", resp.VolumeId)
 	if err != nil {
 		return "", err
 	}
@@ -250,7 +272,9 @@ func (mounter *CSIProxyMounter) MakeDir(pathname string) error {
 	mkdirReq := &fs.MkdirRequest{
 		Path: normalizeWindowsPath(pathname),
 	}
+	klog.InfoS("[CSI Timings] START Mkdir", "id", normalizeWindowsPath(pathname))
 	_, err := mounter.FsClient.Mkdir(context.Background(), mkdirReq)
+	klog.InfoS("[CSI Timings] -END- Mkdir", "id", normalizeWindowsPath(pathname))
 	if err != nil {
 		klog.V(4).InfoS("Error", err)
 		return err
@@ -261,10 +285,12 @@ func (mounter *CSIProxyMounter) MakeDir(pathname string) error {
 
 // ExistsPath - Checks if a path exists. Unlike util ExistsPath, this call does not perform follow link.
 func (mounter *CSIProxyMounter) ExistsPath(path string) (bool, error) {
+	klog.InfoS("[CSI Timings] START PathExists", "id", normalizeWindowsPath(path))
 	isExistsResponse, err := mounter.FsClient.PathExists(context.Background(),
 		&fs.PathExistsRequest{
 			Path: normalizeWindowsPath(path),
 		})
+	klog.InfoS("[CSI Timings] -END- PathExists", "id", normalizeWindowsPath(path))
 	if err != nil {
 		return false, err
 	}
@@ -306,15 +332,19 @@ func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemdWithMountFlags(sourc
 // Rescan would trigger an update storage cache via the CSI proxy.
 func (mounter *CSIProxyMounter) Rescan() error {
 	// Call Rescan from disk APIs of CSI Proxy.
+	klog.InfoS("[CSI Timings] START Rescan")
 	if _, err := mounter.DiskClient.Rescan(context.Background(), &disk.RescanRequest{}); err != nil {
 		return err
 	}
+	klog.InfoS("[CSI Timings] -END- Rescan")
 	return nil
 }
 
 // FindDiskByLun - given a lun number, find out the corresponding disk
 func (mounter *CSIProxyMounter) FindDiskByLun(lun string) (diskNum string, err error) {
+	klog.InfoS("[CSI Timings] START ListDiskLocations")
 	findDiskByLunResponse, err := mounter.DiskClient.ListDiskLocations(context.Background(), &disk.ListDiskLocationsRequest{})
+	klog.InfoS("[CSI Timings] -END- ListDiskLocations")
 	if err != nil {
 		return "", err
 	}
@@ -350,7 +380,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 	partionDiskRequest := &disk.PartitionDiskRequest{
 		DiskNumber: uint32(diskNumber),
 	}
+	klog.InfoS("[CSI Timings] START PartitionDisk", "id", diskNumber)
 	_, err = mounter.DiskClient.PartitionDisk(context.Background(), partionDiskRequest)
+	klog.InfoS("[CSI Timings] -END- PartitionDisk", "id", diskNumber)
 	if err != nil {
 		return err
 	}
@@ -360,7 +392,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 		DiskNumber: uint32(diskNumber),
 		IsOnline:   true,
 	}
+	klog.InfoS("[CSI Timings] START SetDiskState", "id", diskNumber)
 	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
+	klog.InfoS("[CSI Timings] -END- SetDiskState", "id", diskNumber)
 	if err != nil {
 		return err
 	}
@@ -369,7 +403,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 	volumeIDsRequest := &volume.ListVolumesOnDiskRequest{
 		DiskNumber: uint32(diskNumber),
 	}
+	klog.InfoS("[CSI Timings] START ListVolumesOnDisk")
 	volumeIdResponse, err := mounter.VolumeClient.ListVolumesOnDisk(context.Background(), volumeIDsRequest)
+	klog.InfoS("[CSI Timings] -END- ListVolumesOnDisk")
 	if err != nil {
 		return err
 	}
@@ -382,7 +418,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 	isVolumeFormattedRequest := &volume.IsVolumeFormattedRequest{
 		VolumeId: volumeID,
 	}
+	klog.InfoS("[CSI Timings] START IsVolumeFormatted", "id", volumeID)
 	isVolumeFormattedResponse, err := mounter.VolumeClient.IsVolumeFormatted(context.Background(), isVolumeFormattedRequest)
+	klog.InfoS("[CSI Timings] -END- IsVolumeFormatted", "id", volumeID)
 	if err != nil {
 		return err
 	}
@@ -393,7 +431,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 			VolumeId: volumeID,
 			// TODO: Accept the filesystem and other options
 		}
+		klog.InfoS("[CSI Timings] START FormatVolume", "id", volumeID)
 		_, err = mounter.VolumeClient.FormatVolume(context.Background(), formatVolumeRequest)
+		klog.InfoS("[CSI Timings] -END- FormatVolume", "id", volumeID)
 		if err != nil {
 			return err
 		}
@@ -404,7 +444,9 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 		VolumeId:   volumeID,
 		TargetPath: normalizeWindowsPath(target),
 	}
+	klog.InfoS("[CSI Timings] START MountVolume", "id", volumeID)
 	_, err = mounter.VolumeClient.MountVolume(context.Background(), mountVolumeRequest)
+	klog.InfoS("[CSI Timings] -END- MountVolume", "id", volumeID)
 	if err != nil {
 		return err
 	}
@@ -417,7 +459,9 @@ func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string) (bool, erro
 	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
 		TargetPath: normalizeWindowsPath(deviceMountPath),
 	}
+	klog.InfoS("[CSI Timings] START GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(deviceMountPath))
 	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
+	klog.InfoS("[CSI Timings] -END- GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(deviceMountPath))
 	if err != nil {
 		return false, err
 	}
@@ -427,7 +471,9 @@ func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string) (bool, erro
 	resizeVolumeRequest := &volume.ResizeVolumeRequest{
 		VolumeId: volumeId,
 	}
+	klog.InfoS("[CSI Timings] START ResizeVolume", "id", volumeId)
 	_, err = mounter.VolumeClient.ResizeVolume(context.Background(), resizeVolumeRequest)
+	klog.InfoS("[CSI Timings] -END- ResizeVolume", "id", volumeId)
 	if err != nil {
 		return false, err
 	}
@@ -441,7 +487,9 @@ func (mounter *CSIProxyMounter) GetVolumeSizeInBytes(deviceMountPath string) (in
 	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
 		TargetPath: normalizeWindowsPath(deviceMountPath),
 	}
+	klog.InfoS("[CSI Timings] START GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(deviceMountPath))
 	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
+	klog.InfoS("[CSI Timings] -END- GetVolumeIDFromTargetPath", "id", normalizeWindowsPath(deviceMountPath))
 	if err != nil {
 		return -1, err
 	}
@@ -451,7 +499,9 @@ func (mounter *CSIProxyMounter) GetVolumeSizeInBytes(deviceMountPath string) (in
 	getVolumeStatsRequest := &volume.GetVolumeStatsRequest{
 		VolumeId: volumeId,
 	}
+	klog.InfoS("[CSI Timings] START GetVolumeStats", "id", volumeId)
 	resp, err := mounter.VolumeClient.GetVolumeStats(context.Background(), getVolumeStatsRequest)
+	klog.InfoS("[CSI Timings] -END- GetVolumeStats", "id", volumeId)
 	if err != nil {
 		return -1, err
 	}
@@ -470,7 +520,9 @@ func (mounter *CSIProxyMounter) GetDeviceSize(devicePath string) (int64, error) 
 	getDiskStatsRequest := &disk.GetDiskStatsRequest{
 		DiskNumber: uint32(diskNumber),
 	}
+	klog.InfoS("[CSI Timings] START GetDiskStats", "id", diskNumber)
 	resp, err := mounter.DiskClient.GetDiskStats(context.Background(), getDiskStatsRequest)
+	klog.InfoS("[CSI Timings] -END- GetDiskStats", "id", diskNumber)
 	if err != nil {
 		return -1, err
 	}
