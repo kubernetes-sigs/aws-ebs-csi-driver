@@ -68,7 +68,7 @@ function eksctl_create_cluster() {
       --ssh-access=false \
       --cluster="${CLUSTER_NAME}" \
       --node-ami-family=WindowsServer2022FullContainer \
-      --node-ami=ami-03cd0b8c6c28613c2 \
+      --node-ami=ami-0ad9da4864ca5a1b7 \
       -n ng-windows \
       -m 3 \
       -M 3 \
