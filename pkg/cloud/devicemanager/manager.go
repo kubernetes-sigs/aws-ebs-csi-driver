@@ -25,8 +25,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const devPrefix = "/dev/xvd"
-
 type Device struct {
 	Instance          *ec2.Instance
 	Path              string
@@ -126,7 +124,7 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 		return nil, err
 	}
 
-	name, err := d.nameAllocator.GetNext(inUse, devPrefix)
+	name, err := d.nameAllocator.GetNext(inUse)
 	if err != nil {
 		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
 	}

@@ -41,7 +41,7 @@ const (
 	snowZone        = "snow"
 	defaultVolumeID = "vol-test-1234"
 	defaultNodeID   = "node-1234"
-	defaultPath     = "/dev/xvdaa"
+	defaultPath     = "/dev/xvdb"
 )
 
 func TestCreateDisk(t *testing.T) {
@@ -1834,7 +1834,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      false,
 		},
@@ -1843,7 +1843,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeDetachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      false,
 		},
@@ -1852,7 +1852,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeDetachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      false,
 		},
@@ -1861,7 +1861,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
@@ -1870,7 +1870,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdab",
+			expectedDevice:   "/dev/xvdc",
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
@@ -1879,7 +1879,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1235",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
@@ -1888,7 +1888,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  true,
 			expectError:      true,
 		},
@@ -1897,7 +1897,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      false,
 		},
@@ -1906,7 +1906,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
@@ -1915,7 +1915,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
-			expectedDevice:   "/dev/xvdaa",
+			expectedDevice:   "/dev/xvdb",
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
@@ -1931,22 +1931,22 @@ func TestWaitForAttachmentState(t *testing.T) {
 
 			attachedVol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdb"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
 			}
 
 			attachingVol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1234"), State: aws.String("attaching")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdb"), InstanceId: aws.String("1234"), State: aws.String("attaching")}},
 			}
 
 			detachedVol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1234"), State: aws.String("detached")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdb"), InstanceId: aws.String("1234"), State: aws.String("detached")}},
 			}
 
 			multipleAttachmentsVol := &ec2.Volume{
 				VolumeId:    aws.String(tc.volumeID),
-				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1235"), State: aws.String("attached")}, {Device: aws.String("/dev/xvdaa"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
+				Attachments: []*ec2.VolumeAttachment{{Device: aws.String("/dev/xvdb"), InstanceId: aws.String("1235"), State: aws.String("attached")}, {Device: aws.String("/dev/xvdb"), InstanceId: aws.String("1234"), State: aws.String("attached")}},
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
