@@ -34,34 +34,19 @@ type ExistingNames map[string]string
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
 type NameAllocator interface {
-	// GetNext returns a free device name or error when there is no free device
-	// name. The prefix (such as "/dev/xvd" or "/dev/sd") is passed as a parameter.
-	GetNext(existingNames ExistingNames, prefix string) (name string, err error)
+	GetNext(existingNames ExistingNames) (name string, err error)
 }
 
 type nameAllocator struct{}
 
 var _ NameAllocator = &nameAllocator{}
 
-// GetNext gets next available device given existing names that are being used
-// This function iterate through the device names in deterministic order of:
-//
-//	aa, ..., az, ba, ..., bz, ..., ..., dx
-//
-// and return the first one that is not used yet.
-// We stop at dx because EBS performs undocumented validation on the device
-// name that refuses to mount devices after /dev/xvddx
-func (d *nameAllocator) GetNext(existingNames ExistingNames, prefix string) (string, error) {
-	for c1 := 'a'; c1 <= 'd'; c1++ {
-		c2end := 'z'
-		if c1 == 'd' {
-			c2end = 'x'
-		}
-		for c2 := 'a'; c2 <= c2end; c2++ {
-			name := fmt.Sprintf("%s%s%s", prefix, string(c1), string(c2))
-			if _, found := existingNames[name]; !found {
-				return name, nil
-			}
+// GetNext returns a free device name or error when there is no free device name
+// It does this by using a list of legal EBS device names from device_names.go
+func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
+	for _, name := range deviceNames {
+		if _, found := existingNames[name]; !found {
+			return name, nil
 		}
 	}
 
