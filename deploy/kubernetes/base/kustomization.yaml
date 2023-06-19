@@ -18,3 +18,5 @@ resources:
 - poddisruptionbudget-controller.yaml
 - serviceaccount-csi-controller.yaml
 - serviceaccount-csi-node.yaml
+- role-leases.yaml
+- rolebinding-leases.yaml
