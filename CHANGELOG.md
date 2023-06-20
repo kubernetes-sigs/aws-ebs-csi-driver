@@ -1,3 +1,25 @@
+# v1.20.0
+### Notable Changes
+* Enable leader election in csi-resizer sidecar ([#1606](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1606), [@rdpsin](https://github.com/rdpsin))
+* Namespace-scoped leases permissions ([#1614](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1614), [@torredil](https://github.com/torredil))
+* Add additionalArgs parameter for sidecars ([#1627](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1627), [@ConnorJC3](https://github.com/ConnorJC3))
+* Fix context handling in WaitForVolumeAttachment & add in-flight checks to attachment/detachment operations ([#1621](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1621), [@torredil](https://github.com/torredil))
+* Extend resource list in Kustomization file ([#1634](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1634), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Idempotent unmount from NodeUnstageVolume / NodeUnpublishVolume ([#1605](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1605), [@dobsonj](https://github.com/dobsonj))
+* Remove condition on iopspergb key being mandatory for io1 volumes ([#1590](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1590), [@surian](https://github.com/surian))
+* Avoid generating manifests with empty envFrom fields ([#1630](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1630), [@mvgmb](https://github.com/mvgmb))
+* Update DM allocator to use all available names ([#1626](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1626), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Update logline to remove "formatted" ([#1612](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1612), [@odinuge](https://github.com/odinuge))
+* Bump kOps k8s version to 1.27; Bump eksctl k8s version to 1.26 ([#1567](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1567), [@ConnorJC3](https://github.com/ConnorJC3))
+* Revert Increase external test pod start timeout ([#1615](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1615), [@torredil](https://github.com/torredil))
+* Remove old coverage banner from README ([#1617](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1617), [@jacobwolfaws](https://github.com/jacobwolfaws))
+* Allow to set automountServiceAccountToken in ServiceAccount ([#1619](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1619), [@kahirokunn](https://github.com/kahirokunn))
+* Upgrade dependencies ([#1637](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1637), [@torredil](https://github.com/torredil))
+
 # v1.19.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
