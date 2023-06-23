@@ -1,0 +1,51 @@
+name: Sync upstream
+# This runs every day on 1000 UTC
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  # Allows manual workflow run
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+ build:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v3
+    - name: Setup git config
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.name "${GITHUB_ACTOR}"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git config --local user.password ${GITHUB_TOKEN}
+    - name: Setup remotes
+      run: |
+        git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git remote add upstream https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    - name: Fetch upstream tags
+      run: git fetch upstream --tags
+    - name: Get latest tag
+      id: get_latest_tag
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run:  echo tag=$(gh release list -R kubernetes-sigs/aws-ebs-csi-driver -L 1 | awk '{ print $1 }') >> $GITHUB_OUTPUT
+    - name: Fetch last base
+      run: git fetch origin tag last-dd-base
+    - name: Fetch datadog branch
+      run: git fetch origin datadog
+    - name: Checkout datadog branch
+      run: git checkout datadog
+    - name: Rebase datadog branch
+      run: git rebase --onto ${{ steps.get_latest_tag.outputs.tag }} last-dd-base
+    - name: Push datadog branch
+      run: git push -f origin datadog
+    - name: Tag release
+      run: git tag ${{ steps.get_latest_tag.outputs.tag }}-dd datadog
+    - name: Push tag
+      run: git push origin ${{ steps.get_latest_tag.outputs.tag }}-dd
+    - name: Move last base tag
+      run: git tag -f last-dd-base ${{ steps.get_latest_tag.outputs.tag }}
+    - name: Push last base tag
+      run: git push -f origin last-dd-base
