@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
@@ -667,6 +668,13 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
 	if err != nil {
+		// TODO: Workaround for https://github.com/kubernetes-csi/external-snapshotter/issues/778
+		// and for https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1608#issuecomment-1554748900
+		//
+		// Wait 15 seconds before returning to the caller if the AWS CreateSnapshot call failed
+		// Because of the inflight check, this will prevent retries while waiting
+		klog.V(4).InfoS("Waiting 15 seconds to delay snapshot retries", "volumeID", volumeID)
+		time.Sleep(time.Second * 15)
 		return nil, status.Errorf(codes.Internal, "Could not create snapshot %q: %v", snapshotName, err)
 	}
 
