@@ -171,7 +171,17 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		if _, ok = BlockSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Cannot use block size with fstype %s", fsType)
 		}
+	}
+	inodeSize, ok := context[INodeSizeKey]
+	if ok {
+		_, err := strconv.Atoi(inodeSize)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid inodeSize (aborting!): %v", err)
+		}
 
+		if _, ok = INodeSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot use inode size with fstype %s", fsType)
+		}
 	}
 
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
@@ -245,6 +255,13 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 			blockSize = "size=" + blockSize
 		}
 		formatOptions = append(formatOptions, "-b", blockSize)
+	}
+	if len(inodeSize) > 0 {
+		option := "-I"
+		if fsType == FSTypeXfs {
+			option, inodeSize = "-i", "size="+inodeSize
+		}
+		formatOptions = append(formatOptions, option, inodeSize)
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {

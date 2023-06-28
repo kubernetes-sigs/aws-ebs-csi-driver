@@ -85,6 +85,9 @@ const (
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
 
+	// INodeSizeKey configures the inode size when formatting a volume
+	INodeSizeKey = "inodesize"
+
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
 	TagKeyPrefix = "tagSpecification"
@@ -161,9 +164,13 @@ const (
 	FSTypeNtfs = "ntfs"
 )
 
-// BlockSizeExcludedFSTypes contains the filesystems that a custom block size is *NOT* supported on
 var (
+	// BlockSizeExcludedFSTypes contains the filesystems that a custom block size is *NOT* supported on
 	BlockSizeExcludedFSTypes = map[string]struct{}{
+		FSTypeNtfs: {},
+	}
+	// INodeSizeExcludedFSTypes contains the filesystems that a custom inode size is *NOT* supported on
+	INodeSizeExcludedFSTypes = map[string]struct{}{
 		FSTypeNtfs: {},
 	}
 )
