@@ -104,18 +104,20 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            {{- with .Values.awsAccessSecret }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
-                  key: key_id
+                  name: {{ .name }}
+                  key: {{ .keyId }}
                   optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
-                  key: access_key
+                  name: {{ .name }}
+                  key: {{ .accessKey }}
                   optional: true
+            {{- end }}
             - name: AWS_EC2_ENDPOINT
               valueFrom:
                 configMapKeyRef:
