@@ -264,8 +264,18 @@ controller:
     runAsUser: 1000
     runAsGroup: 1000
     fsGroup: 1000
+  # Add additional volume mounts on the controller with controller.volumes and controller.volumeMounts
   volumes: []
+  # Add additional volumes to be mounted onto the controller:
+  # - name: custom-dir
+  #   hostPath:
+  #     path: /path/to/dir
+  #     type: Directory
   volumeMounts: []
+  # And add mount paths for those additional volumes:
+  # - name: custom-dir
+  #   mountPath: /mount/path
+  # ---
   # securityContext on the controller container (see sidecars for securityContext on sidecar containers)
   containerSecurityContext:
     readOnlyRootFilesystem: true
@@ -328,6 +338,18 @@ node:
     runAsUser: 0
     runAsGroup: 0
     fsGroup: 0
+  # Add additional volume mounts on the node pods with node.volumes and node.volumeMounts
+  volumes: []
+  # Add additional volumes to be mounted onto the node pods:
+  # - name: custom-dir
+  #   hostPath:
+  #     path: /path/to/dir
+  #     type: Directory
+  volumeMounts: []
+  # And add mount paths for those additional volumes:
+  # - name: custom-dir
+  #   mountPath: /mount/path
+  # ---
   # securityContext on the node container (see sidecars for securityContext on sidecar containers)
   containerSecurityContext:
     readOnlyRootFilesystem: true
