@@ -89,6 +89,9 @@ spec:
               mountPath: /csi
             - name: device-dir
               mountPath: /dev
+          {{- with .Values.node.volumeMounts }}
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: healthz
               containerPort: 9808
@@ -206,3 +209,6 @@ spec:
             type: Directory
         - name: probe-dir
           emptyDir: {}
+        {{- with .Values.node.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
