@@ -18,6 +18,7 @@ package devicemanager
 
 import (
 	"fmt"
+	"strings"
 )
 
 // ExistingNames is a map of assigned device names. Presence of a key with a device
@@ -45,10 +46,32 @@ var _ NameAllocator = &nameAllocator{}
 // It does this by using a list of legal EBS device names from device_names.go
 func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
 	for _, name := range deviceNames {
-		if _, found := existingNames[name]; !found {
-			return name, nil
+
+		// Check if the name exists in its current form
+		if _, found := existingNames[name]; found {
+			continue
 		}
+
+		// Check if the name exists in its alternate form
+		alternateName := alternateDeviceName(name)
+		if _, found := existingNames[alternateName]; found {
+			continue
+		}
+
+		return name, nil
 	}
 
 	return "", fmt.Errorf("there are no names available")
+}
+
+// alternateDeviceName returns the alternate form of a device name.
+// If the name starts with "/dev/sd", it replaces this with "/dev/xvd" and vice versa.
+func alternateDeviceName(name string) string {
+	if strings.HasPrefix(name, "/dev/sd") {
+		return strings.Replace(name, "/dev/sd", "/dev/xvd", 1)
+	} else if strings.HasPrefix(name, "/dev/xvd") {
+		return strings.Replace(name, "/dev/xvd", "/dev/sd", 1)
+	}
+
+	return name
 }
