@@ -157,31 +157,22 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	context := req.GetVolumeContext()
-	blockSize, ok := context[BlockSizeKey]
-	if ok {
-		// This check is already performed on the controller side
-		// However, because it is potentially security-sensitive, we redo it here to be safe
-		_, err := strconv.Atoi(blockSize)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid blockSize (aborting!): %v", err)
-		}
 
-		// In the case that the default fstype does not support custom block sizes we could
-		// be using an invalid fstype, so recheck that here
-		if _, ok = BlockSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Cannot use block size with fstype %s", fsType)
-		}
+	blockSize, err := recheckParameter(context, BlockSizeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
 	}
-	inodeSize, ok := context[INodeSizeKey]
-	if ok {
-		_, err := strconv.Atoi(inodeSize)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid inodeSize (aborting!): %v", err)
-		}
-
-		if _, ok = INodeSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Cannot use inode size with fstype %s", fsType)
-		}
+	inodeSize, err := recheckParameter(context, INodeSizeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	bytesPerINode, err := recheckParameter(context, BytesPerINodeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	numINodes, err := recheckParameter(context, NumberOfINodesKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
 	}
 
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
@@ -262,6 +253,12 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 			option, inodeSize = "-i", "size="+inodeSize
 		}
 		formatOptions = append(formatOptions, option, inodeSize)
+	}
+	if len(bytesPerINode) > 0 {
+		formatOptions = append(formatOptions, "-i", bytesPerINode)
+	}
+	if len(numINodes) > 0 {
+		formatOptions = append(formatOptions, "-N", numINodes)
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {
@@ -894,4 +891,23 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 	}
 	klog.InfoS("Removed taint(s) from local node", "node", nodeName)
 	return nil
+}
+
+func recheckParameter(context map[string]string, key string, fsConfigs map[string]fileSystemConfig, fsType string) (value string, err error) {
+	v, ok := context[key]
+	if ok {
+		// This check is already performed on the controller side
+		// However, because it is potentially security-sensitive, we redo it here to be safe
+		_, err := strconv.Atoi(v)
+		if err != nil {
+			return "", status.Errorf(codes.InvalidArgument, "Invalid %s (aborting!): %v", key, err)
+		}
+
+		// In the case that the default fstype does not support custom sizes we could
+		// be using an invalid fstype, so recheck that here
+		if supported := fsConfigs[strings.ToLower(fsType)].isParameterSupported(key); !supported {
+			return "", status.Errorf(codes.InvalidArgument, "Cannot use %s with fstype %s", key, fsType)
+		}
+	}
+	return v, nil
 }
