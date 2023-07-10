@@ -150,17 +150,6 @@ func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 	return d.Disk, nil
 }
 
-func (c *fakeCloudProvider) ModifyDisk(ctx context.Context, volumeID string, options *cloud.ModifyDiskOptions) error {
-	if d, ok := c.disks[volumeID]; !ok {
-		return cloud.ErrNotFound
-	} else {
-		d.iops = options.IOPS
-		d.throughput = options.Throughput
-		d.volumeType = options.VolumeType
-	}
-	return nil
-}
-
 func (c *fakeCloudProvider) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	for volName, f := range c.disks {
 		if f.Disk.VolumeID == volumeID {
@@ -309,14 +298,16 @@ func (c *fakeCloudProvider) EnableFastSnapshotRestores(ctx context.Context, avai
 	return nil, nil
 }
 
-func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, newSize int64) (int64, error) {
-	for volName, f := range c.disks {
-		if f.Disk.VolumeID == volumeID {
-			c.disks[volName].CapacityGiB = newSize
-			return newSize, nil
-		}
+func (c *fakeCloudProvider) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	if d, ok := c.disks[volumeID]; !ok {
+		return 0, cloud.ErrNotFound
+	} else {
+		d.iops = options.IOPS
+		d.throughput = options.Throughput
+		d.volumeType = options.VolumeType
+		d.Disk.CapacityGiB = newSize
+		return newSize, nil
 	}
-	return 0, cloud.ErrNotFound
 }
 
 type fakeMounter struct {

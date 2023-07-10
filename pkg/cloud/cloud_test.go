@@ -710,64 +710,6 @@ func TestDeleteDisk(t *testing.T) {
 	}
 }
 
-func TestModifyDisk(t *testing.T) {
-	testCases := []struct {
-		name                string
-		volumeID            string
-		modifyDiskOptions   *ModifyDiskOptions
-		modifiedVolume      *ec2.ModifyVolumeOutput
-		modifiedVolumeError awserr.Error
-	}{
-		{
-			name:     "success: IOPS with GP3",
-			volumeID: "vol-test-1234",
-			modifyDiskOptions: &ModifyDiskOptions{
-				VolumeType: "GP3",
-				IOPS:       3000,
-			},
-			modifiedVolume: &ec2.ModifyVolumeOutput{
-				VolumeModification: &ec2.VolumeModification{
-					VolumeId:          aws.String("vol-test"),
-					TargetIops:        aws.Int64(3000),
-					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
-				},
-			},
-		},
-		{
-			name:                "fail: ModifyVolume returned generic error",
-			volumeID:            "vol-test-1234",
-			modifiedVolumeError: awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
-			modifyDiskOptions: &ModifyDiskOptions{
-				VolumeType: "GP2",
-				IOPS:       3000,
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2API(mockCtrl)
-			c := newCloud(mockEC2)
-			ctx := context.Background()
-			if tc.modifiedVolumeError != nil {
-				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Any(), gomock.Any()).Return(nil, tc.modifiedVolumeError).AnyTimes()
-			} else {
-				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Any(), gomock.Any()).Return(tc.modifiedVolume, nil).AnyTimes()
-			}
-			err := c.ModifyDisk(ctx, tc.volumeID, tc.modifyDiskOptions)
-			if err != nil && tc.modifiedVolumeError == nil {
-				t.Fatalf("ModifyDisk() failed: expected no error, got: %v", err)
-			}
-
-			if err == nil && tc.modifiedVolumeError != nil {
-				t.Fatal("ModifyDisk() failed: expected error, got nothing")
-			}
-			mockCtrl.Finish()
-		})
-	}
-}
-
 func TestAttachDisk(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -1387,7 +1329,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 }
 
-func TestResizeDisk(t *testing.T) {
+func TestResizeOrModifyDisk(t *testing.T) {
 	testCases := []struct {
 		name                string
 		volumeID            string
@@ -1397,10 +1339,11 @@ func TestResizeDisk(t *testing.T) {
 		modifiedVolumeError awserr.Error
 		descModVolume       *ec2.DescribeVolumesModificationsOutput
 		reqSizeGiB          int64
+		modifyDiskOptions   *ModifyDiskOptions
 		expErr              error
 	}{
 		{
-			name:     "success: normal",
+			name:     "success: normal resize",
 			volumeID: "vol-test",
 			existingVolume: &ec2.Volume{
 				VolumeId:         aws.String("vol-test"),
@@ -1414,8 +1357,9 @@ func TestResizeDisk(t *testing.T) {
 					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
-			reqSizeGiB: 2,
-			expErr:     nil,
+			reqSizeGiB:        2,
+			modifyDiskOptions: &ModifyDiskOptions{},
+			expErr:            nil,
 		},
 		{
 			name:     "success: normal modifying state",
@@ -1441,8 +1385,9 @@ func TestResizeDisk(t *testing.T) {
 					},
 				},
 			},
-			reqSizeGiB: 2,
-			expErr:     nil,
+			reqSizeGiB:        2,
+			modifyDiskOptions: &ModifyDiskOptions{},
+			expErr:            nil,
 		},
 		{
 			name:     "success: with previous expansion",
@@ -1461,8 +1406,54 @@ func TestResizeDisk(t *testing.T) {
 					},
 				},
 			},
+			reqSizeGiB:        2,
+			modifyDiskOptions: &ModifyDiskOptions{},
+			expErr:            nil,
+		},
+		{
+			name:     "success: modify IOPS, throughput and volume type",
+			volumeID: "vol-test",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP3",
+				IOPS:       3000,
+				Throughput: 1000,
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetVolumeType:  aws.String("GP3"),
+					TargetIops:        aws.Int64(3000),
+					TargetThroughput:  aws.Int64(1000),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+				},
+			},
+			expErr: nil,
+		},
+		{
+			name:     "success: modify size, IOPS, throughput and volume type",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				Size:             aws.Int64(1),
+				AvailabilityZone: aws.String(defaultZone),
+			},
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP3",
+				IOPS:       3000,
+				Throughput: 1000,
+			},
 			reqSizeGiB: 2,
-			expErr:     nil,
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2),
+					TargetVolumeType:  aws.String("GP3"),
+					TargetIops:        aws.Int64(3000),
+					TargetThroughput:  aws.Int64(1000),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+				},
+			},
+			expErr: nil,
 		},
 		{
 			name:                "fail: volume doesn't exist",
@@ -1490,6 +1481,16 @@ func TestResizeDisk(t *testing.T) {
 			},
 			reqSizeGiB: 2,
 			expErr:     fmt.Errorf("ResizeDisk generic error"),
+		},
+		{
+			name:     "failure: ModifyVolume returned generic error",
+			volumeID: "vol-test",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP2",
+				IOPS:       3000,
+			},
+			modifiedVolumeError: awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
+			expErr:              awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
 		},
 	}
 
@@ -1534,17 +1535,17 @@ func TestResizeDisk(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Any(), gomock.Any()).Return(emptyOutput, nil).AnyTimes()
 			}
 
-			newSize, err := c.ResizeDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB))
+			newSize, err := c.ResizeOrModifyDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB), tc.modifyDiskOptions)
 			if err != nil {
 				if tc.expErr == nil {
-					t.Fatalf("ResizeDisk() failed: expected no error, got: %v", err)
+					t.Fatalf("ResizeOrModifyDisk() failed: expected no error, got: %v", err)
 				}
 			} else {
 				if tc.expErr != nil {
-					t.Fatal("ResizeDisk() failed: expected error, got nothing")
+					t.Fatal("ResizeOrModifyDisk() failed: expected error, got nothing")
 				} else {
 					if tc.reqSizeGiB != newSize {
-						t.Fatalf("ResizeDisk() failed: expected capacity %d, got %d", tc.reqSizeGiB, newSize)
+						t.Fatalf("ResizeOrModifyDisk() failed: expected capacity %d, got %d", tc.reqSizeGiB, newSize)
 					}
 				}
 			}
