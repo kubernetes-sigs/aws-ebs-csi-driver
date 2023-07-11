@@ -710,6 +710,64 @@ func TestDeleteDisk(t *testing.T) {
 	}
 }
 
+func TestModifyDisk(t *testing.T) {
+	testCases := []struct {
+		name                string
+		volumeID            string
+		modifyDiskOptions   *ModifyDiskOptions
+		modifiedVolume      *ec2.ModifyVolumeOutput
+		modifiedVolumeError awserr.Error
+	}{
+		{
+			name:     "success: IOPS with GP3",
+			volumeID: "vol-test-1234",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP3",
+				IOPS:       3000,
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetIops:        aws.Int64(3000),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+				},
+			},
+		},
+		{
+			name:                "fail: ModifyVolume returned generic error",
+			volumeID:            "vol-test-1234",
+			modifiedVolumeError: awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP2",
+				IOPS:       3000,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+			ctx := context.Background()
+			if tc.modifiedVolumeError != nil {
+				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Any(), gomock.Any()).Return(nil, tc.modifiedVolumeError).AnyTimes()
+			} else {
+				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Any(), gomock.Any()).Return(tc.modifiedVolume, nil).AnyTimes()
+			}
+			err := c.ModifyDisk(ctx, tc.volumeID, tc.modifyDiskOptions)
+			if err != nil && tc.modifiedVolumeError == nil {
+				t.Fatalf("ModifyDisk() failed: expected no error, got: %v", err)
+			}
+
+			if err == nil && tc.modifiedVolumeError != nil {
+				t.Fatal("ModifyDisk() failed: expected error, got nothing")
+			}
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestAttachDisk(t *testing.T) {
 	testCases := []struct {
 		name     string

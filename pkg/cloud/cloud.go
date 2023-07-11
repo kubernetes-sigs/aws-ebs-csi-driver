@@ -479,7 +479,7 @@ func (c *cloud) ModifyDisk(ctx context.Context, volumeID string, options *Modify
 	if options.VolumeType != "" {
 		req.VolumeType = aws.String(options.VolumeType)
 	}
-	if options.VolumeType == VolumeTypeGP3 {
+	if options.Throughput != 0 {
 		req.Throughput = aws.Int64(int64(options.Throughput))
 	}
 
