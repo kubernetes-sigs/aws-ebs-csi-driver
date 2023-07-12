@@ -1,7 +1,7 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
-	github.com/aws/aws-sdk-go v1.44.283
+	github.com/aws/aws-sdk-go v1.44.299
 	github.com/awslabs/volume-modifier-for-k8s v0.1.1
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/golang/mock v1.6.0
@@ -9,13 +9,13 @@ require (
 	github.com/kubernetes-csi/csi-proxy/client v1.1.2
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
-	github.com/onsi/ginkgo/v2 v2.10.0
+	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/sys v0.9.0
-	google.golang.org/grpc v1.56.0
-	google.golang.org/protobuf v1.30.0
+	golang.org/x/sys v0.10.0
+	google.golang.org/grpc v1.56.2
+	google.golang.org/protobuf v1.31.0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v1.22.11
@@ -24,7 +24,7 @@ require (
 	k8s.io/kubernetes v1.27.3
 	k8s.io/mount-utils v0.27.3
 	k8s.io/pod-security-admission v0.27.3
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106
+	k8s.io/utils v0.0.0-20230711102312-30195339c3c7
 )
 
 require (
