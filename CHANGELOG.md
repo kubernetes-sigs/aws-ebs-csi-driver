@@ -1,3 +1,11 @@
+# v1.21.0
+### Bug Fixes
+* Enable setting throughput without specifying volume type when modifying volumes ([#1667](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1667), [@Indresh2410](https://github.com/Indresh2410))
+* Reorder device names to prevent bad behavior on non-nitro instance types ([#1675](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1675), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Replace deprecated command with environment file in CI ([#1636](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1636), [@jongwooo](https://github.com/jongwooo))
+
 # v1.20.0
 ### Notable Changes
 * Enable leader election in csi-resizer sidecar ([#1606](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1606), [@rdpsin](https://github.com/rdpsin))
