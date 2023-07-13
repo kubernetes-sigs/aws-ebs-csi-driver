@@ -7,6 +7,3 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
-  {{- if not .Values.useOldCSIDriver }}
-  fsGroupPolicy: File
-  {{- end }}
