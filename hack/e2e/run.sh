@@ -23,6 +23,7 @@ source "${BASE_DIR}"/helm.sh
 source "${BASE_DIR}"/kops.sh
 source "${BASE_DIR}"/util.sh
 source "${BASE_DIR}"/chart-testing.sh
+source "${BASE_DIR}"/metrics/metrics.sh
 
 DRIVER_NAME=${DRIVER_NAME:-aws-ebs-csi-driver}
 CONTAINER_NAME=${CONTAINER_NAME:-ebs-plugin}
@@ -81,6 +82,8 @@ EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.2.1"}
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
 CHART_TESTING_VERSION=${CHART_TESTING_VERSION:-3.7.1}
 CLEAN=${CLEAN:-"true"}
+
+COLLECT_METRICS=${COLLECT_METRICS:-"false"}
 
 loudecho "Testing in region ${REGION} and zones ${ZONES}"
 mkdir -p "${BIN_DIR}"
@@ -215,8 +218,8 @@ else
   set +x
 
   endSec=$(date +'%s')
-  secondUsed=$(((endSec - startSec) / 1))
-  loudecho "Driver deployment complete, time used: $secondUsed seconds"
+  deployTimeSeconds=$(((endSec - startSec) / 1))
+  loudecho "Driver deployment complete, time used: $deployTimeSeconds seconds"
   loudecho "Testing focus ${GINKGO_FOCUS}"
 
   if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
@@ -266,6 +269,16 @@ else
 fi
 
 OVERALL_TEST_PASSED="${TEST_PASSED}"
+
+if [[ "${COLLECT_METRICS}" == true ]]; then
+  metrics_collector "$KUBECONFIG" \
+    "$AWS_ACCOUNT_ID" \
+    "$AWS_REGION" \
+    "$NODE_OS_DISTRO" \
+    "$deployTimeSeconds" \
+    "$DRIVER_NAME" \
+    "$VERSION"
+fi
 
 if [[ "${CLEAN}" == true ]]; then
   loudecho "Cleaning"

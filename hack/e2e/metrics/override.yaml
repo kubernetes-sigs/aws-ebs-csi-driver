@@ -1,0 +1,13 @@
+# This file contains override configurations for the cluster loader test.
+# It specifies various settings for provisioning volumes, waiting for PVs to be bound or deleted,
+# pod and volume configurations, and the expected provisioner and storage class.
+
+WAIT_FOR_PVS_BOUND: true
+WAIT_FOR_PVS_CREATED: true
+WAIT_FOR_PVS_DELETED: true
+PODS_PER_NODE: 1
+VOLUMES_PER_POD: 1
+NODES_PER_NAMESPACE: 1
+START_PODS: true
+EXPECTED_PROVISIONER: "ebs.csi.aws.com"
+STORAGE_CLASS: "ebs-sc"

@@ -183,6 +183,7 @@ test-e2e-external:
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="External.Storage" \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
 .PHONY: test-e2e-external-eks
