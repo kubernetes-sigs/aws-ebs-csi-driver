@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{.Name}}
+  labels:
+    app: {{.Name}}
+    group: {{.Group}}
+{{ with .Provisioner }}
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: {{.}}
+{{ end }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{ with .StorageClass }}
+  storageClassName: {{.}}
+  {{ end }}
+  resources:
+    requests:
+      storage: {{.VolSize}}

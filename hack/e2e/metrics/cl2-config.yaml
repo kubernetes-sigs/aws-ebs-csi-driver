@@ -1,0 +1,154 @@
+# This configuration file is designed for Kubernetes performance testing using Cluster Loader.
+# It is focused on testing Persistent Volumes (PVs) and their associated operations.
+# Various parameters can be adjusted to control the behavior of the test, including the number 
+# of nodes and pods, the sizes of the volumes, and whether to provision volumes or start pods. 
+# Specific configurations for the storage class and the provisioner can also be defined.
+
+{{$NODES_PER_NAMESPACE := MinInt .Nodes (DefaultParam .NODES_PER_NAMESPACE 100)}} 
+{{$PODS_PER_NODE := DefaultParam .PODS_PER_NODE 1}}
+{{$DEPLOYMENT_TEMPLATE_PATH := DefaultParam .DEPLOYMENT_TEMPLATE_PATH "deployment.yaml" }}
+{{$VOLUMES_PER_POD := DefaultParam .VOLUMES_PER_POD 1}}
+{{$VOLUME_TEMPLATE_PATH := DefaultParam .VOLUME_TEMPLATE_PATH "pvc.yaml"}}
+{{$GATHER_METRICS := DefaultParam .GATHER_METRICS true}}
+{{$START_PODS := DefaultParam .START_PODS true}}
+{{$PROVISION_VOLUME := DefaultParam .PROVISION_VOLUME true}}
+{{$STORAGE_CLASS := DefaultParam .STORAGE_CLASS "ebs-sc"}}
+{{$PROVISIONER := DefaultParam .PROVISIONER ""}}
+{{$EXPECTED_PROVISIONER := DefaultParam .EXPECTED_PROVISIONER ""}}
+{{$VOL_SIZE := DefaultParam .VOL_SIZE "8Gi"}}
+{{$WAIT_FOR_PVS_CREATED := DefaultParam .WAIT_FOR_PVS_CREATED true}}
+{{$WAIT_FOR_PVS_BOUND := DefaultParam .WAIT_FOR_PVS_BOUND true}}
+{{$WAIT_FOR_PVS_DELETED := DefaultParam .WAIT_FOR_PVS_DELETED true}}
+{{$POD_THROUGHPUT := DefaultParam .POD_THROUGHPUT 10}}
+{{$POD_STARTUP_TIMEOUT := DefaultParam .POD_STARTUP_TIMEOUT "5m"}}
+{{$POD_STARTUP_SLO := DefaultParam .POD_STARTUP_SLO 300}}
+{{$namespaces := DivideInt .Nodes $NODES_PER_NAMESPACE | MaxInt 1}}
+{{$podsPerNamespace := MultiplyInt $NODES_PER_NAMESPACE $PODS_PER_NODE}}
+{{$volumesPerNamespace := MultiplyInt $podsPerNamespace $VOLUMES_PER_POD}}
+{{$totalVols := MultiplyInt $volumesPerNamespace $namespaces}}
+{{$guessedStepTime := MultiplyInt $totalVols 2 | MaxInt 60}}
+{{$StepTimeSeconds := DefaultParam .STEP_TIME_SECONDS $guessedStepTime}}
+
+name: storage
+namespace:
+  number: {{$namespaces}}
+tuningSets:
+- name: UniformQPS
+  qpsLoad:
+    qps: {{$POD_THROUGHPUT}}
+steps:
+
+{{ if $PROVISION_VOLUME }}
+- name: Provisioning volumes
+  phases:
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: {{$volumesPerNamespace}}
+    tuningSet: UniformQPS
+    objectBundle:
+    - basename: vol
+      objectTemplatePath: {{$VOLUME_TEMPLATE_PATH}}
+      templateFillMap:
+        Group: volume-test
+        VolSize: {{$VOL_SIZE}}
+        StorageClass: {{$STORAGE_CLASS}}
+        Provisioner: {{$PROVISIONER}}
+{{ end }}
+
+{{if $WAIT_FOR_PVS_CREATED }}
+- name: Waiting for volume creation
+  measurements:
+    - Identifier: WaitForPVsToBeCreated
+      Method: WaitForAvailablePVs
+      Params:
+        desiredPVCount: {{$totalVols}}
+        apiVersion: v1
+        provisioner: {{$EXPECTED_PROVISIONER}}
+        timeout: {{$StepTimeSeconds}}s
+{{ end }}
+
+{{ if $WAIT_FOR_PVS_BOUND }}
+- name: Waiting for PVs to be bound
+  measurements:
+  - Identifier: WaitForPVCsToBeBound
+    Method: WaitForBoundPVCs
+    Params:
+      desiredPVCCount: {{$totalVols}}
+      apiVersion: v1
+      labelSelector: group = volume-test
+      timeout: {{$StepTimeSeconds}}s
+{{ end }}
+
+{{ if $START_PODS }}
+- name: Starting measurement for waiting for deployments
+  measurements:
+  - Identifier: WaitForRunningDeployments
+    Method: WaitForControlledPodsRunning
+    Params:
+      action: start
+      apiVersion: apps/v1
+      kind: Deployment
+      labelSelector: group = volume-test
+      operationTimeout: {{$POD_STARTUP_TIMEOUT}}
+
+- name: Creating deployments
+  phases:
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: {{$podsPerNamespace}}
+    tuningSet: UniformQPS
+    objectBundle:
+    - basename: deployment
+      objectTemplatePath: {{$DEPLOYMENT_TEMPLATE_PATH}}
+      templateFillMap:
+        Group: volume-test
+        VolumesPerPod: {{$VOLUMES_PER_POD}}
+        VolSize: {{$VOL_SIZE}}
+        StorageClass: {{$STORAGE_CLASS}}
+        Provisioner: {{$PROVISIONER}}
+
+- name: Waiting for deployments to be running
+  measurements:
+  - Identifier: WaitForRunningDeployments
+    Method: WaitForControlledPodsRunning
+    Params:
+      action: gather
+
+- name: Deleting deployments
+  phases:
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: 0
+    tuningSet: UniformQPS
+    objectBundle:
+    - basename: deployment
+      objectTemplatePath: {{$DEPLOYMENT_TEMPLATE_PATH}}
+{{ end }}
+
+{{ if $PROVISION_VOLUME }}
+- name: Deleting volumes
+  phases:
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: 0
+    tuningSet: UniformQPS
+    objectBundle:
+      - basename: vol
+        objectTemplatePath: {{$VOLUME_TEMPLATE_PATH}}
+{{ end }}
+
+{{if $WAIT_FOR_PVS_DELETED }}
+- name: Waiting for volume deletion
+  measurements:
+    - Identifier: WaitForPVsToBeDeleted
+      Method: WaitForAvailablePVs
+      Params:
+        desiredPVCount: 0
+        apiVersion: v1
+        provisioner: {{$EXPECTED_PROVISIONER}}
+        timeout: {{$StepTimeSeconds}}s
+{{ end }}
