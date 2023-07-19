@@ -159,3 +159,37 @@ To make sure dynamically provisioned EBS volumes have all tags that the in-tree 
 
 **Warning**:
 * kubelet *must* be drained of all pods with mounted EBS volumes ***before*** changing its CSI migration feature flags.  Failure to do this will cause deleted pods to get stuck in `Terminating`, requiring a forced delete which can cause filesystem corruption. See [#679](../../../issues/679) for more details.
+
+## Uninstalling the EBS CSI Driver
+
+Note: If your cluster is using EBS volumes, there should be no impact to running workloads. While the ebs-csi-driver daemonsets and controller are deleted from the cluster, no new EBS PVCs will be able to be created, and new pods that are created which use an EBS PV volume will not function (because the PV will not mount) until the driver is successfully re-installed (either manually, or through the EKS addon system).
+
+
+### Reccomended:
+
+Uninstall the self-managed EBS CSI Driver with either Helm or Kustomize, depending on your installation method.
+
+**Uninstall Via helm:**
+
+```
+helm uninstall aws-ebs-csi-driver --namespace kube-system
+```
+
+
+**Uninstall via kubectl (applied via Kustomize):**
+
+```
+kubectl delete -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-<YOUR-CSI-DRIVER-VERION-NUMBER>"
+```
+### Alternative:
+
+Explicitly delete the 2 driver daemonsets and the controller deployment.
+
+```
+kubectl delete ds ebs-csi-node -n kube-system
+kubectl delete ds ebs-csi-node-windows -n kube-system
+kubectl delete deployment ebs-csi-controller -n kube-system
+```
+
+**Warning**:
+* If you are using this uninstall method and wish to later install the driver as an EKS-managed add-on, then you must set the `resolve-conflicts` parameter to `OVERWRITE` to avoid an `UnsupportedAddonModification` error. 
