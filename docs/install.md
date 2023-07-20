@@ -72,6 +72,8 @@ helm upgrade --install aws-ebs-csi-driver \
 ```
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
+For each container (including the controller, node, and sidecars), there is an `additionalArgs` that accepts arguments that are not explicitly specified, such as `--retry-interval-start`, `--retry-interval-max` and
+`--timeout` that provisioner and attacher provides, or `--kube-api-burst`, `--kube-api-qps` etc.
 
 #### Once the driver has been deployed, verify the pods are running:
 ```sh
