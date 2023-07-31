@@ -85,6 +85,15 @@ const (
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
 
+	// INodeSizeKey configures the inode size when formatting a volume
+	INodeSizeKey = "inodesize"
+
+	// BytesPerINodeKey configures the `bytes-per-inode` when formatting a volume
+	BytesPerINodeKey = "bytesperinode"
+
+	// NumberOfINodesKey configures the `number-of-inodes` when formatting a volume
+	NumberOfINodesKey = "numberofinodes"
+
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
 	TagKeyPrefix = "tagSpecification"
@@ -161,15 +170,45 @@ const (
 	FSTypeNtfs = "ntfs"
 )
 
-// BlockSizeExcludedFSTypes contains the filesystems that a custom block size is *NOT* supported on
-var (
-	BlockSizeExcludedFSTypes = map[string]struct{}{
-		FSTypeNtfs: {},
-	}
-)
-
 // constants for node k8s API use
 const (
-	// AgentNotReadyTaintKey contains the key of taints to be removed on driver startup
+	// AgentNotReadyNodeTaintKey contains the key of taints to be removed on driver startup
 	AgentNotReadyNodeTaintKey = "ebs.csi.aws.com/agent-not-ready"
+)
+
+type fileSystemConfig struct {
+	NotSupportedParams map[string]struct{}
+}
+
+func (fsConfig fileSystemConfig) isParameterSupported(paramName string) bool {
+	_, notSupported := fsConfig.NotSupportedParams[paramName]
+	return !notSupported
+}
+
+var (
+	FileSystemConfigs = map[string]fileSystemConfig{
+		FSTypeExt2: {
+			NotSupportedParams: map[string]struct{}{},
+		},
+		FSTypeExt3: {
+			NotSupportedParams: map[string]struct{}{},
+		},
+		FSTypeExt4: {
+			NotSupportedParams: map[string]struct{}{},
+		},
+		FSTypeXfs: {
+			NotSupportedParams: map[string]struct{}{
+				BytesPerINodeKey:  {},
+				NumberOfINodesKey: {},
+			},
+		},
+		FSTypeNtfs: {
+			NotSupportedParams: map[string]struct{}{
+				BlockSizeKey:      {},
+				INodeSizeKey:      {},
+				BytesPerINodeKey:  {},
+				NumberOfINodesKey: {},
+			},
+		},
+	}
 )

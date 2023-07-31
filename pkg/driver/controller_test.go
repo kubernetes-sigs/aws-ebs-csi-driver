@@ -1637,58 +1637,78 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with block size",
 			testFunc: func(t *testing.T) {
-				req := &csi.CreateVolumeRequest{
-					Name:               "random-vol-name",
-					CapacityRange:      stdCapRange,
-					VolumeCapabilities: stdVolCap,
-					Parameters: map[string]string{
-						BlockSizeKey: "4096",
-					},
-				}
-
-				ctx := context.Background()
-
-				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
-					AvailabilityZone: expZone,
-					CapacityGiB:      util.BytesToGiB(stdVolSize),
-				}
-
-				mockCtl := gomock.NewController(t)
-				defer mockCtl.Finish()
-
-				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
-
-				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
-				}
-
-				response, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
-				}
-
-				context := response.Volume.VolumeContext
-				if blockSize, ok := context[BlockSizeKey]; ok {
-					if blockSize != "4096" {
-						t.Fatalf("Invalid %s in VolumeContext (got %s expected 4096)", BlockSizeKey, blockSize)
-					}
-				} else {
-					t.Fatalf("Missing key %s in VolumeContext", BlockSizeKey)
-				}
+				testSuccessWithParameter(t, BlockSizeKey, "4096", stdCapRange, stdVolCap, stdVolSize)
+			},
+		},
+		{
+			name: "success with inode size",
+			testFunc: func(t *testing.T) {
+				testSuccessWithParameter(t, INodeSizeKey, "256", stdCapRange, stdVolCap, stdVolSize)
+			},
+		},
+		{
+			name: "success with bytes-per-inode",
+			testFunc: func(t *testing.T) {
+				testSuccessWithParameter(t, BytesPerINodeKey, "8192", stdCapRange, stdVolCap, stdVolSize)
+			},
+		},
+		{
+			name: "success with number-of-inodes",
+			testFunc: func(t *testing.T) {
+				testSuccessWithParameter(t, NumberOfINodesKey, "13107200", stdCapRange, stdVolCap, stdVolSize)
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func testSuccessWithParameter(t *testing.T, key, value string, capRange *csi.CapacityRange, volCap []*csi.VolumeCapability, volSize int64) {
+	req := &csi.CreateVolumeRequest{
+		Name:               "random-vol-name",
+		CapacityRange:      capRange,
+		VolumeCapabilities: volCap,
+		Parameters:         map[string]string{key: value},
+	}
+
+	ctx := context.Background()
+
+	mockDisk := &cloud.Disk{
+		VolumeID:         req.Name,
+		AvailabilityZone: expZone,
+		CapacityGiB:      util.BytesToGiB(volSize),
+	}
+
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+	awsDriver := controllerService{
+		cloud:         mockCloud,
+		inFlight:      internal.NewInFlight(),
+		driverOptions: &DriverOptions{},
+	}
+
+	response, err := awsDriver.CreateVolume(ctx, req)
+	if err != nil {
+		srvErr, ok := status.FromError(err)
+		if !ok {
+			t.Fatalf("Could not get error status code from error: %v", srvErr)
+		}
+		t.Fatalf("Unexpected error: %v", srvErr.Code())
+	}
+
+	volCtx := response.Volume.VolumeContext
+	if sizeValue, ok := volCtx[key]; ok {
+		if sizeValue != value {
+			t.Fatalf("Invalid %s in VolumeContext (got %s expected %s)", key, sizeValue, value)
+		}
+	} else {
+		t.Fatalf("Missing key %s in VolumeContext", key)
 	}
 }
 

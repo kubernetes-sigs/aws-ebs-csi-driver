@@ -135,7 +135,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
-		blockSize string
+		blockSize      string
+		inodeSize      string
+		bytesPerINode  string
+		numberOfINodes string
 	)
 
 	tProps := new(template.PVProps)
@@ -188,6 +191,24 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
 			}
 			blockSize = value
+		case INodeSizeKey:
+			_, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse inodeSize (%s): %v", value, err)
+			}
+			inodeSize = value
+		case BytesPerINodeKey:
+			_, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse bytesPerINode (%s): %v", value, err)
+			}
+			bytesPerINode = value
+		case NumberOfINodesKey:
+			_, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse numberOfINodes (%s): %v", value, err)
+			}
+			numberOfINodes = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				scTags = append(scTags, value)
@@ -197,23 +218,30 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	responseCtx := map[string]string{}
+
 	if len(blockSize) > 0 {
-		for _, volCap := range req.GetVolumeCapabilities() {
-			switch volCap.GetAccessType().(type) {
-			case *csi.VolumeCapability_Block:
-				return nil, status.Error(codes.InvalidArgument, "Cannot use block size with block volume")
-			}
-
-			mountVolume := volCap.GetMount()
-			if mountVolume == nil {
-				return nil, status.Error(codes.InvalidArgument, "CreateVolume: mount is nil within volume capability")
-			}
-
-			fsType := mountVolume.GetFsType()
-
-			if _, ok := BlockSizeExcludedFSTypes[fsType]; ok {
-				return nil, status.Errorf(codes.InvalidArgument, "Cannot use block size with fstype %s", fsType)
-			}
+		responseCtx[BlockSizeKey] = blockSize
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), BlockSizeKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+	if len(inodeSize) > 0 {
+		responseCtx[INodeSizeKey] = inodeSize
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), INodeSizeKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+	if len(bytesPerINode) > 0 {
+		responseCtx[BytesPerINodeKey] = bytesPerINode
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), BytesPerINodeKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+	if len(numberOfINodes) > 0 {
+		responseCtx[NumberOfINodesKey] = numberOfINodes
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), NumberOfINodesKey, FileSystemConfigs); err != nil {
+			return nil, err
 		}
 	}
 
@@ -289,7 +317,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
-	return newCreateVolumeResponse(disk, blockSize), nil
+	return newCreateVolumeResponse(disk, responseCtx), nil
 }
 
 func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
@@ -817,7 +845,7 @@ func getOutpostArn(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
-func newCreateVolumeResponse(disk *cloud.Disk, blockSize string) *csi.CreateVolumeResponse {
+func newCreateVolumeResponse(disk *cloud.Disk, ctx map[string]string) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
 	if disk.SnapshotID != "" {
 		src = &csi.VolumeContentSource{
@@ -840,16 +868,11 @@ func newCreateVolumeResponse(disk *cloud.Disk, blockSize string) *csi.CreateVolu
 		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
 	}
 
-	context := map[string]string{}
-	if len(blockSize) > 0 {
-		context[BlockSizeKey] = blockSize
-	}
-
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
-			VolumeContext: context,
+			VolumeContext: ctx,
 			AccessibleTopology: []*csi.Topology{
 				{
 					Segments: segments,
@@ -939,4 +962,25 @@ func BuildOutpostArn(segments map[string]string) string {
 		segments[AwsAccountIDKey],
 		segments[AwsOutpostIDKey],
 	)
+}
+
+func validateVolumeCapabilities(volumeCapabilities []*csi.VolumeCapability, paramName string, fsConfigs map[string]fileSystemConfig) error {
+	for _, volCap := range volumeCapabilities {
+		switch volCap.GetAccessType().(type) {
+		case *csi.VolumeCapability_Block:
+			return status.Error(codes.InvalidArgument, fmt.Sprintf("Cannot use %s with block volume", paramName))
+		}
+
+		mountVolume := volCap.GetMount()
+		if mountVolume == nil {
+			return status.Error(codes.InvalidArgument, "CreateVolume: mount is nil within volume capability")
+		}
+
+		fsType := mountVolume.GetFsType()
+		if supported := fsConfigs[fsType].isParameterSupported(paramName); !supported {
+			return status.Errorf(codes.InvalidArgument, "Cannot use %s with fstype %s", paramName, fsType)
+		}
+	}
+
+	return nil
 }
