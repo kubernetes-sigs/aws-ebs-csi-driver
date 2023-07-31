@@ -13,7 +13,7 @@ jobs:
   runs-on: ubuntu-latest
   steps:
     - name: Create upstream version tag
-      uses: DataDog/sync-upstream-release-tag@v0.3.0
+      uses: DataDog/sync-upstream-release-tag@v0.3.1
       with:
         github_actor: "${GITHUB_ACTOR}"
         github_repository: "${GITHUB_REPOSITORY}"
