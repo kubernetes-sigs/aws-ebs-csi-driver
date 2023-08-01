@@ -28,12 +28,6 @@ metrics_collector() {
   upload_metrics
 }
 
-error_handler() {
-  printf "Error occurred in script: %s, at line: %s. Command: %s. Error: %s\n" "$1" "$2" "$BASH_COMMAND" "$3" >&2
-  exit 1
-}
-trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
-
 log() {
   printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
 }
