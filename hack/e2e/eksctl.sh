@@ -64,7 +64,8 @@ function eksctl_create_cluster() {
 
   if [[ "$WINDOWS" == true ]]; then
     ${BIN} create nodegroup \
-      --managed=true \
+      --managed=false \
+      --node-ami=ami-0ad9da4864ca5a1b7 \
       --ssh-access=false \
       --cluster="${CLUSTER_NAME}" \
       --node-ami-family=WindowsServer2022FullContainer \
