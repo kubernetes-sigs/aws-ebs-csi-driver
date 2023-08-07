@@ -196,12 +196,11 @@ metadata:
 spec:
   containers:
     - name: kubetest2
-      image: gcr.io/k8s-staging-test-infra/kubekins-e2e:v20220624-1a63fdd9f2-master
+      image: gcr.io/k8s-staging-test-infra/kubekins-e2e:v20230727-ea685f8747-master
       command: [ "/bin/sh", "-c" ]
       args:
         - |
           cp /etc/config/storageclass.yaml /workspace/storageclass.yaml
-          go install sigs.k8s.io/kubetest2/...@latest
           kubectl config set-cluster cluster --server=https://kubernetes.default --certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           kubectl config set-context kubetest2 --cluster=cluster
           kubectl config set-credentials sa --token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
@@ -211,7 +210,7 @@ spec:
             SNAPSHOTS="|snapshot fields"
           fi
           export FOCUS_REGEX="\bebs.csi.aws.com\b.+(validate content|resize volume|offline PVC|AllowedTopologies|store data$SNAPSHOTS)"
-          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version=$(curl -L https://dl.k8s.io/release/stable-1.25.txt) --skip-regex='\[Disruptive\]|\[Serial\]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
+          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version=$(curl -L https://dl.k8s.io/release/stable-1.27.txt) --skip-regex='\[Disruptive\]|\[Serial\]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
       volumeMounts:
       - name: config-vol
         mountPath: /etc/config
