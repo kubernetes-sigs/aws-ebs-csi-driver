@@ -227,9 +227,6 @@ else
   if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
     pushd ${PWD}/tests/e2e-kubernetes
     packageVersion=$(echo $(cut -d '.' -f 1,2 <<< $K8S_VERSION))
-    if [[ "${WINDOWS}" == true ]]; then
-      packageVersion="1.27"
-    fi
 
     set -x
     set +e
