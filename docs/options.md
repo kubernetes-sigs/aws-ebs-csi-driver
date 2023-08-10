@@ -1,4 +1,5 @@
 # Driver Options
+
 There are a couple of driver options that can be passed as arguments when starting the driver container.
 
 | Option argument             | value sample                                      | default                                             | Description         |
@@ -10,3 +11,4 @@ There are a couple of driver options that can be passed as arguments when starti
 | aws-sdk-debug-log           | true                                              | false                                               | If set to true, the driver will enable the aws sdk debug log level|
 | logging-format              | json                                              | text                                                | Sets the log format. Permitted formats: text, json|
 | user-agent-extra            | csi-ebs                                           | helm                                                | Extra string appended to user agent|
+| enable-otel-tracing         | true                                              | false                                               | If set to true, the driver will enable opentelemetry tracing. Might need [additional env variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration) to export the traces to the right collector|

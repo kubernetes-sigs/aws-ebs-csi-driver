@@ -58,6 +58,9 @@ spec:
             - --logging-format={{ . }}
             {{- end }}
             - --v={{ .Values.node.logLevel }}
+            {{- if .Values.node.otelTracing }}
+            - --enable-otel-tracing=true
+            {{- end}}
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -67,6 +70,12 @@ spec:
                   fieldPath: spec.nodeName
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.node.otelTracing }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .otelServiceName }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .otelExporterEndpoint }}
             {{- end }}
             {{- with .Values.node.env }}
             {{- . | toYaml | nindent 12 }}

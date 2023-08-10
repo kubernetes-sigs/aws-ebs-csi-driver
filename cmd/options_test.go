@@ -53,6 +53,8 @@ func TestGetOptions(t *testing.T) {
 		var VolumeAttachLimit int64 = 42
 		userAgentExtraFlag := "user-agent-extra"
 		userAgentExtraFlagValue := "test"
+		otelTracingFlagName := "enable-otel-tracing"
+		otelTracingFlagValue := true
 
 		args := append([]string{
 			"aws-ebs-csi-driver",
@@ -60,6 +62,7 @@ func TestGetOptions(t *testing.T) {
 
 		if withServerOptions {
 			args = append(args, "--"+endpointFlagName+"="+endpoint)
+			args = append(args, "--"+otelTracingFlagName+"="+strconv.FormatBool(otelTracingFlagValue))
 		}
 		if withControllerOptions {
 			args = append(args, "--"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
@@ -82,6 +85,10 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.ServerOptions.Endpoint != endpoint {
 				t.Fatalf("expected endpoint to be %q but it is %q", endpoint, options.ServerOptions.Endpoint)
+			}
+			otelTracingFlag := flagSet.Lookup(otelTracingFlagName)
+			if otelTracingFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", otelTracingFlagName)
 			}
 		}
 

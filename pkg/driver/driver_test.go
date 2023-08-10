@@ -103,3 +103,12 @@ func TestWithUserAgentExtra(t *testing.T) {
 		t.Fatalf("expected userAgentExtra option got set to %s but is set to %s", userAgentExtra, options.userAgentExtra)
 	}
 }
+
+func TestWithOtelTracing(t *testing.T) {
+	var enableOtelTracing bool = true
+	options := &DriverOptions{}
+	WithOtelTracing(enableOtelTracing)(options)
+	if options.otelTracing != enableOtelTracing {
+		t.Fatalf("expected otelTracing option got set to %v but is set to %v", enableOtelTracing, options.otelTracing)
+	}
+}
