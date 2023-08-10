@@ -2157,6 +2157,17 @@ func TestNodeGetInfo(t *testing.T) {
 			expMaxVolumes:     0,
 			outpostArn:        emptyOutpostArn,
 		},
+		{
+			name:              "nitro instance with dedicated limit",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m7i.48xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      2,
+			expMaxVolumes:     127, // 128 (max) - 1 (root)
+			outpostArn:        emptyOutpostArn,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -2179,7 +2190,7 @@ func TestNodeGetInfo(t *testing.T) {
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
 				mockMetadata.EXPECT().GetNumBlockDeviceMappings().Return(tc.blockDevices)
-				if cloud.IsNitroInstanceType(tc.instanceType) {
+				if cloud.IsNitroInstanceType(tc.instanceType) && cloud.GetDedicatedLimitForInstanceType(tc.instanceType) == 0 {
 					mockMetadata.EXPECT().GetNumAttachedENIs().Return(tc.attachedENIs)
 				}
 			}

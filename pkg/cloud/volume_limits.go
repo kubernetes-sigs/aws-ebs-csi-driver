@@ -93,6 +93,26 @@ func GetEBSLimitForInstanceType(it string) (int, bool) {
 	return 0, false
 }
 
+var dedicatedVolumeLimits = map[string]int{
+	"m7i.large":    32,
+	"m7i.xlarge":   32,
+	"m7i.2xlarge":  32,
+	"m7i.4xlarge":  32,
+	"m7i.8xlarge":  32,
+	"m7i.12xlarge": 32,
+	"m7i.16xlarge": 48,
+	"m7i.24xlarge": 64,
+	"m7i.48xlarge": 128,
+}
+
+func GetDedicatedLimitForInstanceType(it string) int {
+	if limit, ok := dedicatedVolumeLimits[it]; ok {
+		return limit
+	} else {
+		return 0
+	}
+}
+
 func GetNVMeInstanceStoreVolumesForInstanceType(it string) int {
 	if v, ok := nvmeInstanceStoreVolumes[it]; ok {
 		return v
