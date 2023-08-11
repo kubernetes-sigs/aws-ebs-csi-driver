@@ -189,6 +189,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"i3en.12xlarge":  4,
 	"i3en.24xlarge":  8,
 	"i3en.metal":     8,
+	"i4i.large":      1,
 	"i4i.xlarge":     1,
 	"i4i.2xlarge":    1,
 	"i4i.4xlarge":    1,
