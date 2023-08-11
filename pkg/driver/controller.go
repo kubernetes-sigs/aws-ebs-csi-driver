@@ -61,9 +61,10 @@ const isManagedByDriver = "true"
 
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
-	cloud         cloud.Cloud
-	inFlight      *internal.InFlight
-	driverOptions *DriverOptions
+	cloud               cloud.Cloud
+	inFlight            *internal.InFlight
+	driverOptions       *DriverOptions
+	modifyVolumeManager *modifyVolumeManager
 
 	rpc.UnimplementedModifyServer
 }
@@ -97,9 +98,10 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	}
 
 	return controllerService{
-		cloud:         cloudSrv,
-		inFlight:      internal.NewInFlight(),
-		driverOptions: driverOptions,
+		cloud:               cloudSrv,
+		inFlight:            internal.NewInFlight(),
+		driverOptions:       driverOptions,
+		modifyVolumeManager: newModifyVolumeManager(),
 	}
 }
 
@@ -536,9 +538,26 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 	}
 
-	actualSizeGiB, err := d.cloud.ResizeDisk(ctx, volumeID, newSize)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, err)
+	responseChan := make(chan modifyVolumeResponse)
+	modifyVolumeRequest := modifyVolumeRequest{
+		newSize:      newSize,
+		responseChan: responseChan,
+	}
+
+	// Intentionally not pass in context as we deal with context locally in this method
+	d.addModifyVolumeRequest(volumeID, &modifyVolumeRequest) //nolint:contextcheck
+
+	var actualSizeGiB int64
+
+	select {
+	case response := <-responseChan:
+		if response.err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, response.err)
+		} else {
+			actualSizeGiB = response.volumeSize
+		}
+	case <-ctx.Done():
+		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: context cancelled", volumeID)
 	}
 
 	nodeExpansionRequired := true

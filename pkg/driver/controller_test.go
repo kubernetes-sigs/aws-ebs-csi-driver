@@ -3438,12 +3438,13 @@ func TestControllerExpandVolume(t *testing.T) {
 			}
 
 			mockCloud := cloud.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().ResizeDisk(gomock.Eq(ctx), gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
+			mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(tc.req.VolumeId), gomock.Any(), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
 
 			awsDriver := controllerService{
-				cloud:         mockCloud,
-				inFlight:      internal.NewInFlight(),
-				driverOptions: &DriverOptions{},
+				cloud:               mockCloud,
+				inFlight:            internal.NewInFlight(),
+				driverOptions:       &DriverOptions{},
+				modifyVolumeManager: newModifyVolumeManager(),
 			}
 
 			resp, err := awsDriver.ControllerExpandVolume(ctx, tc.req)

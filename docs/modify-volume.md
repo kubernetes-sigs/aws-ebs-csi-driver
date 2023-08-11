@@ -20,7 +20,6 @@ Users can specify the following PVC annotations:
 ## Considerations
 
 - Keep in mind the [6 hour cooldown period](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyVolume.html) for EBS ModifyVolume. Multiple ModifyVolume calls for the same volume within a 6 hour period will fail. 
-- It is not yet possible to update both the annotations and capacity of the PVC at the same time. This results in multiple RPC calls to the driver, and only one of them will succeed (due to the cooldown period). A future release of the driver will lift this restriction.
 - Ensure that the desired volume properties are permissible. The driver does minimum client side validation. 
 
 ## Example
