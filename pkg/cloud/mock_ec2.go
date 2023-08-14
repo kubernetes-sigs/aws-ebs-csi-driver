@@ -34966,6 +34966,39 @@ func (mr *MockEC2APIMockRecorder) WaitUntilSpotInstanceRequestFulfilledWithConte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilSpotInstanceRequestFulfilledWithContext", reflect.TypeOf((*MockEC2API)(nil).WaitUntilSpotInstanceRequestFulfilledWithContext), varargs...)
 }
 
+// WaitUntilStoreImageTaskComplete mocks base method.
+func (m *MockEC2API) WaitUntilStoreImageTaskComplete(arg0 *ec2.DescribeStoreImageTasksInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilStoreImageTaskComplete", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilStoreImageTaskComplete indicates an expected call of WaitUntilStoreImageTaskComplete.
+func (mr *MockEC2APIMockRecorder) WaitUntilStoreImageTaskComplete(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStoreImageTaskComplete", reflect.TypeOf((*MockEC2API)(nil).WaitUntilStoreImageTaskComplete), arg0)
+}
+
+// WaitUntilStoreImageTaskCompleteWithContext mocks base method.
+func (m *MockEC2API) WaitUntilStoreImageTaskCompleteWithContext(arg0 context.Context, arg1 *ec2.DescribeStoreImageTasksInput, arg2 ...request.WaiterOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitUntilStoreImageTaskCompleteWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilStoreImageTaskCompleteWithContext indicates an expected call of WaitUntilStoreImageTaskCompleteWithContext.
+func (mr *MockEC2APIMockRecorder) WaitUntilStoreImageTaskCompleteWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStoreImageTaskCompleteWithContext", reflect.TypeOf((*MockEC2API)(nil).WaitUntilStoreImageTaskCompleteWithContext), varargs...)
+}
+
 // WaitUntilSubnetAvailable mocks base method.
 func (m *MockEC2API) WaitUntilSubnetAvailable(arg0 *ec2.DescribeSubnetsInput) error {
 	m.ctrl.T.Helper()

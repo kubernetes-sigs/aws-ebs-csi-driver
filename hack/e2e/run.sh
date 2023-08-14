@@ -49,16 +49,16 @@ IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-${K8S_VERSION:-1.27.3}}
+K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-${K8S_VERSION:-1.27.4}}
 K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-${K8S_VERSION:-1.27}}
 
-KOPS_VERSION=${KOPS_VERSION:-1.27.0-beta.3}
+KOPS_VERSION=${KOPS_VERSION:-1.27.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 AMI_ID=$(aws ssm get-parameters --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --region ${REGION} --query 'Parameters[0].Value' --output text)
 
-EKSCTL_VERSION=${EKSCTL_VERSION:-0.148.0}
+EKSCTL_VERSION=${EKSCTL_VERSION:-0.152.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 VPC_CONFIGMAP_FILE=${VPC_CONFIGMAP_FILE:-./hack/vpc-resource-controller-configmap.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
@@ -78,9 +78,11 @@ NODE_OS_DISTRO=${NODE_OS_DISTRO:-"linux"}
 TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
+# https://github.com/kubernetes-csi/external-snapshotter
 EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.2.2"}
 
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
+# https://github.com/helm/chart-testing
 CHART_TESTING_VERSION=${CHART_TESTING_VERSION:-3.8.0}
 CLEAN=${CLEAN:-"true"}
 
