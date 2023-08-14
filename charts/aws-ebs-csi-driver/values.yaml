@@ -19,7 +19,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v3.5.0-eks-1-27-7"
+      tag: "v3.5.0-eks-1-27-9"
     logLevel: 2
     additionalArgs: []
     resources: {}
@@ -41,7 +41,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.3.0-eks-1-27-7"
+      tag: "v4.3.0-eks-1-27-9"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -65,7 +65,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v6.2.2-eks-1-27-7"
+      tag: "v6.2.2-eks-1-27-9"
     logLevel: 2
     additionalArgs: []
     resources: {}
@@ -76,7 +76,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.10.0-eks-1-27-7"
+      tag: "v2.10.0-eks-1-27-9"
     additionalArgs: []
     resources: {}
     securityContext:
@@ -87,7 +87,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.8.0-eks-1-27-7"
+      tag: "v1.8.0-eks-1-27-9"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -109,7 +109,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.8.0-eks-1-27-7"
+      tag: "v2.8.0-eks-1-27-9"
     logLevel: 2
     additionalArgs: []
     resources: {}
@@ -121,7 +121,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.1.1"
+      tag: "v0.1.2"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
