@@ -1172,10 +1172,19 @@ func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes in
 
 	// If the volume type is gp3 we are going to mimic the old gp2 behavior in which
 	// both IOPS and Throughput were coupled to disk size.
+	// We check that this is not going to reduce the IOPs and Throughput for those volumes
+	// where we have added an enhanced storage class.
 	volumeType := aws.StringValue(volume.VolumeType)
 	if volumeType == ec2.VolumeTypeGp3 && hasGP3PerformanceReconcileTag(volume) {
-		req.Iops = aws.Int64(getGP3ReconciledIOPS(newSizeGiB))
-		req.Throughput = aws.Int64(getGP3ReconciledThroughput(newSizeGiB))
+		iops := getGP3ReconciledIOPS(newSizeGiB)
+		if volume.Iops != nil && iops > *volume.Iops {
+			req.Iops = aws.Int64(iops)
+		}
+
+		throughput := getGP3ReconciledThroughput(newSizeGiB)
+		if volume.Throughput != nil && throughput > *volume.Throughput {
+			req.Throughput = aws.Int64(throughput)
+		}
 	}
 
 	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)

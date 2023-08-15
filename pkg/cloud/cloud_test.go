@@ -1207,6 +1207,7 @@ func TestResizeDisk(t *testing.T) {
 		volumeID            string
 		existingVolume      *ec2.Volume
 		existingVolumeError awserr.Error
+		modifyVolumeReq     *ec2.ModifyVolumeInput
 		modifiedVolume      *ec2.ModifyVolumeOutput
 		modifiedVolumeError awserr.Error
 		descModVolume       *ec2.DescribeVolumesModificationsOutput
@@ -1303,6 +1304,32 @@ func TestResizeDisk(t *testing.T) {
 			expErr:     nil,
 		},
 		{
+			name:     "success: enhanced storage class doesn't reduce IOPs/Throughput when resizing",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				VolumeType:       aws.String(VolumeTypeGP3),
+				Size:             aws.Int64(1500),
+				Iops:             aws.Int64(16000),
+				Throughput:       aws.Int64(1000),
+				AvailabilityZone: aws.String(defaultZone),
+				Tags:             []*ec2.Tag{{Key: aws.String(AwsEbsReconcileGP3PerformanceTagKey), Value: aws.String("true")}},
+			},
+			modifyVolumeReq: &ec2.ModifyVolumeInput{
+				VolumeId: aws.String("vol-test"),
+				Size:     aws.Int64(2000),
+			},
+			modifiedVolume: &ec2.ModifyVolumeOutput{
+				VolumeModification: &ec2.VolumeModification{
+					VolumeId:          aws.String("vol-test"),
+					TargetSize:        aws.Int64(2000),
+					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
+				},
+			},
+			reqSizeGiB: 2000,
+			expErr:     nil,
+		},
+		{
 			name:                "fail: volume doesn't exist",
 			volumeID:            "vol-test",
 			existingVolumeError: awserr.New("InvalidVolume.NotFound", "", nil),
@@ -1363,7 +1390,11 @@ func TestResizeDisk(t *testing.T) {
 				}
 			}
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
-				mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+				if tc.modifyVolumeReq == nil {
+					mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+				} else {
+					mockEC2.EXPECT().ModifyVolumeWithContext(gomock.Eq(ctx), gomock.Eq(tc.modifyVolumeReq)).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+				}
 			}
 			if tc.descModVolume != nil {
 				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Eq(ctx), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
