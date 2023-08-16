@@ -1,3 +1,25 @@
+# 1.22.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+In an upcoming version, the EBS CSI Driver will upgrade the base image from AL2 to AL2023. For more information and to provide feedback about this change, see [issue #1719](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1719)
+
+### Notable Changes
+* Request coalescing for resizing and modifying volume ([#1676](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1676), [@hanyuel](https://github.com/hanyuel))
+* Support specifying inode size for filesystem format ([#1661](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1661), [@fgksgf](https://github.com/fgksgf))
+
+### Bug Fixes
+* Correct volume limits for i4i instance types ([#1699](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1699), [@talnevo](https://github.com/talnevo))
+* Use SSM to get latest stable AMI for EC2 nodes ([#1689](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1689), [@torredil](https://github.com/torredil))
+* Add `i4i.large` to volume limits config ([#1715](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1715), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Add volume limits for m7i family ([#1710](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1710), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Misc
+* Bump golang.org/x/net/html to fix CVE-2023-3978 ([#1711](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1711), [@jsafrane](https://github.com/jsafrane))
+* Implement performance metrics collector workflow ([#1624](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1624), [@torredil](https://github.com/torredil))
+
 # v1.21.0
 ### Bug Fixes
 * Enable setting throughput without specifying volume type when modifying volumes ([#1667](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1667), [@Indresh2410](https://github.com/Indresh2410))
