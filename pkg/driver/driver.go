@@ -24,6 +24,7 @@ import (
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 )
@@ -69,6 +70,7 @@ type DriverOptions struct {
 	awsSdkDebugLog      bool
 	warnOnInvalidTag    bool
 	userAgentExtra      string
+	otelTracing         bool
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
@@ -123,8 +125,14 @@ func (d *Driver) Run() error {
 		}
 		return resp, err
 	}
+
+	grpcInterceptor := grpc.UnaryInterceptor(logErr)
+	if d.options.otelTracing {
+		grpcInterceptor = grpc.ChainUnaryInterceptor(logErr, otelgrpc.UnaryServerInterceptor())
+	}
+
 	opts := []grpc.ServerOption{
-		grpc.UnaryInterceptor(logErr),
+		grpcInterceptor,
 	}
 	d.srv = grpc.NewServer(opts...)
 
@@ -206,5 +214,11 @@ func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
 func WithUserAgentExtra(userAgentExtra string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.userAgentExtra = userAgentExtra
+	}
+}
+
+func WithOtelTracing(enableOtelTracing bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.otelTracing = enableOtelTracing
 	}
 }

@@ -47,7 +47,7 @@ spec:
           operator: "Exists"
         {{- end }}
       {{- with .Values.node.securityContext }}
-      securityContext:  
+      securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
@@ -64,6 +64,9 @@ spec:
             - --logging-format={{ . }}
             {{- end }}
             - --v={{ .Values.node.logLevel }}
+            {{- if .Values.node.otelTracing }}
+            - --enable-otel-tracing=true
+            {{- end}}
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -73,6 +76,12 @@ spec:
                   fieldPath: spec.nodeName
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.node.otelTracing }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .otelServiceName }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .otelExporterEndpoint }}
             {{- end }}
             {{- with .Values.node.env }}
             {{- . | toYaml | nindent 12 }}
@@ -109,7 +118,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.node.containerSecurityContext }}
-          securityContext:  
+          securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: node-driver-registrar
@@ -158,7 +167,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.sidecars.nodeDriverRegistrar.securityContext }}
-          securityContext:  
+          securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: liveness-probe
@@ -181,7 +190,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.sidecars.livenessProbe.securityContext }}
-          securityContext:  
+          securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}

@@ -93,6 +93,9 @@ spec:
             {{- with .Values.controller.userAgentExtra }}
             - --user-agent-extra={{ . }}
             {{- end }}
+            {{- if .Values.controller.otelTracing }}
+            - --enable-otel-tracing=true
+            {{- end}}
             - --v={{ .Values.controller.logLevel }}
             {{- range .Values.controller.additionalArgs }}
             - {{ . }}
@@ -133,6 +136,12 @@ spec:
             {{- end }}
             {{- with .Values.controller.env }}
             {{- . | toYaml | nindent 12 }}
+            {{- end }}
+            {{- with .Values.controller.otelTracing }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .otelServiceName }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .otelExporterEndpoint }}
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:

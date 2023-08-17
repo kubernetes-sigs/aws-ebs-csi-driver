@@ -17,7 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	flag "github.com/spf13/pflag"
 
@@ -38,6 +40,23 @@ func main() {
 	}
 
 	options := GetOptions(fs)
+
+	// Start tracing as soon as possible
+	if options.ServerOptions.EnableOtelTracing {
+		exporter, err := driver.InitOtelTracing()
+		if err != nil {
+			klog.ErrorS(err, "failed to initialize otel tracing")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		// Exporter will flush traces on shutdown
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := exporter.Shutdown(ctx); err != nil {
+				klog.ErrorS(err, "could not shutdown otel exporter")
+			}
+		}()
+	}
 
 	cloud.RegisterMetrics()
 	if options.ServerOptions.HttpEndpoint != "" {
@@ -62,6 +81,7 @@ func main() {
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
 		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
+		driver.WithOtelTracing(options.ServerOptions.EnableOtelTracing),
 	)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")

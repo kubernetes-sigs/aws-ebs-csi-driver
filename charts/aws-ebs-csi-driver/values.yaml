@@ -288,6 +288,10 @@ controller:
   # - name: wait
   #   image: busybox
   #   command: [ 'sh', '-c', "sleep 20" ]
+  # Enable opentelemetry tracing for the plugin running on the daemonset
+  otelTracing: {}
+  #  otelServiceName: ebs-csi-controller
+  #  otelExporterEndpoint: "http://localhost:4317"
 
 node:
   env: []
@@ -354,6 +358,10 @@ node:
   containerSecurityContext:
     readOnlyRootFilesystem: true
     privileged: true
+  # Enable opentelemetry tracing for the plugin running on the daemonset
+  otelTracing: {}
+  #  otelServiceName: ebs-csi-node
+  #  otelExporterEndpoint: "http://localhost:4317"
 
 storageClasses: []
 # Add StorageClass resources like:
