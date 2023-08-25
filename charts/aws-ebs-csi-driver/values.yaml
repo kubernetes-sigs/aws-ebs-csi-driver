@@ -21,6 +21,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
       tag: "v3.5.0-eks-1-27-9"
     logLevel: 2
+    # Additional parameters provided by external-provisioner.
     additionalArgs: []
     resources: {}
     # Tune leader lease election for csi-provisioner.
@@ -53,6 +54,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by external-attacher.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -67,6 +69,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
       tag: "v6.2.2-eks-1-27-9"
     logLevel: 2
+    # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -77,6 +80,7 @@ sidecars:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
       tag: "v2.10.0-eks-1-27-9"
+    # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -99,6 +103,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by external-resizer.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -111,6 +116,7 @@ sidecars:
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
       tag: "v2.8.0-eks-1-27-9"
     logLevel: 2
+    # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -131,6 +137,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by volume-modifier-for-k8s.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -153,6 +160,7 @@ awsAccessSecret:
 controller:
   volumeModificationFeature:
     enabled: false
+  # Additional parameters provided by aws-ebs-csi-driver controller.
   additionalArgs: []
   sdkDebugLog: false
   loggingFormat: text
