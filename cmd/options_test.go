@@ -53,6 +53,8 @@ func TestGetOptions(t *testing.T) {
 		var VolumeAttachLimit int64 = 42
 		userAgentExtraFlag := "user-agent-extra"
 		userAgentExtraFlagValue := "test"
+		batchingFlagName := "batching"
+		batchingFlagValue := true
 
 		args := append([]string{
 			"aws-ebs-csi-driver",
@@ -65,6 +67,7 @@ func TestGetOptions(t *testing.T) {
 			args = append(args, "--"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
 			args = append(args, "--"+awsSdkDebugFlagName+"="+strconv.FormatBool(awsSdkDebugFlagValue))
 			args = append(args, "--"+userAgentExtraFlag+"="+userAgentExtraFlagValue)
+			args = append(args, "--"+batchingFlagName+"="+strconv.FormatBool(batchingFlagValue))
 		}
 		if withNodeOptions {
 			args = append(args, "--"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
@@ -102,6 +105,13 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.ControllerOptions.UserAgentExtra != userAgentExtraFlagValue {
 				t.Fatalf("expected user agent string to be %q but it is %q", userAgentExtraFlagValue, options.ControllerOptions.UserAgentExtra)
+			}
+			batchingFlag := flagSet.Lookup(batchingFlagName)
+			if batchingFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", batchingFlagName)
+			}
+			if options.ControllerOptions.Batching != batchingFlagValue {
+				t.Fatalf("expected sdk debug flag to be %v but it is %v", batchingFlagValue, options.ControllerOptions.Batching)
 			}
 		}
 

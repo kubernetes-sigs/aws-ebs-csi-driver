@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
@@ -92,7 +93,8 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		region = metadata.GetRegion()
 	}
 
-	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra)
+	klog.InfoS("batching", "status", driverOptions.batching)
+	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra, driverOptions.batching)
 	if err != nil {
 		panic(err)
 	}
@@ -376,6 +378,7 @@ func validateDeleteVolumeRequest(req *csi.DeleteVolumeRequest) error {
 }
 
 func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+	startTime := time.Now()
 	klog.V(4).InfoS("ControllerPublishVolume: called", "args", *req)
 	if err := validateControllerPublishVolumeRequest(req); err != nil {
 		return nil, err
@@ -397,7 +400,8 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(2).InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
+	durationSeconds := time.Since(startTime).Seconds()
+	klog.InfoS("[batching-stats-collection] ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath, "durationSeconds", durationSeconds)
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
@@ -428,7 +432,9 @@ func validateControllerPublishVolumeRequest(req *csi.ControllerPublishVolumeRequ
 }
 
 func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+	startTime := time.Now()
 	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", *req)
+
 	if err := validateControllerUnpublishVolumeRequest(req); err != nil {
 		return nil, err
 	}
@@ -449,7 +455,8 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(2).InfoS("ControllerUnpublishVolume: detached", "volumeID", volumeID, "nodeID", nodeID)
+	durationSeconds := time.Since(startTime).Seconds()
+	klog.InfoS("[batching-stats-collection] ControllerUnpublishVolume: detached", "volumeID", volumeID, "nodeID", nodeID, "durationSeconds", durationSeconds)
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }

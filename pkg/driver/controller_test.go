@@ -53,8 +53,8 @@ func TestNewControllerService(t *testing.T) {
 		testErr    = errors.New("test error")
 		testRegion = "test-region"
 
-		getNewCloudFunc = func(expectedRegion string, _ bool) func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
-			return func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
+		getNewCloudFunc = func(expectedRegion string, _ bool) func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
+			return func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
 				if region != expectedRegion {
 					t.Fatalf("expected region %q but got %q", expectedRegion, region)
 				}
@@ -66,7 +66,7 @@ func TestNewControllerService(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		region                string
-		newCloudFunc          func(string, bool, string) (cloud.Cloud, error)
+		newCloudFunc          func(string, bool, string, bool) (cloud.Cloud, error)
 		newMetadataFuncErrors bool
 		expectPanic           bool
 	}{
@@ -78,7 +78,7 @@ func TestNewControllerService(t *testing.T) {
 		{
 			name:   "AWS_REGION variable set, newCloud errors",
 			region: "foo",
-			newCloudFunc: func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
+			newCloudFunc: func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
 				return nil, testErr
 			},
 			expectPanic: true,

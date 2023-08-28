@@ -103,3 +103,11 @@ func TestWithUserAgentExtra(t *testing.T) {
 		t.Fatalf("expected userAgentExtra option got set to %s but is set to %s", userAgentExtra, options.userAgentExtra)
 	}
 }
+func TestWithBatching(t *testing.T) {
+	var batching bool = true
+	options := &DriverOptions{}
+	WithBatching(batching)(options)
+	if options.batching != batching {
+		t.Fatalf("expected batching option got set to %v but is set to %v", batching, options.batching)
+	}
+}

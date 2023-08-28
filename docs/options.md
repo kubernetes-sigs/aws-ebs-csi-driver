@@ -10,3 +10,4 @@ There are a couple of driver options that can be passed as arguments when starti
 | aws-sdk-debug-log           | true                                              | false                                               | If set to true, the driver will enable the aws sdk debug log level|
 | logging-format              | json                                              | text                                                | Sets the log format. Permitted formats: text, json|
 | user-agent-extra            | csi-ebs                                           | helm                                                | Extra string appended to user agent|
+| batching                    | true                                              | false                                                | If set to true, the driver will enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits|

@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
+  repository: public.ecr.aws/e2w9r8x8/aws-ebs-csi-driver
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
-  tag: ""
+  tag: "batching-v1"
   pullPolicy: IfNotPresent
 
 # -- Custom labels to add into metadata
@@ -151,6 +151,7 @@ awsAccessSecret:
   accessKey: access_key
 
 controller:
+  batching: false
   volumeModificationFeature:
     enabled: false
   additionalArgs: []
