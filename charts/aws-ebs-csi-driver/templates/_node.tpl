@@ -1,4 +1,5 @@
 {{- define "node" }}
+{{- if or (eq (default true .Values.node.enableLinux) true) }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -221,4 +222,5 @@ spec:
         {{- with .Values.node.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+{{- end }}
 {{- end }}
