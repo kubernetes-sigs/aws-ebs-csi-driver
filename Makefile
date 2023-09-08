@@ -216,6 +216,17 @@ test-e2e-external-eks-windows:
 	NODE_OS_DISTRO="windows" \
 	./hack/e2e/run.sh
 
+.PHONY: test-e2e-external-kustomize
+test-e2e-external-kustomize:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
+	EBS_INSTALL_SNAPSHOT="true" \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+	DEPLOY_METHOD="kustomize" \
+	./hack/e2e/run.sh
+
 .PHONY: test-helm-chart
 test-helm-chart:
 	AWS_REGION=us-west-2 \

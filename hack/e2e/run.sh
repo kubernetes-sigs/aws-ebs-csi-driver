@@ -65,6 +65,9 @@ EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
 # Creates a windows node group.
 WINDOWS=${WINDOWS:-"false"}
 
+# Valid deploy methods: "helm" (default), "kustomize"
+DEPLOY_METHOD=${DEPLOY_METHOD:-"helm"}
+
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-./hack/values.yaml}
 HELM_EXTRA_FLAGS=${HELM_EXTRA_FLAGS:-}
 
@@ -198,28 +201,33 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   set -e
   set +x
 else
-  loudecho "Deploying driver"
+  loudecho "Deploying driver via ${DEPLOY_METHOD}"
   startSec=$(date +'%s')
 
-  HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
-    --namespace kube-system
-    --set image.repository="${IMAGE_NAME}"
-    --set image.tag="${IMAGE_TAG}"
-    --set node.enableWindows="${WINDOWS}"
-    --timeout 10m0s
-    --wait
-    --kubeconfig "${KUBECONFIG}"
-    ./charts/"${DRIVER_NAME}")
-  if [[ -f "$HELM_VALUES_FILE" ]]; then
-    HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+  if [[ ${DEPLOY_METHOD} == "helm" ]]; then
+    HELM_ARGS=(upgrade --install "${DRIVER_NAME}"
+      --namespace kube-system
+      --set image.repository="${IMAGE_NAME}"
+      --set image.tag="${IMAGE_TAG}"
+      --set node.enableWindows="${WINDOWS}"
+      --timeout 10m0s
+      --wait
+      --kubeconfig "${KUBECONFIG}"
+      ./charts/"${DRIVER_NAME}")
+    if [[ -f "$HELM_VALUES_FILE" ]]; then
+      HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+    fi
+    eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
+    if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
+      HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+    fi
+    set -x
+    "${HELM_BIN}" "${HELM_ARGS[@]}"
+    set +x
+  elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
+    kubectl --kubeconfig "${KUBECONFIG}" apply -k "./deploy/kubernetes/overlays/stable"
+    kubectl --kubeconfig "${KUBECONFIG}" --namespace kube-system wait --timeout 10m0s --for "condition=ready" pod -l "app.kubernetes.io/name=aws-ebs-csi-driver"
   fi
-  eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
-  if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
-    HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
-  fi
-  set -x
-  "${HELM_BIN}" "${HELM_ARGS[@]}"
-  set +x
 
   endSec=$(date +'%s')
   deployTimeSeconds=$(((endSec - startSec) / 1))
@@ -285,10 +293,14 @@ if [[ "${CLEAN}" == true ]]; then
   loudecho "Cleaning"
 
   if [[ "${HELM_CT_TEST}" != true ]]; then
-    loudecho "Removing driver"
-    ${HELM_BIN} del "${DRIVER_NAME}" \
-      --namespace kube-system \
-      --kubeconfig "${KUBECONFIG}"
+    loudecho "Removing driver via ${DEPLOY_METHOD}"
+    if [[ ${DEPLOY_METHOD} == "helm" ]]; then
+      ${HELM_BIN} del "${DRIVER_NAME}" \
+        --namespace kube-system \
+        --kubeconfig "${KUBECONFIG}"
+    elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
+      kubectl --kubeconfig "${KUBECONFIG}" delete -k "./deploy/kubernetes/overlays/stable"
+    fi
   fi
 
   if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
