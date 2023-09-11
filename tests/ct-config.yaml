@@ -12,3 +12,4 @@ release-label: release
 kubectl-timeout: 3000s
 skip-clean-up: false
 print-logs: true
+debug: true
