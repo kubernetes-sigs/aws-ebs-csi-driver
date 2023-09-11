@@ -371,6 +371,15 @@ node:
   #  otelServiceName: ebs-csi-node
   #  otelExporterEndpoint: "http://localhost:4317"
 
+additionalDaemonSets:
+  # Additional node DaemonSets, using the node config structure
+  # See docs/additional-daemonsets.md for more information
+  #
+  # example:
+  #   nodeSelector:
+  #     node.kubernetes.io/instance-type: c5.large
+  #   volumeAttachLimit: 15
+
 storageClasses: []
 # Add StorageClass resources like:
 # - name: ebs-sc
