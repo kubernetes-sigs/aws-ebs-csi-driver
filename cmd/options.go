@@ -20,15 +20,22 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/cmd/hooks"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/cmd/options"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 
 	"k8s.io/component-base/featuregate"
 	logsapi "k8s.io/component-base/logs/api/v1"
 	"k8s.io/klog/v2"
+)
+
+const (
+	preStopTimeout = 30 * time.Second
 )
 
 // Options is the combined set of options for all operating modes.
@@ -94,6 +101,19 @@ func GetOptions(fs *flag.FlagSet) *Options {
 			controllerOptions.AddFlags(fs)
 			nodeOptions.AddFlags(fs)
 			args = os.Args[1:]
+
+		case cmd == "pre-stop-hook":
+			clientset, clientErr := cloud.DefaultKubernetesAPIClient()
+			if clientErr != nil {
+				klog.ErrorS(err, "unable to communicate with k8s API")
+			} else {
+				err = hooks.PreStop(clientset, preStopTimeout)
+				if err != nil {
+					klog.ErrorS(err, "failed to execute PreStop lifecycle hook")
+					klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+				}
+			}
+			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 
 		default:
 			fmt.Printf("unknown command: %s: expected %q, %q or %q", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
