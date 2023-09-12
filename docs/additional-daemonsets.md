@@ -19,7 +19,7 @@ node:
     limits:
       memory: 512Mi
   
-additionalNodeDaemonSets:
+additionalDaemonSets:
   big:
     nodeSelector:
       node.kubernetes.io/instance-type: m7i.48xlarge

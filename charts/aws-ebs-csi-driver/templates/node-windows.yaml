@@ -9,5 +9,6 @@
     "node" (deepCopy $.Values.node | mustMerge $values)
   )
 }}
+---
 {{- include "node-windows" (deepCopy $ | mustMerge $args) -}}
 {{- end }}
