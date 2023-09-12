@@ -203,6 +203,7 @@ test-e2e-external-eks:
 .PHONY: test-e2e-external-eks-windows
 test-e2e-external-eks-windows:
 	CLUSTER_TYPE=eksctl \
+	INSTANCE_TYPE=c5.xlarge
 	WINDOWS=true \
 	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
 	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
@@ -212,7 +213,7 @@ test-e2e-external-eks-windows:
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="External.Storage" \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
-	GINKGO_PARALLEL=15 \
+	GINKGO_PARALLEL=10 \
 	NODE_OS_DISTRO="windows" \
 	./hack/e2e/run.sh
 
