@@ -336,6 +336,8 @@ node:
     name: ebs-csi-node-sa
     annotations: {}
     automountServiceAccountToken: true
+  # Enable the linux daemonset creation
+  enableLinux: true
   enableWindows: false
   # The "maximum number of attachable volumes" per node
   volumeAttachLimit:
