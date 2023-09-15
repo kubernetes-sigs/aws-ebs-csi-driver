@@ -14,6 +14,26 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
+func init() {
+	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
+	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
+	instanceFamilies := []string{"m7i", "m7a", "c7i", "r7a", "r7iz"}
+	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
+
+	for _, family := range instanceFamilies {
+		for _, size := range commonInstanceSizes {
+			dedicatedVolumeLimits[family+"."+size] = 32
+		}
+		dedicatedVolumeLimits[family+".16xlarge"] = 48
+		dedicatedVolumeLimits[family+".24xlarge"] = 64
+		dedicatedVolumeLimits[family+".metal-48xl"] = 79
+		dedicatedVolumeLimits[family+".32xlarge"] = 88
+		dedicatedVolumeLimits[family+".48xlarge"] = 128
+	}
+}
+
+var dedicatedVolumeLimits = map[string]int{}
+
 // / List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var nonNitroInstanceFamilies = map[string]struct{}{
 	"t2":  {},
@@ -91,18 +111,6 @@ func GetEBSLimitForInstanceType(it string) (int, bool) {
 	}
 
 	return 0, false
-}
-
-var dedicatedVolumeLimits = map[string]int{
-	"m7i.large":    32,
-	"m7i.xlarge":   32,
-	"m7i.2xlarge":  32,
-	"m7i.4xlarge":  32,
-	"m7i.8xlarge":  32,
-	"m7i.12xlarge": 32,
-	"m7i.16xlarge": 48,
-	"m7i.24xlarge": 64,
-	"m7i.48xlarge": 128,
 }
 
 func GetDedicatedLimitForInstanceType(it string) int {
