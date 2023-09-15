@@ -210,7 +210,7 @@ spec:
             SNAPSHOTS="|snapshot fields"
           fi
           export FOCUS_REGEX="\bebs.csi.aws.com\b.+(validate content|resize volume|offline PVC|AllowedTopologies|store data$SNAPSHOTS)"
-          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version=$(curl -L https://dl.k8s.io/release/stable-1.27.txt) --skip-regex='\[Disruptive\]|\[Serial\]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
+          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version=$(curl -L https://dl.k8s.io/release/stable-1.28.txt) --skip-regex='\[Disruptive\]|\[Serial\]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
       volumeMounts:
       - name: config-vol
         mountPath: /etc/config
