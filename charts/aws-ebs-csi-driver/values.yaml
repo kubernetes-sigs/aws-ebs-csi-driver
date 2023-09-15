@@ -19,7 +19,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v3.5.0-eks-1-27-9"
+      tag: "v3.5.0-eks-1-28-4"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -42,7 +42,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.3.0-eks-1-27-9"
+      tag: "v4.3.0-eks-1-28-4"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -67,7 +67,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v6.2.2-eks-1-27-9"
+      tag: "v6.2.2-eks-1-28-4"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -79,7 +79,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.10.0-eks-1-27-9"
+      tag: "v2.10.0-eks-1-28-4"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -91,7 +91,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.8.0-eks-1-27-9"
+      tag: "v1.8.0-eks-1-28-4"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -114,7 +114,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.8.0-eks-1-27-9"
+      tag: "v2.8.0-eks-1-28-4"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
