@@ -198,7 +198,7 @@ upload_metrics() {
   aws s3api put-bucket-notification-configuration \
     --bucket "$SOURCE_BUCKET" \
     --notification-configuration "$notification_config" \
-    --region "$AWS_REGION"
+    --region "$AWS_REGION" || (echo -e "\nERROR: Skipping uploading metrics ...\n" && return)
 
   log "Uploading metrics to S3 bucket $SOURCE_BUCKET"
   aws s3 sync "$METRICS_DIR_PATH" "s3://$SOURCE_BUCKET/$METRICS_DIR_NAME" --region "$AWS_REGION"
