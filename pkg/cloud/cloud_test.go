@@ -1341,6 +1341,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 		reqSizeGiB          int64
 		modifyDiskOptions   *ModifyDiskOptions
 		expErr              error
+		shouldCallDescribe  bool
 	}{
 		{
 			name:     "success: normal resize",
@@ -1357,9 +1358,10 @@ func TestResizeOrModifyDisk(t *testing.T) {
 					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
-			reqSizeGiB:        2,
-			modifyDiskOptions: &ModifyDiskOptions{},
-			expErr:            nil,
+			reqSizeGiB:         2,
+			modifyDiskOptions:  &ModifyDiskOptions{},
+			expErr:             nil,
+			shouldCallDescribe: true,
 		},
 		{
 			name:     "success: normal modifying state",
@@ -1385,9 +1387,10 @@ func TestResizeOrModifyDisk(t *testing.T) {
 					},
 				},
 			},
-			reqSizeGiB:        2,
-			modifyDiskOptions: &ModifyDiskOptions{},
-			expErr:            nil,
+			reqSizeGiB:         2,
+			modifyDiskOptions:  &ModifyDiskOptions{},
+			expErr:             nil,
+			shouldCallDescribe: true,
 		},
 		{
 			name:     "success: with previous expansion",
@@ -1406,13 +1409,18 @@ func TestResizeOrModifyDisk(t *testing.T) {
 					},
 				},
 			},
-			reqSizeGiB:        2,
-			modifyDiskOptions: &ModifyDiskOptions{},
-			expErr:            nil,
+			reqSizeGiB:         2,
+			modifyDiskOptions:  &ModifyDiskOptions{},
+			expErr:             nil,
+			shouldCallDescribe: true,
 		},
 		{
 			name:     "success: modify IOPS, throughput and volume type",
 			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:   aws.String("vol-test"),
+				VolumeType: aws.String("gp2"),
+			},
 			modifyDiskOptions: &ModifyDiskOptions{
 				VolumeType: "GP3",
 				IOPS:       3000,
@@ -1427,7 +1435,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
-			expErr: nil,
+			expErr:             nil,
+			shouldCallDescribe: true,
 		},
 		{
 			name:     "success: modify size, IOPS, throughput and volume type",
@@ -1436,6 +1445,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int64(1),
 				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp2"),
+				Iops:             aws.Int64(2000),
 			},
 			modifyDiskOptions: &ModifyDiskOptions{
 				VolumeType: "GP3",
@@ -1453,7 +1464,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 					ModificationState: aws.String(ec2.VolumeModificationStateCompleted),
 				},
 			},
-			expErr: nil,
+			expErr:             nil,
+			shouldCallDescribe: true,
 		},
 		{
 			name:                "fail: volume doesn't exist",
@@ -1489,8 +1501,43 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeType: "GP2",
 				IOPS:       3000,
 			},
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp2"),
+			},
 			modifiedVolumeError: awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
 			expErr:              awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
+		},
+		{
+			name:     "success: does not call ModifyVolume when no modification required",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp3"),
+				Iops:             aws.Int64(3000),
+			},
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP3",
+				IOPS:       3000,
+			},
+			shouldCallDescribe: true,
+		},
+		{
+			name:     "success: does not call ModifyVolume when no modification required (with size)",
+			volumeID: "vol-test",
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				Size:             aws.Int64(13),
+				Iops:             aws.Int64(3000),
+			},
+			reqSizeGiB: 13,
+			modifyDiskOptions: &ModifyDiskOptions{
+				IOPS: 3000,
+			},
+			shouldCallDescribe: true,
 		},
 	}
 
@@ -1511,16 +1558,26 @@ func TestResizeOrModifyDisk(t *testing.T) {
 						},
 					}, tc.existingVolumeError)
 
-				if tc.expErr == nil && aws.Int64Value(tc.existingVolume.Size) != tc.reqSizeGiB {
-					resizedVolume := &ec2.Volume{
-						VolumeId:         aws.String("vol-test"),
-						Size:             aws.Int64(tc.reqSizeGiB),
-						AvailabilityZone: aws.String(defaultZone),
+				if tc.shouldCallDescribe {
+					newVolume := tc.existingVolume
+					if tc.reqSizeGiB != 0 {
+						newVolume.Size = aws.Int64(tc.reqSizeGiB)
+					}
+					if tc.modifyDiskOptions != nil {
+						if tc.modifyDiskOptions.IOPS != 0 {
+							newVolume.Iops = aws.Int64(int64(tc.modifyDiskOptions.IOPS))
+						}
+						if tc.modifyDiskOptions.Throughput != 0 {
+							newVolume.Throughput = aws.Int64(int64(tc.modifyDiskOptions.Throughput))
+						}
+						if tc.modifyDiskOptions.VolumeType != "" {
+							newVolume.VolumeType = aws.String(tc.modifyDiskOptions.VolumeType)
+						}
 					}
 					mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(
 						&ec2.DescribeVolumesOutput{
 							Volumes: []*ec2.Volume{
-								resizedVolume,
+								newVolume,
 							},
 						}, tc.existingVolumeError)
 				}
