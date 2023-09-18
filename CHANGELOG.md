@@ -1,3 +1,22 @@
+# v1.23.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The EBS CSI Driver's Linux base image was upgraded from Amazon Linux 2 (AL2) to Amazon Linux 2023 (AL2023) in this release. This change will continue to improve the performance and security of the EBS CSI Driver via updates available only on AL2023.
+
+As part of this change, e2fsprogs will be upgraded from `1.42.9` to `1.46.5` and xfsprogs will be upgraded from `5.0.0` to `5.18.0`. New volumes created on versions of the EBS CSI Driver with an AL2023 base image may fail to mount or resize on versions of the EBS CSI Driver with an AL2 base image. For this reason, downgrading the EBS CSI Driver across base images will not be supported and is strongly discouraged. Please see [[Announcement] Base image upgrade to AL2023 · Issue #1719 · kubernetes-sigs/aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1719) to provide any questions or feedback.
+
+### Notable Changes
+* PreStop lifecycle hook to alleviate 6+ minute force-detach delay ([#1736](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1736), [@torredil](https://github.com/torredil))
+* Add option for opentelemetry tracing of gRPC calls ([#1714](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1714), [@Fricounet](https://github.com/Fricounet))
+* Upgrade Linux base image to AL2023 ([#1731](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1731), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug Fixes
+* Do not call ModifyVolume if the volume is already in the desired state ([#1741](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1741), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Dependancy upgrades ([#1743](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1743), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # 1.22.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
