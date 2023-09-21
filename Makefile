@@ -212,7 +212,7 @@ test-e2e-external-eks-windows:
 	TEST_PATH=./tests/e2e-kubernetes/... \
 	GINKGO_FOCUS="External.Storage" \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
-	GINKGO_PARALLEL=15 \
+	GINKGO_PARALLEL=10 \
 	NODE_OS_DISTRO="windows" \
 	./hack/e2e/run.sh
 
