@@ -26,7 +26,7 @@ spec:
         {{- end }}
       {{- if .Values.controller.podAnnotations }}
       annotations:
-        {{- toYaml .Values.controller.podAnnotations | nindent 8 }}
+        {{- tpl ( .Values.controller.podAnnotations | toYaml ) . | nindent 8 }}
       {{- end }}
     spec:
       nodeSelector:
@@ -75,7 +75,7 @@ spec:
             {{- if .Values.controller.extraVolumeTags }}
               {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.k8sTagClusterId }}
+            {{- with (tpl (default "" .Values.controller.k8sTagClusterId) . )  }}
             - --k8s-tag-cluster-id={{ . }}
             {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not .Values.controller.httpEndpoint) }}
