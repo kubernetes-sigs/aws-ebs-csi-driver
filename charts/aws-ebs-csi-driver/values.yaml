@@ -119,6 +119,7 @@ sidecars:
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
     resources: {}
+    hostNetwork: false
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false

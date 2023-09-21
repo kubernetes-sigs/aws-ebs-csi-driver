@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.23.1
+* Make hostNetwork configurable for daemonset
+
 ## v2.23.0
 * Add `node.enableLinux` parameter ([#1732](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1732), [@monicastanciu](https://github.com/monicastanciu))
 * Additional Node DaemonSets bug fixes ([#1739](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1739), [@monicastanciu](https://github.com/monicastanciu))
