@@ -33,3 +33,6 @@ rules:
   - apiGroups: [ "storage.k8s.io" ]
     resources: [ "volumeattachments" ]
     verbs: [ "get", "list", "watch" ]
+  {{- with .Values.sidecars.provisioner.additionalClusterRoleRules }}
+    {{- . | toYaml | nindent 2 }}
+  {{- end }}
