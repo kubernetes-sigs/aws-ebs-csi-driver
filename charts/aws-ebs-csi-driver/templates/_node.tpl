@@ -47,6 +47,7 @@ spec:
         - key: "ebs.csi.aws.com/agent-not-ready"
           operator: "Exists"
         {{- end }}
+      hostNetwork: {{ .Values.node.hostNetwork }}
       {{- with .Values.node.securityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}

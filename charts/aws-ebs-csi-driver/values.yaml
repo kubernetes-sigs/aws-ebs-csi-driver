@@ -345,6 +345,7 @@ node:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: "10%"
+  hostNetwork: false
   # securityContext on the node pod
   securityContext:
     # The node pod must be run as root to bind to the registration/driver sockets
