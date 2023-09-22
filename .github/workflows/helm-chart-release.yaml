@@ -25,3 +25,4 @@ jobs:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         with:
           config: .github/cr.yaml
+          mark_as_latest: false
