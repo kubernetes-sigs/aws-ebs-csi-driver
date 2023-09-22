@@ -404,6 +404,9 @@ volumeSnapshotClasses: []
 #   # annotation metadata
 #   annotations:
 #     snapshot.storage.kubernetes.io/is-default-class: "true"
+#   # label metadata
+#   labels:
+#     my-label-is: supercool
 #   # deletionPolicy must be specified
 #   deletionPolicy: Delete
 #   parameters:
