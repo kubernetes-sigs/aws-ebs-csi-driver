@@ -23,6 +23,8 @@ sidecars:
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
+    # Grant additional permissions to external-provisioner
+    additionalClusterRoleRules:
     resources: {}
     # Tune leader lease election for csi-provisioner.
     # Leader election is on by default.
@@ -56,6 +58,8 @@ sidecars:
     logLevel: 2
     # Additional parameters provided by external-attacher.
     additionalArgs: []
+    # Grant additional permissions to external-attacher
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -71,6 +75,8 @@ sidecars:
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
+    # Grant additional permissions to csi-snapshotter
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -105,6 +111,8 @@ sidecars:
     logLevel: 2
     # Additional parameters provided by external-resizer.
     additionalArgs: []
+    # Grant additional permissions to external-resizer
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
