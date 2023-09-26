@@ -120,7 +120,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.0.0 // indirect
+	k8s.io/apiextensions-apiserver v0.28.2 // indirect
 	k8s.io/apiserver v0.28.2 // indirect
 	k8s.io/cloud-provider v0.26.0 // indirect
 	k8s.io/component-helpers v0.28.2 // indirect
@@ -128,7 +128,7 @@ require (
 	k8s.io/kms v0.28.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	k8s.io/kubectl v0.28.2 // indirect
-	k8s.io/kubelet v0.0.0 // indirect
+	k8s.io/kubelet v0.28.2 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.3 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
@@ -151,6 +151,7 @@ replace (
 	k8s.io/cri-api => k8s.io/cri-api v0.28.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.28.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.28.2
+	k8s.io/endpointslice => k8s.io/endpointslice v0.28.2
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.28.2
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.28.2
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.28.2
