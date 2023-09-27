@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -33,6 +34,10 @@ import (
 )
 
 func main() {
+	fmt.Println("Decrease code coverage")
+	fmt.Println("By adding new lines")
+	fmt.Println("For the main package")
+
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
 
 	if err := logsapi.RegisterLogFormat(logsapi.JSONLogFormat, json.Factory{}, logsapi.LoggingBetaOptions); err != nil {
