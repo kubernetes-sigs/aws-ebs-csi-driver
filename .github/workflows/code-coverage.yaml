@@ -1,0 +1,89 @@
+name: Code Coverage
+on: [pull_request]
+  
+jobs:
+  cover-base:
+    name: Generate Base Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Set up go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Generate report
+        run: |
+          go test -coverprofile cover-base.out ./cmd/... ./pkg/...
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cover-base
+          path: cover-base.out
+
+  cover-pr:
+    name: Generate PR Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v3
+
+      - name: Set up go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Generate report
+        run: |
+          go test -coverprofile cover-pr.out ./cmd/... ./pkg/...
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cover-pr
+          path: cover-pr.out
+
+  code-coverage:
+    name: Output Code Coverage
+    runs-on: ubuntu-latest
+    needs: [cover-base, cover-pr]
+    steps:
+      - name: Download reports
+        uses: actions/download-artifact@v3
+
+      - name: Set up go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Install copherage tool
+        run: go install k8s.io/test-infra/robots/coverage@latest
+
+      - name: Generate comment
+        id: generate-comment
+        run: |
+          echo 'comment<<EOF' >> $GITHUB_OUTPUT
+          echo '<!-- pr-coverage -->' >> $GITHUB_OUTPUT
+          echo '## Code Coverage Diff' >> $GITHUB_OUTPUT
+          coverage diff cover-base/cover-base.out cover-pr/cover-pr.out
+          COVERAGE_DIFF=$(coverage diff cover-base/cover-base.out cover-pr/cover-pr.out | sed -e '1,5d')
+          if [[ -n "${COVERAGE_DIFF}" ]]; then
+            printf -- "%s\n" "${COVERAGE_DIFF}" >> $GITHUB_OUTPUT
+          else
+            echo 'This PR does not change the code coverage' >> $GITHUB_OUTPUT
+          fi
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Create or update comment
+        uses: edumserrano/find-create-or-update-comment@v1
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: '<!-- pr-coverage -->'
+          comment-author: 'github-actions[bot]'
+          body: ${{ steps.generate-comment.outputs.comment }}
+          edit-mode: replace
