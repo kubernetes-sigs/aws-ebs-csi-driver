@@ -1,0 +1,83 @@
+name: Code Coverage
+on: [pull_request]
+  
+jobs:
+  report-base:
+    name: Generate base report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Base
+        uses: actions/checkout@v3
+        with:
+          ref: master
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Generate report
+        run: |
+          go test -coverprofile cover-base.out ./cmd/... ./pkg/...
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cover-base
+          path: cover-base.out
+
+  report-pr:
+    name: Generate PR report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Generate reports
+        run: |
+          go test -coverprofile cover-pr.out ./cmd/... ./pkg/...
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: cover-pr
+          path: cover-pr.out
+
+  code-coverage:
+    name: Output code coverage
+    runs-on: ubuntu-latest
+    needs: [report-base, report-pr]
+    steps:
+      - name: Download reports
+        uses: actions/download-artifact@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20.2'
+
+      - name: Install copherage Tool
+        run: go install k8s.io/test-infra/robots/coverage@latest
+
+      - name: Generate Comment
+        id: generate-comment
+        run: |
+          echo 'comment<<EOF' >> $GITHUB_OUTPUT
+          echo '<!-- pr-coverage -->' >> $GITHUB_OUTPUT
+          echo '## Code Coverage Diff' >> $GITHUB_OUTPUT
+          coverage diff cover-base/cover-base.out cover-pr/cover-pr.out | sed -e '1,5d' >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Create or Update Comment
+        uses: edumserrano/find-create-or-update-comment@v1
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: '<!-- pr-coverage -->'
+          comment-author: 'github-actions[bot]'
+          body: ${{ steps.generate-comment.outputs.comment }}
+          edit-mode: replace
