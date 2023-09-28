@@ -636,10 +636,14 @@ func NewTestPod(c clientset.Interface, ns *v1.Namespace, command string) *TestPo
 				Containers: []v1.Container{
 					{
 						Name:         "volume-tester",
-						Image:        imageutils.GetE2EImage(imageutils.BusyBox),
+						Image:        "docker.io/ubuntu", // TODO can be refactored out, waiting to see if Connor can big brain way to use busybox
 						Command:      []string{"/bin/sh"},
 						Args:         []string{"-c", command},
 						VolumeMounts: make([]v1.VolumeMount, 0),
+						// TODO Should be refactored out, waiting to see if Connor can big brain a non-privileged way to get fs info
+						SecurityContext: &v1.SecurityContext{
+							Privileged: func(b bool) *bool { return &b }(true), // TODO https://stackoverflow.com/questions/28817992/how-to-set-bool-pointer-to-true-in-struct-literal
+						},
 					},
 				},
 				RestartPolicy: v1.RestartPolicyNever,
