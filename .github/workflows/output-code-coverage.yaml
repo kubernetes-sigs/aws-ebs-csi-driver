@@ -1,0 +1,71 @@
+name: Output Code Coverage
+on:
+  workflow_run:
+    workflows: [Generate Code Coverage]
+    types: [completed]
+  
+jobs:
+  output-code-coverage:
+    name: Output Code Coverage
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+      - name: 'Download reports'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            for (const artifact of allArtifacts.data.artifacts) {
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+              });
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifact.id}.zip`, Buffer.from(download.data));
+            }
+
+      - name: 'Determine source PR'
+        uses: potiuk/get-workflow-origin@v1_1
+        id: source-run-info
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sourceRunId: ${{ github.event.workflow_run.id }}
+
+      - name: Set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '^1.20.2'
+
+      - name: Install coverage tool
+        run: go install k8s.io/test-infra/robots/coverage@latest
+
+      - name: Generate comment
+        id: generate-comment
+        run: |
+          unzip \*.zip
+          echo 'comment<<EOF' >> $GITHUB_OUTPUT
+          echo '<!-- pr-coverage -->' >> $GITHUB_OUTPUT
+          echo '## Code Coverage Diff' >> $GITHUB_OUTPUT
+          COVERAGE_DIFF=$(coverage diff base-coverage.out pr-coverage.out | sed -e '1,5d')
+          if [[ -n "${COVERAGE_DIFF}" ]]; then
+            printf -- "%s\n" "${COVERAGE_DIFF}" >> $GITHUB_OUTPUT
+          else
+            echo 'This PR does not change the code coverage' >> $GITHUB_OUTPUT
+          fi
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Create or update comment
+        uses: edumserrano/find-create-or-update-comment@v1
+        with:
+          issue-number: ${{ steps.source-run-info.outputs.pullRequestNumber }}
+          body-includes: '<!-- pr-coverage -->'
+          comment-author: 'github-actions[bot]'
+          body: ${{ steps.generate-comment.outputs.comment }}
+          edit-mode: replace
