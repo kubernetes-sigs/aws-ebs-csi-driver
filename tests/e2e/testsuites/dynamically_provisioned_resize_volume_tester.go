@@ -45,25 +45,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 	tpvc, _ := volume.SetupDynamicPersistentVolumeClaim(client, namespace, t.CSIDriver)
 	defer tpvc.Cleanup()
 
-	pvcName := tpvc.persistentVolumeClaim.Name
-	pvc, _ := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), pvcName, metav1.GetOptions{})
-	By(fmt.Sprintf("Get pvc name: %v", pvc.Name))
-	originalSize := pvc.Spec.Resources.Requests["storage"]
-	delta := resource.Quantity{}
-	delta.Set(util.GiBToBytes(1))
-	originalSize.Add(delta)
-	pvc.Spec.Resources.Requests["storage"] = originalSize
-
-	By("resizing the pvc")
-	updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(context.TODO(), pvc, metav1.UpdateOptions{})
-	if err != nil {
-		framework.ExpectNoError(err, fmt.Sprintf("fail to resize pvc(%s): %v", pvcName, err))
-	}
-	updatedSize := updatedPvc.Spec.Resources.Requests["storage"]
-
-	By("checking the resizing PV result")
-	error := WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, 1*time.Minute, 5*time.Second)
-	framework.ExpectNoError(error)
+	ResizePvc(client, namespace, tpvc, 1)
 
 	By("Validate volume can be attached")
 	tpod := NewTestPod(client, namespace, t.Pod.Cmd)
@@ -91,4 +73,31 @@ func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, d
 		}
 	}
 	return fmt.Errorf("Gave up after waiting %v for pv %q to complete resizing", timeout, pvName)
+}
+
+// TODO move to testsuites.go?
+
+// ResizePvc increases size of given persistent volume claim by `sizeIncreaseGi` Gigabytes
+func ResizePvc(client clientset.Interface, namespace *v1.Namespace, testPvc *TestPersistentVolumeClaim, sizeIncreaseGi int64) (updatedPvc *v1.PersistentVolumeClaim, updatedSize resource.Quantity) {
+	By(fmt.Sprintf("getting pvc name: %v", testPvc.persistentVolumeClaim.Name))
+	pvc, _ := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), testPvc.persistentVolumeClaim.Name, metav1.GetOptions{})
+
+	originalSize := pvc.Spec.Resources.Requests["storage"]
+	delta := resource.Quantity{}
+	delta.Set(util.GiBToBytes(sizeIncreaseGi))
+	originalSize.Add(delta)
+	pvc.Spec.Resources.Requests["storage"] = originalSize
+
+	By("resizing the pvc")
+	updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+	if err != nil {
+		framework.ExpectNoError(err, fmt.Sprintf("fail to resize pvc(%s): %v", pvc.Name, err))
+	}
+	updatedSize = updatedPvc.Spec.Resources.Requests["storage"]
+
+	By("checking the resizing PV result")
+	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, 1*time.Minute, 5*time.Second)
+	framework.ExpectNoError(err)
+
+	return
 }
