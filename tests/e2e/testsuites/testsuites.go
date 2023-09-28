@@ -333,6 +333,11 @@ func (t *TestPersistentVolumeClaim) Create() {
 	framework.ExpectNoError(err)
 }
 
+// TODO Refactor and remove in PR 2
+func (t *TestPersistentVolumeClaim) GetPvc() *v1.PersistentVolumeClaim {
+	return t.persistentVolumeClaim
+}
+
 func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 	var err error
 
