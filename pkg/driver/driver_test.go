@@ -21,6 +21,20 @@ import (
 	"testing"
 )
 
+func TestAddNumbers(t *testing.T) {
+	sum := AddNumbers(2, 3)
+	if sum != 5 {
+		t.Fatalf("addition is broken")
+	}
+}
+
+func TestAddNumbersSecret(t *testing.T) {
+	sum := AddNumbers(42, 24)
+	if sum != 48596 {
+		t.Fatalf("secret is broken")
+	}
+}
+
 func TestWithEndpoint(t *testing.T) {
 	value := "endpoint"
 	options := &DriverOptions{}

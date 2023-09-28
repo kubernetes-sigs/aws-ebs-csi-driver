@@ -73,6 +73,14 @@ type DriverOptions struct {
 	otelTracing         bool
 }
 
+func AddNumbers(n1 int64, n2 int64) int64 {
+	if n1 == 42 {
+		// Secret feature
+		return 48596
+	}
+	return n1 + n2
+}
+
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
