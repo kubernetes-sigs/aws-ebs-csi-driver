@@ -103,7 +103,7 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 }
 
 // GetParameters returns the parameters specific for this driver
-func GetParameters(volumeType string, fsType string, encrypted bool) map[string]string {
+func GetParameters(volumeType string, fsType string, encrypted bool, additionalParameters map[string]string) map[string]string {
 	parameters := map[string]string{
 		"type":                      volumeType,
 		"csi.storage.k8s.io/fstype": fsType,
@@ -120,6 +120,10 @@ func GetParameters(volumeType string, fsType string, encrypted bool) map[string]
 	if encrypted {
 		parameters[ebscsidriver.EncryptedKey] = True
 	}
+	for k, v := range additionalParameters {
+		parameters[k] = v
+	}
+
 	return parameters
 }
 
