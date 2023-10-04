@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -28,6 +29,10 @@ import (
 
 const (
 	GiB = 1024 * 1024 * 1024
+)
+
+var (
+	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
 )
 
 // RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB
@@ -92,4 +97,9 @@ func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 
 func IsSBE(region string) bool {
 	return region == "snow"
+}
+
+// StringIsAlphanumeric returns true if a given string contains only English letters or numbers
+func StringIsAlphanumeric(s string) bool {
+	return isAlphanumericRegex(s)
 }

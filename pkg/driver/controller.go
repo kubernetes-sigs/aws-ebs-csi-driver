@@ -188,26 +188,22 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				blockExpress = true
 			}
 		case BlockSizeKey:
-			_, err = strconv.Atoi(value)
-			if err != nil {
+			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
 			}
 			blockSize = value
 		case INodeSizeKey:
-			_, err = strconv.Atoi(value)
-			if err != nil {
+			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse inodeSize (%s): %v", value, err)
 			}
 			inodeSize = value
 		case BytesPerINodeKey:
-			_, err = strconv.Atoi(value)
-			if err != nil {
+			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse bytesPerINode (%s): %v", value, err)
 			}
 			bytesPerINode = value
 		case NumberOfINodesKey:
-			_, err = strconv.Atoi(value)
-			if err != nil {
+			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse numberOfINodes (%s): %v", value, err)
 			}
 			numberOfINodes = value
