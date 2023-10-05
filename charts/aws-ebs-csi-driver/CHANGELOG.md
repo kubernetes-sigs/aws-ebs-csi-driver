@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.22.1
+* Bump driver version to `v1.22.1`
+
 ## v2.22.0
 * Default PodDisruptionBudget to policy/v1 ([#1707](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1707), [@iNoahNothing](https://github.com/iNoahNothing))
 
