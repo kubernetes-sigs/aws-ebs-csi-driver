@@ -1,3 +1,8 @@
+# v1.22.1
+### Bug Fixes
+* Cherry-pick from v1.23.1: Do not call ModifyVolume if the volume is already in the desired state ([#1741](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1741), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade volume-modifier-for-k8s sidecar to 1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
+
 # 1.22.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
