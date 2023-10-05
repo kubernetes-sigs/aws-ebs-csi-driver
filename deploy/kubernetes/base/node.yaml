@@ -43,7 +43,7 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.23.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.23.1
           imagePullPolicy: IfNotPresent
           args:
             - node
