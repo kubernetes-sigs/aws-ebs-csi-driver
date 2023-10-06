@@ -1634,30 +1634,6 @@ func TestCreateVolume(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.AlreadyExists)
 			},
 		},
-		{
-			name: "success with block size",
-			testFunc: func(t *testing.T) {
-				testSuccessWithParameter(t, BlockSizeKey, "4096", stdCapRange, stdVolCap, stdVolSize)
-			},
-		},
-		{
-			name: "success with inode size",
-			testFunc: func(t *testing.T) {
-				testSuccessWithParameter(t, INodeSizeKey, "256", stdCapRange, stdVolCap, stdVolSize)
-			},
-		},
-		{
-			name: "success with bytes-per-inode",
-			testFunc: func(t *testing.T) {
-				testSuccessWithParameter(t, BytesPerINodeKey, "8192", stdCapRange, stdVolCap, stdVolSize)
-			},
-		},
-		{
-			name: "success with number-of-inodes",
-			testFunc: func(t *testing.T) {
-				testSuccessWithParameter(t, NumberOfINodesKey, "13107200", stdCapRange, stdVolCap, stdVolSize)
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -1665,50 +1641,137 @@ func TestCreateVolume(t *testing.T) {
 	}
 }
 
-func testSuccessWithParameter(t *testing.T, key, value string, capRange *csi.CapacityRange, volCap []*csi.VolumeCapability, volSize int64) {
-	req := &csi.CreateVolumeRequest{
-		Name:               "random-vol-name",
-		CapacityRange:      capRange,
-		VolumeCapabilities: volCap,
-		Parameters:         map[string]string{key: value},
+func TestCreateVolumeWithFormattingParameters(t *testing.T) {
+	stdVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+		},
 	}
+	stdVolSize := int64(5 * 1024 * 1024 * 1024)
+	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 
-	ctx := context.Background()
-
-	mockDisk := &cloud.Disk{
-		VolumeID:         req.Name,
-		AvailabilityZone: expZone,
-		CapacityGiB:      util.BytesToGiB(volSize),
+	testCases := []struct {
+		name                       string
+		formattingOptionParameters map[string]string
+		errExpected                bool
+	}{
+		{
+			name: "success with block size",
+			formattingOptionParameters: map[string]string{
+				BlockSizeKey: "4096",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with inode size",
+			formattingOptionParameters: map[string]string{
+				INodeSizeKey: "256",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with bytes-per-inode",
+			formattingOptionParameters: map[string]string{
+				BytesPerINodeKey: "8192",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with number-of-inodes",
+			formattingOptionParameters: map[string]string{
+				NumberOfINodesKey: "13107200",
+			},
+			errExpected: false,
+		},
+		{
+			name: "failure with block size",
+			formattingOptionParameters: map[string]string{
+				BlockSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with inode size",
+			formattingOptionParameters: map[string]string{
+				INodeSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with bytes-per-inode",
+			formattingOptionParameters: map[string]string{
+				BytesPerINodeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with number-of-inodes",
+			formattingOptionParameters: map[string]string{
+				NumberOfINodesKey: "wrong_value",
+			},
+			errExpected: true,
+		},
 	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
 
-	mockCtl := gomock.NewController(t)
-	defer mockCtl.Finish()
+			req := &csi.CreateVolumeRequest{
+				Name:               "random-vol-name",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         tc.formattingOptionParameters,
+			}
 
-	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+			ctx := context.Background()
 
-	awsDriver := controllerService{
-		cloud:         mockCloud,
-		inFlight:      internal.NewInFlight(),
-		driverOptions: &DriverOptions{},
-	}
+			mockDisk := &cloud.Disk{
+				VolumeID:         req.Name,
+				AvailabilityZone: expZone,
+				CapacityGiB:      util.BytesToGiB(stdVolSize),
+			}
 
-	response, err := awsDriver.CreateVolume(ctx, req)
-	if err != nil {
-		srvErr, ok := status.FromError(err)
-		if !ok {
-			t.Fatalf("Could not get error status code from error: %v", srvErr)
-		}
-		t.Fatalf("Unexpected error: %v", srvErr.Code())
-	}
+			mockCtl := gomock.NewController(t)
 
-	volCtx := response.Volume.VolumeContext
-	if sizeValue, ok := volCtx[key]; ok {
-		if sizeValue != value {
-			t.Fatalf("Invalid %s in VolumeContext (got %s expected %s)", key, sizeValue, value)
-		}
-	} else {
-		t.Fatalf("Missing key %s in VolumeContext", key)
+			mockCloud := cloud.NewMockCloud(mockCtl)
+
+			// CreateDisk not called on Unhappy Case
+			if !tc.errExpected {
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				defer mockCtl.Finish()
+			}
+
+			awsDriver := controllerService{
+				cloud:         mockCloud,
+				inFlight:      internal.NewInFlight(),
+				driverOptions: &DriverOptions{},
+			}
+
+			response, err := awsDriver.CreateVolume(ctx, req)
+
+			// Splits happy case tests from unhappy case tests
+			if !tc.errExpected {
+				assert.Nilf(err, "Unexpected error: %w", err)
+
+				volCtx := response.Volume.VolumeContext
+
+				for formattingParamKey, formattingParamValue := range tc.formattingOptionParameters {
+					createdFormattingParamValue, ok := volCtx[formattingParamKey]
+					assert.Truef(ok, "Missing key %s in VolumeContext", formattingParamKey)
+
+					assert.Equalf(createdFormattingParamValue, formattingParamValue, "Invalid %s in VolumeContext", formattingParamKey)
+				}
+			} else {
+				assert.NotNilf(err, "CreateVolume did not return an error")
+
+				checkExpectedErrorCode(t, err, codes.InvalidArgument)
+			}
+		})
 	}
 }
 

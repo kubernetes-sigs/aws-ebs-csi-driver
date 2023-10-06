@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -158,19 +157,22 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	context := req.GetVolumeContext()
 
-	blockSize, err := recheckParameter(context, BlockSizeKey, FileSystemConfigs, fsType)
+	blockSize, err := recheckFormattingOptionParameter(context, BlockSizeKey, FileSystemConfigs, fsType)
 	if err != nil {
 		return nil, err
 	}
-	inodeSize, err := recheckParameter(context, INodeSizeKey, FileSystemConfigs, fsType)
+	inodeSize, err := recheckFormattingOptionParameter(context, INodeSizeKey, FileSystemConfigs, fsType)
 	if err != nil {
 		return nil, err
 	}
-	bytesPerINode, err := recheckParameter(context, BytesPerINodeKey, FileSystemConfigs, fsType)
+	bytesPerINode, err := recheckFormattingOptionParameter(context, BytesPerINodeKey, FileSystemConfigs, fsType)
 	if err != nil {
 		return nil, err
 	}
-	numINodes, err := recheckParameter(context, NumberOfINodesKey, FileSystemConfigs, fsType)
+	numINodes, err := recheckFormattingOptionParameter(context, NumberOfINodesKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -897,13 +899,12 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 	return nil
 }
 
-func recheckParameter(context map[string]string, key string, fsConfigs map[string]fileSystemConfig, fsType string) (value string, err error) {
+func recheckFormattingOptionParameter(context map[string]string, key string, fsConfigs map[string]fileSystemConfig, fsType string) (value string, err error) {
 	v, ok := context[key]
 	if ok {
 		// This check is already performed on the controller side
 		// However, because it is potentially security-sensitive, we redo it here to be safe
-		_, err := strconv.Atoi(v)
-		if err != nil {
+		if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 			return "", status.Errorf(codes.InvalidArgument, "Invalid %s (aborting!): %v", key, err)
 		}
 
