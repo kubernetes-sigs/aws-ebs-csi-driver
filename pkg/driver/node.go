@@ -173,6 +173,11 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if err != nil {
 		return nil, err
 	}
+	ext4BigAlloc, err := recheckFormattingOptionParameter(context, Ext4BigAllocKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	ext4ClusterSize, err := recheckFormattingOptionParameter(context, Ext4ClusterSizeKey, FileSystemConfigs, fsType)
 	if err != nil {
 		return nil, err
 	}
@@ -261,6 +266,12 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 	if len(numInodes) > 0 {
 		formatOptions = append(formatOptions, "-N", numInodes)
+	}
+	if ext4BigAlloc == "true" {
+		formatOptions = append(formatOptions, "-O", "bigalloc")
+	}
+	if len(ext4ClusterSize) > 0 {
+		formatOptions = append(formatOptions, "-C", ext4ClusterSize)
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {

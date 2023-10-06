@@ -25,8 +25,7 @@ import (
 // FormatOptionTest will provision required StorageClass(es), PVC(s) and Pod(s) in order to test that volumes with
 // a specified custom format options will mount and are able to be later resized.
 type FormatOptionTest struct {
-	CreateVolumeParameterKey   string
-	CreateVolumeParameterValue string
+	CreateVolumeParameters map[string]string
 }
 
 const (
@@ -56,10 +55,6 @@ func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespa
 }
 
 func createFormatOptionVolumeDetails(fsType string, t *FormatOptionTest) *VolumeDetails {
-	additionalParameters := map[string]string{
-		t.CreateVolumeParameterKey: t.CreateVolumeParameterValue,
-	}
-
 	allowVolumeExpansion := true
 
 	volume := VolumeDetails{
@@ -72,7 +67,7 @@ func createFormatOptionVolumeDetails(fsType string, t *FormatOptionTest) *Volume
 			MountPathGenerate: DefaultMountPath,
 		},
 		AllowVolumeExpansion: &allowVolumeExpansion,
-		AdditionalParameters: additionalParameters,
+		AdditionalParameters: t.CreateVolumeParameters,
 	}
 
 	return &volume

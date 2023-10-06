@@ -94,6 +94,12 @@ const (
 	// NumberOfInodesKey configures the `number-of-inodes` when formatting a volume
 	NumberOfInodesKey = "numberofinodes"
 
+	// Ext4ClusterSizeKey enables the bigalloc option when formatting an ext4 volume
+	Ext4BigAllocKey = "ext4bigalloc"
+
+	// Ext4ClusterSizeKey configures the cluster size when formatting an ext4 volume with the bigalloc option enabled
+	Ext4ClusterSizeKey = "ext4clustersize"
+
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
 	TagKeyPrefix = "tagSpecification"
@@ -188,26 +194,36 @@ func (fsConfig fileSystemConfig) isParameterSupported(paramName string) bool {
 var (
 	FileSystemConfigs = map[string]fileSystemConfig{
 		FSTypeExt2: {
-			NotSupportedParams: map[string]struct{}{},
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
 		},
 		FSTypeExt3: {
-			NotSupportedParams: map[string]struct{}{},
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
 		},
 		FSTypeExt4: {
 			NotSupportedParams: map[string]struct{}{},
 		},
 		FSTypeXfs: {
 			NotSupportedParams: map[string]struct{}{
-				BytesPerInodeKey:  {},
-				NumberOfInodesKey: {},
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
 			},
 		},
 		FSTypeNtfs: {
 			NotSupportedParams: map[string]struct{}{
-				BlockSizeKey:      {},
-				InodeSizeKey:      {},
-				BytesPerInodeKey:  {},
-				NumberOfInodesKey: {},
+				BlockSizeKey:       {},
+				InodeSizeKey:       {},
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
 			},
 		},
 	}

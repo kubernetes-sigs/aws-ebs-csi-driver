@@ -137,10 +137,12 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
-		blockSize      string
-		inodeSize      string
-		bytesPerInode  string
-		numberOfInodes string
+		blockSize       string
+		inodeSize       string
+		bytesPerInode   string
+		numberOfInodes  string
+		ext4BigAlloc    bool
+		ext4ClusterSize string
 	)
 
 	tProps := new(template.PVProps)
@@ -207,6 +209,15 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse numberOfInodes (%s): %v", value, err)
 			}
 			numberOfInodes = value
+		case Ext4BigAllocKey:
+			if value == "true" {
+				ext4BigAlloc = true
+			}
+		case Ext4ClusterSizeKey:
+			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
+			}
+			ext4ClusterSize = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				scTags = append(scTags, value)
@@ -241,6 +252,22 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), NumberOfInodesKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
+	}
+	if ext4BigAlloc {
+		responseCtx[Ext4BigAllocKey] = "true"
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), Ext4BigAllocKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+	if len(ext4ClusterSize) > 0 {
+		responseCtx[Ext4ClusterSizeKey] = ext4ClusterSize
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), Ext4ClusterSizeKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+
+	if !ext4BigAlloc && len(ext4ClusterSize) > 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Cannot set ext4BigAllocClusterSize when ext4BigAlloc is false")
 	}
 
 	if blockExpress && volumeType != cloud.VolumeTypeIO2 {
