@@ -45,10 +45,9 @@ type VolumeDetails struct {
 	VolumeMode            VolumeMode
 	VolumeMount           VolumeMountDetails
 	VolumeDevice          VolumeDeviceDetails
-	// Optional, used with pre-provisioned volumes
-	VolumeID string
-	// Optional, used with PVCs created from snapshots
-	DataSource *DataSource
+	VolumeID              string            // Optional, used with pre-provisioned volumes
+	DataSource            *DataSource       // Optional, used with PVCs created from snapshots
+	AdditionalParameters  map[string]string // Optional, used when testing formatting options
 }
 
 type VolumeMode int
@@ -121,7 +120,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 	volume := pod.Volumes[0]
 	By("setting up the StorageClass")
 
-	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
+	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted, volume.AdditionalParameters), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
@@ -141,7 +140,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPersistentVolumeClaim, []func()) {
 	cleanupFuncs := make([]func(), 0)
 	By("setting up the StorageClass")
-	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
+	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType, volume.Encrypted, volume.AdditionalParameters), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
