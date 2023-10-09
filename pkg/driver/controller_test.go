@@ -1670,21 +1670,21 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 		{
 			name: "success with inode size",
 			formattingOptionParameters: map[string]string{
-				INodeSizeKey: "256",
+				InodeSizeKey: "256",
 			},
 			errExpected: false,
 		},
 		{
 			name: "success with bytes-per-inode",
 			formattingOptionParameters: map[string]string{
-				BytesPerINodeKey: "8192",
+				BytesPerInodeKey: "8192",
 			},
 			errExpected: false,
 		},
 		{
 			name: "success with number-of-inodes",
 			formattingOptionParameters: map[string]string{
-				NumberOfINodesKey: "13107200",
+				NumberOfInodesKey: "13107200",
 			},
 			errExpected: false,
 		},
@@ -1698,21 +1698,21 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 		{
 			name: "failure with inode size",
 			formattingOptionParameters: map[string]string{
-				INodeSizeKey: "wrong_value",
+				InodeSizeKey: "wrong_value",
 			},
 			errExpected: true,
 		},
 		{
 			name: "failure with bytes-per-inode",
 			formattingOptionParameters: map[string]string{
-				BytesPerINodeKey: "wrong_value",
+				BytesPerInodeKey: "wrong_value",
 			},
 			errExpected: true,
 		},
 		{
 			name: "failure with number-of-inodes",
 			formattingOptionParameters: map[string]string{
-				NumberOfINodesKey: "wrong_value",
+				NumberOfInodesKey: "wrong_value",
 			},
 			errExpected: true,
 		},

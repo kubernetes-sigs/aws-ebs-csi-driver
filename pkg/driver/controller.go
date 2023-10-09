@@ -139,8 +139,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 		blockSize      string
 		inodeSize      string
-		bytesPerINode  string
-		numberOfINodes string
+		bytesPerInode  string
+		numberOfInodes string
 	)
 
 	tProps := new(template.PVProps)
@@ -192,21 +192,21 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
 			}
 			blockSize = value
-		case INodeSizeKey:
+		case InodeSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse inodeSize (%s): %v", value, err)
 			}
 			inodeSize = value
-		case BytesPerINodeKey:
+		case BytesPerInodeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse bytesPerINode (%s): %v", value, err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse bytesPerInode (%s): %v", value, err)
 			}
-			bytesPerINode = value
-		case NumberOfINodesKey:
+			bytesPerInode = value
+		case NumberOfInodesKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse numberOfINodes (%s): %v", value, err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse numberOfInodes (%s): %v", value, err)
 			}
-			numberOfINodes = value
+			numberOfInodes = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				scTags = append(scTags, value)
@@ -225,20 +225,20 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 	if len(inodeSize) > 0 {
-		responseCtx[INodeSizeKey] = inodeSize
-		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), INodeSizeKey, FileSystemConfigs); err != nil {
+		responseCtx[InodeSizeKey] = inodeSize
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), InodeSizeKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
 	}
-	if len(bytesPerINode) > 0 {
-		responseCtx[BytesPerINodeKey] = bytesPerINode
-		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), BytesPerINodeKey, FileSystemConfigs); err != nil {
+	if len(bytesPerInode) > 0 {
+		responseCtx[BytesPerInodeKey] = bytesPerInode
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), BytesPerInodeKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
 	}
-	if len(numberOfINodes) > 0 {
-		responseCtx[NumberOfINodesKey] = numberOfINodes
-		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), NumberOfINodesKey, FileSystemConfigs); err != nil {
+	if len(numberOfInodes) > 0 {
+		responseCtx[NumberOfInodesKey] = numberOfInodes
+		if err = validateVolumeCapabilities(req.GetVolumeCapabilities(), NumberOfInodesKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
 	}
