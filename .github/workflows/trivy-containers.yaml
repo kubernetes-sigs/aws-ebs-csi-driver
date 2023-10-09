@@ -14,7 +14,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - id: set-matrix
         uses: mikefarah/yq@master
@@ -31,7 +31,7 @@ jobs:
     
     steps:
       - name: Scan container image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.12.0
         with:
           image-ref: '${{ matrix.image }}'
           output: 'results.sarif'
