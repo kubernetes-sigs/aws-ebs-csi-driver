@@ -284,7 +284,7 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
-				VolumeContext:     map[string]string{INodeSizeKey: "256"},
+				VolumeContext:     map[string]string{InodeSizeKey: "256"},
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
@@ -307,7 +307,7 @@ func TestNodeStageVolume(t *testing.T) {
 					},
 				},
 				VolumeId:      volumeID,
-				VolumeContext: map[string]string{INodeSizeKey: "256"},
+				VolumeContext: map[string]string{InodeSizeKey: "256"},
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
@@ -321,7 +321,7 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
-				VolumeContext:     map[string]string{BytesPerINodeKey: "8192"},
+				VolumeContext:     map[string]string{BytesPerInodeKey: "8192"},
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
@@ -335,7 +335,7 @@ func TestNodeStageVolume(t *testing.T) {
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
-				VolumeContext:     map[string]string{NumberOfINodesKey: "13107200"},
+				VolumeContext:     map[string]string{NumberOfInodesKey: "13107200"},
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)

@@ -35,15 +35,15 @@ var (
 			CreateVolumeParameterValue: "1024",
 		},
 		{
-			CreateVolumeParameterKey:   ebscsidriver.INodeSizeKey,
+			CreateVolumeParameterKey:   ebscsidriver.InodeSizeKey,
 			CreateVolumeParameterValue: "512",
 		},
 		{
-			CreateVolumeParameterKey:   ebscsidriver.BytesPerINodeKey,
+			CreateVolumeParameterKey:   ebscsidriver.BytesPerInodeKey,
 			CreateVolumeParameterValue: "8192",
 		},
 		{
-			CreateVolumeParameterKey:   ebscsidriver.NumberOfINodesKey,
+			CreateVolumeParameterKey:   ebscsidriver.NumberOfInodesKey,
 			CreateVolumeParameterValue: "200192",
 		},
 	}

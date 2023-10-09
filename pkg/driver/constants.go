@@ -85,14 +85,14 @@ const (
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
 
-	// INodeSizeKey configures the inode size when formatting a volume
-	INodeSizeKey = "inodesize"
+	// InodeSizeKey configures the inode size when formatting a volume
+	InodeSizeKey = "inodesize"
 
-	// BytesPerINodeKey configures the `bytes-per-inode` when formatting a volume
-	BytesPerINodeKey = "bytesperinode"
+	// BytesPerInodeKey configures the `bytes-per-inode` when formatting a volume
+	BytesPerInodeKey = "bytesperinode"
 
-	// NumberOfINodesKey configures the `number-of-inodes` when formatting a volume
-	NumberOfINodesKey = "numberofinodes"
+	// NumberOfInodesKey configures the `number-of-inodes` when formatting a volume
+	NumberOfInodesKey = "numberofinodes"
 
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
@@ -198,16 +198,16 @@ var (
 		},
 		FSTypeXfs: {
 			NotSupportedParams: map[string]struct{}{
-				BytesPerINodeKey:  {},
-				NumberOfINodesKey: {},
+				BytesPerInodeKey:  {},
+				NumberOfInodesKey: {},
 			},
 		},
 		FSTypeNtfs: {
 			NotSupportedParams: map[string]struct{}{
 				BlockSizeKey:      {},
-				INodeSizeKey:      {},
-				BytesPerINodeKey:  {},
-				NumberOfINodesKey: {},
+				InodeSizeKey:      {},
+				BytesPerInodeKey:  {},
+				NumberOfInodesKey: {},
 			},
 		},
 	}
