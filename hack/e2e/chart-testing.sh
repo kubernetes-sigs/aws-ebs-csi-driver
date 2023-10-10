@@ -10,6 +10,5 @@ function ct_install() {
     curl --silent --location "${CHART_TESTING_DOWNLOAD_URL}" | tar xz -C "${INSTALL_PATH}"
     chmod +x "${INSTALL_PATH}"/ct
   fi
-
-  python3 -m pip install yamllint yamale
+  apt-get update && apt-get install -y yamllint
 }
