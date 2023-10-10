@@ -32,7 +32,7 @@ jobs:
             }
 
       - name: 'Determine source PR'
-        uses: potiuk/get-workflow-origin@v1_1
+        uses: potiuk/get-workflow-origin@08219db9dbbbec802d571eaf0e14ece0bc005f72
         id: source-run-info
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Create or update comment
-        uses: edumserrano/find-create-or-update-comment@v1
+        uses: edumserrano/find-create-or-update-comment@60a62b88d02efeb2c405e578d3a2b47ea0b230b1
         with:
           issue-number: ${{ steps.source-run-info.outputs.pullRequestNumber }}
           body-includes: '<!-- pr-coverage -->'
