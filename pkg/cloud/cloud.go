@@ -245,7 +245,6 @@ var _ Cloud = &cloud{}
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
 func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Cloud, error) {
-	RegisterMetrics()
 	return newEC2Cloud(region, awsSdkDebugLog, userAgentExtra)
 }
 

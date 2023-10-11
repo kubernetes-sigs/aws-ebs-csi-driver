@@ -18,16 +18,14 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	logsapi "k8s.io/component-base/logs/api/v1"
 	json "k8s.io/component-base/logs/json"
-	"k8s.io/component-base/metrics/legacyregistry"
 
 	"k8s.io/klog/v2"
 )
@@ -58,17 +56,9 @@ func main() {
 		}()
 	}
 
-	cloud.RegisterMetrics()
 	if options.ServerOptions.HttpEndpoint != "" {
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", legacyregistry.HandlerWithReset())
-		go func() {
-			err := http.ListenAndServe(options.ServerOptions.HttpEndpoint, mux)
-			if err != nil {
-				klog.ErrorS(err, "failed to listen & serve metrics", "endpoint", options.ServerOptions.HttpEndpoint)
-				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-			}
-		}()
+		r := metrics.InitializeRecorder()
+		r.InitializeMetricsHandler(options.ServerOptions.HttpEndpoint, "/metrics")
 	}
 
 	drv, err := driver.NewDriver(
