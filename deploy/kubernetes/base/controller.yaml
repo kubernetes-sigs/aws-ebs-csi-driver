@@ -151,6 +151,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          ports:
         - name: csi-attacher
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.3.0-eks-1-28-4
           imagePullPolicy: IfNotPresent
@@ -173,6 +174,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          ports:
         - name: csi-snapshotter
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.2.2-eks-1-28-4
           imagePullPolicy: IfNotPresent
@@ -195,6 +197,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          ports:
         - name: csi-resizer
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.8.0-eks-1-28-4
           imagePullPolicy: IfNotPresent
@@ -218,6 +221,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          ports:
         - name: liveness-probe
           image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.10.0-eks-1-28-4
           imagePullPolicy: IfNotPresent

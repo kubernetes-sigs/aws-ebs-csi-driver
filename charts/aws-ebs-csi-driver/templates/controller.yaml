@@ -212,6 +212,9 @@ spec:
             {{- range .Values.sidecars.provisioner.additionalArgs }}
             - {{ . }}
             {{- end }}
+            {{- if .Values.controller.enableMetrics }}
+            - --http-endpoint=0.0.0.0:3302
+            {{- end}}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -236,6 +239,12 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          ports:
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3302
+              protocol: TCP
+            {{- end}}
         - name: csi-attacher
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
@@ -257,6 +266,9 @@ spec:
             {{- range .Values.sidecars.attacher.additionalArgs }}
             - {{ . }}
             {{- end }}
+            {{- if .Values.controller.enableMetrics }}
+            - --http-endpoint=0.0.0.0:3303
+            {{- end}}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -281,6 +293,12 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          ports:
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3303
+              protocol: TCP
+            {{- end}}
         {{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
@@ -294,6 +312,9 @@ spec:
             {{- range .Values.sidecars.snapshotter.additionalArgs }}
             - {{ . }}
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) }}
+            - --http-endpoint=0.0.0.0:3304
+            {{- end}}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -318,6 +339,12 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          ports:
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3304
+              protocol: TCP
+            {{- end}}
         {{- end }}
         {{- if (.Values.controller.volumeModificationFeature).enabled }}
         - name: volumemodifier
@@ -396,6 +423,9 @@ spec:
             {{- range .Values.sidecars.resizer.additionalArgs }}
             - {{ . }}
             {{- end }}
+            {{- if .Values.controller.enableMetrics }}
+            - --http-endpoint=0.0.0.0:3305
+            {{- end}}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -420,6 +450,12 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          ports:
+            {{- if .Values.controller.enableMetrics }}
+            - name: metrics
+              containerPort: 3305
+              protocol: TCP
+            {{- end}}
         - name: liveness-probe
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
