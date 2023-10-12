@@ -29,22 +29,37 @@ import (
 var (
 	testedFsTypes = []string{ebscsidriver.FSTypeExt4}
 
-	formatOptionTests = []testsuites.FormatOptionTest{
-		{
-			CreateVolumeParameterKey:   ebscsidriver.BlockSizeKey,
-			CreateVolumeParameterValue: "1024",
+	formatOptionTests = map[string]testsuites.FormatOptionTest{
+		ebscsidriver.BlockSizeKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.BlockSizeKey: "1024",
+			},
 		},
-		{
-			CreateVolumeParameterKey:   ebscsidriver.InodeSizeKey,
-			CreateVolumeParameterValue: "512",
+		ebscsidriver.InodeSizeKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.InodeSizeKey: "512",
+			},
 		},
-		{
-			CreateVolumeParameterKey:   ebscsidriver.BytesPerInodeKey,
-			CreateVolumeParameterValue: "8192",
+		ebscsidriver.BytesPerInodeKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.BytesPerInodeKey: "8192",
+			},
 		},
-		{
-			CreateVolumeParameterKey:   ebscsidriver.NumberOfInodesKey,
-			CreateVolumeParameterValue: "200192",
+		ebscsidriver.NumberOfInodesKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.NumberOfInodesKey: "200192",
+			},
+		},
+		ebscsidriver.Ext4BigAllocKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.Ext4BigAllocKey: "true",
+			},
+		},
+		ebscsidriver.Ext4ClusterSizeKey: {
+			CreateVolumeParameters: map[string]string{
+				ebscsidriver.Ext4BigAllocKey:    "true",
+				ebscsidriver.Ext4ClusterSizeKey: "16384",
+			},
 		},
 	}
 )
@@ -67,13 +82,13 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 
 	for _, fsType := range testedFsTypes {
 		Context(fmt.Sprintf("using an %s filesystem", fsType), func() {
-			for _, formatOptionTestCase := range formatOptionTests {
+			for testedParameter, formatOptionTestCase := range formatOptionTests {
 				formatOptionTestCase := formatOptionTestCase
-				if fsTypeDoesNotSupportFormatOptionParameter(fsType, formatOptionTestCase.CreateVolumeParameterKey) {
+				if fsTypeDoesNotSupportFormatOptionParameter(fsType, testedParameter) {
 					continue
 				}
 
-				Context(fmt.Sprintf("with a custom %s parameter", formatOptionTestCase.CreateVolumeParameterKey), func() {
+				Context(fmt.Sprintf("with a custom %s parameter", testedParameter), func() {
 					It("successfully mounts and is resizable", func() {
 						formatOptionTestCase.Run(cs, ns, ebsDriver, fsType)
 					})

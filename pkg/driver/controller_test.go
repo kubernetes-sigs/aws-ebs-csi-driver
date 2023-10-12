@@ -1689,6 +1689,21 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			errExpected: false,
 		},
 		{
+			name: "success with ext4 big alloc option",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey: "true",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with ext4 bigalloc option and custom cluster size",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "true",
+				Ext4ClusterSizeKey: "16384",
+			},
+			errExpected: false,
+		},
+		{
 			name: "failure with block size",
 			formattingOptionParameters: map[string]string{
 				BlockSizeKey: "wrong_value",
@@ -1713,6 +1728,22 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			name: "failure with number-of-inodes",
 			formattingOptionParameters: map[string]string{
 				NumberOfInodesKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with ext4 custom cluster size",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "true",
+				Ext4ClusterSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with ext4 bigalloc option and cluster size mismatch",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "false",
+				Ext4ClusterSizeKey: "16384",
 			},
 			errExpected: true,
 		},

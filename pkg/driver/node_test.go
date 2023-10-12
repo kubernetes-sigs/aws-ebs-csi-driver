@@ -343,6 +343,34 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc"}))
+			},
+		},
+		{
+			name: "success with custom cluster size and bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true", Ext4ClusterSizeKey: "16384"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc", "-C", "16384"}))
+			},
+		},
+		{
 			name: "fail no VolumeId",
 			request: &csi.NodeStageVolumeRequest{
 				PublishContext:    map[string]string{DevicePathKey: devicePath},
