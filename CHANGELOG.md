@@ -1,3 +1,16 @@
+# v1.24.0
+### Notable Changes
+* Support clustered allocation with ext4 filesystems. This allows developers to enable [torn write prevention](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/storage-twp.html) on their dynamically provisioned volumes to improve the performance of I/O-intensive relational database workloads. ([#1706](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1706), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add volume limits for m7a, c7a, c7i, r7a, r7iz instance families ([#1742](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1742) & [#1776](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1776), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Fix DeleteDisk error handling in volume creation failure ([#1782](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1782), [@maaoBit](https://github.com/maaoBit))
+
+### Improvements
+* Document topologies in parameters.md ([#1764](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1764), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade dependencies ([#1781](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1781), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Metric Instrumentation Framework ([#1767](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1767), [@torredil](https://github.com/torredil))
+
 # v1.23.1
 ### Bug Fixes
 * Upgrade volume-modifier-for-k8s sidecar to 0.1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
