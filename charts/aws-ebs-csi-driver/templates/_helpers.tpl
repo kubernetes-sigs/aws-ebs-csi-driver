@@ -64,7 +64,7 @@ Convert the `--extra-tags` command line arg from a map.
 */}}
 {{- define "aws-ebs-csi-driver.extra-volume-tags" -}}
 {{- $result := dict "pairs" (list) -}}
-{{- range $key, $value := .Values.controller.extraVolumeTags -}}
+{{- range $key, $value := (.Values.controller).extraVolumeTags -}}
 {{- $noop := printf "%s=%v" $key $value | append $result.pairs | set $result "pairs" -}}
 {{- end -}}
 {{- if gt (len $result.pairs) 0 -}}
@@ -77,9 +77,9 @@ Handle http proxy env vars
 */}}
 {{- define "aws-ebs-csi-driver.http-proxy" -}}
 - name: HTTP_PROXY
-  value: {{ .Values.proxy.http_proxy | quote }}
+  value: {{ (.Values.proxy).http_proxy | quote }}
 - name: HTTPS_PROXY
-  value: {{ .Values.proxy.http_proxy | quote }}
+  value: {{ (.Values.proxy).http_proxy | quote }}
 - name: NO_PROXY
-  value: {{ .Values.proxy.no_proxy | quote }}
+  value: {{ (.Values.proxy).no_proxy | quote }}
 {{- end -}}

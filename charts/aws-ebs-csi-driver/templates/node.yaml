@@ -9,6 +9,5 @@
     "node" (deepCopy $.Values.node | mustMerge $values)
   )
 }}
----
 {{- include "node" (deepCopy $ | mustMerge $args) -}}
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.controller.enableMetrics -}}
+{{- if (.Values.controller).enableMetrics -}}
 ---
 apiVersion: v1
 kind: Service
@@ -16,7 +16,7 @@ spec:
       targetPort: 3301
   type: ClusterIP
 ---
-{{- if or .Values.controller.serviceMonitor.forceEnable (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+{{- if or ((.Values.controller).serviceMonitor).forceEnable (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -24,8 +24,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: ebs-csi-controller
-    {{- if .Values.controller.serviceMonitor.labels }}
-    {{- toYaml .Values.controller.serviceMonitor.labels | nindent 4 }}
+    {{- with ((.Values.controller).serviceMonitor).labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
+    release: prometheus
     {{- end }}
 spec:
   selector:

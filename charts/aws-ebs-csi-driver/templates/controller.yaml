@@ -7,10 +7,15 @@ metadata:
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.controller.replicaCount }}
-  {{- with .Values.controller.updateStrategy }}
+  replicas: {{ (default 2 (.Values.controller).replicaCount) }}
+  {{- with (.Values.controller).updateStrategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
+  {{- else }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   {{- end }}
   selector:
     matchLabels:
@@ -21,83 +26,110 @@ spec:
       labels:
         app: ebs-csi-controller
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
-        {{- if .Values.controller.podLabels }}
-        {{- toYaml .Values.controller.podLabels | nindent 8 }}
+        {{- if (.Values.controller).podLabels }}
+        {{- toYaml (.Values.controller).podLabels | nindent 8 }}
         {{- end }}
-      {{- if .Values.controller.podAnnotations }}
+      {{- if (.Values.controller).podAnnotations }}
       annotations:
-        {{- tpl ( .Values.controller.podAnnotations | toYaml ) . | nindent 8 }}
+        {{- tpl ( (.Values.controller).podAnnotations | toYaml ) . | nindent 8 }}
       {{- end }}
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-        {{- with .Values.controller.nodeSelector }}
+        {{- with (.Values.controller).nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ .Values.controller.serviceAccount.name }}
-      priorityClassName: {{ .Values.controller.priorityClassName }}
-      {{- with default .Values.controller.affinity }}
+      serviceAccountName: {{ default "ebs-csi-controller-sa" ((.Values.controller).serviceAccount).name }}
+      priorityClassName: {{ default "system-cluster-critical" (.Values.controller).priorityClassName }}
+      {{- with (.Values.controller).affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
+      {{- else }}
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                - fargate
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - ebs-csi-controller
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       {{- end }}
+      {{- with (.Values.controller).tolerations }}
       tolerations:
-        {{- with .Values.controller.tolerations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
-      {{- if .Values.controller.topologySpreadConstraints }}
+      {{- else }}
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+          tolerationSeconds: 300
+      {{- end }}
+      {{- if (.Values.controller).topologySpreadConstraints }}
       {{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( dict "app" "ebs-csi-controller" ) ) }}
       {{- $constraints := list }}
-      {{- range .Values.controller.topologySpreadConstraints }}
+      {{- range (.Values.controller).topologySpreadConstraints }}
         {{- $constraints = mustAppend $constraints (mergeOverwrite . $tscLabelSelector) }}
       {{- end }}
       topologySpreadConstraints:
         {{- $constraints | toYaml | nindent 8 }}
       {{- end }}
-      {{- with .Values.controller.securityContext }}
+      {{- with (.Values.controller).securityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
+      {{- else }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       {{- end }}
-      {{- with .Values.controller.initContainers }}
+      {{- with (.Values.controller).initContainers }}
       initContainers:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver" (.Values.image).repository) (toString (default (printf "v%s" .Chart.AppVersion) (.Values.image).tag)) }}
+          imagePullPolicy: {{ default "IfNotPresent" (.Values.image).pullPolicy }}
           args:
-            {{- if ne .Release.Name "kustomize" }}
             - controller
-            {{- else }}
-            # - {all,controller,node} # specify the driver mode
-            {{- end }}
             - --endpoint=$(CSI_ENDPOINT)
-            {{- if .Values.controller.extraVolumeTags }}
+            {{- if (.Values.controller).extraVolumeTags }}
               {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
             {{- end }}
-            {{- with (tpl (default "" .Values.controller.k8sTagClusterId) . )  }}
+            {{- with (tpl (default "" (.Values.controller).k8sTagClusterId) . )  }}
             - --k8s-tag-cluster-id={{ . }}
             {{- end }}
-            {{- if and (.Values.controller.enableMetrics) (not .Values.controller.httpEndpoint) }}
+            {{- if and ((.Values.controller).enableMetrics) (not (.Values.controller).httpEndpoint) }}
             - --http-endpoint=0.0.0.0:3301
             {{- end}}
-            {{- with .Values.controller.httpEndpoint }}
+            {{- with (.Values.controller).httpEndpoint }}
             - --http-endpoint={{ . }}
             {{- end }}
-            {{- if .Values.controller.sdkDebugLog }}
+            {{- if (.Values.controller).sdkDebugLog }}
             - --aws-sdk-debug-log=true
             {{- end}}
-            {{- with .Values.controller.loggingFormat }}
-            - --logging-format={{ . }}
-            {{- end }}
-            {{- with .Values.controller.userAgentExtra }}
-            - --user-agent-extra={{ . }}
-            {{- end }}
-            {{- if .Values.controller.otelTracing }}
+            - --logging-format={{ default "text" (.Values.controller).loggingFormat }}
+            - --user-agent-extra={{ default "helm" (.Values.controller).userAgentExtra }}
+            {{- if (.Values.controller).otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
-            - --v={{ .Values.controller.logLevel }}
-            {{- range .Values.controller.additionalArgs }}
+            - --v={{ default "2" (.Values.controller).logLevel }}
+            {{- range (.Values.controller).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
@@ -107,57 +139,55 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            {{- with .Values.awsAccessSecret }}
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .keyId }}
+                  name: {{ default "aws-secret" (.Values.awsAccessSecret).name }}
+                  key: {{ default "key_id" (.Values.awsAccessSecret).keyId }}
                   optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .accessKey }}
+                  name: {{ default "aws-secret" (.Values.awsAccessSecret).name }}
+                  key: {{ default "key_id" (.Values.awsAccessSecret).accessKey }}
                   optional: true
-            {{- end }}
             - name: AWS_EC2_ENDPOINT
               valueFrom:
                 configMapKeyRef:
                   name: aws-meta
                   key: endpoint
                   optional: true
-            {{- with .Values.controller.region }}
+            {{- with (.Values.controller).region }}
             - name: AWS_REGION
               value: {{ . }}
             {{- end }}
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.env }}
+            {{- with (.Values.controller).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-            {{- with .Values.controller.otelTracing }}
+            {{- with (.Values.controller).otelTracing }}
             - name: OTEL_SERVICE_NAME
               value: {{ .otelServiceName }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .otelExporterEndpoint }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with .Values.controller.volumeMounts }}
+          {{- with (.Values.controller).volumeMounts }}
           {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
             - name: healthz
               containerPort: 9808
               protocol: TCP
-            {{- if .Values.controller.enableMetrics }}
+            {{- if (.Values.controller).enableMetrics }}
             - name: metrics
               containerPort: 3301
               protocol: TCP
@@ -178,167 +208,211 @@ spec:
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: 5
-          {{- with .Values.controller.resources }}
+          {{- with (.Values.controller).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.controller.containerSecurityContext }}
+          {{- with (.Values.controller).containerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
         - name: csi-provisioner
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner" (((.Values.sidecars).provisioner).image).repository) (default "v3.5.0-eks-1-28-6" (((.Values.sidecars).provisioner).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).provisioner).image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
-            - --v={{ .Values.sidecars.provisioner.logLevel }}
+            - --v={{ default "2" ((.Values.sidecars).provisioner).logLevel }}
             - --feature-gates=Topology=true
-            {{- if .Values.controller.extraCreateMetadata }}
+            {{- if default true (.Values.controller).extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
-            - --leader-election={{ .Values.sidecars.provisioner.leaderElection.enabled | required "leader election state for csi-provisioner is required, must be set to true || false." }}
-            {{- if .Values.sidecars.provisioner.leaderElection.enabled }}
-            {{- if .Values.sidecars.provisioner.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.provisioner.leaderElection.leaseDuration }}
+            - --leader-election={{ default true (((.Values.sidecars).provisioner).leaderElection).enabled }}
+            {{- if default true (((.Values.sidecars).provisioner).leaderElection).enabled }}
+            {{- with (((.Values.sidecars).provisioner).leaderElection).leaseDuration }}
+            - --leader-election-lease-duration={{ ((.Values.sidecars).provisioner).leaderElection.leaseDuration }}
             {{- end }}
-            {{- if .Values.sidecars.provisioner.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.provisioner.leaderElection.renewDeadline }}
+            {{- with (((.Values.sidecars).provisioner).leaderElection).renewDeadline}}
+            - --leader-election-renew-deadline={{ ((.Values.sidecars).provisioner).leaderElection.renewDeadline }}
             {{- end }}
-            {{- if .Values.sidecars.provisioner.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.provisioner.leaderElection.retryPeriod }}
+            {{- with (((.Values.sidecars).provisioner).leaderElection).retryPeriod }}
+            - --leader-election-retry-period={{ ((.Values.sidecars).provisioner).leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
-            - --default-fstype={{ .Values.controller.defaultFsType }}
-            {{- range .Values.sidecars.provisioner.additionalArgs }}
+            - --default-fstype={{ default "ext4" (.Values.controller).defaultFsType }}
+            {{- range ((.Values.sidecars).provisioner).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.provisioner.env }}
+            {{- with ((.Values.sidecars).provisioner).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with default .Values.controller.resources .Values.sidecars.provisioner.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).provisioner).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.provisioner.securityContext }}
+          {{- with ((.Values.sidecars).provisioner).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
         - name: csi-attacher
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/eks-distro/kubernetes-csi/external-attacher" (((.Values.sidecars).attacher).image).repository) (default "v4.4.0-eks-1-28-6" (((.Values.sidecars).attacher).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).attacher).image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
-            - --v={{ .Values.sidecars.attacher.logLevel }}
-            - --leader-election={{ .Values.sidecars.attacher.leaderElection.enabled | required "leader election state for csi-attacher is required, must be set to true || false." }}
-            {{- if .Values.sidecars.attacher.leaderElection.enabled }}
-            {{- if .Values.sidecars.attacher.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.attacher.leaderElection.leaseDuration }}
+            - --v={{ default "2" ((.Values.sidecars).attacher).logLevel }}
+            - --leader-election={{ default true (((.Values.sidecars).attacher).leaderElection).enabled }}
+            {{- if default true (((.Values.sidecars).attacher).leaderElection).enabled }}
+            {{- with (((.Values.sidecars).attacher).leaderElection).leaseDuration }}
+            - --leader-election-lease-duration={{ ((.Values.sidecars).attacher).leaderElection.leaseDuration }}
             {{- end }}
-            {{- if .Values.sidecars.attacher.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.attacher.leaderElection.renewDeadline }}
+            {{- with (((.Values.sidecars).attacher).leaderElection).renewDeadline}}
+            - --leader-election-renew-deadline={{ ((.Values.sidecars).attacher).leaderElection.renewDeadline }}
             {{- end }}
-            {{- if .Values.sidecars.attacher.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
+            {{- with (((.Values.sidecars).attacher).leaderElection).retryPeriod }}
+            - --leader-election-retry-period={{ ((.Values.sidecars).attacher).leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
-            {{- range .Values.sidecars.attacher.additionalArgs }}
+            {{- range ((.Values.sidecars).attacher).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.attacher.env }}
+            {{- with ((.Values.sidecars).attacher).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with default .Values.controller.resources .Values.sidecars.attacher.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).attacher).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.attacher.securityContext }}
+          {{- with ((.Values.sidecars).attacher).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
-        {{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
+        {{- if or ((.Values.sidecars).snapshotter).forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.snapshotter.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter" (((.Values.sidecars).snapshotter).image).repository) (default "v6.3.0-eks-1-28-6" (((.Values.sidecars).snapshotter).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).snapshotter).image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
-            {{- if .Values.controller.extraCreateMetadata }}
+            {{- if default true (.Values.controller).extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
-            {{- range .Values.sidecars.snapshotter.additionalArgs }}
+            {{- range ((.Values.sidecars).snapshotter).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.snapshotter.env }}
+            {{- with ((.Values.sidecars).snapshotter).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with default .Values.controller.resources .Values.sidecars.snapshotter.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).snapshotter).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.snapshotter.securityContext }}
+          {{- with ((.Values.sidecars).snapshotter).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
         {{- end }}
-        {{- if (.Values.controller.volumeModificationFeature).enabled }}
+        {{- if ((.Values.controller).volumeModificationFeature).enabled }}
         - name: volumemodifier
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.volumemodifier.image.repository .Values.sidecars.volumemodifier.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.volumemodifier.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s" (((.Values.sidecars).volumemodifier).image).repository) (default "v0.1.3" (((.Values.sidecars).volumemodifier).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).volumemodifier).image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
-            - --v={{ .Values.sidecars.volumemodifier.logLevel }}
-            - --leader-election={{ .Values.sidecars.volumemodifier.leaderElection.enabled | required "leader election state for csi-volumemodifier is required, must be set to true || false." }}
-            {{- if .Values.sidecars.volumemodifier.leaderElection.enabled }}
-            {{- if .Values.sidecars.volumemodifier.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.volumemodifier.leaderElection.leaseDuration }}
+            - --v={{ default "2" ((.Values.sidecars).volumemodifier).logLevel }}
+            - --leader-election={{ default true (((.Values.sidecars).volumemodifier).leaderElection).enabled }}
+            {{- if default true (((.Values.sidecars).volumemodifier).leaderElection).enabled }}
+            {{- with (((.Values.sidecars).volumemodifier).leaderElection).leaseDuration }}
+            - --leader-election-lease-duration={{ ((.Values.sidecars).volumemodifier).leaderElection.leaseDuration }}
             {{- end }}
-            {{- if .Values.sidecars.volumemodifier.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.volumemodifier.leaderElection.renewDeadline }}
+            {{- with (((.Values.sidecars).volumemodifier).leaderElection).renewDeadline}}
+            - --leader-election-renew-deadline={{ ((.Values.sidecars).volumemodifier).leaderElection.renewDeadline }}
             {{- end }}
-            {{- if .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
+            {{- with (((.Values.sidecars).volumemodifier).leaderElection).retryPeriod }}
+            - --leader-election-retry-period={{ ((.Values.sidecars).volumemodifier).leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
-            {{- range .Values.sidecars.volumemodifier.additionalArgs }}
+            {{- range ((.Values.sidecars).volumemodifier).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
@@ -352,96 +426,129 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.volumemodifier.env }}
+            {{- with ((.Values.sidecars).volumemodifier).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with default .Values.controller.resources .Values.sidecars.volumemodifier.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).volumemodifier).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.volumemodifier.securityContext }}
+          {{- with ((.Values.sidecars).volumemodifier).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
         {{- end }}
         - name: csi-resizer
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/eks-distro/kubernetes-csi/external-resizer" (((.Values.sidecars).resizer).image).repository) (default "v1.9.0-eks-1-28-6" (((.Values.sidecars).resizer).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).resizer).image.pullPolicy }}
           args:
             - --csi-address=$(ADDRESS)
-            - --v={{ .Values.sidecars.resizer.logLevel }}
+            - --v={{ default "2" ((.Values.sidecars).resizer).logLevel }}
             - --handle-volume-inuse-error=false
-            {{- with .Values.sidecars.resizer.leaderElection }}
-            - --leader-election={{ .enabled | default true }}
-            {{- if .leaseDuration }}
-            - --leader-election-lease-duration={{ .leaseDuration }}
+            - --leader-election={{ default true (((.Values.sidecars).resizer).leaderElection).enabled }}
+            {{- if default true (((.Values.sidecars).resizer).leaderElection).enabled }}
+            {{- with (((.Values.sidecars).resizer).leaderElection).leaseDuration }}
+            - --leader-election-lease-duration={{ ((.Values.sidecars).resizer).leaderElection.leaseDuration }}
             {{- end }}
-            {{- if .renewDeadline }}
-            - --leader-election-renew-deadline={{ .renewDeadline }}
+            {{- with (((.Values.sidecars).resizer).leaderElection).renewDeadline}}
+            - --leader-election-renew-deadline={{ ((.Values.sidecars).resizer).leaderElection.renewDeadline }}
             {{- end }}
-            {{- if .retryPeriod }}
-            - --leader-election-retry-period={{ .retryPeriod }}
+            {{- with (((.Values.sidecars).resizer).leaderElection).retryPeriod }}
+            - --leader-election-retry-period={{ ((.Values.sidecars).resizer).leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
-            {{- range .Values.sidecars.resizer.additionalArgs }}
+            {{- range ((.Values.sidecars).resizer).additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            {{- if .Values.proxy.http_proxy }}
+            {{- if (.Values.proxy).http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.resizer.env }}
+            {{- with ((.Values.sidecars).resizer).env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-          {{- with default .Values.controller.resources .Values.sidecars.resizer.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).resizer).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.resizer.securityContext }}
+          {{- with ((.Values.sidecars).resizer).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
         - name: liveness-probe
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" (.Values.image).containerRegistry) (default "public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe" (((.Values.sidecars).livenessProbe).image).repository) (default "v2.10.0-eks-1-28-6" (((.Values.sidecars).livenessProbe).image).tag) }}
+          imagePullPolicy: {{ default (default "IfNotPresent" (.Values.image).pullPolicy) ((.Values.sidecars).livenessProbe).image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
-            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
+            {{- range ((.Values.sidecars).livenessProbe).additionalArgs }}
             - {{ . }}
             {{- end }}
-          {{- with .Values.controller.envFrom }}
+          {{- with (.Values.controller).envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-          {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
+          {{- with default (.Values.controller).resources ((.Values.sidecars).livenessProbe).resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 40Mi
+            limits:
+              memory: 256Mi
           {{- end }}
-          {{- with .Values.sidecars.livenessProbe.securityContext }}
+          {{- with ((.Values.sidecars).livenessProbe).securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
           {{- end }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -452,6 +559,6 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir: {}
-        {{- with .Values.controller.volumes }}
+        {{- with (.Values.controller).volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
