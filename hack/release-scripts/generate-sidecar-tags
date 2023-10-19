@@ -1,0 +1,87 @@
+#!/bin/bash
+# This script generates the sidecar image tags in `deploy/kubernetes/overlays/stable/gcr/kustomization.yaml`and
+# `charts/aws-ebs-csi-driver/values.yaml` based off of the values in `hack/release-scripts/image-source-of-truth.yaml`
+
+# --- Environment Variables
+export ROOT_DIRECTORY TRUTH_FILEPATH HELM_VALUES_FILEPATH KUSTOMIZE_FILEPATH
+ROOT_DIRECTORY=${ROOT_DIRECTORY:=$(git rev-parse --show-toplevel)}
+TRUTH_FILEPATH=${TRUTH_FILEPATH:="$ROOT_DIRECTORY/hack/release-scripts/image-source-of-truth.yaml"}
+HELM_VALUES_FILEPATH=${HELM_VALUES_FILEPATH:="$ROOT_DIRECTORY/charts/aws-ebs-csi-driver/values.yaml"}
+KUSTOMIZE_FILEPATH=${KUSTOMIZE_FILEPATH:="$ROOT_DIRECTORY/deploy/kubernetes/overlays/stable/gcr/kustomization.yaml"}
+
+tmp_filename="tmp_$RANDOM.txt"
+
+# --- Script Tools
+set -euo pipefail # Exit on any error
+
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("yq" "git")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+}
+
+error_handler() {
+  printf "Error occurred in script: %s, at line: %s. Command: %s. Error: %s\n" "$1" "$2" "$BASH_COMMAND" "$3" >&2
+  exit 1
+}
+
+trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
+
+# --- Script
+trap 'rm $tmp_filename' EXIT
+
+update_gcr_kustomize_sidecar_tag () {
+  sidecar_name=$1
+  line_above=$2
+
+  tag=$(yq ".sidecars.$sidecar_name.tag" "$TRUTH_FILEPATH" | awk -F- '{print $1}') # Cut off -eks-1... off of tag
+  log "Updating gcr kustomize $sidecar_name to $tag"
+  sed -i "" "\|$line_above|{n;s/.*/    newTag: $tag/;}" "$KUSTOMIZE_FILEPATH"
+}
+
+update_helm_chart_sidecar_tag () {
+  sidecar_name=$1
+
+  export TAG
+  TAG=$(yq ".sidecars.$sidecar_name.tag" "$TRUTH_FILEPATH")
+  log "Updating helm $sidecar_name sidecar to $TAG"
+  yq ".sidecars.$sidecar_name.image.tag = env(TAG)" -i "$HELM_VALUES_FILEPATH"
+}
+
+generate_gcr_kustomize () {
+    update_gcr_kustomize_sidecar_tag "provisioner" "newName: registry.k8s.io/sig-storage/csi-provisioner"
+    update_gcr_kustomize_sidecar_tag "attacher" "newName: registry.k8s.io/sig-storage/csi-attacher"
+    update_gcr_kustomize_sidecar_tag "livenessProbe" "newName: registry.k8s.io/sig-storage/livenessprobe"
+    update_gcr_kustomize_sidecar_tag "snapshotter" "newName: registry.k8s.io/sig-storage/csi-snapshotter"
+    update_gcr_kustomize_sidecar_tag "resizer" "newName: registry.k8s.io/sig-storage/csi-resizer"
+    update_gcr_kustomize_sidecar_tag "nodeDriverRegistrar" "newName: registry.k8s.io/sig-storage/csi-node-driver-registrar"
+
+    log "Success: All sidecar tags in $KUSTOMIZE_FILEPATH updated"
+}
+
+generate_helm_sidecars () {
+    yq '.sidecars | keys | .[]' "$TRUTH_FILEPATH" > $tmp_filename
+
+    for sidecar in $(cat $tmp_filename)
+         do
+           update_helm_chart_sidecar_tag "$sidecar"
+         done
+
+    log "Success: All sidecar tags in $HELM_VALUES_FILEPATH updated"
+}
+
+main () {
+  generate_gcr_kustomize
+  generate_helm_sidecars
+}
+
+main

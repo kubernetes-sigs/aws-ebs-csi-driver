@@ -271,4 +271,11 @@ generate-kustomize: bin/helm
 
 .PHONY: update-truth-sidecars
 update-truth-sidecars: hack/release-scripts/image-source-of-truth.yaml hack/release-scripts/update-truth-sidecars
-	hack/release-scripts/update-truth-sidecars
+	./hack/release-scripts/update-truth-sidecars
+
+.PHONY: generate-sidecar-tags
+generate-sidecar-tags: hack/release-scripts/image-source-of-truth.yaml charts/aws-ebs-csi-driver/values.yaml deploy/kubernetes/overlays/stable/gcr/kustomization.yaml hack/release-scripts/generate-sidecar-tags
+	./hack/release-scripts/generate-sidecar-tags
+
+.PHONY: update-sidecar-dependencies
+update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags generate-kustomize
