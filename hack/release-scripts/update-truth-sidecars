@@ -1,0 +1,68 @@
+#!/bin/bash
+# This script updates the image-source-of-truth.yaml with the latest tags and associated manifest digests for each sidecar image.
+
+# --- Environment Variables
+export ROOT_DIRECTORY TRUTH_FILEPATH
+ROOT_DIRECTORY=${ROOT_DIRECTORY:=$(git rev-parse --show-toplevel)}
+TRUTH_FILEPATH=${TRUTH_FILEPATH:="$ROOT_DIRECTORY/hack/release-scripts/image-source-of-truth.yaml"}
+
+tmp_filename="tmp_$RANDOM.txt"
+# --- Script Tools
+set -euo pipefail # Exit on any error
+
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("yq" "git" "crane")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+}
+
+error_handler() {
+  printf "Error occurred in script: %s, at line: %s. Command: %s. Error: %s\n" "$1" "$2" "$BASH_COMMAND" "$3" >&2
+  exit 1
+}
+
+trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
+
+# --- Script
+trap 'rm $tmp_filename' EXIT
+
+crane_get_latest_image_tag() {
+  image=$1
+
+  export TAG
+  TAG=$(crane ls "$image" | sed '/latest/d' | sort -V | tail -1)  # Get tag for $image with latest semvar
+}
+
+update_sidecars_source_of_truth () {
+  yq '.sidecars | keys | .[]' "$TRUTH_FILEPATH" > $tmp_filename
+
+  for sidecar in $(cat $tmp_filename)
+       do
+         log "Updating $sidecar in $TRUTH_FILEPATH"
+         image=$(yq ".sidecars.$sidecar.image" "$TRUTH_FILEPATH")
+
+         export TAG
+         crane_get_latest_image_tag "$image"
+         yq ".sidecars.$sidecar.tag = env(TAG)" -i "$TRUTH_FILEPATH"
+
+         export DIGEST
+         DIGEST=$(crane digest "$image:$TAG")
+         yq ".sidecars.$sidecar.manifestDigest = env(DIGEST)" -i "$TRUTH_FILEPATH"
+       done
+}
+
+main () {
+  check_dependencies
+  update_sidecars_source_of_truth
+}
+
+main

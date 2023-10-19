@@ -268,3 +268,7 @@ generate-kustomize: bin/helm
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/role-leases.yaml
 	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/rolebinding-leases.yaml
+
+.PHONY: update-truth-sidecars
+update-truth-sidecars: hack/release-scripts/image-source-of-truth.yaml hack/release-scripts/update-truth-sidecars
+	hack/release-scripts/update-truth-sidecars

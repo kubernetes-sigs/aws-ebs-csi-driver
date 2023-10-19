@@ -1,0 +1,42 @@
+# This file acts as the source of truth for the driver and sidecar image tags and digests used by the rest of the repository.
+# It is to be updated through the use of scripts in `hack/release-scripts` or Makefile targets.
+driver:
+  name: "aws-ebs-csi-driver"
+  version: "v1.24.0"
+  gcrStagingImage: "gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver"
+  manifestDigest: ""
+  gcrImage: "registry.k8s.io/provider-aws/aws-ebs-csi-driver"
+  ecrImage: "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
+sidecars: # sidecar names match upstream helm chart values.yaml
+  snapshotter:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter"
+    tag: ""
+    manifestDigest: ""
+  attacher:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/external-attacher"
+    tag: ""
+    manifestDigest: ""
+  provisioner:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner"
+    tag: ""
+    manifestDigest: ""
+  resizer:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/external-resizer"
+    tag: ""
+    manifestDigest: ""
+  livenessProbe:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe"
+    tag: ""
+    manifestDigest: ""
+  nodeDriverRegistrar:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar"
+    tag: ""
+    manifestDigest: ""
+  volumemodifier:
+    image: "public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s"
+    tag: ""
+    manifestDigest: ""
+  snapshotController:
+    image: "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/snapshot-controller"
+    tag: ""
+    manifestDigest: ""
