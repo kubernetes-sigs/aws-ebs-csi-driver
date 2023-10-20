@@ -1,0 +1,125 @@
+#!/bin/bash
+# This script generates (most of) the file changes needed for a new aws-ebs-csi-driver release
+
+# --- Script Tools
+set -euo pipefail # Exit on any error
+
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("yq" "git" "vi" "sed")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+
+  # Force macOS users to use gsed due to -i incompatibility
+  export SED="sed"
+  if [[ $(uname) = "Darwin" ]]; then
+    if ! command -v "gsed" &>/dev/null; then
+      log "gsed could not be found, please install it."
+            exit 1
+    fi
+    SED="gsed"
+  fi
+}
+
+error_handler() {
+  printf "Error occurred in script: %s, at line: %s. Command: %s. Error: %s\n" "$1" "$2" "$BASH_COMMAND" "$3" >&2
+  exit 1
+}
+
+trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
+
+# --- Script
+usage () {
+  echo "Usage: $0 [PREV_DRIVER_VERSION] [NEW_DRIVER_VERSION]"
+  echo "example: $0 v1.23.1 v1.24.0"
+  exit 1
+}
+
+setup_vars () {
+  export PREV_DRIVER_VERSION=$1
+  export NEW_DRIVER_VERSION=$2
+
+  # Paths
+  export ROOT_DIRECTORY TRUTH_PATH
+  ROOT_DIRECTORY=${ROOT_DIRECTORY:=$(git rev-parse --show-toplevel)}
+  TRUTH_PATH=${TRUTH_PATH:="$ROOT_DIRECTORY/hack/release-scripts/image-source-of-truth.yaml"}
+  export README_PATH="$ROOT_DIRECTORY/README.md"
+  export MAKEFILE_PATH="$ROOT_DIRECTORY/Makefile"
+  export INSTALL_MD_PATH="$ROOT_DIRECTORY/docs/install.md"
+  export CHART_PATH="$ROOT_DIRECTORY/charts/aws-ebs-csi-driver/Chart.yaml"
+}
+
+parse_args () {
+  # Confirm 2 parameters
+  [[ $# -ne 2 ]] && usage
+
+  # Confirm new driver version > prev driver version
+  log "Confirming $1 < $2"
+  sort -C -V <(echo "1.2
+  2.1") || usage
+
+  setup_vars "$@"
+}
+
+update_readme () {
+  log "Updating README.md"
+  # vi macro that adds new driver version 'Container Images' row to README.md
+  vi -s <(echo "gg/## Container Images
+  jjjjyy:%s/${PREV_DRIVER_VERSION}/${NEW_DRIVER_VERSION}/g
+  jjjjjjp:wq") "$README_PATH"
+}
+
+update_makefile () {
+  log "Updating Makefile"
+  $SED "s/VERSION?=$PREV_DRIVER_VERSION/VERSION?=$NEW_DRIVER_VERSION/g" -i "$MAKEFILE_PATH"
+}
+
+update_installmd () {
+  log "Updating docs/install.md"
+  prev_major_minor_version=$(echo "$PREV_DRIVER_VERSION" | sed 's/v\([0-9]*\.[0-9]*\).*/\1/')
+  new_major_minor_version=$(echo "$NEW_DRIVER_VERSION" | sed 's/v\([0-9]*\.[0-9]*\).*/\1/')
+  $SED "s/?ref=release-$prev_major_minor_version/?ref=release-$new_major_minor_version/g" -i "$INSTALL_MD_PATH"
+}
+
+update_chart_and_overlays () {
+  log "Updating helm chart and generates kustomize"
+  prev_minor_patch_version=$(echo "$PREV_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
+  new_minor_patch_version=$(echo "$NEW_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
+
+  $SED "s/$prev_minor_patch_version$/$new_minor_patch_version/g" -i "$CHART_PATH"
+
+  (cd "$ROOT_DIRECTORY"; make generate-kustomize) > "/dev/null"
+}
+
+update_upstream_repo () {
+  update_readme
+  update_makefile
+  update_installmd
+  update_chart_and_overlays
+}
+
+print_rest_of_release_steps () {
+  echo "SUCCESS!
+Before you submit the release PR, you must also:
+  1. Check that 'git diff' produces what you expected.
+  2. Update CHANGELOG.md
+  3. Update charts/aws-ebs-csi-driver/CHANGELOG.md"
+}
+
+main () {
+  check_dependencies
+  parse_args "$@"
+
+  update_upstream_repo
+  print_rest_of_release_steps
+}
+
+main "$@" # Must pass all args from script with $@
