@@ -264,6 +264,8 @@ controller:
     create: true
     name: ebs-csi-controller-sa
     annotations: {}
+    ## Enable if EKS IAM for SA is used
+    # eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
     automountServiceAccountToken: true
   tolerations:
     - key: CriticalAddonsOnly
@@ -360,6 +362,8 @@ node:
     create: true
     name: ebs-csi-node-sa
     annotations: {}
+    ## Enable if EKS IAM for SA is used
+    # eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
     automountServiceAccountToken: true
   # Enable the linux daemonset creation
   enableLinux: true
