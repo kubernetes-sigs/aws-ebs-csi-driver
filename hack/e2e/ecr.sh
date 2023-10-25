@@ -27,8 +27,8 @@ function ecr_build_and_push() {
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       make all-push
     else
-      IMAGE=${IMAGE_NAME} TAG=${IMAGE_TAG} OS=linux ARCH=amd64 OSVERSION=amazon make image
-      docker tag "${IMAGE_NAME}":"${IMAGE_TAG}"-linux-amd64-amazon "${IMAGE_NAME}":"${IMAGE_TAG}"
+      IMAGE=${IMAGE_NAME} TAG=${IMAGE_TAG} OS=linux ARCH=amd64 OSVERSION=al2023 make image
+      docker tag "${IMAGE_NAME}":"${IMAGE_TAG}"-linux-amd64-al2023 "${IMAGE_NAME}":"${IMAGE_TAG}"
       docker push "${IMAGE_NAME}":"${IMAGE_TAG}"
     fi
   fi
