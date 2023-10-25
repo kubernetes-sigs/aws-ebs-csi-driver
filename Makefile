@@ -33,11 +33,11 @@ OUTPUT_TYPE?=docker
 
 OS?=linux
 ARCH?=amd64
-OSVERSION?=amazon
+OSVERSION?=al2023
 
 ALL_OS?=linux windows
 ALL_ARCH_linux?=amd64 arm64
-ALL_OSVERSION_linux?=amazon
+ALL_OSVERSION_linux?=al2023
 ALL_OS_ARCH_OSVERSION_linux=$(foreach arch, $(ALL_ARCH_linux), $(foreach osversion, ${ALL_OSVERSION_linux}, linux-$(arch)-${osversion}))
 
 ALL_ARCH_windows?=amd64
@@ -86,7 +86,7 @@ create-manifest: all-image-registry
 .PHONY: all-image-docker
 all-image-docker: $(addprefix sub-image-docker-,$(ALL_OS_ARCH_OSVERSION_linux))
 .PHONY: all-image-registry
-all-image-registry: $(addprefix sub-image-registry-,$(ALL_OS_ARCH_OSVERSION))
+all-image-registry: sub-image-registry-linux-arm64-al2 $(addprefix sub-image-registry-,$(ALL_OS_ARCH_OSVERSION))
 
 sub-image-%:
 	$(MAKE) OUTPUT_TYPE=$(call word-hyphen,$*,1) OS=$(call word-hyphen,$*,2) ARCH=$(call word-hyphen,$*,3) OSVERSION=$(call word-hyphen,$*,4) image
