@@ -196,7 +196,7 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   set -x
   set +e
   export KUBECONFIG="${KUBECONFIG}"
-  ${CHART_TESTING_BIN} lint-and-install --config ${PWD}/tests/ct-config.yaml --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG}"
+  ${CHART_TESTING_BIN} lint-and-install --config ${PWD}/tests/ct-config.yaml --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG},node.tolerateAllTaints=false"
   TEST_PASSED=$?
   set -e
   set +x
