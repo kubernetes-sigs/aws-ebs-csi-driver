@@ -135,6 +135,9 @@ spec:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -146,22 +149,14 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-            {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
-            - {{ . }}
-            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
+          {{- with .Values.sidecars.nodeDriverRegistrar.livenessProbe }}
           livenessProbe:
-            exec:
-              command:
-                - /csi-node-driver-registrar
-                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-                - --mode=kubelet-registration-probe
-            initialDelaySeconds: 30
-            timeoutSeconds: 15
-            periodSeconds: 90
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
