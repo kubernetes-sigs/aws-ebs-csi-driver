@@ -325,6 +325,14 @@ node:
             operator: NotIn
             values:
             - fargate
+          - key: node.kubernetes.io/instance-type
+            operator: NotIn
+            values:
+            - a1.medium
+            - a1.large
+            - a1.xlarge
+            - a1.2xlarge
+            - a1.4xlarge
   nodeSelector: {}
   podAnnotations: {}
   podLabels: {}
@@ -390,6 +398,9 @@ additionalDaemonSets:
   #   nodeSelector:
   #     node.kubernetes.io/instance-type: c5.large
   #   volumeAttachLimit: 15
+
+# Enable compatibility for the A1 instance family via use of an AL2-based image in a separate DaemonSet
+# a1CompatibilityDaemonSet: true
 
 storageClasses: []
 # Add StorageClass resources like:
