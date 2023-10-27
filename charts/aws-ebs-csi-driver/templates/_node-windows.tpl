@@ -1,5 +1,6 @@
 {{- define "node-windows" }}
 {{- if .Values.node.enableWindows }}
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
