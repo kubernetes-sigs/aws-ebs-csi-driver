@@ -1,5 +1,6 @@
 {{- define "node" }}
 {{- if or (eq (default true .Values.node.enableLinux) true) }}
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
