@@ -100,7 +100,7 @@ Events:
 ```
 $ pv=$(k get -o json pvc ebs-claim | jq -r '.spec | .volumeName')
 $ volumename=$(k get -o json pv $pv | jq -r '.spec | .csi | .volumeHandle')
-$ aws ec2 describe-volumes —volume-id $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
+$ aws ec2 describe-volumes —volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
 "gp3 3000 125"
 ```
 
@@ -195,7 +195,7 @@ Do **NOT** delete these annotations. These annotations are used by the sidecar t
 
 #### 6) (Optional) Validate the volume has been modified in EBS.
 ```
-$ aws ec2 describe-volumes --volume-id $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
+$ aws ec2 describe-volumes --volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
 "io2 4000 null"
 ```
 
