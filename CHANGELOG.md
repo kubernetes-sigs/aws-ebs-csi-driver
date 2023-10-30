@@ -1,3 +1,10 @@
+# v1.23.2
+### Bug Fixes
+* Add compatibility workaround for A1 instance family ([#1811](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1811), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Upgrade dependencies (and resolve CVEs found in [#1800](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1800)) ([#1809](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1809), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.23.1
 ### Bug Fixes
 * Upgrade volume-modifier-for-k8s sidecar to 0.1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
