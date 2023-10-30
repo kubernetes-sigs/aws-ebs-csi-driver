@@ -1,4 +1,7 @@
 # Helm chart
+## v2.23.2
+* Bump driver version to `v1.23.2`
+* Upgrade sidecar images
 
 ## v2.23.1
 * Bump driver version to `v1.23.1`
