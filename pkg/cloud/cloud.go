@@ -696,7 +696,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			attachmentState = volumeDetachedState
 		}
 		if attachment != nil {
-			// AWS eventual consistency can go back in time.
+			// AWS eventual consistency can go back in TIME.
 			// For example, we're waiting for a volume to be attached as /dev/xvdba, but AWS can tell us it's
 			// attached as /dev/xvdbb, where it was attached before and it was already detached.
 			// Retry couple of times, hoping AWS starts reporting the right status.
