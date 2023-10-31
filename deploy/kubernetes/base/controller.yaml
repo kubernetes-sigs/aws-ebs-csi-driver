@@ -66,6 +66,7 @@ spec:
           args:
             # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
+            - --batching=true
             - --logging-format=text
             - --user-agent-extra=kustomize
             - --v=2

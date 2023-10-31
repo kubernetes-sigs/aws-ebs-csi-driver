@@ -72,6 +72,7 @@ func main() {
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
 		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
 		driver.WithOtelTracing(options.ServerOptions.EnableOtelTracing),
+		driver.WithBatching(options.ControllerOptions.Batching),
 	)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")

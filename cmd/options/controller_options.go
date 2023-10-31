@@ -39,6 +39,8 @@ type ControllerOptions struct {
 	WarnOnInvalidTag bool
 	// flag to set user agent
 	UserAgentExtra string
+	// flag to enable batching of API calls
+	Batching bool
 }
 
 func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
@@ -48,4 +50,5 @@ func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&s.AwsSdkDebugLog, "aws-sdk-debug-log", false, "To enable the aws sdk debug log level (default to false).")
 	fs.BoolVar(&s.WarnOnInvalidTag, "warn-on-invalid-tag", false, "To warn on invalid tags, instead of returning an error")
 	fs.StringVar(&s.UserAgentExtra, "user-agent-extra", "", "Extra string appended to user agent.")
+	fs.BoolVar(&s.Batching, "batching", false, "To enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits.")
 }
