@@ -1,5 +1,9 @@
 # Helm chart
 
+## v2.24.1
+* Bump driver version to `v1.24.1`
+* Upgrade sidecar images
+
 ## v2.24.0
 * Bump driver version to `v1.24.0`
 * Add additionalClusterRoleRules to sidecar chart templates. ([#1757](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1757), [@AndrewSirenko](https://github.com/AndrewSirenko))
@@ -7,6 +11,10 @@
 * Make hostNetwork configurable for daemonset ([#1716](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1716), [@bseenu](https://github.com/bseenu))
 * Add labels to volumesnapshotclass ([#1754](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1754), [@fad3t](https://github.com/fad3t))
 * Update default API version for PodDisruptionBudget ([#1751](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1751), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.23.2
+* Bump driver version to `v1.23.2`
+* Upgrade sidecar images
 
 ## v2.23.1
 * Bump driver version to `v1.23.1`
