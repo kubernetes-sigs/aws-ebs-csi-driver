@@ -701,7 +701,11 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			// attached as /dev/xvdbb, where it was attached before and it was already detached.
 			// Retry couple of times, hoping AWS starts reporting the right status.
 			device := aws.StringValue(attachment.Device)
-			if expectedDevice != "" && device != "" && device != expectedDevice {
+			if device != expectedDevice {
+				if expectedState == volumeDetachedState && attachmentState == volumeDetachedState {
+					attachment = nil
+					return true, nil
+				}
 				klog.InfoS("Expected device for volume not found", "expectedDevice", expectedDevice, "expectedState", expectedState, "volumeID", volumeID, "device", device, "attachmentState", attachmentState)
 				return false, nil
 			}
