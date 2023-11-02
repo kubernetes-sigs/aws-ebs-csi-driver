@@ -186,6 +186,20 @@ test-e2e-external:
 	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
+.PHONY: test-e2e-external-arm64
+test-e2e-external-arm64:
+	AWS_REGION=us-west-2 \
+	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
+	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	EBS_INSTALL_SNAPSHOT="true" \
+	TEST_PATH=./tests/e2e-kubernetes/... \
+	GINKGO_FOCUS="External.Storage" \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+	INSTANCE_TYPE="m7g.medium" \
+	AMI_PARAMETER="/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64" \
+	IMAGE_ARCH="arm64" \
+	./hack/e2e/run.sh
+
 .PHONY: test-e2e-external-eks
 test-e2e-external-eks:
 	CLUSTER_TYPE=eksctl \
