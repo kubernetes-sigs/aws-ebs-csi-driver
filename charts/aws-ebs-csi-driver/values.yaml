@@ -130,6 +130,15 @@ sidecars:
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+    livenessProbe:
+      exec:
+        command:
+        - /csi-node-driver-registrar
+        - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+        - --mode=kubelet-registration-probe
+      initialDelaySeconds: 30
+      periodSeconds: 90
+      timeoutSeconds: 15
   volumemodifier:
     env: []
     image:

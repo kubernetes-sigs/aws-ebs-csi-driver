@@ -114,12 +114,12 @@ spec:
           livenessProbe:
             exec:
               command:
-                - /csi-node-driver-registrar
-                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-                - --mode=kubelet-registration-probe
+              - /csi-node-driver-registrar
+              - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+              - --mode=kubelet-registration-probe
             initialDelaySeconds: 30
-            timeoutSeconds: 15
             periodSeconds: 90
+            timeoutSeconds: 15
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
