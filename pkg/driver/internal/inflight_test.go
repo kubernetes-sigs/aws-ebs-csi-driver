@@ -22,6 +22,7 @@ import (
 
 type testRequest struct {
 	volumeId string
+	extra    string
 	expResp  bool
 	delete   bool
 }
@@ -73,15 +74,18 @@ func TestInFlight(t *testing.T) {
 			requests: []testRequest{
 				{
 					volumeId: "random-vol-name",
+					extra:    "random-node-id",
 					expResp:  true,
 				},
 				{
 					volumeId: "random-vol-name",
+					extra:    "random-node-id",
 					expResp:  false,
 					delete:   true,
 				},
 				{
 					volumeId: "random-vol-name",
+					extra:    "random-node-id",
 					expResp:  true,
 				},
 			},

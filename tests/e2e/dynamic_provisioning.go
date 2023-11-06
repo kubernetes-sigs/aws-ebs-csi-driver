@@ -238,6 +238,187 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
+	It("should succeed multi-attach with dynamically provisioned IO2 block device", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.Block,
+			VolumeType: awscloud.VolumeTypeIO2,
+			AccessMode: v1.ReadWriteMany,
+			RunningPod: true,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach dynamically provisioned IO2 block device - not enabled", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteOnce,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteOnce,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.Block,
+			AccessMode: v1.ReadWriteOnce,
+			VolumeType: awscloud.VolumeTypeIO2,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach when VolumeMode is not Block", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						FSType:     ebscsidriver.FSTypeExt4,
+						VolumeMode: testsuites.FileSystem,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						FSType:     ebscsidriver.FSTypeExt4,
+						VolumeMode: testsuites.FileSystem,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.FileSystem,
+			AccessMode: v1.ReadWriteMany,
+			VolumeType: awscloud.VolumeTypeIO2,
+			PendingPVC: true,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach non io2 VolumeType", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType:        awscloud.VolumeTypeGP3,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode: v1.ReadWriteMany,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType:        awscloud.VolumeTypeGP3,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode: v1.ReadWriteMany,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.FileSystem,
+			AccessMode: v1.ReadWriteMany,
+			VolumeType: awscloud.VolumeTypeIO2,
+			PendingPVC: true,
+		}
+		test.Run(cs, ns)
+	})
+
 	It("should create a raw block volume and a filesystem volume on demand and bind to the same pod", func() {
 		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{

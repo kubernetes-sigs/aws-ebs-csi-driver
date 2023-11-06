@@ -165,6 +165,26 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 	}
+	multiAttachVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Block{
+				Block: &csi.VolumeCapability_BlockVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+			},
+		},
+	}
+	invalidMultiAttachVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+			},
+		},
+	}
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
@@ -1634,8 +1654,81 @@ func TestCreateVolume(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.AlreadyExists)
 			},
 		},
-	}
+		{
+			name: "success multi-attach",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: multiAttachVolCap,
+					Parameters:         nil,
+				}
 
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "fail multi-attach - invalid mount capability",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: invalidMultiAttachVolCap,
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
+				}
+			},
+		},
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
 	}
@@ -3328,16 +3421,6 @@ func TestControllerPublishVolume(t *testing.T) {
 			errorCode: codes.Internal,
 		},
 		{
-			name:             "Fail when volume is already attached to another node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", (cloud.ErrVolumeInUse))
-			},
-			errorCode: codes.FailedPrecondition,
-		},
-		{
 			name:             "Aborted error when AttachDisk operation already in-flight",
 			volumeId:         "vol-test",
 			nodeId:           expInstanceID,
@@ -3346,7 +3429,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			},
 			errorCode: codes.Aborted,
 			setupFunc: func(controllerService *controllerService) {
-				controllerService.inFlight.Insert("vol-test")
+				controllerService.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
 	}
@@ -3442,7 +3525,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			nodeId:    expInstanceID,
 			errorCode: codes.Aborted,
 			setupFunc: func(driver *controllerService) {
-				driver.inFlight.Insert("vol-test")
+				driver.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
 	}

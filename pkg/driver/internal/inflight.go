@@ -35,7 +35,7 @@ const (
 	VolumeOperationAlreadyExistsErrorMsg = "An operation with the given Volume %s already exists"
 )
 
-// InFlight is a struct used to manage in flight requests per volumeId.
+// InFlight is a struct used to manage in flight requests for a unique identifier.
 type InFlight struct {
 	mux      *sync.Mutex
 	inFlight map[string]bool
@@ -49,7 +49,7 @@ func NewInFlight() *InFlight {
 	}
 }
 
-// Insert inserts the entry to the current list of inflight request key is volumeId for node and req hash for controller .
+// Insert inserts the entry to the current list of inflight, request key is a unique identifier.
 // Returns false when the key already exists.
 func (db *InFlight) Insert(key string) bool {
 	db.mux.Lock()
