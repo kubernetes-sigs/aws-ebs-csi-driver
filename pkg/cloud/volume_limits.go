@@ -24,8 +24,11 @@ func init() {
 		for _, size := range commonInstanceSizes {
 			dedicatedVolumeLimits[family+"."+size] = 32
 		}
+		dedicatedVolumeLimits[family+".metal-16xl"] = 31
+		dedicatedVolumeLimits[family+".metal-24xl"] = 31
 		dedicatedVolumeLimits[family+".16xlarge"] = 48
 		dedicatedVolumeLimits[family+".24xlarge"] = 64
+		dedicatedVolumeLimits[family+".metal-32xl"] = 79
 		dedicatedVolumeLimits[family+".metal-48xl"] = 79
 		dedicatedVolumeLimits[family+".32xlarge"] = 88
 		dedicatedVolumeLimits[family+".48xlarge"] = 128
