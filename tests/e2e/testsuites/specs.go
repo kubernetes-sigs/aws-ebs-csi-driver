@@ -41,6 +41,7 @@ type VolumeDetails struct {
 	ReclaimPolicy         *v1.PersistentVolumeReclaimPolicy
 	AllowVolumeExpansion  *bool
 	VolumeBindingMode     *storagev1.VolumeBindingMode
+	AccessMode            v1.PersistentVolumeAccessMode
 	AllowedTopologyValues []string
 	VolumeMode            VolumeMode
 	VolumeMount           VolumeMountDetails
@@ -125,7 +126,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
 	By("setting up the PVC")
-	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
+	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass, v1.ReadWriteOnce)
 	tpvc.Create()
 	tpvc.WaitForBound()
 	tpvc.ValidateProvisionedPersistentVolume()
@@ -152,9 +153,9 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 			Kind:     VolumeSnapshotKind,
 			APIGroup: &SnapshotAPIGroup,
 		}
-		tpvc = NewTestPersistentVolumeClaimWithDataSource(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass, dataSource)
+		tpvc = NewTestPersistentVolumeClaimWithDataSource(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass, dataSource, volume.AccessMode)
 	} else {
-		tpvc = NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
+		tpvc = NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass, volume.AccessMode)
 	}
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
@@ -169,12 +170,16 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 
 func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPersistentVolumeClaim, []func()) {
 	cleanupFuncs := make([]func(), 0)
+	volumeMode := v1.PersistentVolumeFilesystem
+	if volume.VolumeMode == Block {
+		volumeMode = v1.PersistentVolumeBlock
+	}
 	By("setting up the PV")
-	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.FSType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name)
+	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.FSType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, volume.AccessMode, volumeMode)
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
 	tpv.Create()
 	By("setting up the PVC")
-	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, nil)
+	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, nil, volume.AccessMode)
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.DeleteBoundPersistentVolume)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)

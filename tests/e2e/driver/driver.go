@@ -41,7 +41,7 @@ type DynamicPVTestDriver interface {
 // PreProvisionedVolumeTestDriver represents an interface for a CSI driver that supports pre-provisioned volume
 type PreProvisionedVolumeTestDriver interface {
 	// GetPersistentVolume returns a PersistentVolume with pre-provisioned volumeHandle
-	GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume
+	GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string, accessMode v1.PersistentVolumeAccessMode, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolume
 }
 
 type VolumeSnapshotTestDriver interface {

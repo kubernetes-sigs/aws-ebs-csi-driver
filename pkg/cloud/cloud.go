@@ -195,6 +195,7 @@ type DiskOptions struct {
 	OutpostArn             string
 	Encrypted              bool
 	BlockExpress           bool
+	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -345,6 +346,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
+	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
+		return nil, fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes")
+	}
+
 	if maxIops > 0 {
 		if diskOptions.IOPS > 0 {
 			requestedIops = int64(diskOptions.IOPS)
@@ -381,11 +386,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(volumeName))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String(zone),
-		ClientToken:      aws.String(hex.EncodeToString(clientToken[:])),
-		Size:             aws.Int64(capacityGiB),
-		VolumeType:       aws.String(createType),
-		Encrypted:        aws.Bool(diskOptions.Encrypted),
+		AvailabilityZone:   aws.String(zone),
+		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
+		Size:               aws.Int64(capacityGiB),
+		VolumeType:         aws.String(createType),
+		Encrypted:          aws.Bool(diskOptions.Encrypted),
+		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 	}
 
 	if !util.IsSBE(zone) {
@@ -549,38 +555,17 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 
 		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
 		if attachErr != nil {
-			var awsErr awserr.Error
-			if errors.As(attachErr, &awsErr) {
-				if awsErr.Code() == "VolumeInUse" {
-					return "", ErrVolumeInUse
-				}
-			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
-	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
+	_, err = c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
 
 	// This is the only situation where we taint the device
 	if err != nil {
 		device.Taint()
 		return "", err
-	}
-
-	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
-	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
-	// which could theoretically be against a different device (or even instance).
-	if attachment == nil {
-		// Impossible?
-		return "", fmt.Errorf("unexpected state: attachment nil after attached %q to %q", volumeID, nodeID)
-	}
-	if device.Path != aws.StringValue(attachment.Device) {
-		// Already checked in waitForAttachmentState(), but just to be sure...
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested device %q but found %q", volumeID, nodeID, device.Path, aws.StringValue(attachment.Device))
-	}
-	if *instance.InstanceId != aws.StringValue(attachment.InstanceId) {
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested instance %q but found %q", volumeID, nodeID, *instance.InstanceId, aws.StringValue(attachment.InstanceId))
 	}
 
 	// TODO: Check volume capability matches for ALREADY_EXISTS
@@ -674,40 +659,30 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return false, nil
 		}
 
-		if len(volume.Attachments) > 1 {
-			// Shouldn't happen; log so we know if it is
+		if volume.MultiAttachEnabled != nil && !*volume.MultiAttachEnabled && len(volume.Attachments) > 1 {
 			klog.InfoS("Found multiple attachments for volume", "volumeID", volumeID, "volume", volume)
+			return false, fmt.Errorf("volume %q has multiple attachments", volumeID)
 		}
+
 		attachmentState := ""
+
 		for _, a := range volume.Attachments {
-			if attachmentState != "" {
-				// Shouldn't happen; log so we know if it is
-				klog.InfoS("Found multiple attachments for volume", "volumeID", volumeID, "volume", volume)
-			}
-			if a.State != nil {
-				attachment = a
-				attachmentState = *a.State
-			} else {
-				// Shouldn't happen; log so we know if it is
-				klog.InfoS("Ignoring nil attachment state for volume", "volumeID", volumeID, "attachment", a)
+			if a.State != nil && a.InstanceId != nil {
+				if aws.StringValue(a.InstanceId) == expectedInstance {
+					attachmentState = aws.StringValue(a.State)
+					attachment = a
+				}
 			}
 		}
+
 		if attachmentState == "" {
 			attachmentState = volumeDetachedState
 		}
-		if attachment != nil {
-			// AWS eventual consistency can go back in time.
-			// For example, we're waiting for a volume to be attached as /dev/xvdba, but AWS can tell us it's
-			// attached as /dev/xvdbb, where it was attached before and it was already detached.
-			// Retry couple of times, hoping AWS starts reporting the right status.
+
+		if attachment != nil && attachment.Device != nil && expectedState == volumeAttachedState {
 			device := aws.StringValue(attachment.Device)
-			if expectedDevice != "" && device != "" && device != expectedDevice {
-				klog.InfoS("Expected device for volume not found", "expectedDevice", expectedDevice, "expectedState", expectedState, "volumeID", volumeID, "device", device, "attachmentState", attachmentState)
-				return false, nil
-			}
-			instanceID := aws.StringValue(attachment.InstanceId)
-			if expectedInstance != "" && instanceID != "" && instanceID != expectedInstance {
-				klog.InfoS("Expected instance for volume not found", "expectedInstance", expectedInstance, "expectedState", expectedState, "volumeID", volumeID, "instanceID", instanceID, "attachmentState", attachmentState)
+			if device != expectedDevice {
+				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
 				return false, nil
 			}
 		}
