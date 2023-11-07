@@ -17,15 +17,18 @@ const (
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
-	instanceFamilies := []string{"m7i", "m7a", "c7i", "c7a", "r7a", "r7iz"}
+	instanceFamilies := []string{"m7i", "m7a", "c7i", "c7a", "r7a", "r7i", "r7iz"}
 	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
 
 	for _, family := range instanceFamilies {
 		for _, size := range commonInstanceSizes {
 			dedicatedVolumeLimits[family+"."+size] = 32
 		}
+		dedicatedVolumeLimits[family+".metal-16xl"] = 31
+		dedicatedVolumeLimits[family+".metal-24xl"] = 31
 		dedicatedVolumeLimits[family+".16xlarge"] = 48
 		dedicatedVolumeLimits[family+".24xlarge"] = 64
+		dedicatedVolumeLimits[family+".metal-32xl"] = 79
 		dedicatedVolumeLimits[family+".metal-48xl"] = 79
 		dedicatedVolumeLimits[family+".32xlarge"] = 88
 		dedicatedVolumeLimits[family+".48xlarge"] = 128
