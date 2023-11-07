@@ -46,6 +46,7 @@ INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${DRIVER_NAME}}
 IMAGE_TAG=${IMAGE_TAG:-${TEST_ID}}
+IMAGE_ARCH=${IMAGE_ARCH:-amd64}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
@@ -56,7 +57,8 @@ KOPS_VERSION=${KOPS_VERSION:-1.28.0}
 KOPS_STATE_FILE=${KOPS_STATE_FILE:-s3://k8s-kops-csi-shared-e2e}
 KOPS_PATCH_FILE=${KOPS_PATCH_FILE:-./hack/kops-patch.yaml}
 KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
-AMI_ID=$(aws ssm get-parameters --names /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --region ${REGION} --query 'Parameters[0].Value' --output text)
+AMI_PARAMETER=${AMI_PARAMETER:-/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}
+AMI_ID=$(aws ssm get-parameters --names ${AMI_PARAMETER} --region ${REGION} --query 'Parameters[0].Value' --output text)
 
 EKSCTL_VERSION=${EKSCTL_VERSION:-0.163.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
@@ -137,7 +139,8 @@ fi
 ecr_build_and_push "${REGION}" \
   "${AWS_ACCOUNT_ID}" \
   "${IMAGE_NAME}" \
-  "${IMAGE_TAG}"
+  "${IMAGE_TAG}" \
+  "${IMAGE_ARCH}"
 
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_create_cluster \

@@ -10,6 +10,7 @@ function ecr_build_and_push() {
   AWS_ACCOUNT_ID=${2}
   IMAGE_NAME=${3}
   IMAGE_TAG=${4}
+  IMAGE_ARCH=${5}
   set +e
   if docker images --format "{{.Repository}}:{{.Tag}}" | grep "${IMAGE_NAME}:${IMAGE_TAG}"; then
     set -e
@@ -27,8 +28,8 @@ function ecr_build_and_push() {
       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       make all-push
     else
-      IMAGE=${IMAGE_NAME} TAG=${IMAGE_TAG} OS=linux ARCH=amd64 OSVERSION=al2023 make image
-      docker tag "${IMAGE_NAME}":"${IMAGE_TAG}"-linux-amd64-al2023 "${IMAGE_NAME}":"${IMAGE_TAG}"
+      IMAGE=${IMAGE_NAME} TAG=${IMAGE_TAG} OS=linux ARCH=${IMAGE_ARCH} OSVERSION=al2023 make image
+      docker tag "${IMAGE_NAME}":"${IMAGE_TAG}"-linux-${IMAGE_ARCH}-al2023 "${IMAGE_NAME}":"${IMAGE_TAG}"
       docker push "${IMAGE_NAME}":"${IMAGE_TAG}"
     fi
   fi
