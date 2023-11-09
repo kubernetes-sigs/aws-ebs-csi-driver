@@ -44,6 +44,11 @@ func TestControllerOptions(t *testing.T) {
 			found: true,
 		},
 		{
+			name:  "lookup batching",
+			flag:  "batching",
+			found: true,
+		},
+		{
 			name:  "lookup user-agent-extra",
 			flag:  "user-agent-extra",
 			found: true,

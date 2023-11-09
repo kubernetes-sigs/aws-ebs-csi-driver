@@ -112,3 +112,12 @@ func TestWithOtelTracing(t *testing.T) {
 		t.Fatalf("expected otelTracing option got set to %v but is set to %v", enableOtelTracing, options.otelTracing)
 	}
 }
+
+func TestWithBatching(t *testing.T) {
+	var batching bool = true
+	options := &DriverOptions{}
+	WithBatching(batching)(options)
+	if options.batching != batching {
+		t.Fatalf("expected batching option got set to %v but is set to %v", batching, options.batching)
+	}
+}

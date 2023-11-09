@@ -68,6 +68,7 @@ type DriverOptions struct {
 	volumeAttachLimit   int64
 	kubernetesClusterID string
 	awsSdkDebugLog      bool
+	batching            bool
 	warnOnInvalidTag    bool
 	userAgentExtra      string
 	otelTracing         bool
@@ -190,6 +191,12 @@ func WithMode(mode Mode) func(*DriverOptions) {
 func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.volumeAttachLimit = volumeAttachLimit
+	}
+}
+
+func WithBatching(enableBatching bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.batching = enableBatching
 	}
 }
 

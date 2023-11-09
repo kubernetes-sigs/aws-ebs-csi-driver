@@ -175,6 +175,7 @@ awsAccessSecret:
   accessKey: access_key
 
 controller:
+  batching: true
   volumeModificationFeature:
     enabled: false
   # Additional parameters provided by aws-ebs-csi-driver controller.

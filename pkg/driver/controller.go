@@ -89,7 +89,8 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 		region = metadata.GetRegion()
 	}
 
-	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra)
+	klog.InfoS("batching", "status", driverOptions.batching)
+	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra, driverOptions.batching)
 	if err != nil {
 		panic(err)
 	}
@@ -420,7 +421,7 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(2).InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
+	klog.InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
@@ -448,6 +449,7 @@ func validateControllerPublishVolumeRequest(req *csi.ControllerPublishVolumeRequ
 
 func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", *req)
+
 	if err := validateControllerUnpublishVolumeRequest(req); err != nil {
 		return nil, err
 	}
@@ -463,12 +465,12 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 	klog.V(2).InfoS("ControllerUnpublishVolume: detaching", "volumeID", volumeID, "nodeID", nodeID)
 	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
 		if errors.Is(err, cloud.ErrNotFound) {
-			klog.V(2).InfoS("ControllerUnpublishVolume: attachment not found", "volumeID", volumeID, "nodeID", nodeID)
+			klog.InfoS("ControllerUnpublishVolume: attachment not found", "volumeID", volumeID, "nodeID", nodeID)
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(2).InfoS("ControllerUnpublishVolume: detached", "volumeID", volumeID, "nodeID", nodeID)
+	klog.InfoS("ControllerUnpublishVolume: detached", "volumeID", volumeID, "nodeID", nodeID)
 
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
