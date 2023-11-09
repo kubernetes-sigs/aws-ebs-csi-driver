@@ -1283,9 +1283,10 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 		return true, oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, err)
 	}
 
+	state := ""
 	// latestMod can be nil if the volume has never been modified
 	if latestMod != nil {
-		state := aws.StringValue(latestMod.ModificationState)
+		state = aws.StringValue(latestMod.ModificationState)
 		if state == ec2.VolumeModificationStateModifying {
 			// If volume is already modifying, detour to waiting for it to modify
 			klog.V(5).InfoS("[Debug] Watching ongoing modification", "volumeID", volumeID)
@@ -1295,8 +1296,6 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 			}
 			returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
 			return false, returnGiB, returnErr
-		} else if state == ec2.VolumeModificationStateOptimizing {
-			return true, 0, fmt.Errorf("volume %q in OPTIMIZING state, cannot currently modify", volumeID)
 		}
 	}
 
@@ -1312,6 +1311,10 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 		}
 		returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
 		return false, returnGiB, returnErr
+	}
+
+	if state == ec2.VolumeModificationStateOptimizing {
+		return true, 0, fmt.Errorf("volume %q in OPTIMIZING state, cannot currently modify", volumeID)
 	}
 
 	return true, 0, nil
