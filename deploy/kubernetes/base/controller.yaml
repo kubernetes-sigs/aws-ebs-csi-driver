@@ -136,6 +136,9 @@ spec:
             - --extra-create-metadata
             - --leader-election=true
             - --default-fstype=ext4
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -158,6 +161,9 @@ spec:
             - --csi-address=$(ADDRESS)
             - --v=2
             - --leader-election=true
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -180,6 +186,9 @@ spec:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
             - --extra-create-metadata
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -203,6 +212,9 @@ spec:
             - --v=2
             - --handle-volume-inuse-error=false
             - --leader-election=true
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --workers=100
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
