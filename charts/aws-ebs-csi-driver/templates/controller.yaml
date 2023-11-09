@@ -209,6 +209,11 @@ spec:
             {{- end }}
             {{- end }}
             - --default-fstype={{ .Values.controller.defaultFsType }}
+            {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-worker-threads)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
+            {{- end }}
             {{- range .Values.sidecars.provisioner.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -254,6 +259,11 @@ spec:
             - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
+            {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-worker-threads)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
+            {{- end }}
             {{- range .Values.sidecars.attacher.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -291,6 +301,11 @@ spec:
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
+            {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-worker-threads)" (join " " .Values.sidecars.snapshotter.additionalArgs)) }}
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --worker-threads=100
+            {{- end }}
             {{- range .Values.sidecars.snapshotter.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -392,6 +407,11 @@ spec:
             {{- if .retryPeriod }}
             - --leader-election-retry-period={{ .retryPeriod }}
             {{- end }}
+            {{- end }}
+            {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-workers)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
+            - --kube-api-qps=20
+            - --kube-api-burst=100
+            - --workers=100
             {{- end }}
             {{- range .Values.sidecars.resizer.additionalArgs }}
             - {{ . }}
