@@ -60,7 +60,7 @@ KOPS_PATCH_NODE_FILE=${KOPS_PATCH_NODE_FILE:-./hack/kops-patch-node.yaml}
 AMI_PARAMETER=${AMI_PARAMETER:-/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}
 AMI_ID=$(aws ssm get-parameters --names ${AMI_PARAMETER} --region ${REGION} --query 'Parameters[0].Value' --output text)
 
-EKSCTL_VERSION=${EKSCTL_VERSION:-0.163.0}
+EKSCTL_VERSION=${EKSCTL_VERSION:-0.164.0}
 EKSCTL_PATCH_FILE=${EKSCTL_PATCH_FILE:-./hack/eksctl-patch.yaml}
 VPC_CONFIGMAP_FILE=${VPC_CONFIGMAP_FILE:-./hack/vpc-resource-controller-configmap.yaml}
 EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-}
@@ -84,7 +84,7 @@ TEST_EXTRA_FLAGS=${TEST_EXTRA_FLAGS:-}
 
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"false"}
 # https://github.com/kubernetes-csi/external-snapshotter
-EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.3.1"}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v6.3.2"}
 
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
 # https://github.com/helm/chart-testing
