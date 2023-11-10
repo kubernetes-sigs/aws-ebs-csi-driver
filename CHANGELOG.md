@@ -1,3 +1,19 @@
+# v1.25.0
+### Notable Changes
+* Feature: Multi-Attach for io2 block devices ([#1799](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1799), [@torredil](https://github.com/torredil))
+* Mitigate EC2 rate-limit issues by batching DescribeVolume API requests ([#1819](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1819), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Fix Error Handling for Volumes in Optimizing State ([#1833](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1833), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Update default sidecar timeout values in chart to improve driver performance ([#1824](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1824), [@torredil](https://github.com/torredil))
+* Increase default QPS and worker threads of sidecars in chart to improve driver performance ([#1834](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1834), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add volume limits for r7i ([#1832](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1832), [@torredil](https://github.com/torredil))
+* Upgrade driver & sidecar dependencies for v1.25.0 ([#1835](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1835), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Bump go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp to v0.45.0 ([#1827](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1827), [@jsafrane](https://github.com/jsafrane))
+* Update modify-volume.md ([#1816](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1816), [@sebastianlzy](https://github.com/sebastianlzy))
+
 # v1.24.1
 ### Bug Fixes
 * Add compatibility workaround for A1 instance family ([#1811](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1811), [@ConnorJC3](https://github.com/ConnorJC3))
