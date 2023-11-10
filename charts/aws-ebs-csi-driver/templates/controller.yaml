@@ -190,6 +190,9 @@ spec:
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy }}
           args:
+            {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
+            - --timeout=60s
+            {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.provisioner.logLevel }}
             - --feature-gates=Topology=true
@@ -245,6 +248,9 @@ spec:
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
           args:
+            {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
+            - --timeout=60s
+            {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.attacher.logLevel }}
             - --leader-election={{ .Values.sidecars.attacher.leaderElection.enabled | required "leader election state for csi-attacher is required, must be set to true || false." }}
@@ -339,6 +345,9 @@ spec:
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.volumemodifier.image.repository .Values.sidecars.volumemodifier.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.volumemodifier.image.pullPolicy }}
           args:
+            {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.volumemodifier.additionalArgs)) }}
+            - --timeout=60s
+            {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.volumemodifier.logLevel }}
             - --leader-election={{ .Values.sidecars.volumemodifier.leaderElection.enabled | required "leader election state for csi-volumemodifier is required, must be set to true || false." }}
@@ -393,6 +402,9 @@ spec:
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy }}
           args:
+            {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
+            - --timeout=60s
+            {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.resizer.logLevel }}
             - --handle-volume-inuse-error=false

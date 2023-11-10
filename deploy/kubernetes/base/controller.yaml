@@ -130,6 +130,7 @@ spec:
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v3.6.0-eks-1-28-7
           imagePullPolicy: IfNotPresent
           args:
+            - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --v=2
             - --feature-gates=Topology=true
@@ -158,6 +159,7 @@ spec:
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.4.0-eks-1-28-7
           imagePullPolicy: IfNotPresent
           args:
+            - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --v=2
             - --leader-election=true
@@ -208,6 +210,7 @@ spec:
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.9.0-eks-1-28-7
           imagePullPolicy: IfNotPresent
           args:
+            - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --v=2
             - --handle-volume-inuse-error=false
