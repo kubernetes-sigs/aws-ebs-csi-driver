@@ -1,5 +1,12 @@
 # Helm chart
 
+## v2.25.0
+* Bump driver version to `v1.25.0`
+* Update default sidecar timeout values ([#1824](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1824), [@torredil](https://github.com/torredil))
+* Increase default QPS and worker threads of sidecars ([#1834](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1834), [@ConnorJC3](https://github.com/ConnorJC3))
+* Node-driver-registrar sidecar fixes ([#1815](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1815), [@jukie](https://github.com/jukie))
+* Suggest eks.amazonaws.com/role-arn in values.yaml if EKS IAM for SA is used ([#1804](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1804), [@tporeba](https://github.com/tporeba))
+
 ## v2.24.1
 * Bump driver version to `v1.24.1`
 * Upgrade sidecar images
