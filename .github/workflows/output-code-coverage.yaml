@@ -32,7 +32,7 @@ jobs:
             }
 
       - name: 'Determine source PR'
-        uses: potiuk/get-workflow-origin@08219db9dbbbec802d571eaf0e14ece0bc005f72
+        uses: potiuk/get-workflow-origin@e2dae063368361e4cd1f510e8785cd73bca9352e
         id: source-run-info
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
