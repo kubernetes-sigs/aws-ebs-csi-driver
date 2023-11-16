@@ -7,6 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: ebs-csi-node

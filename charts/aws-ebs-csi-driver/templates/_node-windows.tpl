@@ -9,6 +9,7 @@ metadata:
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
+  revisionHistoryLimit: {{ .Values.node.revisionHistoryLimit }}
   selector:
     matchLabels:
       app: {{ .NodeName }}
@@ -199,6 +200,6 @@ spec:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
         - name: probe-dir
-          emptyDir: {}
+          {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
 {{- end }}
 {{- end }}

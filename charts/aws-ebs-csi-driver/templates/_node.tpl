@@ -9,6 +9,7 @@ metadata:
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
+  revisionHistoryLimit: {{ .Values.node.revisionHistoryLimit }}
   selector:
     matchLabels:
       app: {{ .NodeName }}
@@ -219,7 +220,7 @@ spec:
             path: /dev
             type: Directory
         - name: probe-dir
-          emptyDir: {}
+          {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
         {{- with .Values.node.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

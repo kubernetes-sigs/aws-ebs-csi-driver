@@ -8,6 +8,7 @@ metadata:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controller.replicaCount }}
+  revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
   {{- with .Values.controller.updateStrategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
@@ -486,7 +487,7 @@ spec:
       {{- end }}
       volumes:
         - name: socket-dir
-          emptyDir: {}
+          {{- toYaml .Values.controller.socketDirVolume | nindent 10 }}
         {{- with .Values.controller.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
