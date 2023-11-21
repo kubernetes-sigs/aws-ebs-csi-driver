@@ -60,7 +60,6 @@ func TestNewMetadataService(t *testing.T) {
 		imdsBlockDeviceOutput            string
 		imdsENIOutput                    string
 		expectedENIs                     int
-		expectedBlockDevices             int
 		expectedOutpostArn               arn.ARN
 		expectedErr                      error
 		node                             v1.Node
@@ -319,20 +318,6 @@ func TestNewMetadataService(t *testing.T) {
 			expectedENIs:  2,
 		},
 		{
-			name:                 "success: GetMetadata() returns correct number of block device mappings",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			imdsENIOutput:         "00:00:00:00:00:00",
-			expectedENIs:          1,
-			imdsBlockDeviceOutput: "ami\nroot\nebs1\nebs2",
-			expectedBlockDevices:  2,
-		},
-		{
 			name:                 "success: region from session is snow",
 			ec2metadataAvailable: true,
 			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
@@ -341,10 +326,9 @@ func TestNewMetadataService(t *testing.T) {
 				Region:           "",
 				AvailabilityZone: "",
 			},
-			imdsENIOutput:        "00:00:00:00:00:00",
-			expectedENIs:         1,
-			regionFromSession:    snowRegion,
-			expectedBlockDevices: 0,
+			imdsENIOutput:     "00:00:00:00:00:00",
+			expectedENIs:      1,
+			regionFromSession: snowRegion,
 		},
 	}
 
@@ -424,9 +408,6 @@ func TestNewMetadataService(t *testing.T) {
 				}
 				if m.GetNumAttachedENIs() != tc.expectedENIs {
 					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", enisEndpoint, m.GetNumAttachedENIs(), tc.expectedENIs)
-				}
-				if m.GetNumBlockDeviceMappings() != tc.expectedBlockDevices {
-					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", blockDevicesEndpoint, m.GetNumBlockDeviceMappings(), tc.expectedBlockDevices)
 				}
 			}
 			mockCtrl.Finish()
