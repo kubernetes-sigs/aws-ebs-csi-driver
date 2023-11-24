@@ -22,7 +22,7 @@ Vagrantfile
 # IntelliJ
 .idea/
 
-#MacOS system files
+# MacOS system files
 *.DS_Store
 
 # Vendor dir
@@ -30,3 +30,6 @@ vendor/
 
 # .image-* files used by Makefile
 .image-*
+
+# Files used by Makefile when upgrading sidecars
+hack/release-scripts/image-digests.yaml
