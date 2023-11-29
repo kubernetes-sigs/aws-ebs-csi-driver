@@ -2025,7 +2025,6 @@ func TestNodeGetInfo(t *testing.T) {
 		availabilityZone  string
 		region            string
 		attachedENIs      int
-		blockDevices      int
 		volumeAttachLimit int64
 		expMaxVolumes     int64
 		outpostArn        arn.ARN
@@ -2138,54 +2137,6 @@ func TestNodeGetInfo(t *testing.T) {
 			outpostArn:        emptyOutpostArn,
 		},
 		{
-			name:              "nitro instances already attached EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      2,
-			expMaxVolumes:     24,
-			outpostArn:        emptyOutpostArn,
-		},
-		{
-			name:              "nitro instance already attached max EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      27,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
-		},
-		{
-			name:              "non-nitro instance already attached max EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "m5.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      39,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
-		},
-		{
-			name:              "nitro instance already attached max ENIs",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      27,
-			blockDevices:      1,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
-		},
-		{
 			name:              "nitro instance with dedicated limit",
 			instanceID:        "i-123456789abcdef01",
 			instanceType:      "m7i.48xlarge",
@@ -2217,7 +2168,6 @@ func TestNodeGetInfo(t *testing.T) {
 
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
-				mockMetadata.EXPECT().GetNumBlockDeviceMappings().Return(tc.blockDevices)
 				if cloud.IsNitroInstanceType(tc.instanceType) && cloud.GetDedicatedLimitForInstanceType(tc.instanceType) == 0 {
 					mockMetadata.EXPECT().GetNumAttachedENIs().Return(tc.attachedENIs)
 				}

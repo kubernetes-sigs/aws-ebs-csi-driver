@@ -75,12 +75,11 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 	}
 
 	instanceInfo := Metadata{
-		InstanceID:             instanceID,
-		InstanceType:           instanceType,
-		Region:                 region,
-		AvailabilityZone:       availabilityZone,
-		NumAttachedENIs:        1, // All nodes have at least 1 attached ENI, so we'll use that
-		NumBlockDeviceMappings: 0,
+		InstanceID:       instanceID,
+		InstanceType:     instanceType,
+		Region:           region,
+		AvailabilityZone: availabilityZone,
+		NumAttachedENIs:  1, // All nodes have at least 1 attached ENI, so we'll use that
 	}
 
 	return &instanceInfo, nil
