@@ -17,6 +17,7 @@ package testsuites
 import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 
+	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
@@ -31,9 +32,11 @@ import (
 // And finally delete the snapshot
 // This test only supports a single volume
 type DynamicallyProvisionedVolumeSnapshotTest struct {
-	CSIDriver   driver.PVTestDriver
-	Pod         PodDetails
-	RestoredPod PodDetails
+	CSIDriver    driver.PVTestDriver
+	Pod          PodDetails
+	RestoredPod  PodDetails
+	Parameters   map[string]string
+	ValidateFunc func(*volumesnapshotv1.VolumeSnapshot)
 }
 
 func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient restclientset.Interface, namespace *v1.Namespace) {
@@ -52,7 +55,7 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 	tpod.WaitForSuccess()
 
 	By("taking snapshots")
-	tvsc, cleanup := CreateVolumeSnapshotClass(restclient, namespace, t.CSIDriver)
+	tvsc, cleanup := CreateVolumeSnapshotClass(restclient, namespace, t.CSIDriver, t.Parameters)
 	defer cleanup()
 
 	snapshot := tvsc.CreateSnapshot(tpvc.persistentVolumeClaim)
@@ -73,4 +76,8 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 	defer trpod.Cleanup()
 	By("checking that the pods command exits with no error")
 	trpod.WaitForSuccess()
+
+	if t.ValidateFunc != nil {
+		t.ValidateFunc(snapshot)
+	}
 }

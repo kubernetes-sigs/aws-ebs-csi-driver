@@ -62,10 +62,10 @@ func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]str
 	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, volumeExpansion, bindingMode, allowedTopologies)
 }
 
-func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string) *volumesnapshotv1.VolumeSnapshotClass {
+func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string, parameters map[string]string) *volumesnapshotv1.VolumeSnapshotClass {
 	provisioner := d.driverName
 	generateName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
-	return getVolumeSnapshotClass(generateName, provisioner)
+	return getVolumeSnapshotClass(generateName, provisioner, parameters)
 }
 
 func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string, accessMode v1.PersistentVolumeAccessMode, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolume {
