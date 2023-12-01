@@ -1,0 +1,115 @@
+#!/bin/bash
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ---
+# This script generates the sidecar image tags in `deploy/kubernetes/overlays/stable/gcr/kustomization.yaml`and
+# `charts/aws-ebs-csi-driver/values.yaml` based off of the values in the generated
+# `hack/release-scripts/image-digests.yaml` file from running the get-latest-sidecar-images script.
+
+set -euo pipefail # Exit on any error
+
+# --- Environment Variables
+export SCRIPT_PATH ROOT_DIRECTORY TRUTH_FILEPATH HELM_VALUES_FILEPATH KUSTOMIZE_FILEPATH
+SCRIPT_PATH=$(dirname $(realpath "$0"))
+ROOT_DIRECTORY="$SCRIPT_PATH/../.."
+IMAGE_DIGESTS_FILEPATH=${IMAGE_DIGESTS_FILEPATH:="$ROOT_DIRECTORY/hack/release-scripts/image-digests.yaml"}
+HELM_VALUES_FILEPATH=${HELM_VALUES_FILEPATH:="$ROOT_DIRECTORY/charts/aws-ebs-csi-driver/values.yaml"}
+KUSTOMIZE_FILEPATH=${KUSTOMIZE_FILEPATH:="$ROOT_DIRECTORY/deploy/kubernetes/overlays/stable/gcr/kustomization.yaml"}
+
+tmp_filename=$(mktemp)
+
+# --- Script Tools
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("yq" "git" "sed")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+
+  # Force macOS users to use gsed due to -i incompatibility
+  export SED="sed"
+  if [[ $(uname) = "Darwin" ]]; then
+    if ! command -v "gsed" &>/dev/null; then
+      log "gsed could not be found, please install it."
+        exit 1
+    fi
+    SED="gsed"
+  fi
+}
+
+error_handler() {
+  printf "Error occurred in script: %s, at line: %s. Command: %s. Error: %s\n" "$1" "$2" "$BASH_COMMAND" "$3" >&2
+  exit 1
+}
+
+trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
+
+# --- Script
+trap 'rm $tmp_filename' EXIT
+
+update_gcr_kustomize_sidecar_tag () {
+  sidecar_name=$1
+  line_above=$2
+
+  tag=$(yq ".sidecars.$sidecar_name.tag" "$IMAGE_DIGESTS_FILEPATH" | awk -F- '{print $1}') # Cut off -eks-1... off of tag
+  log "Updating gcr kustomize $sidecar_name to $tag"
+  $SED -i "\|$line_above|{n;s/.*/    newTag: $tag/;}" "$KUSTOMIZE_FILEPATH"
+}
+
+update_helm_chart_sidecar_tag () {
+  sidecar_name=$1
+
+  export TAG
+  TAG=$(yq ".sidecars.$sidecar_name.tag" "$IMAGE_DIGESTS_FILEPATH")
+  log "Updating helm $sidecar_name sidecar to $TAG"
+  yq ".sidecars.$sidecar_name.image.tag = env(TAG)" -i "$HELM_VALUES_FILEPATH"
+}
+
+generate_gcr_kustomize () {
+  update_gcr_kustomize_sidecar_tag "provisioner" "newName: registry.k8s.io/sig-storage/csi-provisioner"
+  update_gcr_kustomize_sidecar_tag "attacher" "newName: registry.k8s.io/sig-storage/csi-attacher"
+  update_gcr_kustomize_sidecar_tag "livenessProbe" "newName: registry.k8s.io/sig-storage/livenessprobe"
+  update_gcr_kustomize_sidecar_tag "snapshotter" "newName: registry.k8s.io/sig-storage/csi-snapshotter"
+  update_gcr_kustomize_sidecar_tag "resizer" "newName: registry.k8s.io/sig-storage/csi-resizer"
+  update_gcr_kustomize_sidecar_tag "nodeDriverRegistrar" "newName: registry.k8s.io/sig-storage/csi-node-driver-registrar"
+
+  log "Success: All sidecar tags in $KUSTOMIZE_FILEPATH updated"
+}
+
+generate_helm_sidecars () {
+  yq '.sidecars | keys | .[]' "$IMAGE_DIGESTS_FILEPATH" > "$tmp_filename"
+
+  for sidecar in $(cat "$tmp_filename")
+     do
+       update_helm_chart_sidecar_tag "$sidecar"
+     done
+
+  log "Success: All sidecar tags in $HELM_VALUES_FILEPATH updated"
+}
+
+main () {
+  check_dependencies
+  generate_gcr_kustomize
+  generate_helm_sidecars
+}
+
+main
