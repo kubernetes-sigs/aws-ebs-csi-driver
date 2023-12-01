@@ -82,6 +82,9 @@ const (
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
 	BlockExpressKey = "blockexpress"
 
+	// FSTypeKey configures the file system type that will be formatted during volume creation.
+	FSTypeKey = "csi.storage.k8s.io/fstype"
+
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
 

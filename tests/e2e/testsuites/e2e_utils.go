@@ -19,8 +19,27 @@ import "fmt"
 const (
 	DefaultVolumeName = "test-volume-1"
 	DefaultMountPath  = "/mnt/default-mount"
+
+	DefaultIopsIoVolumes = "100"
 )
 
 func PodCmdWriteToVolume(volumeMountPath string) string {
 	return fmt.Sprintf("echo 'hello world' >> %s/data && grep 'hello world' %s/data && sync", volumeMountPath, volumeMountPath)
+}
+
+func CreateVolumeDetails(createVolumeParameters map[string]string, volumeSize string) *VolumeDetails {
+	allowVolumeExpansion := true
+
+	volume := VolumeDetails{
+		MountOptions: []string{"rw"},
+		ClaimSize:    volumeSize,
+		VolumeMount: VolumeMountDetails{
+			NameGenerate:      DefaultVolumeName,
+			MountPathGenerate: DefaultMountPath,
+		},
+		AllowVolumeExpansion:   &allowVolumeExpansion,
+		CreateVolumeParameters: createVolumeParameters,
+	}
+
+	return &volume
 }

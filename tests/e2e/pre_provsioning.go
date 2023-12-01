@@ -37,7 +37,7 @@ import (
 
 const (
 	defaultDiskSize   = 4
-	defaultVoluemType = awscloud.VolumeTypeGP3
+	defaultVolumeType = awscloud.VolumeTypeGP3
 
 	awsAvailabilityZonesEnv = "AWS_AVAILABILITY_ZONES"
 
@@ -83,7 +83,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 		diskOptions := &awscloud.DiskOptions{
 			CapacityBytes:    defaultDiskSizeBytes,
-			VolumeType:       defaultVoluemType,
+			VolumeType:       defaultVolumeType,
 			AvailabilityZone: availabilityZone,
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
@@ -128,9 +128,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeID:  volumeID,
-						FSType:    ebscsidriver.FSTypeExt4,
-						ClaimSize: diskSize,
+						VolumeID:                   volumeID,
+						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+						ClaimSize:                  diskSize,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -172,9 +172,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeID:  volumeID,
-						FSType:    ebscsidriver.FSTypeExt4,
-						ClaimSize: diskSize,
+						VolumeID:                   volumeID,
+						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+						ClaimSize:                  diskSize,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -195,10 +195,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumes := []testsuites.VolumeDetails{
 			{
-				VolumeID:      volumeID,
-				FSType:        ebscsidriver.FSTypeExt4,
-				ClaimSize:     diskSize,
-				ReclaimPolicy: &reclaimPolicy,
+				VolumeID:                   volumeID,
+				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+				ClaimSize:                  diskSize,
+				ReclaimPolicy:              &reclaimPolicy,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -213,10 +213,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		skipManuallyDeletingVolume = true
 		volumes := []testsuites.VolumeDetails{
 			{
-				VolumeID:      volumeID,
-				FSType:        ebscsidriver.FSTypeExt4,
-				ClaimSize:     diskSize,
-				ReclaimPolicy: &reclaimPolicy,
+				VolumeID:                   volumeID,
+				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+				ClaimSize:                  diskSize,
+				ReclaimPolicy:              &reclaimPolicy,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -286,7 +286,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 			{
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeIO2,
 						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
 						VolumeMode: testsuites.Block,
 						VolumeDevice: testsuites.VolumeDeviceDetails{
@@ -302,7 +301,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 			{
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeIO2,
 						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
 						VolumeMode: testsuites.Block,
 						VolumeDevice: testsuites.VolumeDeviceDetails{
