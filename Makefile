@@ -157,7 +157,7 @@ test-sanity:
 test-e2e-single-az:
 	AWS_REGION=us-west-2 \
 	AWS_AVAILABILITY_ZONES=us-west-2a \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
+	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME,controller.volumeModificationFeature.enabled=true' \
 	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \

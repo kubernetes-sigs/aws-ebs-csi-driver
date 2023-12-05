@@ -15,18 +15,9 @@ limitations under the License.
 package testsuites
 
 import (
-	"context"
-	"fmt"
-	"time"
-
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/test/e2e/framework"
-
 	. "github.com/onsi/ginkgo/v2"
+	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 )
 
@@ -45,9 +36,10 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 	tpvc, _ := volume.SetupDynamicPersistentVolumeClaim(client, namespace, t.CSIDriver)
 	defer tpvc.Cleanup()
 
-	ResizeTestPvc(client, namespace, tpvc, 1)
+	By("resizing the volume")
+	ResizeTestPvc(client, namespace, tpvc, DefaultSizeIncreaseGi)
 
-	By("Validate volume can be attached")
+	By("validate volume can be attached")
 	tpod := NewTestPod(client, namespace, t.Pod.Cmd)
 
 	tpod.SetupVolume(tpvc.persistentVolumeClaim, volume.VolumeMount.NameGenerate+"1", volume.VolumeMount.MountPathGenerate+"1", volume.VolumeMount.ReadOnly)
@@ -58,44 +50,4 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 	tpod.WaitForSuccess()
 
 	defer tpod.Cleanup()
-
-}
-
-// WaitForPvToResize waiting for pvc size to be resized to desired size
-func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, desiredSize resource.Quantity, timeout time.Duration, interval time.Duration) error {
-	By(fmt.Sprintf("Waiting up to %v for pv in namespace %q to be complete", timeout, ns.Name))
-	for start := time.Now(); time.Since(start) < timeout; time.Sleep(interval) {
-		newPv, _ := c.CoreV1().PersistentVolumes().Get(context.TODO(), pvName, metav1.GetOptions{})
-		newPvSize := newPv.Spec.Capacity["storage"]
-		if desiredSize.Equal(newPvSize) {
-			By(fmt.Sprintf("Pv size is updated to %v", newPvSize.String()))
-			return nil
-		}
-	}
-	return fmt.Errorf("Gave up after waiting %v for pv %q to complete resizing", timeout, pvName)
-}
-
-// ResizeTestPvc increases size of given persistent volume claim by `sizeIncreaseGi` Gigabytes
-func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc *TestPersistentVolumeClaim, sizeIncreaseGi int64) (updatedPvc *v1.PersistentVolumeClaim, updatedSize resource.Quantity) {
-	By(fmt.Sprintf("getting pvc name: %v", testPvc.persistentVolumeClaim.Name))
-	pvc, _ := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), testPvc.persistentVolumeClaim.Name, metav1.GetOptions{})
-
-	originalSize := pvc.Spec.Resources.Requests["storage"]
-	delta := resource.Quantity{}
-	delta.Set(util.GiBToBytes(sizeIncreaseGi))
-	originalSize.Add(delta)
-	pvc.Spec.Resources.Requests["storage"] = originalSize
-
-	By("resizing the pvc")
-	updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(context.TODO(), pvc, metav1.UpdateOptions{})
-	if err != nil {
-		framework.ExpectNoError(err, fmt.Sprintf("fail to resize pvc(%s): %v", pvc.Name, err))
-	}
-	updatedSize = updatedPvc.Spec.Resources.Requests["storage"]
-
-	By("checking the resizing PV result")
-	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, 1*time.Minute, 5*time.Second)
-	framework.ExpectNoError(err)
-
-	return
 }

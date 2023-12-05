@@ -28,10 +28,6 @@ type FormatOptionTest struct {
 	CreateVolumeParameters map[string]string
 }
 
-const (
-	volumeSizeIncreaseAmtGi = 1
-)
-
 func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespace, ebsDriver driver.PVTestDriver) {
 	By("setting up pvc with custom format option")
 	volumeDetails := CreateVolumeDetails(t.CreateVolumeParameters, driver.MinimumSizeForVolumeType(t.CreateVolumeParameters[ebscsidriver.VolumeTypeKey]))
@@ -44,7 +40,7 @@ func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespa
 	formatOptionMountPod.WaitForSuccess()
 
 	By("testing that pvc is able to be resized")
-	ResizeTestPvc(client, namespace, testPvc, volumeSizeIncreaseAmtGi)
+	ResizeTestPvc(client, namespace, testPvc, DefaultSizeIncreaseGi)
 
 	By("validating resized pvc by deploying new pod")
 	resizeTestPod := createPodWithVolume(client, namespace, PodCmdWriteToVolume(DefaultMountPath), testPvc, volumeDetails)
