@@ -1,20 +1,27 @@
 #!/bin/bash
 
-set -euo pipefail
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-function eksctl_install() {
-  INSTALL_PATH=${1}
-  EKSCTL_VERSION=${2}
-  if [[ ! -e ${INSTALL_PATH}/eksctl ]]; then
-    EKSCTL_DOWNLOAD_URL="https://github.com/weaveworks/eksctl/releases/download/v${EKSCTL_VERSION}/eksctl_$(uname -s)_amd64.tar.gz"
-    curl --silent --location "${EKSCTL_DOWNLOAD_URL}" | tar xz -C "${INSTALL_PATH}"
-    chmod +x "${INSTALL_PATH}"/eksctl
-  fi
-}
+# This script updates the kustomize templates in deploy/kubernetes/base/ by
+# running `helm template` and stripping the namespace from the output
+
+set -euo pipefail
 
 function eksctl_create_cluster() {
   CLUSTER_NAME=${1}
-  BIN=${2}
+  EKSCTL_BIN=${2}
   ZONES=${3}
   INSTANCE_TYPE=${4}
   K8S_VERSION=${5}
@@ -27,12 +34,12 @@ function eksctl_create_cluster() {
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
-  if eksctl_cluster_exists "${CLUSTER_NAME}" "${BIN}"; then
+  if eksctl_cluster_exists "${CLUSTER_NAME}" "${EKSCTL_BIN}"; then
     loudecho "Upgrading cluster $CLUSTER_NAME with $CLUSTER_FILE"
-    ${BIN} upgrade cluster -f "${CLUSTER_FILE}"
+    ${EKSCTL_BIN} upgrade cluster -f "${CLUSTER_FILE}"
   else
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
-    ${BIN} create cluster \
+    ${EKSCTL_BIN} create cluster \
       --managed \
       --ssh-access=false \
       --zones "${ZONES}" \
@@ -48,22 +55,22 @@ function eksctl_create_cluster() {
     fi
 
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
-    ${BIN} create cluster -f "${CLUSTER_FILE}" --kubeconfig "${KUBECONFIG}"
+    ${EKSCTL_BIN} create cluster -f "${CLUSTER_FILE}" --kubeconfig "${KUBECONFIG}"
   fi
 
   loudecho "Cluster ${CLUSTER_NAME} kubecfg written to ${KUBECONFIG}"
   loudecho "Getting cluster ${CLUSTER_NAME}"
-  ${BIN} get cluster "${CLUSTER_NAME}"
+  ${EKSCTL_BIN} get cluster "${CLUSTER_NAME}"
 
   if [[ -n "$EKSCTL_ADMIN_ROLE" ]]; then
     AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     ADMIN_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${EKSCTL_ADMIN_ROLE}"
     loudecho "Granting ${ADMIN_ARN} admin access to the cluster"
-    ${BIN} create iamidentitymapping --cluster "${CLUSTER_NAME}" --arn "${ADMIN_ARN}" --group system:masters --username admin
+    ${EKSCTL_BIN} create iamidentitymapping --cluster "${CLUSTER_NAME}" --arn "${ADMIN_ARN}" --group system:masters --username admin
   fi
 
   if [[ "$WINDOWS" == true ]]; then
-    ${BIN} create nodegroup \
+    ${EKSCTL_BIN} create nodegroup \
       --managed=true \
       --ssh-access=false \
       --cluster="${CLUSTER_NAME}" \
@@ -81,9 +88,9 @@ function eksctl_create_cluster() {
 
 function eksctl_cluster_exists() {
   CLUSTER_NAME=${1}
-  BIN=${2}
+  EKSCTL_BIN=${2}
   set +e
-  if ${BIN} get cluster "${CLUSTER_NAME}"; then
+  if ${EKSCTL_BIN} get cluster "${CLUSTER_NAME}"; then
     set -e
     return 0
   else
@@ -93,10 +100,13 @@ function eksctl_cluster_exists() {
 }
 
 function eksctl_delete_cluster() {
-  BIN=${1}
+  EKSCTL_BIN=${1}
   CLUSTER_NAME=${2}
+
+  CLUSTER_NAME="${CLUSTER_NAME//./-}"
+
   loudecho "Deleting cluster ${CLUSTER_NAME}"
-  ${BIN} delete cluster "${CLUSTER_NAME}"
+  ${EKSCTL_BIN} delete cluster "${CLUSTER_NAME}"
 }
 
 function eksctl_patch_cluster_file() {
@@ -112,7 +122,7 @@ function eksctl_patch_cluster_file() {
   cp "$CLUSTER_FILE" "$CLUSTER_FILE_0"
 
   # Patch only the Cluster
-  kubectl patch -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$EKSCTL_PATCH_FILE")" -o yaml > "$CLUSTER_FILE_1"
+  kubectl patch --kubeconfig "/dev/null" -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$EKSCTL_PATCH_FILE")" -o yaml > "$CLUSTER_FILE_1"
   mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
 
   # Done patching, overwrite original CLUSTER_FILE
