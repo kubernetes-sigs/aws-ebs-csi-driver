@@ -38,7 +38,7 @@ check_dependencies() {
   if [[ $(uname) = "Darwin" ]]; then
     if ! command -v "gsed" &>/dev/null; then
       log "gsed could not be found, please install it."
-        exit 1
+      exit 1
     fi
     SED="gsed"
   fi
@@ -52,13 +52,13 @@ error_handler() {
 trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
 
 # --- Script
-usage () {
+usage() {
   echo "Usage: $0 [PREV_DRIVER_VERSION] [NEW_DRIVER_VERSION]"
   echo "example: $0 v1.23.1 v1.24.0"
   exit 1
 }
 
-setup_vars () {
+setup_vars() {
   export PREV_DRIVER_VERSION=$1
   export NEW_DRIVER_VERSION=$2
 
@@ -72,18 +72,21 @@ setup_vars () {
   export CHART_PATH="$ROOT_DIRECTORY/charts/aws-ebs-csi-driver/Chart.yaml"
 }
 
-parse_args () {
+parse_args() {
   # Confirm 2 parameters
   [[ $# -ne 2 ]] && usage
 
   # Confirm new driver version > prev driver version
   log "Confirming $1 < $2"
-  sort -C -V <(echo "$1"; echo "$2") || usage
+  sort -C -V <(
+    echo "$1"
+    echo "$2"
+  ) || usage
 
   setup_vars "$@"
 }
 
-update_readme () {
+update_readme() {
   log "Updating README.md"
   # vi macro that adds new driver version 'Container Images' row to README.md
   vi -s <(echo "gg/## Container Images
@@ -91,36 +94,39 @@ update_readme () {
   jjjjjjp:wq") "$README_PATH"
 }
 
-update_makefile () {
+update_makefile() {
   log "Updating Makefile"
   $SED "s/VERSION?=$PREV_DRIVER_VERSION/VERSION?=$NEW_DRIVER_VERSION/g" -i "$MAKEFILE_PATH"
 }
 
-update_installmd () {
+update_installmd() {
   log "Updating docs/install.md"
   prev_major_minor_version=$(echo "$PREV_DRIVER_VERSION" | sed 's/v\([0-9]*\.[0-9]*\).*/\1/')
   new_major_minor_version=$(echo "$NEW_DRIVER_VERSION" | sed 's/v\([0-9]*\.[0-9]*\).*/\1/')
   $SED "s/?ref=release-$prev_major_minor_version/?ref=release-$new_major_minor_version/g" -i "$INSTALL_MD_PATH"
 }
 
-update_chart_and_overlays () {
+update_chart_and_overlays() {
   log "Updating helm chart and generates kustomize"
   prev_minor_patch_version=$(echo "$PREV_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
   new_minor_patch_version=$(echo "$NEW_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
 
   $SED "s/$prev_minor_patch_version$/$new_minor_patch_version/g" -i "$CHART_PATH"
 
-  (cd "$ROOT_DIRECTORY"; make generate-kustomize) > "/dev/null"
+  (
+    cd "$ROOT_DIRECTORY"
+    make generate-kustomize
+  ) >"/dev/null"
 }
 
-update_upstream_repo () {
+update_upstream_repo() {
   update_readme
   update_makefile
   update_installmd
   update_chart_and_overlays
 }
 
-print_rest_of_release_steps () {
+print_rest_of_release_steps() {
   echo "SUCCESS!
 Before you submit the release PR, you must also:
   1. Check that 'git diff' produces what you expected.
@@ -128,7 +134,7 @@ Before you submit the release PR, you must also:
   3. Update charts/aws-ebs-csi-driver/CHANGELOG.md"
 }
 
-main () {
+main() {
   check_dependencies
   parse_args "$@"
 

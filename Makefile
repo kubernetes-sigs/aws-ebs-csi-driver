@@ -1,4 +1,4 @@
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,28 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+###
+### This Makefile is documented in docs/makefile.md
+###
+
+## Variables/Functions
+
 VERSION?=v1.26.1
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u -Iseconds)
-
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
-GO111MODULE=on
-GOPATH=$(shell go env GOPATH)
-GOOS=$(shell go env GOOS)
-GOBIN=$(shell pwd)/bin
+OS?=$(shell go env GOHOSTOS)
+ARCH?=$(shell go env GOHOSTARCH)
+ifeq ($(OS),windows)
+	BINARY=aws-ebs-csi-driver.exe
+	OSVERSION?=ltsc2022
+else
+	BINARY=aws-ebs-csi-driver
+	OSVERSION?=al2023
+endif
+
+GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
 REGISTRY?=gcr.io/k8s-staging-provider-aws
 IMAGE?=$(REGISTRY)/aws-ebs-csi-driver
 TAG?=$(GIT_COMMIT)
-
-OUTPUT_TYPE?=docker
-
-OS?=linux
-ARCH?=amd64
-OSVERSION?=al2023
 
 ALL_OS?=linux windows
 ALL_ARCH_linux?=amd64 arm64
@@ -43,106 +49,28 @@ ALL_OS_ARCH_OSVERSION_linux=$(foreach arch, $(ALL_ARCH_linux), $(foreach osversi
 ALL_ARCH_windows?=amd64
 ALL_OSVERSION_windows?=ltsc2019 ltsc2022
 ALL_OS_ARCH_OSVERSION_windows=$(foreach arch, $(ALL_ARCH_windows), $(foreach osversion, ${ALL_OSVERSION_windows}, windows-$(arch)-${osversion}))
-
 ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
+
+CLUSTER_NAME?=ebs-csi-e2e.k8s.local
+CLUSTER_TYPE?=kops
+WINDOWS?=false
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
 
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: linux/$(ARCH) bin/aws-ebs-csi-driver
-linux/$(ARCH): bin/aws-ebs-csi-driver
-bin/aws-ebs-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -mod=mod -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver ./cmd/
+## Default target
+# When no target is supplied, make runs the first target that does not begin with a .
+# Alias that to building the binary
+.PHONY: default
+default: bin/$(BINARY)
 
-.PHONY: windows/$(ARCH) bin/aws-ebs-csi-driver.exe
-windows/$(ARCH): bin/aws-ebs-csi-driver.exe
-bin/aws-ebs-csi-driver.exe: | bin
-	CGO_ENABLED=0 GOOS=windows GOARCH=$(ARCH) go build -mod=mod -ldflags ${LDFLAGS} -o bin/aws-ebs-csi-driver.exe ./cmd/
-
-# Builds all linux images (not windows because it can't be exported with OUTPUT_TYPE=docker)
-.PHONY: all
-all: all-image-docker
-
-# Builds all linux and windows images and pushes them
-.PHONY: all-push
-all-push: all-image-registry push-manifest
-
-.PHONY: push-manifest
-push-manifest: create-manifest
-	docker manifest push --purge $(IMAGE):$(TAG)
-
-.PHONY: create-manifest
-create-manifest: all-image-registry
-# sed expression:
-# LHS: match 0 or more not space characters
-# RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
-	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_OS_ARCH_OSVERSION) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
-
-# Only linux for OUTPUT_TYPE=docker because windows image cannot be exported
-# "Currently, multi-platform images cannot be exported with the docker export type. The most common usecase for multi-platform images is to directly push to a registry (see registry)."
-# https://docs.docker.com/engine/reference/commandline/buildx_build/#output
-.PHONY: all-image-docker
-all-image-docker: $(addprefix sub-image-docker-,$(ALL_OS_ARCH_OSVERSION_linux))
-.PHONY: all-image-registry
-all-image-registry: sub-image-registry-linux-arm64-al2 $(addprefix sub-image-registry-,$(ALL_OS_ARCH_OSVERSION))
-
-sub-image-%:
-	$(MAKE) OUTPUT_TYPE=$(call word-hyphen,$*,1) OS=$(call word-hyphen,$*,2) ARCH=$(call word-hyphen,$*,3) OSVERSION=$(call word-hyphen,$*,4) image
-
-.PHONY: image
-image: .image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)
-.image-$(TAG)-$(OS)-$(ARCH)-$(OSVERSION):
-	docker buildx build \
-		--platform=$(OS)/$(ARCH) \
-		--progress=plain \
-		--target=$(OS)-$(OSVERSION) \
-		--output=type=$(OUTPUT_TYPE) \
-		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
-		--build-arg=GOPROXY=$(GOPROXY) \
-		--build-arg=VERSION=$(VERSION) \
-		`./hack/provenance` \
-		.
-	touch $@
+## Top level targets
 
 .PHONY: clean
 clean:
-	rm -rf .*image-* bin/
-
-bin /tmp/helm /tmp/kubeval:
-	@mkdir -p $@
-
-bin/helm: | /tmp/helm bin
-	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.11.2-${GOOS}-amd64.tar.gz
-	@tar -zxf /tmp/helm/helm.tar.gz -C bin --strip-components=1
-	@rm -rf /tmp/helm/*
-
-bin/kubeval: | /tmp/kubeval bin
-	@curl -o /tmp/kubeval/kubeval.tar.gz -sSL https://github.com/instrumenta/kubeval/releases/download/0.16.1/kubeval-linux-amd64.tar.gz
-	@tar -zxf /tmp/kubeval/kubeval.tar.gz -C bin kubeval
-	@rm -rf /tmp/kubeval/*
-
-bin/mockgen: | bin
-	go install github.com/golang/mock/mockgen@v1.6.0
-
-bin/golangci-lint: | bin
-	echo "Installing golangci-lint..."
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.54.0
-
-.PHONY: kubeval
-kubeval: bin/kubeval
-	bin/kubeval -d deploy/kubernetes/base,deploy/kubernetes/cluster,deploy/kubernetes/overlays -i kustomization.yaml,crd_.+\.yaml,controller_add
-
-.PHONY: mockgen
-mockgen: bin/mockgen
-	./hack/update-gomock
-
-.PHONY: verify
-verify: bin/golangci-lint
-	echo "verifying and linting files ..."
-	./hack/verify-all
-	echo "Congratulations! All Go source files have been linted."
+	rm -rf bin/
 
 .PHONY: test
 test:
@@ -152,135 +80,77 @@ test:
 test-sanity:
 	go test -v -race ./tests/sanity/...
 
-.PHONY: test-e2e-single-az
-test-e2e-single-az:
-	AWS_REGION=us-west-2 \
+.PHONY: tools
+tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
+
+.PHONY: update
+update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt
+	@echo "All updates succeeded!"
+
+.PHONY: verify
+verify: verify/govet verify/golangci-lint verify/update
+	@echo "All verifications passed!"
+
+.PHONY: all-push
+all-push: all-image-registry push-manifest
+
+.PHONY: cluster/create
+cluster/create: bin/kops bin/eksctl
+	./hack/e2e/create-cluster.sh
+
+.PHONY: cluster/delete
+cluster/delete: bin/kops bin/eksctl
+	./hack/e2e/delete-cluster.sh
+
+## E2E targets
+# Targets to run e2e tests
+
+.PHONY: e2e/single-az
+e2e/single-az: bin/helm bin/ginkgo
 	AWS_AVAILABILITY_ZONES=us-west-2a \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME,controller.volumeModificationFeature.enabled=true' \
-	EBS_INSTALL_SNAPSHOT="true" \
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
-	GINKGO_SKIP="\"sc1\"|\"st1\"" \
+	GINKGO_PARALLEL=5 \
+	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true" \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-multi-az
-test-e2e-multi-az:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EBS_INSTALL_SNAPSHOT="true" \
+.PHONY: e2e/multi-az
+e2e/multi-az: bin/helm bin/ginkgo
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" \
+	GINKGO_PARALLEL=5 \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-external
-test-e2e-external:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EBS_INSTALL_SNAPSHOT="true" \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="External.Storage" \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+.PHONY: e2e/external
+e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-external-arm64
-test-e2e-external-arm64:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EBS_INSTALL_SNAPSHOT="true" \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="External.Storage" \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
-	INSTANCE_TYPE="m7g.medium" \
-	AMI_PARAMETER="/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64" \
+.PHONY: e2e/external-arm64
+e2e/external-arm64: bin/helm bin/kubetest2
 	IMAGE_ARCH="arm64" \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-external-eks
-test-e2e-external-eks:
-	CLUSTER_TYPE=eksctl \
-	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EBS_INSTALL_SNAPSHOT="true" \
-	EKSCTL_ADMIN_ROLE="Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV" \
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="External.Storage" \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
-	./hack/e2e/run.sh
-
-.PHONY: test-e2e-external-eks-windows
-test-e2e-external-eks-windows:
-	CLUSTER_TYPE=eksctl \
+.PHONY: e2e/external-windows
+e2e/external-windows: bin/helm bin/kubetest2
 	WINDOWS=true \
-	HELM_VALUES_FILE="./hack/values_eksctl.yaml" \
-	HELM_EXTRA_FLAGS='--set=controller.k8sTagClusterId=$$CLUSTER_NAME' \
-	EKSCTL_ADMIN_ROLE="Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV" \
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="External.Storage" \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
 	GINKGO_PARALLEL=15 \
-	NODE_OS_DISTRO="windows" \
+	EBS_INSTALL_SNAPSHOT="false" \
 	./hack/e2e/run.sh
 
-.PHONY: test-e2e-external-kustomize
-test-e2e-external-kustomize:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	EBS_INSTALL_SNAPSHOT="true" \
-	TEST_PATH=./tests/e2e-kubernetes/... \
-	GINKGO_FOCUS="External.Storage" \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]" \
+.PHONY: e2e/external-kustomize
+e2e/external-kustomize: bin/kubetest2
 	DEPLOY_METHOD="kustomize" \
 	./hack/e2e/run.sh
 
-.PHONY: test-helm-chart
-test-helm-chart:
-	AWS_REGION=us-west-2 \
-	AWS_AVAILABILITY_ZONES=us-west-2a,us-west-2b,us-west-2c \
-	EBS_INSTALL_SNAPSHOT="true" \
+.PHONY: e2e/helm-ct
+e2e/helm-ct: bin/helm bin/ct
 	HELM_CT_TEST="true" \
 	./hack/e2e/run.sh
 
-.PHONY: verify-vendor
-test: verify-vendor
-verify: verify-vendor
-verify-vendor:
-	@ echo; echo "### $@:"
-	@ ./hack/verify-vendor.sh
-
-.PHONY: verify-kustomize
-verify: verify-kustomize
-verify-kustomize:
-	@ echo; echo "### $@:"
-	@ ./hack/verify-kustomize
-
-.PHONY: generate-kustomize
-generate-kustomize: bin/helm
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-attacher.yaml > ../../deploy/kubernetes/base/clusterrole-attacher.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-csi-node.yaml > ../../deploy/kubernetes/base/clusterrole-csi-node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-provisioner.yaml > ../../deploy/kubernetes/base/clusterrole-provisioner.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-resizer.yaml > ../../deploy/kubernetes/base/clusterrole-resizer.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrole-snapshotter.yaml > ../../deploy/kubernetes/base/clusterrole-snapshotter.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-attacher.yaml > ../../deploy/kubernetes/base/clusterrolebinding-attacher.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-csi-node.yaml > ../../deploy/kubernetes/base/clusterrolebinding-csi-node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-provisioner.yaml > ../../deploy/kubernetes/base/clusterrolebinding-provisioner.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-resizer.yaml > ../../deploy/kubernetes/base/clusterrolebinding-resizer.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/clusterrolebinding-snapshotter.yaml > ../../deploy/kubernetes/base/clusterrolebinding-snapshotter.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/controller.yaml --api-versions 'snapshot.storage.k8s.io/v1' --set 'controller.userAgentExtra=kustomize' | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/csidriver.yaml > ../../deploy/kubernetes/base/csidriver.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/node.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/poddisruptionbudget-controller.yaml --api-versions 'policy/v1/PodDisruptionBudget' | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/poddisruptionbudget-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-controller.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-controller.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/serviceaccount-csi-node.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/serviceaccount-csi-node.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/role-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/role-leases.yaml
-	cd charts/aws-ebs-csi-driver && ../../bin/helm template kustomize . -s templates/rolebinding-leases.yaml | sed -e "/namespace: /d" > ../../deploy/kubernetes/base/rolebinding-leases.yaml
+## Release scripts
+# Targets run as part of performing a release
 
 .PHONY: update-truth-sidecars
 update-truth-sidecars: hack/release-scripts/get-latest-sidecar-images
@@ -291,4 +161,98 @@ generate-sidecar-tags: update-truth-sidecars charts/aws-ebs-csi-driver/values.ya
 	./hack/release-scripts/generate-sidecar-tags
 
 .PHONY: update-sidecar-dependencies
-update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags generate-kustomize
+update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/kustomize
+
+## CI aliases
+# Targets intended to be executed mostly or only by CI jobs
+
+.PHONY: all-push-with-a1compat
+all-push-with-a1compat: sub-image-linux-arm64-al2 all-image-registry push-manifest
+
+test-e2e-%:
+	./hack/prow-e2e.sh test-e2e-$*
+
+test-helm-chart:
+	./hack/prow-e2e.sh test-helm-chart
+
+## Builds
+
+bin:
+	@mkdir -p $@
+
+bin/$(BINARY): $(GO_SOURCES) | bin
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -mod=readonly -ldflags ${LDFLAGS} -o $@ ./cmd/
+
+.PHONY: all-image-registry
+all-image-registry: $(addprefix sub-image-,$(ALL_OS_ARCH_OSVERSION))
+
+sub-image-%:
+	$(MAKE) OS=$(call word-hyphen,$*,1) ARCH=$(call word-hyphen,$*,2) OSVERSION=$(call word-hyphen,$*,3) image
+
+.PHONY: image
+image:
+	docker buildx build \
+		--platform=$(OS)/$(ARCH) \
+		--progress=plain \
+		--target=$(OS)-$(OSVERSION) \
+		--output=type=registry \
+		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
+		--build-arg=GOPROXY=$(GOPROXY) \
+		--build-arg=VERSION=$(VERSION) \
+		`./hack/provenance.sh` \
+		.
+
+.PHONY: create-manifest
+create-manifest: all-image-registry
+# sed expression:
+# LHS: match 0 or more not space characters
+# RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
+	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_OS_ARCH_OSVERSION) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
+
+.PHONY: push-manifest
+push-manifest: create-manifest
+	docker manifest push --purge $(IMAGE):$(TAG)
+
+## Tools
+# Tools necessary to perform other targets
+
+bin/%: hack/tools/install.sh hack/tools/python-runner.sh
+	@TOOLS_PATH="$(shell pwd)/bin" ./hack/tools/install.sh $*
+
+## Updaters
+# Automatic generators/formatters for code
+
+.PHONY: update/gofmt
+update/gofmt:
+	gofmt -s -w .
+
+.PHONY: update/kustomize
+update/kustomize: bin/helm
+	./hack/update-kustomize.sh
+
+.PHONY: update/mockgen
+update/mockgen: bin/mockgen
+	./hack/update-mockgen.sh
+
+.PHONY: update/gomod
+update/gomod:
+	go mod tidy
+
+.PHONY: update/shfmt
+update/shfmt: bin/shfmt
+	./bin/shfmt -w -i 2 -d .
+
+## Verifiers
+# Linters and similar
+
+.PHONY: verify/golangci-lint
+verify/golangci-lint: bin/golangci-lint
+	./bin/golangci-lint run --timeout=10m --verbose
+
+.PHONY: verify/govet
+verify/govet:
+	go vet $$(go list ./...)
+
+.PHONY: verify/update
+verify/update: bin/helm bin/mockgen
+	./hack/verify-update.sh

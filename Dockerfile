@@ -24,7 +24,7 @@ COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
-RUN OS=$TARGETOS ARCH=$TARGETARCH make $TARGETOS/$TARGETARCH
+RUN OS=$TARGETOS ARCH=$TARGETARCH make
 
 FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23 AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver

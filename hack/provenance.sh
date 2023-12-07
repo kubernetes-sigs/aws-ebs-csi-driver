@@ -26,7 +26,7 @@
 # Thus, this script echos back the flag `--provenance=false` if and only
 # if the local buildx installation supports it. If not, it exits silently.
 
-BUILDX_TEST=`docker buildx build --provenance=false 2>&1`
+BUILDX_TEST=$(docker buildx build --provenance=false 2>&1)
 if [[ "${BUILDX_TEST}" == *"See 'docker buildx build --help'."* ]]; then
   if [[ "${BUILDX_TEST}" == *"requires exactly 1 argument"* ]] && ! docker buildx inspect | grep -qE "^Driver:\s*docker$"; then
     echo "--provenance=false"

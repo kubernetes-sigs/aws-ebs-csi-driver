@@ -39,7 +39,7 @@ jobs:
           echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
     - name: Build, tag, and push manifest to Amazon ECR
-      run: make -j `nproc` all-push
+      run: make -j `nproc` all-push-with-a1compat
 
   ecr-public:
     name: Push to ECR Public

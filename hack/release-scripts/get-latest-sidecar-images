@@ -52,7 +52,7 @@ trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
 # --- Script
 trap 'rm $tmp_filename' EXIT
 
-generate_image_digests_file () {
+generate_image_digests_file() {
   touch "$OUTPUT_FILEPATH"
 
   yq '.sidecars.snapshotter.image = "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter"' -i "$OUTPUT_FILEPATH"
@@ -68,28 +68,27 @@ crane_get_latest_image_tag() {
   image=$1
 
   export TAG
-  TAG=$(crane ls "$image" | sed '/latest/d' | sort -V | tail -1)  # Get tag for $image with latest semvar
+  TAG=$(crane ls "$image" | sed '/latest/d' | sort -V | tail -1) # Get tag for $image with latest semvar
 }
 
-update_sidecars_source_of_truth () {
-  yq '.sidecars | keys | .[]' "$OUTPUT_FILEPATH" > "$tmp_filename"
+update_sidecars_source_of_truth() {
+  yq '.sidecars | keys | .[]' "$OUTPUT_FILEPATH" >"$tmp_filename"
 
-  for sidecar in $(cat "$tmp_filename")
-     do
-       log "Updating $sidecar in $OUTPUT_FILEPATH"
-       image=$(yq ".sidecars.$sidecar.image" "$OUTPUT_FILEPATH")
+  for sidecar in $(cat "$tmp_filename"); do
+    log "Updating $sidecar in $OUTPUT_FILEPATH"
+    image=$(yq ".sidecars.$sidecar.image" "$OUTPUT_FILEPATH")
 
-       export TAG
-       crane_get_latest_image_tag "$image"
-       yq ".sidecars.$sidecar.tag = env(TAG)" -i "$OUTPUT_FILEPATH"
+    export TAG
+    crane_get_latest_image_tag "$image"
+    yq ".sidecars.$sidecar.tag = env(TAG)" -i "$OUTPUT_FILEPATH"
 
-       export DIGEST
-       DIGEST=$(crane digest "$image:$TAG")
-       yq ".sidecars.$sidecar.manifestDigest = env(DIGEST)" -i "$OUTPUT_FILEPATH"
-     done
+    export DIGEST
+    DIGEST=$(crane digest "$image:$TAG")
+    yq ".sidecars.$sidecar.manifestDigest = env(DIGEST)" -i "$OUTPUT_FILEPATH"
+  done
 }
 
-main () {
+main() {
   check_dependencies
   generate_image_digests_file
   update_sidecars_source_of_truth

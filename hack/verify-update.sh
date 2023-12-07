@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2022 The Kubernetes Authors.
+# Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,23 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script verifies that `make update` does not need to run
+# It does so by creating a temporary copy of the repo and running `make update`
+# in the copy, and then checking if it produces a diff to the local copy
+
 set -euo pipefail
 
-echo "Verifying kustomize"
-diff=$(git status --porcelain=v1)
-if [[ -n "${diff}" ]]; then
-  echo "${diff}"
-  echo
-  echo "Please commit all changes before verifying"
+ROOT="$(dirname "${0}")/../"
+TEST_DIR=$(mktemp -d)
+trap "rm -rf \"${TEST_DIR}\"" EXIT
+cp -rf "${ROOT}/." "${TEST_DIR}"
+
+if ! make -C "${TEST_DIR}" update >/dev/null; then
+  echo "\`make update\` failed!"
   exit 1
 fi
-make generate-kustomize
-echo
-diff=$(git status --porcelain=v1)
-if [[ -n "${diff}" ]]; then
-  echo "${diff}"
-  echo
-  echo "Please run make generate-kustomize to fix the issue(s)"
+
+if ! diff -x bin -r "${TEST_DIR}" "${ROOT}"; then
+  echo "Auto-generation/formatting needs to run!"
+  echo "Run \`make update\` to fix!"
   exit 1
 fi
-echo "No issue found"
