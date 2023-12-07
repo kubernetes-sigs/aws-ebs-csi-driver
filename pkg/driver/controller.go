@@ -341,12 +341,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)
 	if err != nil {
-		errCode := codes.Internal
-		if errors.Is(err, cloud.ErrNotFound) {
+		var errCode codes.Code
+		switch {
+		case errors.Is(err, cloud.ErrNotFound):
 			errCode = codes.NotFound
-		}
-		if errors.Is(err, cloud.ErrIdempotentParameterMismatch) {
+		case errors.Is(err, cloud.ErrIdempotentParameterMismatch), errors.Is(err, cloud.ErrAlreadyExists):
 			errCode = codes.AlreadyExists
+		default:
+			errCode = codes.Internal
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
@@ -419,6 +421,10 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	klog.V(2).InfoS("ControllerPublishVolume: attaching", "volumeID", volumeID, "nodeID", nodeID)
 	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
+		if errors.Is(err, cloud.ErrNotFound) {
+			klog.InfoS("ControllerPublishVolume: volume not found", "volumeID", volumeID, "nodeID", nodeID)
+			return nil, status.Errorf(codes.NotFound, "Volume %q not found", volumeID)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
@@ -752,6 +758,9 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	snapshot, err = d.cloud.CreateSnapshot(ctx, volumeID, opts)
 	if err != nil {
+		if errors.Is(err, cloud.ErrAlreadyExists) {
+			return nil, status.Errorf(codes.AlreadyExists, "Snapshot %q already exists", snapshotName)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not create snapshot %q: %v", snapshotName, err)
 	}
 
