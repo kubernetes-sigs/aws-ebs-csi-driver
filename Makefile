@@ -150,8 +150,7 @@ test:
 
 .PHONY: test-sanity
 test-sanity:
-	#go test -v ./tests/sanity/...
-	echo "succeed"
+	go test -v -race ./tests/sanity/...
 
 .PHONY: test-e2e-single-az
 test-e2e-single-az:
