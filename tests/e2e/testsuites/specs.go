@@ -187,9 +187,9 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 	return tpvc, cleanupFuncs
 }
 
-func CreateVolumeSnapshotClass(client restclientset.Interface, namespace *v1.Namespace, csiDriver driver.VolumeSnapshotTestDriver) (*TestVolumeSnapshotClass, func()) {
+func CreateVolumeSnapshotClass(client restclientset.Interface, namespace *v1.Namespace, csiDriver driver.VolumeSnapshotTestDriver, vscParameters map[string]string) (*TestVolumeSnapshotClass, func()) {
 	By("setting up the VolumeSnapshotClass")
-	volumeSnapshotClass := csiDriver.GetVolumeSnapshotClass(namespace.Name)
+	volumeSnapshotClass := csiDriver.GetVolumeSnapshotClass(namespace.Name, vscParameters)
 	tvsc := NewTestVolumeSnapshotClass(client, namespace, volumeSnapshotClass)
 	tvsc.Create()
 

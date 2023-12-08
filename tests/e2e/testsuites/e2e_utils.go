@@ -43,6 +43,11 @@ const (
 	AnnotationVolumeType = "ebs.csi.aws.com/volumeType"
 )
 
+var DefaultGeneratedVolumeMount = VolumeMountDetails{
+	NameGenerate:      "test-volume-",
+	MountPathGenerate: "/mnt/test-",
+}
+
 // PodCmdWriteToVolume returns pod command that would write to mounted volume
 func PodCmdWriteToVolume(volumeMountPath string) string {
 	return fmt.Sprintf("echo 'hello world' >> %s/data && grep 'hello world' %s/data && sync", volumeMountPath, volumeMountPath)
@@ -51,6 +56,11 @@ func PodCmdWriteToVolume(volumeMountPath string) string {
 // PodCmdContinuousWrite returns pod command that would continuously write to mounted volume
 func PodCmdContinuousWrite(volumeMountPath string) string {
 	return fmt.Sprintf("while true; do echo \"$(date -u)\" >> /%s/out.txt; sleep 5; done", volumeMountPath)
+}
+
+// PodCmdGrepVolumeData returns pod command that would check that a volume was written to by PodCmdWriteToVolume
+func PodCmdGrepVolumeData(volumeMountPath string) string {
+	return fmt.Sprintf("grep 'hello world' %s/data", volumeMountPath)
 }
 
 // IncreasePvcObjectStorage increases `storage` of a K8s PVC object by specified Gigabytes

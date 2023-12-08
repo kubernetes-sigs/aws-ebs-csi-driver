@@ -767,8 +767,8 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	if len(fsrAvailabilityZones) > 0 {
 		_, err := d.cloud.EnableFastSnapshotRestores(ctx, fsrAvailabilityZones, snapshot.SnapshotID)
 		if err != nil {
-			if _, err = d.cloud.DeleteSnapshot(ctx, snapshot.SnapshotID); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not delete snapshot ID %q: %v", snapshotName, err)
+			if _, deleteErr := d.cloud.DeleteSnapshot(ctx, snapshot.SnapshotID); deleteErr != nil {
+				return nil, status.Errorf(codes.Internal, "Could not delete snapshot ID %q: %v", snapshotName, deleteErr)
 			}
 			return nil, status.Errorf(codes.Internal, "Failed to create Fast Snapshot Restores for snapshot ID %q: %v", snapshotName, err)
 		}
