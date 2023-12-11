@@ -61,13 +61,23 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	attachedENIs := strings.Count(enis, "\n") + 1
+	blockDevMappings := 0
+
+	if !util.IsSBE(doc.Region) {
+		mappings, mapErr := svc.GetMetadata(blockDevicesEndpoint)
+		if mapErr != nil {
+			return nil, fmt.Errorf("could not get number of block device mappings: %w", err)
+		}
+		blockDevMappings = strings.Count(mappings, "ebs")
+	}
 
 	instanceInfo := Metadata{
-		InstanceID:       doc.InstanceID,
-		InstanceType:     doc.InstanceType,
-		Region:           doc.Region,
-		AvailabilityZone: doc.AvailabilityZone,
-		NumAttachedENIs:  attachedENIs,
+		InstanceID:             doc.InstanceID,
+		InstanceType:           doc.InstanceType,
+		Region:                 doc.Region,
+		AvailabilityZone:       doc.AvailabilityZone,
+		NumAttachedENIs:        attachedENIs,
+		NumBlockDeviceMappings: blockDevMappings,
 	}
 
 	outpostArn, err := svc.GetMetadata(outpostArnEndpoint)

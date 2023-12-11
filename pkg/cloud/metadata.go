@@ -26,12 +26,13 @@ import (
 
 // Metadata is info about the ec2 instance on which the driver is running
 type Metadata struct {
-	InstanceID       string
-	InstanceType     string
-	Region           string
-	AvailabilityZone string
-	NumAttachedENIs  int
-	OutpostArn       arn.ARN
+	InstanceID             string
+	InstanceType           string
+	Region                 string
+	AvailabilityZone       string
+	NumAttachedENIs        int
+	NumBlockDeviceMappings int
+	OutpostArn             arn.ARN
 }
 
 const (
@@ -69,6 +70,10 @@ func (m *Metadata) GetAvailabilityZone() string {
 
 func (m *Metadata) GetNumAttachedENIs() int {
 	return m.NumAttachedENIs
+}
+
+func (m *Metadata) GetNumBlockDeviceMappings() int {
+	return m.NumBlockDeviceMappings
 }
 
 // GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.
