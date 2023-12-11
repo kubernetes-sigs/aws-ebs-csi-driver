@@ -91,6 +91,20 @@ func (mr *MockMetadataServiceMockRecorder) GetNumAttachedENIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNumAttachedENIs", reflect.TypeOf((*MockMetadataService)(nil).GetNumAttachedENIs))
 }
 
+// GetNumBlockDeviceMappings mocks base method.
+func (m *MockMetadataService) GetNumBlockDeviceMappings() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNumBlockDeviceMappings")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetNumBlockDeviceMappings indicates an expected call of GetNumBlockDeviceMappings.
+func (mr *MockMetadataServiceMockRecorder) GetNumBlockDeviceMappings() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNumBlockDeviceMappings", reflect.TypeOf((*MockMetadataService)(nil).GetNumBlockDeviceMappings))
+}
+
 // GetOutpostArn mocks base method.
 func (m *MockMetadataService) GetOutpostArn() arn.ARN {
 	m.ctrl.T.Helper()
