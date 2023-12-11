@@ -2158,7 +2158,7 @@ func TestNodeGetInfo(t *testing.T) {
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			blockDevices:      27,
-			expMaxVolumes:     0,
+			expMaxVolumes:     1,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2170,7 +2170,7 @@ func TestNodeGetInfo(t *testing.T) {
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			blockDevices:      39,
-			expMaxVolumes:     0,
+			expMaxVolumes:     1,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2182,7 +2182,7 @@ func TestNodeGetInfo(t *testing.T) {
 			volumeAttachLimit: -1,
 			attachedENIs:      27,
 			blockDevices:      1,
-			expMaxVolumes:     0,
+			expMaxVolumes:     1,
 			outpostArn:        emptyOutpostArn,
 		},
 		{

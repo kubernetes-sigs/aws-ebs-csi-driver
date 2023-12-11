@@ -790,8 +790,8 @@ func (d *nodeService) getVolumesLimit() int64 {
 		availableAttachments = availableAttachments - enis - nvmeInstanceStoreVolumes
 	}
 	availableAttachments = availableAttachments - blockVolumes - 1 // -1 for root device
-	if availableAttachments < 0 {
-		availableAttachments = 0
+	if availableAttachments <= 0 {
+		availableAttachments = 1
 	}
 
 	maxEBSAttachments, ok := cloud.GetEBSLimitForInstanceType(instanceType)
