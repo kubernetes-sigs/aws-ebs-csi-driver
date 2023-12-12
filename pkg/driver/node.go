@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -33,6 +34,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 )
@@ -44,7 +46,7 @@ const (
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 
-	//sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
+	// sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
 	sbeDeviceVolumeAttachmentLimit = 10
 )
 
@@ -64,6 +66,13 @@ var (
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 		csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
 		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+	}
+
+	// taintRemovalBackoff is the exponential backoff configuration for node taint removal
+	taintRemovalBackoff = wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   2,
+		Steps:    10, // Max delay = 0.5 * 2^9 = ~4 minutes
 	}
 )
 
@@ -94,10 +103,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 
 	// Remove taint from node to indicate driver startup success
 	// This is done at the last possible moment to prevent race conditions or false positive removals
-	err = removeNotReadyTaint(cloud.DefaultKubernetesAPIClient)
-	if err != nil {
-		klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
-	}
+	go removeTaintInBackground(cloud.DefaultKubernetesAPIClient)
 
 	return nodeService{
 		metadata:         metadata,
@@ -849,6 +855,22 @@ type JSONPatch struct {
 	Value interface{} `json:"value"`
 }
 
+// removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff
+func removeTaintInBackground(k8sClient cloud.KubernetesAPIClient) {
+	backoffErr := wait.ExponentialBackoff(taintRemovalBackoff, func() (bool, error) {
+		err := removeNotReadyTaint(k8sClient)
+		if err != nil {
+			klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
+			return false, err
+		}
+		return true, nil
+	})
+
+	if backoffErr != nil {
+		klog.ErrorS(backoffErr, "Retries exhausted, giving up attempting to remove node taint(s)")
+	}
+}
+
 // removeNotReadyTaint removes the taint ebs.csi.aws.com/agent-not-ready from the local node
 // This taint can be optionally applied by users to prevent startup race conditions such as
 // https://github.com/kubernetes/kubernetes/issues/95911
@@ -861,8 +883,8 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 
 	clientset, err := k8sClient()
 	if err != nil {
-		klog.V(4).InfoS("Failed to communicate with k8s API, skipping taint removal")
-		return nil //lint:ignore nilerr Failing to communicate with k8s API is a soft failure
+		klog.V(4).InfoS("Failed to setup k8s client")
+		return nil //lint:ignore nilerr If there are no k8s credentials, treat that as a soft failure
 	}
 
 	node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
