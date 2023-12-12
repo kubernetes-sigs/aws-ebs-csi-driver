@@ -2207,6 +2207,17 @@ func TestNodeGetInfo(t *testing.T) {
 			expMaxVolumes:     1,
 			outpostArn:        emptyOutpostArn,
 		},
+		{
+			name:              "d3en.12xlarge instance max EBS attachment limit",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "d3en.12xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      1,
+			expMaxVolumes:     1,
+			outpostArn:        emptyOutpostArn,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
