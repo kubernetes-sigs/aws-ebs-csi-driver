@@ -2112,7 +2112,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
-			expMaxVolumes:     19,
+			expMaxVolumes:     17,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2123,7 +2123,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
-			expMaxVolumes:     16,
+			expMaxVolumes:     14,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2134,7 +2134,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
-			expMaxVolumes:     11,
+			expMaxVolumes:     9,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2194,6 +2194,17 @@ func TestNodeGetInfo(t *testing.T) {
 			volumeAttachLimit: -1,
 			attachedENIs:      2,
 			expMaxVolumes:     127, // 128 (max) - 1 (root)
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "d3.8xlarge instance max EBS attachment limit",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "d3.8xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      1,
+			expMaxVolumes:     1,
 			outpostArn:        emptyOutpostArn,
 		},
 	}
