@@ -153,13 +153,11 @@ func (d *Driver) Run() error {
 		return resp, err
 	}
 
-	grpcInterceptor := grpc.UnaryInterceptor(logErr)
-	if d.options.otelTracing {
-		grpcInterceptor = grpc.ChainUnaryInterceptor(logErr, otelgrpc.UnaryServerInterceptor())
-	}
-
 	opts := []grpc.ServerOption{
-		grpcInterceptor,
+		grpc.UnaryInterceptor(logErr),
+	}
+	if d.options.otelTracing {
+		opts = append(opts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	}
 	d.srv = grpc.NewServer(opts...)
 
