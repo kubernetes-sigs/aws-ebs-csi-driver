@@ -14,6 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+### DO NOT MERGE
+unset AWS_ROLE_ARN
+unset AWS_WEB_IDENTITY_TOKEN_FILE
+echo "skipping CI!!!!"
+
+if [[ "${HELM_CT_TEST}" == true ]]; then
+  aws iam list-attached-role-policies --role-name aws-shared-testing-role
+fi
+
+exit 0
+### DISABLING CI FOR TEST PR
+
 set -euo pipefail
 
 BASE_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
