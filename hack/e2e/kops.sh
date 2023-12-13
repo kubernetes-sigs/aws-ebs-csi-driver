@@ -28,13 +28,12 @@ function kops_create_cluster() {
   ZONES=${3}
   NODE_COUNT=${4}
   INSTANCE_TYPE=${5}
-  AMI_ID=${6}
-  K8S_VERSION=${7}
-  CLUSTER_FILE=${8}
-  KUBECONFIG=${9}
-  KOPS_PATCH_FILE=${10}
-  KOPS_PATCH_NODE_FILE=${11}
-  KOPS_STATE_FILE=${12}
+  K8S_VERSION=${6}
+  CLUSTER_FILE=${7}
+  KUBECONFIG=${8}
+  KOPS_PATCH_FILE=${9}
+  KOPS_PATCH_NODE_FILE=${10}
+  KOPS_STATE_FILE=${11}
 
   if kops_cluster_exists "${CLUSTER_NAME}" "${BIN}" "${KOPS_STATE_FILE}"; then
     loudecho "Replacing cluster $CLUSTER_NAME with $CLUSTER_FILE"
@@ -45,7 +44,6 @@ function kops_create_cluster() {
       --zones "${ZONES}" \
       --node-count="${NODE_COUNT}" \
       --node-size="${INSTANCE_TYPE}" \
-      --image="${AMI_ID}" \
       --kubernetes-version="${K8S_VERSION}" \
       --dry-run \
       -o yaml \
