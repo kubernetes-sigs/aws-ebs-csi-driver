@@ -22,4 +22,4 @@ images:
     newTag: v1.9.2
   - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newName: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    newTag: v2.9.1
+    newTag: v2.9.2
