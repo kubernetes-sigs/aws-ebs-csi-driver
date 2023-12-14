@@ -78,7 +78,7 @@ func GetMaxAttachments(nitro bool) int {
 // / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
 var maxVolumeLimits = map[string]int{
 	"d3.8xlarge":    3,
-	"d3.12xlarge":   3,
+	"d3en.12xlarge": 3,
 	"g5.48xlarge":   9,
 	"inf1.xlarge":   26,
 	"inf1.2xlarge":  26,
