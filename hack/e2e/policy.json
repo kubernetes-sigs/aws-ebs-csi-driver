@@ -1,0 +1,20 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeRegions",
+          "ecr:GetAuthorizationToken",
+          "events:ListRules",
+          "iam:ListRoles",
+          "ssm:GetParameters",
+          "iam:ListInstanceProfiles",
+          "s3:*",
+          "s3-object-lambda:*",
+          "ec2-instance-connect:SendSSHPublicKey"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }

@@ -16,7 +16,19 @@
 
 set -euo pipefail
 
+unset AWS_ROLE_ARN
+unset AWS_WEB_IDENTITY_TOKEN_FILE
 BASE_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
+HELM_CT_TEST=${HELM_CT_TEST:-"false"}
+
+if [[ "${HELM_CT_TEST}" == true ]]; then
+aws iam put-role-policy \
+    --role-name aws-shared-testing-role \
+    --policy-name aws-shared-testing-role \
+    --policy-document "file://${BASE_DIR}/policy.json"
+  echo "10-4"
+fi
+
 source "${BASE_DIR}"/ecr.sh
 source "${BASE_DIR}"/eksctl.sh
 source "${BASE_DIR}"/helm.sh
