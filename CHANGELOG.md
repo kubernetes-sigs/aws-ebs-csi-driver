@@ -1,3 +1,19 @@
+# v1.26.0
+### Announcements
+* [The EBS CSI Driver Helm chart will stop supporting `--reuse-values` in a future release](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864)
+
+### Notable Changes
+* Add retry and background run to node taint removal ([#1861](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1861), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add U7i attachment limits ([#1867](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1867), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug Fixes
+* Clamp minimum reported attachment limit to 1 to prevent undefined limit (This will prevent K8s from unrestricted scheduling of stateful workloads) ([#1859](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1859), [@torredil](https://github.com/torredil))
+* Instances listed under `maxVolumeLimits` not taking into account ENIs/Instance storage ([#1860](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1860), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Upgrade dependencies for aws-ebs-csi-driver v1.26.0 ([#1867](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1867), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Bump otelhttp to fix CVE-2023-45142 ([#1858](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1858), [@jsafrane](https://github.com/jsafrane))
+
 # v1.25.0
 ### Notable Changes
 * Feature: Multi-Attach for io2 block devices ([#1799](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1799), [@torredil](https://github.com/torredil))
