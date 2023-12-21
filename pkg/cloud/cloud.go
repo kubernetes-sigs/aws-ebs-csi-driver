@@ -1517,6 +1517,8 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		if allowIncrease {
 			iops = minTotalIOPS
 			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
+		} else if volumeType == VolumeTypeGP3 {
+			klog.V(5).InfoS("[Debug] Did not increase IOPS", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB)
 		} else {
 			return 0, fmt.Errorf("invalid IOPS: %d is too low, it must be at least %d", iops, minTotalIOPS)
 		}
