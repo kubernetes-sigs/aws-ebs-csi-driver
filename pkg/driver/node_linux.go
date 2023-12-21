@@ -22,7 +22,9 @@ package driver
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -47,6 +49,7 @@ func (d *nodeService) appendPartition(devicePath, partition string) string {
 // if the device is not nvme, return the path directly
 // if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
 func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (string, error) {
+	strippedVolumeName := strings.Replace(volumeID, "-", "", -1)
 	canonicalDevicePath := ""
 
 	// If the given path exists, the device MAY be nvme. Further, it MAY be a
@@ -76,6 +79,9 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 		}
 
 		klog.V(5).InfoS("[Debug] The canonical device path was resolved", "devicePath", devicePath, "cacanonicalDevicePath", canonicalDevicePath)
+		if err = verifyVolumeSerialMatch(canonicalDevicePath, strippedVolumeName, execRunner); err != nil {
+			return "", err
+		}
 		return d.appendPartition(canonicalDevicePath, partition), nil
 	}
 
@@ -87,13 +93,16 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 	// which AWS presents NVME devices under /dev/disk/by-id/. For example,
 	// vol-0fab1d5e3f72a5e23 creates a symlink at
 	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
-	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
+	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strippedVolumeName
 
 	nvmeDevicePath, err := findNvmeVolume(d.deviceIdentifier, nvmeName)
 
 	if err == nil {
 		klog.V(5).InfoS("[Debug] successfully resolved", "nvmeName", nvmeName, "nvmeDevicePath", nvmeDevicePath)
 		canonicalDevicePath = nvmeDevicePath
+		if err = verifyVolumeSerialMatch(canonicalDevicePath, strippedVolumeName, execRunner); err != nil {
+			return "", err
+		}
 		return d.appendPartition(canonicalDevicePath, partition), nil
 	} else {
 		klog.V(5).InfoS("[Debug] error searching for nvme path", "nvmeName", nvmeName, "err", err)
@@ -114,6 +123,37 @@ func (d *nodeService) findDevicePath(devicePath, volumeID, partition string) (st
 
 	canonicalDevicePath = d.appendPartition(canonicalDevicePath, partition)
 	return canonicalDevicePath, nil
+}
+
+// Helper to inject exec.Comamnd().CombinedOutput() for verifyVolumeSerialMatch
+// Tests use a mocked version that does not actually execute any binaries
+func execRunner(name string, arg ...string) ([]byte, error) {
+	return exec.Command(name, arg...).CombinedOutput()
+}
+
+func verifyVolumeSerialMatch(canonicalDevicePath string, strippedVolumeName string, execRunner func(string, ...string) ([]byte, error)) error {
+	// In some rare cases, a race condition can lead to the /dev/disk/by-id/ symlink becoming out of date
+	// See https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1224 for more info
+	// Attempt to use lsblk to double check that the nvme device selected was the correct volume
+	output, err := execRunner("lsblk", "--noheadings", "--ascii", "--nodeps", "--output", "SERIAL", canonicalDevicePath)
+
+	if err == nil {
+		// Look for an EBS volume ID in the output, compare all matches against what we expect
+		// (in some rare cases there may be multiple matches due to lsblk printing partitions)
+		// If no volume ID is in the output (non-Nitro instances, SBE devices, etc) silently proceed
+		volumeRegex := regexp.MustCompile(`vol[a-z0-9]+`)
+		for _, volume := range volumeRegex.FindAllString(string(output), -1) {
+			klog.V(6).InfoS("Comparing volume serial", "canonicalDevicePath", canonicalDevicePath, "expected", strippedVolumeName, "actual", volume)
+			if volume != strippedVolumeName {
+				return fmt.Errorf("Refusing to mount %s because it claims to be %s but should be %s", canonicalDevicePath, volume, strippedVolumeName)
+			}
+		}
+	} else {
+		// If the command fails (for example, because lsblk is not available), silently ignore the error and proceed
+		klog.V(5).ErrorS(err, "Ignoring lsblk failure", "canonicalDevicePath", canonicalDevicePath, "strippedVolumeName", strippedVolumeName)
+	}
+
+	return nil
 }
 
 func errNoDevicePathFound(devicePath, volumeID string) error {

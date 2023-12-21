@@ -20,6 +20,7 @@ limitations under the License.
 package driver
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"testing"
@@ -185,6 +186,69 @@ func TestFindDevicePath(t *testing.T) {
 			} else {
 				assert.Equal(t, tc.expectDevicePath, devicePath)
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+const fakeVolumeName = "vol11111111111111111"
+const fakeIncorrectVolumeName = "vol21111111111111111"
+
+func TestVerifyVolumeSerialMatch(t *testing.T) {
+	type testCase struct {
+		name        string
+		execOutput  string
+		execError   error
+		expectError bool
+	}
+	testCases := []testCase{
+		{
+			name:       "success: empty",
+			execOutput: "",
+		},
+		{
+			name:       "success: single",
+			execOutput: fakeVolumeName,
+		},
+		{
+			name:       "success: multiple",
+			execOutput: fakeVolumeName + "\n" + fakeVolumeName + "\n" + fakeVolumeName,
+		},
+		{
+			name:       "success: whitespace",
+			execOutput: "\t     " + fakeVolumeName + "         \n    \t    ",
+		},
+		{
+			name:       "success: extra output",
+			execOutput: "extra output without name in it\n" + fakeVolumeName,
+		},
+		{
+			name:      "success: failed command",
+			execError: fmt.Errorf("Exec failed"),
+		},
+		{
+			name:        "failure: wrong volume",
+			execOutput:  fakeIncorrectVolumeName,
+			expectError: true,
+		},
+		{
+			name:        "failure: mixed",
+			execOutput:  fakeVolumeName + "\n" + fakeIncorrectVolumeName,
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockExecRunner := func(_ string, _ ...string) ([]byte, error) {
+				return []byte(tc.execOutput), tc.execError
+			}
+
+			result := verifyVolumeSerialMatch("path", fakeVolumeName, mockExecRunner)
+			if tc.expectError {
+				assert.Error(t, result)
+			} else {
+				assert.NoError(t, result)
 			}
 		})
 	}
