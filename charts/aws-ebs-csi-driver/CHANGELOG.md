@@ -1,4 +1,7 @@
 # Helm chart
+## v2.26.1
+* Bump driver version to `v1.26.1`
+* Bump sidecar container versions to fix [restart bug in external attacher, provisioner, resizer, snapshotter, and node-driver-registrar](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1875) ([#1886](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1886), [@AndrewSirenko](https://github.com/AndrewSirenko))
 
 ## v2.26.0
 * Bump driver version to `v1.26.0`
