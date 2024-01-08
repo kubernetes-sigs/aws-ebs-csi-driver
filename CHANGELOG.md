@@ -1,3 +1,12 @@
+# v1.26.1
+### Bug Fixes
+* Fix [csi sidecar container restarts after 30 minutes of idleness](https://github.com/kubernetes-csi/external-provisioner/issues/1099) by upgrading to latest versions of affected sidecars ([#1886](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1886), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Fix regression for those upgrading from pre-v1.12.0 who have misconfigured GP3 storage classes with IOPS below 3000 ([#1879](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1879), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Improvements
+* Bump golang.org/x/crypto to v0.17.0 to fix [CVE-2023-48795](https://github.com/advisories/GHSA-45x7-px36-x8w8) ([$1877](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1877), [@dobsonj](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/commits?author=dobsonj))
+* Upgrade dependencies ([#1886](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1886), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.26.0
 ### Announcements
 * [The EBS CSI Driver Helm chart will stop supporting `--reuse-values` in a future release](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864)
