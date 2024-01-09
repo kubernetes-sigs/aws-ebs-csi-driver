@@ -33,3 +33,7 @@ vendor/
 
 # Files used by Makefile when upgrading sidecars
 hack/release-scripts/image-digests.yaml
+
+# E2E artifacts
+_rundir/
+_artifacts/

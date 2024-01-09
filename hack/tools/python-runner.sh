@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -euo pipefail
+# This script is used as a stub for python commands installed to bin/
+# It activates the venv inside bin/venv/ and then passes through
 
-if ! [[ "$0" =~ hack/test-integration.sh ]]; then
-  echo "must be run from repository root"
-  exit 127
-fi
-
-export GO111MODULE=on
-go test -c ./tests/integration/... -o bin/integration.test && \
-  sudo -E bin/integration.test -test.v -ginkgo.v
+source "$(dirname "${0}")/venv/bin/activate"
+exec "$(basename "${0}")" "$@"

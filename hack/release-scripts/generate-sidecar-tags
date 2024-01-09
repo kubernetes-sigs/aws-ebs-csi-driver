@@ -50,7 +50,7 @@ check_dependencies() {
   if [[ $(uname) = "Darwin" ]]; then
     if ! command -v "gsed" &>/dev/null; then
       log "gsed could not be found, please install it."
-        exit 1
+      exit 1
     fi
     SED="gsed"
   fi
@@ -66,7 +66,7 @@ trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
 # --- Script
 trap 'rm $tmp_filename' EXIT
 
-update_gcr_kustomize_sidecar_tag () {
+update_gcr_kustomize_sidecar_tag() {
   sidecar_name=$1
   line_above=$2
 
@@ -75,7 +75,7 @@ update_gcr_kustomize_sidecar_tag () {
   $SED -i "\|$line_above|{n;s/.*/    newTag: $tag/;}" "$KUSTOMIZE_FILEPATH"
 }
 
-update_helm_chart_sidecar_tag () {
+update_helm_chart_sidecar_tag() {
   sidecar_name=$1
 
   export TAG
@@ -84,7 +84,7 @@ update_helm_chart_sidecar_tag () {
   yq ".sidecars.$sidecar_name.image.tag = env(TAG)" -i "$HELM_VALUES_FILEPATH"
 }
 
-generate_gcr_kustomize () {
+generate_gcr_kustomize() {
   update_gcr_kustomize_sidecar_tag "provisioner" "newName: registry.k8s.io/sig-storage/csi-provisioner"
   update_gcr_kustomize_sidecar_tag "attacher" "newName: registry.k8s.io/sig-storage/csi-attacher"
   update_gcr_kustomize_sidecar_tag "livenessProbe" "newName: registry.k8s.io/sig-storage/livenessprobe"
@@ -95,18 +95,17 @@ generate_gcr_kustomize () {
   log "Success: All sidecar tags in $KUSTOMIZE_FILEPATH updated"
 }
 
-generate_helm_sidecars () {
-  yq '.sidecars | keys | .[]' "$IMAGE_DIGESTS_FILEPATH" > "$tmp_filename"
+generate_helm_sidecars() {
+  yq '.sidecars | keys | .[]' "$IMAGE_DIGESTS_FILEPATH" >"$tmp_filename"
 
-  for sidecar in $(cat "$tmp_filename")
-     do
-       update_helm_chart_sidecar_tag "$sidecar"
-     done
+  for sidecar in $(cat "$tmp_filename"); do
+    update_helm_chart_sidecar_tag "$sidecar"
+  done
 
   log "Success: All sidecar tags in $HELM_VALUES_FILEPATH updated"
 }
 
-main () {
+main() {
   check_dependencies
   generate_gcr_kustomize
   generate_helm_sidecars
