@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -161,9 +162,6 @@ var (
 
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("Resource already exists")
-
-	// ErrVolumeInUse is returned when a volume is already attached to an instance.
-	ErrVolumeInUse = errors.New("Request volume is already attached to an instance")
 
 	// ErrMultiSnapshots is returned when multiple snapshots are found
 	// with the same ID
@@ -689,13 +687,34 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	return true, nil
 }
 
+// Node likely bad device names cache
+// Remember device names that are already in use on an instance and use them last when attaching volumes
+// This works around device names that are used but do not appear in the mapping from DescribeInstanceStatus
+const cacheForgetDelay = 1 * time.Hour
+
+type cachedNode struct {
+	timer          *time.Timer
+	likelyBadNames map[string]struct{}
+}
+
+var cacheMutex sync.Mutex
+var nodeDeviceCache map[string]cachedNode = map[string]cachedNode{}
+
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
 
-	device, err := c.dm.NewDevice(instance, volumeID)
+	likelyBadNames := map[string]struct{}{}
+	cacheMutex.Lock()
+	if node, ok := nodeDeviceCache[nodeID]; ok {
+		likelyBadNames = node.likelyBadNames
+		node.timer.Reset(cacheForgetDelay)
+	}
+	cacheMutex.Unlock()
+
+	device, err := c.dm.NewDevice(instance, volumeID, likelyBadNames)
 	if err != nil {
 		return "", err
 	}
@@ -710,8 +729,38 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 
 		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
 		if attachErr != nil {
+			if isAWSErrorBlockDeviceInUse(attachErr) {
+				cacheMutex.Lock()
+				if node, ok := nodeDeviceCache[nodeID]; ok {
+					// Node already had existing cached bad names, add on to the list
+					node.likelyBadNames[device.Path] = struct{}{}
+					node.timer.Reset(cacheForgetDelay)
+				} else {
+					// Node has no existing cached bad device names, setup a new struct instance
+					nodeDeviceCache[nodeID] = cachedNode{
+						timer: time.AfterFunc(cacheForgetDelay, func() {
+							// If this ever fires, the node has not had a volume attached for an hour
+							// In order to prevent a semi-permanent memory leak, delete it from the map
+							cacheMutex.Lock()
+							delete(nodeDeviceCache, nodeID)
+							cacheMutex.Unlock()
+						}),
+						likelyBadNames: map[string]struct{}{
+							device.Path: {},
+						},
+					}
+				}
+				cacheMutex.Unlock()
+			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
+		cacheMutex.Lock()
+		if node, ok := nodeDeviceCache[nodeID]; ok {
+			// Remove succesfully attached devices from the "likely bad" list
+			delete(node.likelyBadNames, device.Path)
+			node.timer.Reset(cacheForgetDelay)
+		}
+		cacheMutex.Unlock()
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
@@ -1292,6 +1341,18 @@ func isAWSErrorSnapshotNotFound(err error) bool {
 // This error is reported when the two request contains same client-token but different parameters
 func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
+}
+
+// isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
+// given error appears to be a block device name already in use error.
+func isAWSErrorBlockDeviceInUse(err error) bool {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		if awsErr.Code() == "InvalidParameterValue" && strings.Contains(awsErr.Message(), "already in use") {
+			return true
+		}
+	}
+	return false
 }
 
 // Checks for desired size on volume by also verifying volume size by describing volume.
