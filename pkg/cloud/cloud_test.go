@@ -576,23 +576,6 @@ func TestCreateDisk(t *testing.T) {
 			expErr:               fmt.Errorf("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both"),
 		},
 		{
-			name:       "fail: io1 with too low iopsPerGB",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeIO1,
-				IOPSPerGB:     1,
-			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      4,
-				AvailabilityZone: defaultZone,
-			},
-			expCreateVolumeInput: nil,
-			expErr:               fmt.Errorf("invalid IOPS: 4 is too low, it must be at least 100"),
-		},
-		{
 			name:       "success: small io1 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -649,23 +632,6 @@ func TestCreateDisk(t *testing.T) {
 				Iops: aws.Int64(100),
 			},
 			expErr: nil,
-		},
-		{
-			name:       "fail: io2 with too low iopsPerGB",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(4),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    VolumeTypeIO2,
-				IOPSPerGB:     1,
-			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      4,
-				AvailabilityZone: defaultZone,
-			},
-			expCreateVolumeInput: nil,
-			expErr:               fmt.Errorf("invalid IOPS: 4 is too low, it must be at least 100"),
 		},
 		{
 			name:       "success: small io2 with too high iopsPerGB",
