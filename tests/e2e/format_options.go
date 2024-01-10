@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	testedFsTypes = []string{ebscsidriver.FSTypeExt4}
+	testedFsTypes = []string{ebscsidriver.FSTypeExt4, ebscsidriver.FSTypeExt3, ebscsidriver.FSTypeXfs}
 )
 
 var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume", func() {
