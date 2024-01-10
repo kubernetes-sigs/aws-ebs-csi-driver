@@ -511,10 +511,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		} else if diskOptions.IOPSPerGB > 0 {
 			requestedIops = int64(diskOptions.IOPSPerGB) * capacityGiB
 		}
-		iops, err = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
-		if err != nil {
-			return nil, err
-		}
+		iops = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	var tags []*ec2.Tag
@@ -1505,10 +1502,10 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 }
 
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
-func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) (int64, error) {
+func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) int64 {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
 	if requestedIops == 0 {
-		return 0, nil
+		return 0
 	}
 
 	iops := requestedIops
@@ -1517,10 +1514,6 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		if allowIncrease {
 			iops = minTotalIOPS
 			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
-		} else if volumeType == VolumeTypeGP3 {
-			klog.V(5).InfoS("[Debug] Did not increase IOPS", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB)
-		} else {
-			return 0, fmt.Errorf("invalid IOPS: %d is too low, it must be at least %d", iops, minTotalIOPS)
 		}
 	}
 	if iops > maxTotalIOPS {
@@ -1532,5 +1525,5 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		iops = maxIopsByCapacity
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
-	return iops, nil
+	return iops
 }
