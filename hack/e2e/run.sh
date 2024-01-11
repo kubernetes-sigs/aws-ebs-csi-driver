@@ -124,10 +124,30 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   fi
   set -x
   set +e
+
+  (
+    while true; do
+      if kubectl get pod ebs-csi-driver-test -n kube-system --kubeconfig "${KUBECONFIG}" &>/dev/null; then
+        echo "Pod found, waiting for it to become ready..."
+        if kubectl wait --for=condition=ready pod ebs-csi-driver-test -n kube-system --timeout=60s --kubeconfig "${KUBECONFIG}"; then
+          echo "Pod is ready, fetching logs..."
+          kubectl logs -f ebs-csi-driver-test -n kube-system -c kubetest2 --kubeconfig "${KUBECONFIG}"
+        fi
+      fi
+      sleep 30
+    done
+  ) &
+  LOG_STREAM_PID=$!
+
   KUBECONFIG="$KUBECONFIG" PATH="${BIN}:${PATH}" "${BIN}/ct" lint-and-install \
     --config="${BASE_DIR}/../../tests/ct-config.yaml" \
     --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG},node.tolerateAllTaints=false"
   TEST_PASSED=$?
+
+  if kill -0 $LOG_STREAM_PID 2>/dev/null; then
+    kill $LOG_STREAM_PID
+  fi
+
   set -e
   set +x
 else
