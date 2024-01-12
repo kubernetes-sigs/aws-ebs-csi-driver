@@ -1,0 +1,128 @@
+#!/bin/bash
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---
+
+set -euo pipefail # Exit on any error
+
+# --- Environment Variables
+export MIN_VOLUME_GUESS=${MIN_VOLUME_GUESS:=0}
+export MAX_VOLUME_GUESS=${MAX_VOLUME_GUESS:=130}
+export POD_TIMEOUT_SECONDS=${POD_TIMEOUT_SECONDS:=90}
+export EXTRA_LOGS_FILEPATH=${EXTRA_LOGS_FILEPATH:="/dev/null"}
+
+export TEST_POD_NAME=${TEST_POD_NAME:="attachment-limit-test-pod"}
+
+export SCRIPT_DIR ROOT_DIRECTORY GENERATE_MANIFEST_SCRIPT_FILEPATH
+SCRIPT_DIR=$(dirname $(realpath "$0"))
+GENERATE_MANIFEST_SCRIPT_FILEPATH="$SCRIPT_DIR/generate_example_manifest.go"
+
+# --- Script Tools
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("kubectl" "go")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+}
+
+# --- Script
+usage() {
+  echo "Usage: $0 [NODE_AFFINITY]"
+  echo "Examples:"
+  echo "$0 'eks.amazonaws.com/nodegroup:test-nodegroup'"
+  echo "$0 'node.kubernetes.io/instance-type:m5.large'"
+  echo "You can also override the following environment variable defaults: MIN_VOLUME_GUESS=0 MAX_VOLUME_GUESS=130 POD_TIMEOUT_SECONDS=90 EXTRA_LOGS_FILEPATH='/dev/null'"
+  echo "MIN_VOLUME_GUESS=12 MAX_VOLUME_GUESS=30 POD_TIMEOUT_SECONDS=60 $0 'node.kubernetes.io/instance-type:m5.large'"
+  exit 1
+}
+
+parse_args() {
+  # Confirm 1 parameter
+  [[ $# -ne 1 ]] && usage
+
+  export NODE_AFFINITY_KEY_VALUE_PAIR=$1
+}
+
+cleanup() {
+  log "Deleting k8s objects associated with manifest $MANIFEST_FILE"
+  kubectl delete -f "$MANIFEST_FILE" >"$EXTRA_LOGS_FILEPATH" 2>&1
+  test -f "$MANIFEST_FILE" && rm "$MANIFEST_FILE"
+}
+
+deploy_manifest() {
+  VOLUME_COUNT=$1
+  log "Attempting to deploy pod with $VOLUME_COUNT PVCs on node with label '$NODE_AFFINITY_KEY_VALUE_PAIR'"
+
+  # Create pod manifest for initial guess
+  MANIFEST_FILE=$(mktemp)
+  go run "$GENERATE_MANIFEST_SCRIPT_FILEPATH" --node-affinity "$NODE_AFFINITY_KEY_VALUE_PAIR" --volume-count "$VOLUME_COUNT" --test-pod-name "$TEST_POD_NAME" >"$MANIFEST_FILE"
+
+  # Deploy pod to node
+  log "Creating k8s objects associated with manifest $MANIFEST_FILE"
+  kubectl create -f "$MANIFEST_FILE" >"$EXTRA_LOGS_FILEPATH"
+
+  # Watch for success vs error code
+  log "Waiting $POD_TIMEOUT_SECONDS seconds for 'pod/$TEST_POD_NAME to reach condition 'ready'"
+  set +e
+  kubectl wait --for=condition=ready --timeout="${POD_TIMEOUT_SECONDS}s" pod/"$TEST_POD_NAME" >"$EXTRA_LOGS_FILEPATH" 2>&1
+  WAS_POD_CREATED=$?
+  set -e
+  if [[ $WAS_POD_CREATED == 0 ]]; then
+    log "Pod with $VOLUME_COUNT PVCs successfully deployed"
+  else
+    log "Pod with $VOLUME_COUNT PVCs did not successfully deploy"
+  fi
+
+  cleanup
+}
+
+main() {
+  check_dependencies
+
+  parse_args "$@"
+
+  export WAS_POD_CREATED=0 # 0 is true in bash
+  export MANIFEST_FILE
+  trap 'cleanup' EXIT
+
+  min=$MIN_VOLUME_GUESS
+  max=$MAX_VOLUME_GUESS
+
+  while ((min < max)); do
+    # Compute the mean between min and max, rounded up to the superior unit
+    current_volume_count=$(((min + max + 1) / 2))
+    deploy_manifest $current_volume_count
+    if [[ $WAS_POD_CREATED == 0 ]]; then # 0 is True in bash
+      min=$current_volume_count
+    else
+      max=$((current_volume_count - 1))
+    fi
+  done
+
+  export MAX_ATTACHED_VOLUMES="$min"
+  log "Success!"
+  log "Maximum amount of volumes deployed with pod on node with label '$NODE_AFFINITY_KEY_VALUE_PAIR': $MAX_ATTACHED_VOLUMES"
+  trap - EXIT
+  return "$MAX_ATTACHED_VOLUMES"
+}
+
+main "$@"
