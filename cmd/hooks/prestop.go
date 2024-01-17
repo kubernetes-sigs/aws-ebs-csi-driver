@@ -86,6 +86,15 @@ func waitForVolumeAttachments(ctx context.Context, clientset kubernetes.Interfac
 				}
 			}
 		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			klog.V(5).InfoS("UpdateFunc: VolumeAttachment updated", "node", nodeName)
+			va := newObj.(*storagev1.VolumeAttachment)
+			if va.Spec.NodeName == nodeName {
+				if err := checkVolumeAttachments(ctx, clientset, nodeName, allAttachmentsDeleted); err != nil {
+					klog.ErrorS(err, "UpdateFunc: error checking VolumeAttachments")
+				}
+			}
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add event handler to VolumeAttachment informer: %w", err)
