@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	flag "github.com/spf13/pflag"
 
@@ -32,10 +31,6 @@ import (
 	"k8s.io/component-base/featuregate"
 	logsapi "k8s.io/component-base/logs/api/v1"
 	"k8s.io/klog/v2"
-)
-
-const (
-	preStopTimeout = 30 * time.Second
 )
 
 // Options is the combined set of options for all operating modes.
@@ -107,7 +102,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 			if clientErr != nil {
 				klog.ErrorS(err, "unable to communicate with k8s API")
 			} else {
-				err = hooks.PreStop(clientset, preStopTimeout)
+				err = hooks.PreStop(clientset)
 				if err != nil {
 					klog.ErrorS(err, "failed to execute PreStop lifecycle hook")
 					klog.FlushAndExit(klog.ExitFlushTimeout, 1)
