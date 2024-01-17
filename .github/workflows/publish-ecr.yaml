@@ -70,7 +70,13 @@ jobs:
       with:
         registry-type: public
 
-    - name: Copy manifest to ECR Public
+    - name: Copy a1-compatible manifest to ECR Public
+      env:
+        ECR_PRIVATE_REPOSITORY: ${{ secrets.ECR_PRIVATE_REPOSITORY }}
+        ECR_PUBLIC_REPOSITORY: ${{ secrets.ECR_PUBLIC_REPOSITORY }}
+      run: crane copy ${ECR_PRIVATE_REPOSITORY}/aws-ebs-csi-driver:${GITHUB_REF_NAME}-linux-arm64-al2 ${ECR_PUBLIC_REPOSITORY}/aws-ebs-csi-driver:${GITHUB_REF_NAME}-a1compat
+
+    - name: Copy manifest list to ECR Public
       env:
         ECR_PRIVATE_REPOSITORY: ${{ secrets.ECR_PRIVATE_REPOSITORY }}
         ECR_PUBLIC_REPOSITORY: ${{ secrets.ECR_PUBLIC_REPOSITORY }}
