@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -917,14 +918,17 @@ func TestDeleteDisk(t *testing.T) {
 }
 
 func TestAttachDisk(t *testing.T) {
+	blockDeviceInUseErr := awserr.New("InvalidParameterValue", "Invalid value '"+defaultPath+"' for unixDevice. Attachment point "+defaultPath+" is already in use", nil)
+
 	testCases := []struct {
-		name     string
-		volumeID string
-		nodeID   string
-		nodeID2  string
-		path     string
-		expErr   error
-		mockFunc func(*MockEC2API, context.Context, string, string, string, string, dm.DeviceManager)
+		name         string
+		volumeID     string
+		nodeID       string
+		nodeID2      string
+		path         string
+		expErr       error
+		mockFunc     func(*MockEC2API, context.Context, string, string, string, string, dm.DeviceManager)
+		validateFunc func(t *testing.T)
 	}{
 		{
 			name:     "success: AttachVolume normal",
@@ -945,6 +949,33 @@ func TestAttachDisk(t *testing.T) {
 			},
 		},
 		{
+			name:     "success: AttachVolume skip likely bad name",
+			volumeID: defaultVolumeID,
+			nodeID:   defaultNodeID,
+			path:     "/dev/xvdab",
+			expErr:   nil,
+			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, nodeID2, path string, dm dm.DeviceManager) {
+				volumeRequest := createVolumeRequest(volumeID)
+				instanceRequest := createInstanceRequest(nodeID)
+				attachRequest := createAttachRequest(volumeID, nodeID, path)
+
+				gomock.InOrder(
+					mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolumeWithContext(gomock.Any(), attachRequest).Return(createAttachVolumeOutput(volumeID, nodeID, path), nil),
+					mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
+				)
+
+				nodeDeviceCache = map[string]cachedNode{
+					defaultNodeID: {
+						timer: time.NewTimer(1 * time.Hour),
+						likelyBadNames: map[string]struct{}{
+							defaultPath: {},
+						},
+					},
+				}
+			},
+		},
+		{
 			name:     "success: AttachVolume device already assigned",
 			volumeID: defaultVolumeID,
 			nodeID:   defaultNodeID,
@@ -955,7 +986,7 @@ func TestAttachDisk(t *testing.T) {
 				instanceRequest := createInstanceRequest(nodeID)
 
 				fakeInstance := newFakeInstance(nodeID, volumeID, path)
-				_, err := dm.NewDevice(fakeInstance, volumeID)
+				_, err := dm.NewDevice(fakeInstance, volumeID, map[string]struct{}{})
 				assert.NoError(t, err)
 
 				gomock.InOrder(
@@ -978,21 +1009,29 @@ func TestAttachDisk(t *testing.T) {
 					mockEC2.EXPECT().AttachVolumeWithContext(gomock.Any(), attachRequest).Return(nil, errors.New("AttachVolume error")),
 				)
 			},
+			validateFunc: func(t *testing.T) {
+				assert.NotContains(t, nodeDeviceCache, defaultNodeID)
+			},
 		},
 		{
-			name:     "fail: AttachVolume returned error volumeInUse",
+			name:     "fail: AttachVolume returned block device already in use error",
 			volumeID: defaultVolumeID,
 			nodeID:   defaultNodeID,
 			path:     defaultPath,
-			expErr:   fmt.Errorf("could not attach volume %q to node %q: %w", defaultVolumeID, defaultNodeID, ErrVolumeInUse),
+			expErr:   fmt.Errorf("could not attach volume %q to node %q: %w", defaultVolumeID, defaultNodeID, blockDeviceInUseErr),
 			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, nodeID2, path string, dm dm.DeviceManager) {
 				instanceRequest := createInstanceRequest(nodeID)
 				attachRequest := createAttachRequest(volumeID, nodeID, path)
 
 				gomock.InOrder(
 					mockEC2.EXPECT().DescribeInstancesWithContext(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolumeWithContext(ctx, attachRequest).Return(nil, ErrVolumeInUse),
+					mockEC2.EXPECT().AttachVolumeWithContext(ctx, attachRequest).Return(nil, blockDeviceInUseErr),
 				)
+			},
+			validateFunc: func(t *testing.T) {
+				assert.Contains(t, nodeDeviceCache, defaultNodeID)
+				assert.NotNil(t, nodeDeviceCache[defaultNodeID].timer)
+				assert.Contains(t, nodeDeviceCache[defaultNodeID].likelyBadNames, defaultPath)
 			},
 		},
 		{
@@ -1045,6 +1084,9 @@ func TestAttachDisk(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Reset node likely bad names cache
+			nodeDeviceCache = map[string]cachedNode{}
+
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
@@ -1068,6 +1110,10 @@ func TestAttachDisk(t *testing.T) {
 				devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID2)
 				assert.NoError(t, err)
 				assert.Equal(t, tc.path, devicePath)
+			}
+
+			if tc.validateFunc != nil {
+				tc.validateFunc(t)
 			}
 
 			mockCtrl.Finish()

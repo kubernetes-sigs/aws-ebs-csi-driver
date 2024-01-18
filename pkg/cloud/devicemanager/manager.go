@@ -52,7 +52,7 @@ type DeviceManager interface {
 	// NewDevice retrieves the device if the device is already assigned.
 	// Otherwise it creates a new device with next available device name
 	// and mark it as unassigned device.
-	NewDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
+	NewDevice(instance *ec2.Instance, volumeID string, likelyBadNames map[string]struct{}) (device *Device, err error)
 
 	// GetDevice returns the device already assigned to the volume.
 	GetDevice(instance *ec2.Instance, volumeID string) (device *Device, err error)
@@ -103,7 +103,7 @@ func NewDeviceManager() DeviceManager {
 	}
 }
 
-func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
+func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string, likelyBadNames map[string]struct{}) (*Device, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -124,7 +124,7 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 		return nil, err
 	}
 
-	name, err := d.nameAllocator.GetNext(inUse)
+	name, err := d.nameAllocator.GetNext(inUse, likelyBadNames)
 	if err != nil {
 		return nil, fmt.Errorf("could not get a free device name to assign to node %s", nodeID)
 	}
