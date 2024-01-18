@@ -3,7 +3,6 @@ package hooks
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
@@ -154,46 +153,6 @@ func TestPreStopHook(t *testing.T) {
 			},
 		},
 		{
-			name:     "TestPreStopHook: node is being drained, volume attachments remain -- timeout exceeded",
-			nodeName: "test-node",
-			expErr:   fmt.Errorf("waitForVolumeAttachments: timed out waiting for preStopHook to complete: context deadline exceeded"),
-			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
-				fakeNode := &v1.Node{
-					Spec: v1.NodeSpec{
-						Taints: []v1.Taint{
-							{
-								Key:    v1.TaintNodeUnschedulable,
-								Effect: v1.TaintEffectNoSchedule,
-							},
-						},
-					},
-				}
-
-				fakeVolumeAttachments := &storagev1.VolumeAttachmentList{
-					Items: []storagev1.VolumeAttachment{
-						{
-							Spec: storagev1.VolumeAttachmentSpec{
-								NodeName: "test-node",
-							},
-						},
-					},
-				}
-
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
-
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
-
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
-				mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes()
-				mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).Return(watch.NewFake(), nil).AnyTimes()
-
-				return nil
-			},
-		},
-		{
 			name:     "TestPreStopHook: Node is drained before timeout",
 			nodeName: "test-node",
 			expErr:   nil,
@@ -274,7 +233,7 @@ func TestPreStopHook(t *testing.T) {
 				t.Setenv("CSI_NODE_NAME", tc.nodeName)
 			}
 
-			err := PreStop(mockClient, 5*time.Second)
+			err := PreStop(mockClient)
 
 			if tc.expErr != nil {
 				assert.Error(t, err)
