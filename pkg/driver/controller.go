@@ -600,6 +600,11 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	}, nil
 }
 
+func (d *controllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+	klog.V(4).InfoS("ControllerModifyVolume: called", "args", *req)
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
 func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerGetVolume: called", "args", *req)
 	return nil, status.Error(codes.Unimplemented, "")
