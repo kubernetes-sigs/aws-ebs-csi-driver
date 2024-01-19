@@ -103,7 +103,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 
 	// Remove taint from node to indicate driver startup success
 	// This is done at the last possible moment to prevent race conditions or false positive removals
-	go removeTaintInBackground(cloud.DefaultKubernetesAPIClient)
+	go removeTaintInBackground(cloud.DefaultKubernetesAPIClient, removeNotReadyTaint)
 
 	return nodeService{
 		metadata:         metadata,
@@ -854,12 +854,12 @@ type JSONPatch struct {
 }
 
 // removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff
-func removeTaintInBackground(k8sClient cloud.KubernetesAPIClient) {
+func removeTaintInBackground(k8sClient cloud.KubernetesAPIClient, removalFunc func(cloud.KubernetesAPIClient) error) {
 	backoffErr := wait.ExponentialBackoff(taintRemovalBackoff, func() (bool, error) {
-		err := removeNotReadyTaint(k8sClient)
+		err := removalFunc(k8sClient)
 		if err != nil {
 			klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
-			return false, err
+			return false, nil
 		}
 		return true, nil
 	})

@@ -34,6 +34,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -2403,6 +2404,21 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveTaintInBackground(t *testing.T) {
+	mockRemovalCount := 0
+	mockRemovalFunc := func(_ cloud.KubernetesAPIClient) error {
+		mockRemovalCount += 1
+		if mockRemovalCount == 3 {
+			return nil
+		} else {
+			return fmt.Errorf("Taint removal failed!")
+		}
+	}
+
+	removeTaintInBackground(nil, mockRemovalFunc)
+	assert.Equal(t, mockRemovalCount, 3)
 }
 
 func getNodeMock(mockCtl *gomock.Controller, nodeName string, returnNode *corev1.Node, returnError error) (kubernetes.Interface, *MockNodeInterface) {
