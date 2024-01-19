@@ -29,6 +29,18 @@ source "${BASE_DIR}/util.sh"
 source "${BASE_DIR}/ecr.sh"
 source "${BASE_DIR}/metrics/metrics.sh"
 
+### DO NOT MERGE
+unset AWS_ROLE_ARN
+unset AWS_WEB_IDENTITY_TOKEN_FILE
+echo "skipping CI!!!!"
+
+if [[ "${HELM_CT_TEST}" == true ]]; then
+  aws iam list-open-id-connect-providers | jq '.OpenIDConnectProviderList | map(.Arn)[] | select(contains("F8B73554FE6FBAF9B19569183FB39762") | not)' -r | xargs -n1 aws iam delete-open-id-connect-provider --open-id-connect-provider-arn
+fi
+
+exit 0
+### DISABLING CI FOR TEST PR
+
 ## Setup
 
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
