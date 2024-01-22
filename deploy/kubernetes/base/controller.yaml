@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
   replicas: 2
+  revisionHistoryLimit: 10
   strategy:
     rollingUpdate:
       maxUnavailable: 1

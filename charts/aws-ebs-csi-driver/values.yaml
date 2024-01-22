@@ -246,6 +246,9 @@ controller:
   # region: us-east-1
   region:
   replicaCount: 2
+  revisionHistoryLimit: 10
+  socketDirVolume:
+    emptyDir: {}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -359,6 +362,9 @@ node:
       memory: 40Mi
     limits:
       memory: 256Mi
+  revisionHistoryLimit: 10
+  probeDirVolume:
+    emptyDir: {}
   serviceAccount:
     create: true
     name: ebs-csi-node-sa
