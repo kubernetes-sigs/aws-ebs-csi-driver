@@ -115,7 +115,7 @@ update_chart_and_overlays() {
 
   (
     cd "$ROOT_DIRECTORY"
-    make generate-kustomize
+    make update/kustomize
   ) >"/dev/null"
 }
 
