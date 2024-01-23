@@ -95,7 +95,7 @@ verify: verify/govet verify/golangci-lint verify/update
 all-push: all-image-registry push-manifest
 
 .PHONY: cluster/create
-cluster/create: bin/kops bin/eksctl
+cluster/create: bin/kops bin/eksctl bin/aws
 	./hack/e2e/create-cluster.sh
 
 .PHONY: cluster/delete
