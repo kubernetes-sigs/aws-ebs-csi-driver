@@ -1,3 +1,16 @@
+# v1.27.0
+### Notable Changes
+* Enable use of driver on AMIs with instance store mounts ([#1889](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1889), [@ConnorJC3](https://github.com/ConnorJC3))
+* Remove premature CreateVolume error if requested IOPS is below minimum ([#1883](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1883), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug Fixes
+* Fix taint removal retry for non-swallowed errors ([#1898](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1898), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Use lsblk to safeguard against outdated symlinks ([#1878](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1878), [@ConnorJC3](https://github.com/ConnorJC3))
+* Bump go/sidecar dependencies ([#1900](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1900), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Pre-stop Lifecycle Hook enhancements ([#1895](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1895), [@torredil](https://github.com/torredil))
+
 # v1.26.1
 ### Bug Fixes
 * Fix [csi sidecar container restarts after 30 minutes of idleness](https://github.com/kubernetes-csi/external-provisioner/issues/1099) by upgrading to latest versions of affected sidecars ([#1886](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1886), [@AndrewSirenko](https://github.com/AndrewSirenko))
