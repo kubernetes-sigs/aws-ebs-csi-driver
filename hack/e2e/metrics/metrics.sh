@@ -13,7 +13,7 @@ metrics_collector() {
   readonly METRICS_BASE_DIR=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
   readonly METRICS_DIR_NAME="metrics-$(git rev-parse HEAD)1-${NODE_OS_DISTRO}-${DRIVER_VERSION}"
   readonly METRICS_DIR_PATH="${METRICS_BASE_DIR}/../csi-test-artifacts/${METRICS_DIR_NAME}"
-  readonly METRICS_SERVER_URL="https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+  readonly METRICS_SERVER_URL="https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.4/components.yaml"
   readonly STORAGE_CLASS="${METRICS_BASE_DIR}/storageclass.yaml"
   readonly CLUSTER_LOADER_CONFIG="${METRICS_BASE_DIR}/cl2-config.yaml"
   readonly CLUSTER_LOADER_OVERRIDE="${METRICS_BASE_DIR}/override.yaml"

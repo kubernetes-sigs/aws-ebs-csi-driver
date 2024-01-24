@@ -18,7 +18,7 @@
 
 ## Variables/Functions
 
-VERSION?=v1.26.1
+VERSION?=v1.27.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -95,7 +95,7 @@ verify: verify/govet verify/golangci-lint verify/update
 all-push: all-image-registry push-manifest
 
 .PHONY: cluster/create
-cluster/create: bin/kops bin/eksctl
+cluster/create: bin/kops bin/eksctl bin/aws
 	./hack/e2e/create-cluster.sh
 
 .PHONY: cluster/delete
