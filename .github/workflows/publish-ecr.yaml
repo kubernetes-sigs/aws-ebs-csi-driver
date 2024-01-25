@@ -2,6 +2,13 @@ name: Publish to ECR
 on:
   push:
     tags: ['*']
+    branches-ignore:
+      - timescale # This is how our main branch is called.
+
+env:
+  ALL_OS: ${{ vars.ALL_OS }}
+  ALL_ARCH_linux: ${{ vars.ALL_ARCH_LINUX }}
+
 jobs:
   ecr-private:
     name: Push to ECR Private
@@ -34,14 +41,20 @@ jobs:
       env:
         REGISTRY: ${{ secrets.ECR_PRIVATE_REPOSITORY }}
       run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "TAG=auto-${GITHUB_SHA::8}" >> $GITHUB_ENV
+          else
+            echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          fi
+          
           echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
-          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
           echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
     - name: Build, tag, and push manifest to Amazon ECR
       run: make -j `nproc` all-push
 
   ecr-public:
+    if: ${{ vars.SKIP_ECR_PUBLIC != 'true' }}
     name: Push to ECR Public
     runs-on: ubuntu-latest
     environment: ecr-public

@@ -1,4 +1,9 @@
 name: Output Code Coverage
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_run:
     workflows: [Generate Code Coverage]
