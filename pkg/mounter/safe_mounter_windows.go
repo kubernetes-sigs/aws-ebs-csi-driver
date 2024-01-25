@@ -21,6 +21,7 @@ package mounter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -53,7 +54,7 @@ type ProxyMounter interface {
 	ExistsPath(path string) (bool, error)
 	Rescan() error
 	FindDiskByLun(lun string) (diskNum string, err error)
-	FormatAndMount(source, target, fstype string, options []string) error
+	FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error
 	ResizeVolume(deviceMountPath string) (bool, error)
 	GetVolumeSizeInBytes(deviceMountPath string) (int64, error)
 	GetDeviceSize(devicePath string) (int64, error)
@@ -96,11 +97,13 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 		TargetPath: normalizeWindowsPath(target),
 	}
 	volumeIdResponse, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), getVolumeIdRequest)
-	volumeId := volumeIdResponse.GetVolumeId()
+	if err != nil {
+		return err
+	}
 
 	// Call UnmountVolume CSI proxy function which flushes data cache to disk and removes the global staging path
 	unmountVolumeRequest := &volume.UnmountVolumeRequest{
-		VolumeId:   volumeId,
+		VolumeId:   volumeIdResponse.VolumeId,
 		TargetPath: normalizeWindowsPath(target),
 	}
 	_, err = mounter.VolumeClient.UnmountVolume(context.Background(), unmountVolumeRequest)
@@ -108,25 +111,31 @@ func (mounter *CSIProxyMounter) Unmount(target string) error {
 		return err
 	}
 
+	// Cleanup stage path
+	err = mounter.Rmdir(target)
+	if err != nil {
+		return err
+	}
+
 	// Get disk number
 	getDiskNumberRequest := &volume.GetDiskNumberFromVolumeIDRequest{
-		VolumeId: volumeId,
+		VolumeId: volumeIdResponse.VolumeId,
 	}
 	getDiskNumberResponse, err := mounter.VolumeClient.GetDiskNumberFromVolumeID(context.Background(), getDiskNumberRequest)
-	diskNumber := getDiskNumberResponse.GetDiskNumber()
 	if err != nil {
 		return err
 	}
 
 	// Offline the disk
 	setDiskStateRequest := &disk.SetDiskStateRequest{
-		DiskNumber: diskNumber,
+		DiskNumber: getDiskNumberResponse.DiskNumber,
 		IsOnline:   false,
 	}
 	_, err = mounter.DiskClient.SetDiskState(context.Background(), setDiskStateRequest)
 	if err != nil {
 		return err
 	}
+	klog.V(4).InfoS("Successfully unmounted volume", "diskNumber", getDiskNumberResponse.DiskNumber, "volumeId", volumeIdResponse.VolumeId, "target", target)
 	return nil
 }
 
@@ -147,13 +156,13 @@ func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
 	request := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(target)}
 	response, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), request)
 	if err != nil || response == nil {
-		klog.Warningf("GetVolumeIDFromTargetPath(%s) failed with error: %v, response: %v", target, err, response)
+		klog.InfoS("GetVolumeIDFromTargetPath failed", "target", target, "err", err, "response", response)
 	} else {
 		request := &volume.WriteVolumeCacheRequest{
 			VolumeId: response.VolumeId,
 		}
 		if res, err := mounter.VolumeClient.WriteVolumeCache(context.Background(), request); err != nil {
-			klog.Warningf("WriteVolumeCache(%s) failed with error: %v, response: %v", response.VolumeId, err, res)
+			klog.InfoS("WriteVolumeCache failed", "volumeID", response.VolumeId, "err", err, "res", res)
 		}
 	}
 }
@@ -207,15 +216,23 @@ func (mounter *CSIProxyMounter) DeviceOpened(pathname string) (bool, error) {
 	return false, fmt.Errorf("DeviceOpened not implemented for CSIProxyMounter")
 }
 
-// GetDeviceNameFromMount returns the volume ID for a mount path.
-func (mounter *CSIProxyMounter) GetDeviceNameFromMount(mountPath, pluginMountDir string) (string, error) {
+// GetDeviceNameFromMount returns the disk number for a mount path.
+func (mounter *CSIProxyMounter) GetDeviceNameFromMount(mountPath, _ string) (string, error) {
 	req := &volume.GetVolumeIDFromTargetPathRequest{TargetPath: normalizeWindowsPath(mountPath)}
 	resp, err := mounter.VolumeClient.GetVolumeIDFromTargetPath(context.Background(), req)
 	if err != nil {
 		return "", err
 	}
-
-	return resp.VolumeId, nil
+	// Get disk number
+	getDiskNumberRequest := &volume.GetDiskNumberFromVolumeIDRequest{
+		VolumeId: resp.VolumeId,
+	}
+	getDiskNumberResponse, err := mounter.VolumeClient.GetDiskNumberFromVolumeID(context.Background(), getDiskNumberRequest)
+	if err != nil {
+		return "", err
+	}
+	klog.V(4).InfoS("GetDeviceNameFromMount called", "diskNumber", getDiskNumberResponse.DiskNumber, "volumeID", resp.VolumeId, "mountPath", mountPath)
+	return fmt.Sprint(getDiskNumberResponse.DiskNumber), nil
 }
 
 func (mounter *CSIProxyMounter) MakeRShared(path string) error {
@@ -235,7 +252,7 @@ func (mounter *CSIProxyMounter) MakeDir(pathname string) error {
 	}
 	_, err := mounter.FsClient.Mkdir(context.Background(), mkdirReq)
 	if err != nil {
-		klog.V(4).Infof("Error: %v", err)
+		klog.V(4).InfoS("Error", err)
 		return err
 	}
 
@@ -313,7 +330,17 @@ func (mounter *CSIProxyMounter) FindDiskByLun(lun string) (diskNum string, err e
 }
 
 // FormatAndMount - accepts the source disk number, target path to mount, the fstype to format with and options to be used.
-func (mounter *CSIProxyMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
+	// sensitiveOptions is not supported on Windows because we have no reasonable way to control what the csi-proxy does
+	if len(sensitiveOptions) > 0 {
+		return errors.New("sensitiveOptions not supported on Windows!")
+	}
+	// formatOptions is not supported on Windows because the csi-proxy does not allow supplying format arguments
+	// This limitation will be addressed in the future with privileged Windows containers
+	if len(formatOptions) > 0 {
+		return errors.New("formatOptions not supported on Windows!")
+	}
+
 	diskNumber, err := strconv.Atoi(source)
 	if err != nil {
 		return err

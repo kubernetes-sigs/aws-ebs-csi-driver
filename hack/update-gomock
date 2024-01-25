@@ -16,11 +16,16 @@
 
 set -euo pipefail
 
-mockgen -package cloud -destination=./pkg/cloud/mock_ec2.go -source pkg/cloud/ec2_interface.go
 mockgen -package cloud -destination=./pkg/cloud/mock_cloud.go -source pkg/cloud/cloud_interface.go
 mockgen -package cloud -destination=./pkg/cloud/mock_metadata.go -source pkg/cloud/metadata_interface.go
 mockgen -package driver -destination=./pkg/driver/mock_mount.go -source pkg/driver/mount.go
 mockgen -package mounter -destination=./pkg/mounter/mock_mount_windows.go -source pkg/mounter/safe_mounter_windows.go
+
+# Reflection-based mocking for external dependencies
+mockgen -package cloud -destination=./pkg/cloud/mock_ec2.go github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
+mockgen -package driver -destination=./pkg/driver/mock_k8s_client.go -mock_names='Interface=MockKubernetesClient' k8s.io/client-go/kubernetes Interface
+mockgen -package driver -destination=./pkg/driver/mock_k8s_corev1.go k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface,NodeInterface
+mockgen -package driver -destination=./pkg/driver/mock_k8s_storagev1.go k8s.io/client-go/kubernetes/typed/storage/v1 VolumeAttachmentInterface,StorageV1Interface
 
 # Fixes "Mounter Type cannot implement 'Mounter' as it has a non-exported method and is defined in a different package"
 # See https://github.com/kubernetes/mount-utils/commit/a20fcfb15a701977d086330b47b7efad51eb608e for context.

@@ -17,8 +17,9 @@ limitations under the License.
 package options
 
 import (
-	"flag"
 	"testing"
+
+	flag "github.com/spf13/pflag"
 )
 
 func TestControllerOptions(t *testing.T) {
@@ -40,6 +41,16 @@ func TestControllerOptions(t *testing.T) {
 		{
 			name:  "lookup aws-sdk-debug-log",
 			flag:  "aws-sdk-debug-log",
+			found: true,
+		},
+		{
+			name:  "lookup batching",
+			flag:  "batching",
+			found: true,
+		},
+		{
+			name:  "lookup user-agent-extra",
+			flag:  "user-agent-extra",
 			found: true,
 		},
 		{

@@ -1,16 +1,18 @@
 approvers:
-- AndyXiangLi
+- AndrewSirenko
 - bertinatto
 - ConnorJC3
 - gnufied
-- gtxu
 - jsafrane
 - leakingtapan
 - rdpsin
 - torredil
 - wongma7
-reviewers:
-- ConnorJC3
+emiritus_approvers:
+- AndyXiangLi
 - gtxu
-- rdpsin
+- hanyuel
+reviewers:
+- AndrewSirenko
+- ConnorJC3
 - torredil

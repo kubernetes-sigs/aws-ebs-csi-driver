@@ -1,19 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-bases:
-  - ../gcr
+resources:
+  - ../ecr-public
 images:
-  - name: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
+  - name: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver
-  - name: k8s.gcr.io/sig-storage/csi-provisioner
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-provisioner
-  - name: k8s.gcr.io/sig-storage/csi-attacher
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-attacher
-  - name: k8s.gcr.io/sig-storage/livenessprobe
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/livenessprobe
-  - name: k8s.gcr.io/sig-storage/csi-snapshotter
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
-  - name: k8s.gcr.io/sig-storage/csi-resizer
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
-  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-node-driver-registrar

@@ -1,6 +1,5 @@
 ---
 # Source: aws-ebs-csi-driver/templates/node.yaml
-# Node Service
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -31,12 +30,21 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+              - key: node.kubernetes.io/instance-type
+                operator: NotIn
+                values:
+                - a1.medium
+                - a1.large
+                - a1.xlarge
+                - a1.2xlarge
+                - a1.4xlarge
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: ebs-csi-node-sa
       priorityClassName: system-node-critical
       tolerations:
         - operator: Exists
+      hostNetwork: false
       securityContext:
         fsGroup: 0
         runAsGroup: 0
@@ -44,12 +52,12 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: k8s.gcr.io/provider-aws/aws-ebs-csi-driver
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.24.1
           imagePullPolicy: IfNotPresent
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
-            - --logtostderr
+            - --logging-format=text
             - --v=2
           env:
             - name: CSI_ENDPOINT
@@ -58,7 +66,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          envFrom:
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -79,11 +86,21 @@ spec:
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: 5
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 40Mi
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.9.1-eks-1-28-9
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -94,24 +111,45 @@ spec:
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
               value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
-          envFrom:
+          livenessProbe:
+            exec:
+              command:
+              - /csi-node-driver-registrar
+              - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+              - --mode=kubelet-registration-probe
+            initialDelaySeconds: 30
+            periodSeconds: 90
+            timeoutSeconds: 15
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
+            - name: probe-dir
+              mountPath: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: k8s.gcr.io/sig-storage/livenessprobe
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.11.0-eks-1-28-9
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
-          envFrom:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -132,3 +170,5 @@ spec:
           hostPath:
             path: /dev
             type: Directory
+        - name: probe-dir
+          emptyDir: {}

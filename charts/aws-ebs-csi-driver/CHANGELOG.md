@@ -1,5 +1,142 @@
 # Helm chart
 
+## v2.24.1
+* Bump driver version to `v1.24.1`
+* Upgrade sidecar images
+
+## v2.24.0
+* Bump driver version to `v1.24.0`
+* Add additionalClusterRoleRules to sidecar chart templates. ([#1757](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1757), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Allow passing template value for clusterName ([#1753](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1753), [@monicastanciu](https://github.com/monicastanciu))
+* Make hostNetwork configurable for daemonset ([#1716](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1716), [@bseenu](https://github.com/bseenu))
+* Add labels to volumesnapshotclass ([#1754](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1754), [@fad3t](https://github.com/fad3t))
+* Update default API version for PodDisruptionBudget ([#1751](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1751), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.23.2
+* Bump driver version to `v1.23.2`
+* Upgrade sidecar images
+
+## v2.23.1
+* Bump driver version to `v1.23.1`
+
+## v2.23.0
+* Add `node.enableLinux` parameter ([#1732](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1732), [@monicastanciu](https://github.com/monicastanciu))
+* Additional Node DaemonSets bug fixes ([#1739](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1739), [@monicastanciu](https://github.com/monicastanciu))
+* Additional DaemonSets feature ([#1722](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1722), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add doc of chart value additionalArgs ([#1697](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1697), [@zitudu](https://github.com/zitudu))
+
+## v2.22.1
+* Bump driver version to `v1.22.1`
+
+## v2.22.0
+* Default PodDisruptionBudget to policy/v1 ([#1707](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1707), [@iNoahNothing](https://github.com/iNoahNothing))
+
+## v2.21.0
+* Bump driver version to `v1.21.0`
+* Enable additional volume mounts on node pods ([#1670](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1670), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Enable customization of aws-secret name and keys in Helm Chart ([#1668](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1668), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* The sidecars have been updated. The new versions are:
+    - csi-snapshotter: `v6.2.2`
+
+## v2.20.0
+* Bump driver version to `v1.20.0`
+* Enable leader election in csi-resizer sidecar ([#1606](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1606), [@rdpsin](https://github.com/rdpsin))
+* Namespace-scoped leases permissions ([#1614](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1614), [@torredil](https://github.com/torredil))
+* Add additionalArgs parameter for sidecars ([#1627](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1627), [@ConnorJC3](https://github.com/ConnorJC3))
+* Avoid generating manifests with empty envFrom fields ([#1630](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1630), [@mvgmb](https://github.com/mvgmb))
+* Allow to set automountServiceAccountToken in ServiceAccount ([#1619](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1619), [@kahirokunn](https://github.com/kahirokunn))
+
+## v2.19.0
+* Bump driver version to `v1.19.0`
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.5.0`
+    - csi-attacher: `v4.3.0`
+    - livenessprobe: `v2.10.0`
+    - csi-resizer: `v1.8.0`
+    - node-driver-registrar: `v2.8.0`
+* Remove CPU limits ([#1596](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1596), [@torredil](https://github.com/torredil))
+
+## v2.18.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The Helm chart now defaults to using specific releases of the EKS-D sidecars, rather than the `-latest` versions. This is done so the chart will specify an exact container image, as well as for consistency with the EKS Addons version of the driver.
+
+The new sidecar tags are:
+* csi-provisioner: `v3.4.1-eks-1-26-7`
+* csi-attacher: `v4.2.0-eks-1-26-7`
+* csi-snapshotter: `v6.2.1-eks-1-26-7`
+* livenessprobe: `v2.9.0-eks-1-26-7`
+* csi-resizer: `v1.7.0-eks-1-26-7`
+* node-driver-registrar: `v2.7.0-eks-1-26-7`
+
+### Improvements
+* Bump driver version to `v1.18.0`
+* Increase speed and reliability of `helm test` ([#1533](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1533), [@torredil](https://github.com/torredil))
+* Support `VolumeSnapshotClass` in helm chart ([#1540](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1540), [@hanyuel](https://github.com/hanyuel))
+
+## v2.17.2
+* Bump driver version to `v1.17.0`
+* Bump `external-resizer` version to `v4.2.0`
+* All other sidecars have been updated to the latest rebuild (without an associated version change)
+
+## v2.17.1
+* Bump driver version to `v1.16.1`
+
+## v2.17.0
+* Bump driver version to `v1.16.0`
+* Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
+    * `--logging-format` flag has been added to set the log format. Valid values are `text` and `json`. The default value is `text`.
+    * `--logtostderr` is deprecated.
+    * Long arguments prefixed with `-` are no longer supported, and must be prefixed with `--`. For example, `--volume-attach-limit` instead of `-volume-attach-limit`.
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.4.0`
+    - csi-attacher: `v4.1.0`
+    - csi-snapshotter: `v6.2.1`
+    - livenessprobe: `v2.9.0`
+    - csi-resizer: `v1.7.0`
+    - node-driver-registrar: `v2.7.0`
+
+
+## v2.16.0
+* Bump driver version to `v1.15.0`
+* Change default sidecars to EKS-D ([#1475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1475), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.3.0`
+    - csi-attacher: `v4.0.0`
+    - csi-snapshotter: `v6.1.0`
+    - livenessprobe: `v2.8.0`
+    - csi-resizer: `v1.6.0`
+    - node-driver-registrar: `v2.6.2`
+
+## v2.15.1
+* Bugfix: Prevent deployment of testing resources during normal installation by adding `helm.sh/hook: test` annotation.
+
+## v2.15.0
+* Set sensible default resource requests/limits
+* Add sensible default update strategy
+* Add podAntiAffinity so controller pods prefer scheduling on separate nodes if possible
+* Add container registry parameter
+
+## v2.14.2
+* Bump driver version to `v1.14.1`
+
+## v2.14.1
+* Add `controller.sdkDebugLog` parameter
+
+## v2.14.0
+* Bump driver version to `v1.14.0`
+
+## v2.13.0
+* Bump app/driver to version `v1.13.0`
+* Expose volumes and volumeMounts for the ebs-csi-controller deployment ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1436), [@cnmcavoy](https://github.com/cnmcavoy))
+* refactor: Move the default controller tolerations in the helm chart values ([#1427](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1427), [@cnmcavoy](https://github.com/Linutux42))
+* Add serviceMonitor.labels parameter ([#1419](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1419), [@torredil](https://github.com/torredil))
+* Add parameter to force enable snapshotter sidecar ([#1418](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1418), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## v2.12.1
+* Bump app/driver to version `v1.12.1`
+
 ## v2.12.0
 * Bump app/driver to version `v1.12.0`
 * Move default toleration to values.yaml so it can be overriden if desired by users ([#1400](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1400), [@cnmcavoy](https://github.com/cnmcavoy))

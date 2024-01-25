@@ -6,7 +6,6 @@ package driver
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -24,7 +23,7 @@ import (
 
 func TestSanity(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "sanity-ebs-csi")
+	dir, err := os.MkdirTemp("", "sanity-ebs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
@@ -100,7 +99,10 @@ type fakeCloudProvider struct {
 
 type fakeDisk struct {
 	*cloud.Disk
-	tags map[string]string
+	iops       int
+	throughput int
+	volumeType string
+	tags       map[string]string
 }
 
 type fakeSnapshot struct {
@@ -139,7 +141,10 @@ func (c *fakeCloudProvider) CreateDisk(ctx context.Context, volumeName string, d
 			AvailabilityZone: diskOptions.AvailabilityZone,
 			SnapshotID:       diskOptions.SnapshotID,
 		},
-		tags: diskOptions.Tags,
+		iops:       diskOptions.IOPS,
+		throughput: diskOptions.Throughput,
+		volumeType: diskOptions.VolumeType,
+		tags:       diskOptions.Tags,
 	}
 	c.disks[volumeName] = d
 	return d.Disk, nil
@@ -260,6 +265,10 @@ func (c *fakeCloudProvider) GetSnapshotByID(ctx context.Context, snapshotID stri
 	return ret.Snapshot, nil
 }
 
+func (c *fakeCloudProvider) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
+	return nil, nil
+}
+
 func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *cloud.ListSnapshotsResponse, err error) {
 	var snapshots []*cloud.Snapshot
 	var retToken string
@@ -285,14 +294,20 @@ func (c *fakeCloudProvider) ListSnapshots(ctx context.Context, volumeID string, 
 
 }
 
-func (c *fakeCloudProvider) ResizeDisk(ctx context.Context, volumeID string, newSize int64) (int64, error) {
-	for volName, f := range c.disks {
-		if f.Disk.VolumeID == volumeID {
-			c.disks[volName].CapacityGiB = newSize
-			return newSize, nil
-		}
+func (c *fakeCloudProvider) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+	return nil, nil
+}
+
+func (c *fakeCloudProvider) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	if d, ok := c.disks[volumeID]; !ok {
+		return 0, cloud.ErrNotFound
+	} else {
+		d.iops = options.IOPS
+		d.throughput = options.Throughput
+		d.volumeType = options.VolumeType
+		d.Disk.CapacityGiB = newSize
+		return newSize, nil
 	}
-	return 0, cloud.ErrNotFound
 }
 
 type fakeMounter struct {
@@ -355,7 +370,7 @@ func (f *fakeMounter) GetMountRefs(pathname string) ([]string, error) {
 	return []string{}, nil
 }
 
-func (f *fakeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (f *fakeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
 	return nil
 }
 

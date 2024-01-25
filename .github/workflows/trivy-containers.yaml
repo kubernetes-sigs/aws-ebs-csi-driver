@@ -1,10 +1,13 @@
 name: Trivy Scanner - Container Images
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
       - master
-    paths:
-      - 'deploy/kubernetes/overlays/stable/gcr/kustomization.yaml'
   schedule:
     - cron: '0 */24 * * *'
 
@@ -16,14 +19,13 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - id: set-matrix
         uses: mikefarah/yq@master
         with:
-          # Dynamically build the matrix of images to scan using `deploy/kubernetes/overlays/stable/gcr/kustomization.yaml`
-          # matrix format: ['k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.11.3', 'k8s.gcr.io/sig-storage/csi-attacher:v3.4.0', ...]
-          cmd: yq '.images | map(.name + ":" + .newTag) | . style="flow"' < deploy/kubernetes/overlays/stable/gcr/kustomization.yaml
+          # Dynamically build the matrix of images to scan
+          cmd: "yq '[{\"repository\": .image.repository, \"tag\": \"v'$(yq '.appVersion' charts/aws-ebs-csi-driver/Chart.yaml)'\"}] + (.sidecars | map(.image)) | map(.repository + \":\" + .tag) | . style=\"flow\"' charts/aws-ebs-csi-driver/values.yaml"
   
   trivy-scan:
     needs: build-matrix
@@ -34,7 +36,7 @@ jobs:
     
     steps:
       - name: Scan container image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.12.0
         with:
           image-ref: '${{ matrix.image }}'
           output: 'results.sarif'

@@ -27,12 +27,12 @@ import (
 	"regexp"
 )
 
-func (m NodeMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
+func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
 	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*mounter.CSIProxyMounter)
 	if !ok {
 		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
 	}
-	return proxyMounter.FormatAndMount(source, target, fstype, options)
+	return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
 }
 
 // GetDeviceNameFromMount returns the volume ID for a mount path.
@@ -56,7 +56,7 @@ func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, erro
 		// internal Get-Item cmdlet didn't fail but no item/device was found at the
 		// path so we should return empty string and nil error just like the Linux
 		// implementation would.
-		pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>`
+		pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist`
 		matched, matchErr := regexp.MatchString(pattern, err.Error())
 		if matched {
 			return "", 0, nil
@@ -128,8 +128,6 @@ func (m *NodeMounter) Unpublish(target string) error {
 	if !ok {
 		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
 	}
-	// WriteVolumeCache before unmount
-	proxyMounter.WriteVolumeCache(target)
 	// Remove symlink
 	err := proxyMounter.Rmdir(target)
 	if err != nil {
@@ -147,11 +145,6 @@ func (m *NodeMounter) Unstage(target string) error {
 	}
 	// Unmounts and offlines the disk via the CSI Proxy API
 	err := proxyMounter.Unmount(target)
-	if err != nil {
-		return err
-	}
-	// Cleanup stage path
-	err = proxyMounter.Rmdir(target)
 	if err != nil {
 		return err
 	}

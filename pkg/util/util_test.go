@@ -21,6 +21,7 @@ package util
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 
@@ -152,5 +153,30 @@ func TestGetAccessModes(t *testing.T) {
 	actualModes := GetAccessModes(testVolCap)
 	if !reflect.DeepEqual(expectedModes, *actualModes) {
 		t.Fatalf("Wrong values returned for volume capabilities. Expected %v, got %v", expectedModes, actualModes)
+	}
+}
+
+func TestIsAlphanumeric(t *testing.T) {
+	testCases := []struct {
+		name       string
+		testString string
+		expResult  bool
+	}{
+		{
+			name:       "success with alphanumeric",
+			testString: "4Kib",
+			expResult:  true,
+		},
+		{
+			name:       "failure with non-alphanumeric",
+			testString: "space 4Kib",
+			expResult:  false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := StringIsAlphanumeric(tc.testString)
+			assert.Equalf(t, res, tc.expResult, "Wrong value returned for StringIsAlphanumeric. Expected %s for string %s, got %s", tc.expResult, tc.testString, res)
+		})
 	}
 }

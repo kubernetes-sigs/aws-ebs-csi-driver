@@ -75,23 +75,10 @@ func (m *NodeMounter) NeedResize(devicePath string, deviceMountPath string) (boo
 	return mountutils.NewResizeFs(m.Exec).NeedResize(devicePath, deviceMountPath)
 }
 
-func (m *NodeMounter) getDeviceSize(devicePath string) (uint64, error) {
-	output, err := m.SafeFormatAndMount.Exec.Command("blockdev", "--getsize64", devicePath).CombinedOutput()
-	outStr := strings.TrimSpace(string(output))
-	if err != nil {
-		return 0, fmt.Errorf("failed to read size of device %s: %s: %s", devicePath, err, outStr)
-	}
-	size, err := strconv.ParseUint(outStr, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse size of device %s %s: %s", devicePath, outStr, err)
-	}
-	return size, nil
-}
-
 func (m *NodeMounter) getExtSize(devicePath string) (uint64, uint64, error) {
 	output, err := m.SafeFormatAndMount.Exec.Command("dumpe2fs", "-h", devicePath).CombinedOutput()
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to read size of filesystem on %s: %s: %s", devicePath, err, string(output))
+		return 0, 0, fmt.Errorf("failed to read size of filesystem on %s: %w: %s", devicePath, err, string(output))
 	}
 
 	blockSize, blockCount, _ := m.parseFsInfoOutput(string(output), ":", "block size", "block count")
@@ -108,7 +95,7 @@ func (m *NodeMounter) getExtSize(devicePath string) (uint64, uint64, error) {
 func (m *NodeMounter) getXFSSize(devicePath string) (uint64, uint64, error) {
 	output, err := m.SafeFormatAndMount.Exec.Command("xfs_io", "-c", "statfs", devicePath).CombinedOutput()
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to read size of filesystem on %s: %s: %s", devicePath, err, string(output))
+		return 0, 0, fmt.Errorf("failed to read size of filesystem on %s: %w: %s", devicePath, err, string(output))
 	}
 
 	blockSize, blockCount, _ := m.parseFsInfoOutput(string(output), "=", "geom.bsize", "geom.datablocks")
@@ -136,13 +123,13 @@ func (m *NodeMounter) parseFsInfoOutput(cmdOutput string, spliter string, blockS
 		if key == blockSizeKey {
 			blockSize, err = strconv.ParseUint(value, 10, 64)
 			if err != nil {
-				return 0, 0, fmt.Errorf("failed to parse block size %s: %s", value, err)
+				return 0, 0, fmt.Errorf("failed to parse block size %s: %w", value, err)
 			}
 		}
 		if key == blockCountKey {
 			blockCount, err = strconv.ParseUint(value, 10, 64)
 			if err != nil {
-				return 0, 0, fmt.Errorf("failed to parse block count %s: %s", value, err)
+				return 0, 0, fmt.Errorf("failed to parse block count %s: %w", value, err)
 			}
 		}
 	}
@@ -150,11 +137,22 @@ func (m *NodeMounter) parseFsInfoOutput(cmdOutput string, spliter string, blockS
 }
 
 func (m *NodeMounter) Unpublish(path string) error {
-	return m.Unmount(path)
+	// On linux, unpublish and unstage both perform an unmount
+	return m.Unstage(path)
 }
 
 func (m *NodeMounter) Unstage(path string) error {
-	return m.Unmount(path)
+	err := mountutils.CleanupMountPoint(path, m, false)
+	// Ignore the error when it contains "not mounted", because that indicates the
+	// world is already in the desired state
+	//
+	// mount-utils attempts to detect this on its own but fails when running on
+	// a read-only root filesystem, which our manifests use by default
+	if err == nil || strings.Contains(fmt.Sprint(err), "not mounted") {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (m *NodeMounter) NewResizeFs() (Resizefs, error) {

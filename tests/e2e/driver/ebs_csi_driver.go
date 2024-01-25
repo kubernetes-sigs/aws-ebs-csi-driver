@@ -68,7 +68,7 @@ func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string) *volumesnapshotv
 	return getVolumeSnapshotClass(generateName, provisioner)
 }
 
-func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume {
+func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string, accessMode v1.PersistentVolumeAccessMode, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolume {
 	provisioner := d.driverName
 	generateName := fmt.Sprintf("%s-%s-preprovsioned-pv-", namespace, provisioner)
 	// Default to Retain ReclaimPolicy for pre-provisioned volumes
@@ -76,6 +76,11 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 	if reclaimPolicy != nil {
 		pvReclaimPolicy = *reclaimPolicy
 	}
+
+	if accessMode == "" {
+		accessMode = v1.ReadWriteOnce
+	}
+
 	return &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: generateName,
@@ -86,7 +91,7 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			AccessModes: []v1.PersistentVolumeAccessMode{accessMode},
 			Capacity: v1.ResourceList{
 				v1.ResourceName(v1.ResourceStorage): resource.MustParse(size),
 			},
@@ -98,12 +103,13 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 					FSType:       fsType,
 				},
 			},
+			VolumeMode: &volumeMode,
 		},
 	}
 }
 
 // GetParameters returns the parameters specific for this driver
-func GetParameters(volumeType string, fsType string, encrypted bool) map[string]string {
+func GetParameters(volumeType string, fsType string, encrypted bool, additionalParameters map[string]string) map[string]string {
 	parameters := map[string]string{
 		"type":                      volumeType,
 		"csi.storage.k8s.io/fstype": fsType,
@@ -120,6 +126,10 @@ func GetParameters(volumeType string, fsType string, encrypted bool) map[string]
 	if encrypted {
 		parameters[ebscsidriver.EncryptedKey] = True
 	}
+	for k, v := range additionalParameters {
+		parameters[k] = v
+	}
+
 	return parameters
 }
 

@@ -1,0 +1,44 @@
+{{$index := .Index}}
+{{$volumesPerPod := .VolumesPerPod}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Name}}
+  labels:
+    group: {{.Group}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: {{.Name}}
+  template:
+    metadata:
+      labels:
+        group: {{.Group}}
+        name: {{.Name}}
+    spec:
+      containers:
+      - name: {{.Name}}
+        image: registry.k8s.io/pause:3.9
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        {{ range $volumeIndex := Loop .VolumesPerPod }}
+        - name: vol-{{$volumeIndex}}
+          mountPath: /usr/share/{{$volumeIndex}}
+        {{ end }}
+      volumes:
+      {{ range $volumeIndex := Loop .VolumesPerPod }}
+      - name: vol-{{$volumeIndex}}
+        persistentVolumeClaim:
+          claimName: vol-{{AddInt $volumeIndex (MultiplyInt $index $volumesPerPod)}}
+          readOnly: false
+      {{ end }}
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 900
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 900

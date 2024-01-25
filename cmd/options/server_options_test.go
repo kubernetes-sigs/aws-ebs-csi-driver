@@ -17,8 +17,9 @@ limitations under the License.
 package options
 
 import (
-	"flag"
 	"testing"
+
+	flag "github.com/spf13/pflag"
 )
 
 func TestServerOptions(t *testing.T) {

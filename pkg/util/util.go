@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -28,6 +29,10 @@ import (
 
 const (
 	GiB = 1024 * 1024 * 1024
+)
+
+var (
+	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
 )
 
 // RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB
@@ -55,7 +60,7 @@ func GiBToBytes(volumeSizeGiB int64) int64 {
 func ParseEndpoint(endpoint string) (string, string, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return "", "", fmt.Errorf("could not parse endpoint: %v", err)
+		return "", "", fmt.Errorf("could not parse endpoint: %w", err)
 	}
 
 	addr := filepath.Join(u.Host, filepath.FromSlash(u.Path))
@@ -66,7 +71,7 @@ func ParseEndpoint(endpoint string) (string, string, error) {
 	case "unix":
 		addr = filepath.Join("/", addr)
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {
-			return "", "", fmt.Errorf("could not remove unix domain socket %q: %v", addr, err)
+			return "", "", fmt.Errorf("could not remove unix domain socket %q: %w", addr, err)
 		}
 	default:
 		return "", "", fmt.Errorf("unsupported protocol: %s", scheme)
@@ -92,4 +97,9 @@ func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 
 func IsSBE(region string) bool {
 	return region == "snow"
+}
+
+// StringIsAlphanumeric returns true if a given string contains only English letters or numbers
+func StringIsAlphanumeric(s string) bool {
+	return isAlphanumericRegex(s)
 }

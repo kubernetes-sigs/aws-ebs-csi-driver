@@ -82,23 +82,23 @@ func (m *Metadata) GetOutpostArn() arn.ARN {
 }
 
 func NewMetadataService(ec2MetadataClient EC2MetadataClient, k8sAPIClient KubernetesAPIClient, region string) (MetadataService, error) {
-	klog.Infof("retrieving instance data from ec2 metadata")
+	klog.InfoS("retrieving instance data from ec2 metadata")
 	svc, err := ec2MetadataClient()
 	if !svc.Available() {
-		klog.Warning("ec2 metadata is not available")
+		klog.InfoS("ec2 metadata is not available")
 	} else if err != nil {
-		klog.Warningf("error creating ec2 metadata client: %v", err)
+		klog.InfoS("error creating ec2 metadata client", "err", err)
 	} else {
-		klog.Infof("ec2 metadata is available")
+		klog.InfoS("ec2 metadata is available")
 		return EC2MetadataInstanceInfo(svc, region)
 	}
 
-	klog.Infof("retrieving instance data from kubernetes api")
+	klog.InfoS("retrieving instance data from kubernetes api")
 	clientset, err := k8sAPIClient()
 	if err != nil {
-		klog.Warningf("error creating kubernetes api client: %v", err)
+		klog.InfoS("error creating kubernetes api client", "err", err)
 	} else {
-		klog.Infof("kubernetes api is available")
+		klog.InfoS("kubernetes api is available")
 		return KubernetesAPIInstanceInfo(clientset)
 	}
 

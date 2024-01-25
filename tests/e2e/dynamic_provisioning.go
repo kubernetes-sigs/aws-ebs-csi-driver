@@ -140,23 +140,26 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 
 	It("should create multiple PV objects, bind to PVCs and attach all to a single pod", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && echo 'hello world' > /mnt/test-2/data && grep 'hello world' /mnt/test-1/data  && grep 'hello world' /mnt/test-2/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeGP2,
-						FSType:     ebscsidriver.FSTypeExt3,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeType:        awscloud.VolumeTypeGP2,
+						FSType:            ebscsidriver.FSTypeExt3,
+						VolumeBindingMode: &volumeBindingMode,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
 						},
 					},
 					{
-						VolumeType: awscloud.VolumeTypeIO1,
-						FSType:     ebscsidriver.FSTypeExt4,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeType:        awscloud.VolumeTypeIO1,
+						FSType:            ebscsidriver.FSTypeExt4,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeBindingMode: &volumeBindingMode,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -235,26 +238,210 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
+	It("should succeed multi-attach with dynamically provisioned IO2 block device", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.Block,
+			VolumeType: awscloud.VolumeTypeIO2,
+			AccessMode: v1.ReadWriteMany,
+			RunningPod: true,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach dynamically provisioned IO2 block device - not enabled", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteOnce,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteOnce,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.Block,
+			AccessMode: v1.ReadWriteOnce,
+			VolumeType: awscloud.VolumeTypeIO2,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach when VolumeMode is not Block", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						FSType:     ebscsidriver.FSTypeExt4,
+						VolumeMode: testsuites.FileSystem,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType: awscloud.VolumeTypeIO2,
+						FSType:     ebscsidriver.FSTypeExt4,
+						VolumeMode: testsuites.FileSystem,
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.FileSystem,
+			AccessMode: v1.ReadWriteMany,
+			VolumeType: awscloud.VolumeTypeIO2,
+			PendingPVC: true,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("should fail to multi-attach non io2 VolumeType", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType:        awscloud.VolumeTypeGP3,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode: v1.ReadWriteMany,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeType:        awscloud.VolumeTypeGP3,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode: v1.ReadWriteMany,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.FileSystem,
+			AccessMode: v1.ReadWriteMany,
+			VolumeType: awscloud.VolumeTypeIO2,
+			PendingPVC: true,
+		}
+		test.Run(cs, ns)
+	})
+
 	It("should create a raw block volume and a filesystem volume on demand and bind to the same pod", func() {
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "dd if=/dev/zero of=/dev/xvda bs=1024k count=100 && echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeType: awscloud.VolumeTypeIO1,
-						FSType:     ebscsidriver.FSTypeExt4,
-						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeType:        awscloud.VolumeTypeIO1,
+						FSType:            ebscsidriver.FSTypeExt4,
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeBindingMode: &volumeBindingMode,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
 						},
 					},
 					{
-						VolumeType:   awscloud.VolumeTypeGP2,
-						FSType:       ebscsidriver.FSTypeExt4,
-						MountOptions: []string{"rw"},
-						ClaimSize:    driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
-						VolumeMode:   testsuites.Block,
+						VolumeType:        awscloud.VolumeTypeGP2,
+						FSType:            ebscsidriver.FSTypeExt4,
+						MountOptions:      []string{"rw"},
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMode:        testsuites.Block,
 						VolumeDevice: testsuites.VolumeDeviceDetails{
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
@@ -368,7 +555,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
 		region := availabilityZone[0 : len(availabilityZone)-1]
-		cloud, err := awscloud.NewCloud(region, false)
+		cloud, err := awscloud.NewCloud(region, false, "", true)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

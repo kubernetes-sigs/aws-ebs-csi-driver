@@ -18,15 +18,12 @@ package devicemanager
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"k8s.io/klog/v2"
 )
-
-const devPreffix = "/dev/xvd"
 
 type Device struct {
 	Instance          *ec2.Instance
@@ -41,7 +38,7 @@ type Device struct {
 func (d *Device) Release(force bool) {
 	if !d.isTainted || force {
 		if err := d.releaseFunc(); err != nil {
-			klog.Errorf("Error releasing device: %v", err)
+			klog.ErrorS(err, "Error releasing device")
 		}
 	}
 }
@@ -135,7 +132,7 @@ func (d *deviceManager) NewDevice(instance *ec2.Instance, volumeID string) (*Dev
 	// Add the chosen device and volume to the "attachments in progress" map
 	d.inFlight.Add(nodeID, volumeID, name)
 
-	return d.newBlockDevice(instance, volumeID, devPreffix+name, false), nil
+	return d.newBlockDevice(instance, volumeID, name, false), nil
 }
 
 func (d *deviceManager) GetDevice(instance *ec2.Instance, volumeID string) (*Device, error) {
@@ -175,12 +172,7 @@ func (d *deviceManager) release(device *Device) error {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	var name string
-	if len(device.Path) > 2 {
-		name = strings.TrimPrefix(device.Path, devPreffix)
-	}
-
-	existingVolumeID := d.inFlight.GetVolume(nodeID, name)
+	existingVolumeID := d.inFlight.GetVolume(nodeID, device.Path)
 	if len(existingVolumeID) == 0 {
 		// Attaching is not in progress, so there's nothing to release
 		return nil
@@ -194,8 +186,8 @@ func (d *deviceManager) release(device *Device) error {
 		return fmt.Errorf("release on device %q assigned to different volume: %q vs %q", device.Path, device.VolumeID, existingVolumeID)
 	}
 
-	klog.V(5).Infof("[Debug] Releasing in-process attachment entry: %v -> volume %s", device.Path, device.VolumeID)
-	d.inFlight.Del(nodeID, name)
+	klog.V(5).InfoS("[Debug] Releasing in-process", "attachment entry", device.Path, "volume", device.VolumeID)
+	d.inFlight.Del(nodeID, device.Path)
 
 	return nil
 }
@@ -207,13 +199,6 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]s
 	inUse := map[string]string{}
 	for _, blockDevice := range instance.BlockDeviceMappings {
 		name := aws.StringValue(blockDevice.DeviceName)
-		// trims /dev/sd or /dev/xvd from device name
-		name = strings.TrimPrefix(name, "/dev/sd")
-		name = strings.TrimPrefix(name, "/dev/xvd")
-
-		if len(name) < 1 || len(name) > 2 {
-			klog.Warningf("Unexpected EBS DeviceName: %q", aws.StringValue(blockDevice.DeviceName))
-		}
 		inUse[name] = aws.StringValue(blockDevice.Ebs.VolumeId)
 	}
 
@@ -227,7 +212,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *ec2.Instance) map[string]s
 func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string {
 	for name, volID := range inUse {
 		if volumeID == volID {
-			return devPreffix + name
+			return name
 		}
 	}
 	return ""

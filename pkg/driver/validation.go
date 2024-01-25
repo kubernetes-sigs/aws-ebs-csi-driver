@@ -27,11 +27,11 @@ import (
 
 func ValidateDriverOptions(options *DriverOptions) error {
 	if err := validateExtraTags(options.extraTags, false); err != nil {
-		return fmt.Errorf("Invalid extra tags: %v", err)
+		return fmt.Errorf("Invalid extra tags: %w", err)
 	}
 
 	if err := validateMode(options.mode); err != nil {
-		return fmt.Errorf("Invalid mode: %v", err)
+		return fmt.Errorf("Invalid mode: %w", err)
 	}
 
 	return nil
@@ -62,9 +62,6 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		if k == cloud.AwsEbsDriverTagKey {
 			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)
 		}
-		if k == cloud.AwsEbsReconcileGP3PerformanceTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsReconcileGP3PerformanceTagKey)
-		}
 		if k == cloud.SnapshotNameTagKey {
 			return fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey)
 		}
@@ -87,7 +84,7 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		err := validate(k, v)
 		if err != nil {
 			if warnOnly {
-				klog.Warningf("Skipping tag: the following key-value pair is not valid: (%s, %s): (%v)", k, v, err)
+				klog.InfoS("Skipping tag: the following key-value pair is not valid", "key", k, "value", v, "err", err)
 			} else {
 				return err
 			}

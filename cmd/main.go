@@ -17,30 +17,48 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-	"net/http"
+	"context"
+	"time"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	flag "github.com/spf13/pflag"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	"k8s.io/component-base/metrics/legacyregistry"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
+	logsapi "k8s.io/component-base/logs/api/v1"
+	json "k8s.io/component-base/logs/json"
 
 	"k8s.io/klog/v2"
 )
 
 func main() {
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
+
+	if err := logsapi.RegisterLogFormat(logsapi.JSONLogFormat, json.Factory{}, logsapi.LoggingBetaOptions); err != nil {
+		klog.ErrorS(err, "failed to register JSON log format")
+	}
+
 	options := GetOptions(fs)
 
-	cloud.RegisterMetrics()
-	if options.ServerOptions.HttpEndpoint != "" {
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", legacyregistry.HandlerWithReset())
-		go func() {
-			err := http.ListenAndServe(options.ServerOptions.HttpEndpoint, mux)
-			if err != nil {
-				klog.Fatalf("failed to listen & serve metrics from %q: %v", options.ServerOptions.HttpEndpoint, err)
+	// Start tracing as soon as possible
+	if options.ServerOptions.EnableOtelTracing {
+		exporter, err := driver.InitOtelTracing()
+		if err != nil {
+			klog.ErrorS(err, "failed to initialize otel tracing")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		// Exporter will flush traces on shutdown
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := exporter.Shutdown(ctx); err != nil {
+				klog.ErrorS(err, "could not shutdown otel exporter")
 			}
 		}()
+	}
+
+	if options.ServerOptions.HttpEndpoint != "" {
+		r := metrics.InitializeRecorder()
+		r.InitializeMetricsHandler(options.ServerOptions.HttpEndpoint, "/metrics")
 	}
 
 	drv, err := driver.NewDriver(
@@ -52,11 +70,16 @@ func main() {
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
+		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
+		driver.WithOtelTracing(options.ServerOptions.EnableOtelTracing),
+		driver.WithBatching(options.ControllerOptions.Batching),
 	)
 	if err != nil {
-		klog.Fatalln(err)
+		klog.ErrorS(err, "failed to create driver")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 	if err := drv.Run(); err != nil {
-		klog.Fatalln(err)
+		klog.ErrorS(err, "failed to run driver")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 }

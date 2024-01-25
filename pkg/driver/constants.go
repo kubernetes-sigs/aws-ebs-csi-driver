@@ -47,11 +47,6 @@ const (
 	// AllowAutoIOPSPerGBIncreaseKey represents key for allowing automatic increase of IOPS
 	AllowAutoIOPSPerGBIncreaseKey = "allowautoiopspergbincrease"
 
-	// ReconcileGP3PerformanceKey represents key for allowing the controller
-	// to mimic the same GP2 performance reconciliation algorithm for GP3
-	// volumes
-	ReconcileGP3PerformanceKey = "reconcilegp3performance"
-
 	// Iops represents key for IOPS for volume
 	IopsKey = "iops"
 
@@ -74,12 +69,46 @@ const (
 	// provisioned volume
 	PVNameKey = "csi.storage.k8s.io/pv/name"
 
+	// VolumeSnapshotNameKey contains name of the snapshot
+	VolumeSnapshotNameKey = "csi.storage.k8s.io/volumesnapshot/name"
+
+	// VolumeSnapshotNamespaceKey contains namespace of the snapshot
+	VolumeSnapshotNamespaceKey = "csi.storage.k8s.io/volumesnapshot/namespace"
+
+	// VolumeSnapshotCotentNameKey contains name of the VolumeSnapshotContent that is the source
+	// for the snapshot
+	VolumeSnapshotContentNameKey = "csi.storage.k8s.io/volumesnapshotcontent/name"
+
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
-	BlockExpressKey = "blockExpress"
+	BlockExpressKey = "blockexpress"
+
+	// BlockSizeKey configures the block size when formatting a volume
+	BlockSizeKey = "blocksize"
+
+	// InodeSizeKey configures the inode size when formatting a volume
+	InodeSizeKey = "inodesize"
+
+	// BytesPerInodeKey configures the `bytes-per-inode` when formatting a volume
+	BytesPerInodeKey = "bytesperinode"
+
+	// NumberOfInodesKey configures the `number-of-inodes` when formatting a volume
+	NumberOfInodesKey = "numberofinodes"
+
+	// Ext4ClusterSizeKey enables the bigalloc option when formatting an ext4 volume
+	Ext4BigAllocKey = "ext4bigalloc"
+
+	// Ext4ClusterSizeKey configures the cluster size when formatting an ext4 volume with the bigalloc option enabled
+	Ext4ClusterSizeKey = "ext4clustersize"
 
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
 	TagKeyPrefix = "tagSpecification"
+)
+
+// constants of keys in snapshot parameters
+const (
+	// FastSnapShotRestoreAvailabilityZones represents key for fast snapshot restore availability zones
+	FastSnapshotRestoreAvailabilityZones = "fastsnapshotrestoreavailabilityzones"
 )
 
 // constants for volume tags and their values
@@ -131,4 +160,71 @@ const (
 const (
 	//DefaultBlockSize represents the default block size (4KB)
 	DefaultBlockSize = 4096
+)
+
+// constants for fstypes
+const (
+	// FSTypeExt2 represents the ext2 filesystem type
+	FSTypeExt2 = "ext2"
+	// FSTypeExt3 represents the ext3 filesystem type
+	FSTypeExt3 = "ext3"
+	// FSTypeExt4 represents the ext4 filesystem type
+	FSTypeExt4 = "ext4"
+	// FSTypeXfs represents the xfs filesystem type
+	FSTypeXfs = "xfs"
+	// FSTypeNtfs represents the ntfs filesystem type
+	FSTypeNtfs = "ntfs"
+)
+
+// constants for node k8s API use
+const (
+	// AgentNotReadyNodeTaintKey contains the key of taints to be removed on driver startup
+	AgentNotReadyNodeTaintKey = "ebs.csi.aws.com/agent-not-ready"
+)
+
+type fileSystemConfig struct {
+	NotSupportedParams map[string]struct{}
+}
+
+func (fsConfig fileSystemConfig) isParameterSupported(paramName string) bool {
+	_, notSupported := fsConfig.NotSupportedParams[paramName]
+	return !notSupported
+}
+
+var (
+	FileSystemConfigs = map[string]fileSystemConfig{
+		FSTypeExt2: {
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeExt3: {
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeExt4: {
+			NotSupportedParams: map[string]struct{}{},
+		},
+		FSTypeXfs: {
+			NotSupportedParams: map[string]struct{}{
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeNtfs: {
+			NotSupportedParams: map[string]struct{}{
+				BlockSizeKey:       {},
+				InodeSizeKey:       {},
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+	}
 )

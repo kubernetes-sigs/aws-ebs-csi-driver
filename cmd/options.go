@@ -17,15 +17,25 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	flag "github.com/spf13/pflag"
+
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/cmd/hooks"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/cmd/options"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 
+	"k8s.io/component-base/featuregate"
+	logsapi "k8s.io/component-base/logs/api/v1"
 	"k8s.io/klog/v2"
+)
+
+const (
+	preStopTimeout = 30 * time.Second
 )
 
 // Options is the combined set of options for all operating modes.
@@ -40,11 +50,14 @@ type Options struct {
 // used for testing
 var osExit = os.Exit
 
+var featureGate = featuregate.NewFeatureGate()
+
 // GetOptions parses the command line options and returns a struct that contains
 // the parsed options.
 func GetOptions(fs *flag.FlagSet) *Options {
 	var (
-		version = fs.Bool("version", false, "Print the version and exit.")
+		version  = fs.Bool("version", false, "Print the version and exit.")
+		toStderr = fs.Bool("logtostderr", false, "log to standard error instead of files. DEPRECATED: will be removed in a future release.")
 
 		args = os.Args[1:]
 		mode = driver.AllMode
@@ -55,7 +68,15 @@ func GetOptions(fs *flag.FlagSet) *Options {
 	)
 
 	serverOptions.AddFlags(fs)
-	klog.InitFlags(fs)
+
+	c := logsapi.NewLoggingConfiguration()
+
+	err := logsapi.AddFeatureGates(featureGate)
+	if err != nil {
+		klog.ErrorS(err, "failed to add feature gates")
+	}
+
+	logsapi.AddFlags(c, fs)
 
 	if len(os.Args) > 1 {
 		cmd := os.Args[1]
@@ -81,23 +102,46 @@ func GetOptions(fs *flag.FlagSet) *Options {
 			nodeOptions.AddFlags(fs)
 			args = os.Args[1:]
 
+		case cmd == "pre-stop-hook":
+			clientset, clientErr := cloud.DefaultKubernetesAPIClient()
+			if clientErr != nil {
+				klog.ErrorS(err, "unable to communicate with k8s API")
+			} else {
+				err = hooks.PreStop(clientset, preStopTimeout)
+				if err != nil {
+					klog.ErrorS(err, "failed to execute PreStop lifecycle hook")
+					klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+				}
+			}
+			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+
 		default:
 			fmt.Printf("unknown command: %s: expected %q, %q or %q", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
 			os.Exit(1)
 		}
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err = fs.Parse(args); err != nil {
 		panic(err)
 	}
 
+	err = logsapi.ValidateAndApply(c, featureGate)
+	if err != nil {
+		klog.ErrorS(err, "failed to validate and apply logging configuration")
+	}
+
 	if *version {
-		info, err := driver.GetVersionJSON()
+		versionInfo, err := driver.GetVersionJSON()
 		if err != nil {
-			klog.Fatalln(err)
+			klog.ErrorS(err, "failed to get version")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
-		fmt.Println(info)
+		fmt.Println(versionInfo)
 		osExit(0)
+	}
+
+	if *toStderr {
+		klog.SetOutput(os.Stderr)
 	}
 
 	return &Options{

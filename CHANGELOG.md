@@ -1,3 +1,257 @@
+# v1.24.1
+### Bug Fixes
+* Add compatibility workaround for A1 instance family ([#1811](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1811), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Upgrade dependencies (and resolve CVEs found in [#1800](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1800)) ([#1809](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1809), [@ConnorJC3](https://github.com/ConnorJC3))
+
+# v1.24.0
+### Notable Changes
+* Support clustered allocation with ext4 filesystems. This allows developers to enable [torn write prevention](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/storage-twp.html) on their dynamically provisioned volumes to improve the performance of I/O-intensive relational database workloads. ([#1706](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1706), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add volume limits for m7a, c7a, c7i, r7a, r7iz instance families ([#1742](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1742) & [#1776](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1776), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Fix DeleteDisk error handling in volume creation failure ([#1782](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1782), [@maaoBit](https://github.com/maaoBit))
+
+### Improvements
+* Document topologies in parameters.md ([#1764](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1764), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade dependencies ([#1781](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1781), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Metric Instrumentation Framework ([#1767](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1767), [@torredil](https://github.com/torredil))
+
+# v1.23.2
+### Bug Fixes
+* Add compatibility workaround for A1 instance family ([#1811](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1811), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Upgrade dependencies (and resolve CVEs found in [#1800](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1800)) ([#1809](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1809), [@ConnorJC3](https://github.com/ConnorJC3))
+
+# v1.23.1
+### Bug Fixes
+* Upgrade volume-modifier-for-k8s sidecar to 0.1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
+
+# v1.23.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The EBS CSI Driver's Linux base image was upgraded from Amazon Linux 2 (AL2) to Amazon Linux 2023 (AL2023) in this release. This change will continue to improve the performance and security of the EBS CSI Driver via updates available only on AL2023.
+
+As part of this change, e2fsprogs will be upgraded from `1.42.9` to `1.46.5` and xfsprogs will be upgraded from `5.0.0` to `5.18.0`. New volumes created on versions of the EBS CSI Driver with an AL2023 base image may fail to mount or resize on versions of the EBS CSI Driver with an AL2 base image. For this reason, downgrading the EBS CSI Driver across base images will not be supported and is strongly discouraged. Please see [[Announcement] Base image upgrade to AL2023 · Issue #1719 · kubernetes-sigs/aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1719) to provide any questions or feedback.
+
+### Notable Changes
+* PreStop lifecycle hook to alleviate 6+ minute force-detach delay ([#1736](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1736), [@torredil](https://github.com/torredil))
+* Add option for opentelemetry tracing of gRPC calls ([#1714](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1714), [@Fricounet](https://github.com/Fricounet))
+* Upgrade Linux base image to AL2023 ([#1731](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1731), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug Fixes
+* Do not call ModifyVolume if the volume is already in the desired state ([#1741](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1741), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Dependancy upgrades ([#1743](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1743), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+# v1.22.1
+### Bug Fixes
+* Cherry-pick from v1.23.1: Do not call ModifyVolume if the volume is already in the desired state ([#1741](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1741), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade volume-modifier-for-k8s sidecar to 0.1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
+
+# 1.22.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+In an upcoming version, the EBS CSI Driver will upgrade the base image from AL2 to AL2023. For more information and to provide feedback about this change, see [issue #1719](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1719)
+
+### Notable Changes
+* Request coalescing for resizing and modifying volume ([#1676](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1676), [@hanyuel](https://github.com/hanyuel))
+* Support specifying inode size for filesystem format ([#1661](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1661), [@fgksgf](https://github.com/fgksgf))
+
+### Bug Fixes
+* Correct volume limits for i4i instance types ([#1699](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1699), [@talnevo](https://github.com/talnevo))
+* Use SSM to get latest stable AMI for EC2 nodes ([#1689](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1689), [@torredil](https://github.com/torredil))
+* Add `i4i.large` to volume limits config ([#1715](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1715), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Add volume limits for m7i family ([#1710](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1710), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Misc
+* Bump golang.org/x/net/html to fix CVE-2023-3978 ([#1711](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1711), [@jsafrane](https://github.com/jsafrane))
+
+# v1.21.0
+### Bug Fixes
+* Enable setting throughput without specifying volume type when modifying volumes ([#1667](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1667), [@Indresh2410](https://github.com/Indresh2410))
+* Reorder device names to prevent bad behavior on non-nitro instance types ([#1675](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1675), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Replace deprecated command with environment file in CI ([#1636](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1636), [@jongwooo](https://github.com/jongwooo))
+
+# v1.20.0
+### Notable Changes
+* Enable leader election in csi-resizer sidecar ([#1606](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1606), [@rdpsin](https://github.com/rdpsin))
+* Namespace-scoped leases permissions ([#1614](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1614), [@torredil](https://github.com/torredil))
+* Add additionalArgs parameter for sidecars ([#1627](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1627), [@ConnorJC3](https://github.com/ConnorJC3))
+* Fix context handling in WaitForVolumeAttachment & add in-flight checks to attachment/detachment operations ([#1621](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1621), [@torredil](https://github.com/torredil))
+* Extend resource list in Kustomization file ([#1634](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1634), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Idempotent unmount from NodeUnstageVolume / NodeUnpublishVolume ([#1605](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1605), [@dobsonj](https://github.com/dobsonj))
+* Remove condition on iopspergb key being mandatory for io1 volumes ([#1590](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1590), [@surian](https://github.com/surian))
+* Avoid generating manifests with empty envFrom fields ([#1630](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1630), [@mvgmb](https://github.com/mvgmb))
+* Update DM allocator to use all available names ([#1626](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1626), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Update logline to remove "formatted" ([#1612](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1612), [@odinuge](https://github.com/odinuge))
+* Bump kOps k8s version to 1.27; Bump eksctl k8s version to 1.26 ([#1567](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1567), [@ConnorJC3](https://github.com/ConnorJC3))
+* Revert Increase external test pod start timeout ([#1615](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1615), [@torredil](https://github.com/torredil))
+* Remove old coverage banner from README ([#1617](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1617), [@jacobwolfaws](https://github.com/jacobwolfaws))
+* Allow to set automountServiceAccountToken in ServiceAccount ([#1619](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1619), [@kahirokunn](https://github.com/kahirokunn))
+* Upgrade dependencies ([#1637](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1637), [@torredil](https://github.com/torredil))
+
+# v1.19.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+Windows 20H2 hosts are no longer supported. Windows 20H2 is [no longer supported by Microsoft](https://learn.microsoft.com/en-us/lifecycle/announcements/windows-10-20h2-end-of-servicing).
+
+### Notable Changes
+* Add support for annotation-based volume modification via volume-modifier-for-k8s sidecar ([#1600](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1600), [@rdpsin](https://github.com/rdpsin))
+* Add startup taint removal feature ([#1588](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1588), [@ConnorJC3](https://github.com/ConnorJC3) and [@gtxu](https://github.com/gtxu))
+
+### Bug Fixes
+* Check for 'not mounted' in linux Unstage/Unpublish ([#1597](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1597), [@ConnorJC3](https://github.com/ConnorJC3))
+* Update list of nitro instances ([#1573](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1573), [@patderek](https://github.com/patderek))
+* Allow throughput with defaulted GP3 volume type ([#1584](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1584), [@ConnorJC3](https://github.com/ConnorJC3))
+* Use dl.k8s.io instead of kubernetes-release bucket ([#1593](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1593), [@ratnopamc](https://github.com/ratnopamc))
+
+### Improvements
+* Migrate to EKS-D Windows base images ([#1601](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1601), [@ConnorJC3](https://github.com/ConnorJC3))
+* Drop support for Windows 20H2 ([#1598](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1598), [@torredil](https://github.com/torredil))
+* Add option to append extra string to user agent ([#1599](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1599), [@torredil](https://github.com/torredil))
+
+# v1.18.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This will be the last minor release of the AWS EBS CSI Driver to support Windows 20H2 hosts. Windows 20H2 is [no longer supported by Microsoft](https://learn.microsoft.com/en-us/lifecycle/announcements/windows-10-20h2-end-of-servicing). Future releases of the AWS EBS CSI Driver will no longer be built for Windows 20H2.
+
+### Notable Changes
+* Add support for Fast Snapshot Restore ([#1554](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1554), [@torredil](https://github.com/torredil))
+* Support for interpolated tags in `VolumeSnapshotClass` ([#1558](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1558), [@hanyuel](https://github.com/hanyuel))
+* Add target to run External Storage tests on Windows nodes ([#1521](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1521), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Add non-negative check on volume limit for `CSINode` ([#1542](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1542), [@gtxu](https://github.com/gtxu))
+* Fix volume mounts on AWS Snow devices ([#1546](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1546), [@ConnorJC3](https://github.com/ConnorJC3))
+* Improve consistency/idempotency of Windows mounting ([#1526](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1526), [@torredil](https://github.com/torredil))
+* Add liveness probe for node-driver-registrar container ([#1570](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1570), [@gtxu](https://github.com/gtxu))
+* Fix calculation of attached block devices from IMDS ([#1561](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1561), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Migrate Kustomize configuration from 'bases' to 'resources' ([#1539](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1539), [@torredil](https://github.com/torredil))
+* Reduce CI flakiness by removing unnecessary SSH certificates ([#1566](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1566), [@ConnorJC3](https://github.com/ConnorJC3))
+
+# v1.17.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+[`k8s.gcr.io` will be redirected on Monday March 20th](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/), and may stop working entirely in the near future. If you are using `k8s.gcr.io` you MUST [move to `registry.k8s.io`](https://kubernetes.io/blog/2023/02/06/k8s-gcr-io-freeze-announcement/) to continue receiving support.
+
+Issues related to `k8s.gcr.io` will no longer be accepted. `public.ecr.aws` and `registry.k8s.io` images are unaffected and remain supported as per [the support policy](https://github.com/kubernetes-sigs/aws-ebs-csi-driver#support).
+
+### Notable Changes
+* Add support for XFS custom block sizes ([#1523](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1523), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add support for instances with more than 52 volumes attached ([#1518](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1518), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug Fixes
+* Fix improper handling of manually-mounted volumes ([#1518](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1518), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Log driver version in lower verbosities ([#1525](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1525), [@torredil](https://github.com/torredil))
+* Upgrade dependencies ([#1529](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1529), [@torredil](https://github.com/torredil))
+
+# v1.16.1
+### Notable Changes
+* Security fixes
+
+# v1.16.0
+### Notable Changes
+* Add support for JSON logging ([#1467](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1467), [@torredil](https://github.com/torredil))
+    * `--logging-format` flag has been added to set the log format. Valid values are `text` and `json`. The default value is `text`.
+    * `--logtostderr` is deprecated.
+    * Long arguments prefixed with `-` are no longer supported, and must be prefixed with `--`. For example, `--volume-attach-limit` instead of `-volume-attach-limit`.
+* k8s.gcr.io -> registry.k8s.io ([#1488](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1488), [@ConnorJC3](https://github.com/ConnorJC3))
+    * The GCR manifests now use `registry.k8s.io` instead of `k8s.gcr.io` for the image repository. For users that rely on it, the images will still be pushed to `k8s.gcr.io` for the forseeable future, but we recommend migration to `registry.k8s.io` as soon as reasonably possible. For more information, see [registry.k8s.io: faster, cheaper and Generally Available (GA)](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/).
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.4.0`
+    - csi-attacher: `v4.1.0`
+    - csi-snapshotter: `v6.2.1`
+    - livenessprobe: `v2.9.0`
+    - csi-resizer: `v1.7.0`
+    - node-driver-registrar: `v2.7.0`
+
+### Improvements
+* Bump CI k8s version to 1.26.1 (and other CI tools upgrades) ([#1487](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1487), [@ConnorJC3](https://github.com/ConnorJC3))
+* Bump GitHub Actions workflows ([#1491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1491), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade golangci-lint ([#1505](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1505), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Use test driver image when testing upgrades with CT ([#1486](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1486), [@torredil](https://github.com/torredil))
+* Disable buildx provenance ([#1491](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1491), [@ConnorJC3](https://github.com/ConnorJC3))
+
+# v1.15.1
+### Notable Changes
+* Security fixes
+
+# v1.15.0
+### Notable Changes
+* Support specifying block size for filesystem format ([#1452](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1452), [@ConnorJC3](https://github.com/ConnorJC3))
+* Change default sidecars to EKS-D ([#1475](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1475), [@ConnorJC3](https://github.com/ConnorJC3), [@torredil](https://github.com/torredil))
+* The sidecars have been updated. The new versions are:
+    - csi-provisioner: `v3.3.0`
+    - csi-attacher: `v4.0.0`
+    - csi-snapshotter: `v6.1.0`
+    - livenessprobe: `v2.8.0`
+    - csi-resizer: `v1.6.0`
+    - node-driver-registrar: `v2.6.2`
+
+### Bug Fixes
+* Manually setup remote for CT on Prow ([#1473](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1473), [@ConnorJC3](https://github.com/ConnorJC3))
+* Fix volume limits for `m6id` and `x2idn` instance types ([#1463](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1463), [@talnevo](https://github.com/talnevo))
+
+### Improvements
+* Update compatibility info in README ([#1465](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1465), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@talnevo](https://github.com/talnevo)
+
+# v1.14.1
+### Bug Fixes
+* (Cherry-Pick) Fixed handling of volume limits for instance types m6id and x2idn
+
+# v1.14.0
+### Improvements
+* Bumped golang dependencies
+* Rebuilt driver container with newer base image (containing security fixes)
+* In the next minor release (v1.15.0, scheduled for January) the default sidecars will be changed, see https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1456
+
+# v1.13.0
+### Bug Fixes
+
+* Add version information from tag to GCR build ([#1426](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1426), [@ConnorJC3](https://github.com/ConnorJC3))
+* `pkg/driver/controller.go` uses ToLower ([#1429](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1429), [@yevhenvolchenko](https://github.com/yevhenvolchenko))
+* Increase cloudbuild timeout ([#1430](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1430), [@torredil](https://github.com/torredil))
+* Use `PULL_BASE_REF` for `VERSION` instead of `GIT_TAG` for GCR builds ([#1439](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1439), [@ConnorJC3](https://github.com/ConnorJC3))
+* Grab version via tag directly from git ([#1441](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1441), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Upgrade K8s to `v1.25`; Upgrade ginkgo to `v2`; Use upstream binary for `e2e-kubernetes` ([#1341](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1341), [@torredil](https://github.com/torredil))
+* Add release and support policy to README.md ([#1392](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1392), [@torredil](https://github.com/torredil))
+* Update and run update-gomock ([#1422](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1422), [@torredil](https://github.com/torredil))
+* Upgrade Go/CI dependencies ([#1433](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1433), [@torredil](https://github.com/torredil))
+* Upgrade golangci-lint; Fix linter errors ([#1435](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1435), [@torredil](https://github.com/torredil))
+
+### Acknowledgments
+* We would like to sincerely thank:
+[@yevhenvolchenko](https://github.com/yevhenvolchenko)
+
 # v1.12.1
 ### Security
 * Addreses [ALAS2-2022-1854](https://alas.aws.amazon.com/AL2/ALAS-2022-1854.html) and [ALAS2-2022-1849](https://alas.aws.amazon.com/AL2/ALAS-2022-1849.html)

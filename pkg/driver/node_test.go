@@ -22,6 +22,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"reflect"
@@ -35,6 +36,8 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var (
@@ -64,7 +67,7 @@ func TestNodeStageVolume(t *testing.T) {
 		stdVolContext           = map[string]string{VolumeAttributePartition: "1"}
 		devicePathWithPartition = devicePath + "1"
 		// With few exceptions, all "success" non-block cases have roughly the same
-		// expected calls and only care about testing the FormatAndMount call. The
+		// expected calls and only care about testing the FormatAndMountSensitiveWithFormatOptions call. The
 		// exceptions should not call this, instead they should define expectMock
 		// from scratch.
 		successExpectMock = func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
@@ -93,7 +96,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Len(0))
 			},
 		},
 		{
@@ -112,7 +115,7 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeId: volumeID,
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
-				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Len(0)).Times(0)
 			},
 		},
 		{
@@ -134,7 +137,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}), gomock.Nil(), gomock.Len(0))
 			},
 		},
 		{
@@ -156,7 +159,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any(), gomock.Nil(), gomock.Len(0))
 			},
 		},
 		{
@@ -178,7 +181,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any(), gomock.Nil(), gomock.Len(0))
 			},
 		},
 		{
@@ -195,7 +198,7 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(true, nil)
 				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(devicePath)).Return(deviceFileInfo, nil)
 
-				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Len(0)).Times(0)
 			},
 		},
 		{
@@ -216,12 +219,12 @@ func TestNodeStageVolume(t *testing.T) {
 				// The publish context device path may not exist but the driver should
 				// find the canonical device path (see TestFindDevicePath), compare it
 				// to the one returned by GetDeviceNameFromMount, and then skip
-				// FormatAndMount
+				// FormatAndMountSensitiveWithFormatOptions
 				mockMounter.EXPECT().PathExists(gomock.Eq(devicePath)).Return(false, nil)
 				mockDeviceIdentifier.EXPECT().Lstat(gomock.Eq(nvmeName)).Return(symlinkFileInfo, nil)
 				mockDeviceIdentifier.EXPECT().EvalSymlinks(gomock.Eq(symlinkFileInfo.Name())).Return(nvmeDevicePath, nil)
 
-				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Len(0)).Times(0)
 			},
 		},
 		{
@@ -243,7 +246,7 @@ func TestNodeStageVolume(t *testing.T) {
 				// The device path argument should be canonicalized to contain the
 				// partition
 				mockMounter.EXPECT().NeedResize(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath)).Return(false, nil)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePathWithPartition), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Len(0))
 			},
 		},
 		{
@@ -257,7 +260,114 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
-				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any())
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Len(0))
+			},
+		},
+		{
+			name: "success with block size",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{BlockSizeKey: "1024"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-b", "1024"}))
+			},
+		},
+		{
+			name: "success with inode size in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{InodeSizeKey: "256"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-I", "256"}))
+			},
+		},
+		{
+			name: "success with inode size in xfs",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: FSTypeXfs,
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId:      volumeID,
+				VolumeContext: map[string]string{InodeSizeKey: "256"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeXfs), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-i", "size=256"}))
+			},
+		},
+		{
+			name: "success with bytes-per-inode",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{BytesPerInodeKey: "8192"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-i", "8192"}))
+			},
+		},
+		{
+			name: "success with number-of-inodes",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{NumberOfInodesKey: "13107200"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-N", "13107200"}))
+			},
+		},
+		{
+			name: "success with bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc"}))
+			},
+		},
+		{
+			name: "success with custom cluster size and bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true", Ext4ClusterSizeKey: "16384"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc", "-C", "16384"}))
 			},
 		},
 		{
@@ -1927,7 +2037,7 @@ func TestNodeGetInfo(t *testing.T) {
 			availabilityZone:  "us-west-2b",
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
-			expMaxVolumes:     39,
+			expMaxVolumes:     38,
 			attachedENIs:      1,
 			outpostArn:        emptyOutpostArn,
 		},
@@ -1949,7 +2059,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      2,
-			expMaxVolumes:     26, // 28 (max) - 2 (enis)
+			expMaxVolumes:     25, // 28 (max) - 2 (enis) - 1 (root)
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -1960,7 +2070,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      2,
-			expMaxVolumes:     25,
+			expMaxVolumes:     24,
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -1991,7 +2101,7 @@ func TestNodeGetInfo(t *testing.T) {
 			region:            "us-west-2",
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
-			expMaxVolumes:     27, // 28 (max) - 1 (eni)
+			expMaxVolumes:     26, // 28 (max) - 1 (eni) - 1 (root)
 			outpostArn:        emptyOutpostArn,
 		},
 		{
@@ -2036,7 +2146,54 @@ func TestNodeGetInfo(t *testing.T) {
 			volumeAttachLimit: -1,
 			attachedENIs:      1,
 			blockDevices:      2,
-			expMaxVolumes:     25,
+			expMaxVolumes:     24,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "nitro instance already attached max EBS volumes",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t3.xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      1,
+			blockDevices:      27,
+			expMaxVolumes:     0,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "non-nitro instance already attached max EBS volumes",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m5.xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      1,
+			blockDevices:      39,
+			expMaxVolumes:     0,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "nitro instance already attached max ENIs",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "t3.xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      27,
+			blockDevices:      1,
+			expMaxVolumes:     0,
+			outpostArn:        emptyOutpostArn,
+		},
+		{
+			name:              "nitro instance with dedicated limit",
+			instanceID:        "i-123456789abcdef01",
+			instanceType:      "m7i.48xlarge",
+			availabilityZone:  "us-west-2b",
+			region:            "us-west-2",
+			volumeAttachLimit: -1,
+			attachedENIs:      2,
+			expMaxVolumes:     127, // 128 (max) - 1 (root)
 			outpostArn:        emptyOutpostArn,
 		},
 	}
@@ -2061,7 +2218,7 @@ func TestNodeGetInfo(t *testing.T) {
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
 				mockMetadata.EXPECT().GetNumBlockDeviceMappings().Return(tc.blockDevices)
-				if cloud.IsNitroInstanceType(tc.instanceType) {
+				if cloud.IsNitroInstanceType(tc.instanceType) && cloud.GetDedicatedLimitForInstanceType(tc.instanceType) == 0 {
 					mockMetadata.EXPECT().GetNumAttachedENIs().Return(tc.attachedENIs)
 				}
 			}
@@ -2113,6 +2270,129 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRemoveNotReadyTaint(t *testing.T) {
+	nodeName := "test-node-123"
+	testCases := []struct {
+		name      string
+		setup     func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error)
+		expResult error
+	}{
+		{
+			name: "missing CSI_NODE_NAME",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				return func() (kubernetes.Interface, error) {
+					t.Fatalf("Unexpected call to k8s client getter")
+					return nil, nil
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to setup k8s client",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				return func() (kubernetes.Interface, error) {
+					return nil, fmt.Errorf("Failed setup!")
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to get node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, nil, fmt.Errorf("Failed to get node!"))
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("Failed to get node!"),
+		},
+		{
+			name: "no taints to remove",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{}, nil)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: nil,
+		},
+		{
+			name: "failed to patch node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: "NoExecute",
+							},
+						},
+					},
+				}, nil)
+				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Failed to patch node!"))
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("Failed to patch node!"),
+		},
+		{
+			name: "success",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: "NoSchedule",
+							},
+						},
+					},
+				}, nil)
+				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: nil,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			k8sClientGetter := tc.setup(t, mockCtl)
+			result := removeNotReadyTaint(k8sClientGetter)
+
+			if !reflect.DeepEqual(result, tc.expResult) {
+				t.Fatalf("Expected result `%v`, got result `%v`", tc.expResult, result)
+			}
+		})
+	}
+}
+
+func getNodeMock(mockCtl *gomock.Controller, nodeName string, returnNode *corev1.Node, returnError error) (kubernetes.Interface, *MockNodeInterface) {
+	mockClient := NewMockKubernetesClient(mockCtl)
+	mockCoreV1 := NewMockCoreV1Interface(mockCtl)
+	mockNode := NewMockNodeInterface(mockCtl)
+
+	mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+	mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+	mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(returnNode, returnError).MinTimes(1)
+
+	return mockClient, mockNode
 }
 
 func expectErr(t *testing.T, actualErr error, expectedCode codes.Code) {

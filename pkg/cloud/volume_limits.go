@@ -14,23 +14,45 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
+func init() {
+	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
+	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
+	instanceFamilies := []string{"m7i", "m7a", "c7i", "c7a", "r7a", "r7i", "r7iz"}
+	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
+
+	for _, family := range instanceFamilies {
+		for _, size := range commonInstanceSizes {
+			dedicatedVolumeLimits[family+"."+size] = 32
+		}
+		dedicatedVolumeLimits[family+".metal-16xl"] = 31
+		dedicatedVolumeLimits[family+".metal-24xl"] = 31
+		dedicatedVolumeLimits[family+".16xlarge"] = 48
+		dedicatedVolumeLimits[family+".24xlarge"] = 64
+		dedicatedVolumeLimits[family+".metal-32xl"] = 79
+		dedicatedVolumeLimits[family+".metal-48xl"] = 79
+		dedicatedVolumeLimits[family+".32xlarge"] = 88
+		dedicatedVolumeLimits[family+".48xlarge"] = 128
+	}
+}
+
+var dedicatedVolumeLimits = map[string]int{}
+
 // / List of nitro instance types can be found here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
 var nonNitroInstanceFamilies = map[string]struct{}{
-	"t2":     {},
-	"c7g":    {},
-	"c4":     {},
-	"r4":     {},
-	"x2idn":  {},
-	"x2iedn": {},
-	"x2iezn": {},
-	"x1e":    {},
-	"x1":     {},
-	"p2":     {},
-	"tr1n":   {},
-	"g4dn":   {},
-	"g3":     {},
-	"d2":     {},
-	"h1":     {},
+	"t2":  {},
+	"c3":  {},
+	"m3":  {},
+	"r3":  {},
+	"c4":  {},
+	"m4":  {},
+	"r4":  {},
+	"x1e": {},
+	"x1":  {},
+	"p2":  {},
+	"p3":  {},
+	"g3":  {},
+	"d2":  {},
+	"h1":  {},
 }
 
 func IsNitroInstanceType(it string) bool {
@@ -53,10 +75,11 @@ func GetMaxAttachments(nitro bool) int {
 }
 
 // / Some instance types have a maximum limit of EBS volumes
-// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances
+// / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
 var maxVolumeLimits = map[string]int{
 	"d3.8xlarge":    3,
 	"d3.12xlarge":   3,
+	"g5.48xlarge":   9,
 	"inf1.xlarge":   26,
 	"inf1.2xlarge":  26,
 	"inf1.6xlarge":  23,
@@ -91,6 +114,14 @@ func GetEBSLimitForInstanceType(it string) (int, bool) {
 	}
 
 	return 0, false
+}
+
+func GetDedicatedLimitForInstanceType(it string) int {
+	if limit, ok := dedicatedVolumeLimits[it]; ok {
+		return limit
+	} else {
+		return 0
+	}
 }
 
 func GetNVMeInstanceStoreVolumesForInstanceType(it string) int {
@@ -169,6 +200,14 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"i3en.12xlarge":  4,
 	"i3en.24xlarge":  8,
 	"i3en.metal":     8,
+	"i4i.large":      1,
+	"i4i.xlarge":     1,
+	"i4i.2xlarge":    1,
+	"i4i.4xlarge":    1,
+	"i4i.8xlarge":    2,
+	"i4i.16xlarge":   4,
+	"i4i.32xlarge":   8,
+	"i4i.metal":      8,
 	"im4gn.large":    1,
 	"im4gn.xlarge":   1,
 	"im4gn.2xlarge":  1,
@@ -216,6 +255,16 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"m6gd.12xlarge":  2,
 	"m6gd.16xlarge":  2,
 	"m6gd.metal":     2,
+	"m6id.large":     1,
+	"m6id.xlarge":    1,
+	"m6id.2xlarge":   1,
+	"m6id.4xlarge":   1,
+	"m6id.8xlarge":   1,
+	"m6id.12xlarge":  2,
+	"m6id.16xlarge":  2,
+	"m6id.24xlarge":  4,
+	"m6id.32xlarge":  4,
+	"m6id.metal":     4,
 	"p3dn.24xlarge":  2,
 	"p4d.24xlarge":   8,
 	"r5ad.large":     1,
@@ -262,6 +311,10 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"x2gd.12xlarge":  2,
 	"x2gd.16xlarge":  2,
 	"x2gd.metal":     2,
+	"x2idn.16xlarge": 1,
+	"x2idn.24xlarge": 2,
+	"x2idn.32xlarge": 2,
+	"x2idn.metal":    2,
 	"z1d.large":      1,
 	"z1d.xlarge":     1,
 	"z1d.2xlarge":    1,

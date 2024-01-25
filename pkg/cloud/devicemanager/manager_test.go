@@ -92,6 +92,60 @@ func TestNewDevice(t *testing.T) {
 	}
 }
 
+func TestNewDeviceWithExistingDevice(t *testing.T) {
+	testCases := []struct {
+		name         string
+		existingID   string
+		existingPath string
+		volumeID     string
+		expectedPath string
+	}{
+		{
+			name:         "success: different volumes",
+			existingID:   "vol-1",
+			existingPath: deviceNames[0],
+			volumeID:     "vol-2",
+			expectedPath: deviceNames[1],
+		},
+		{
+			name:         "success: same volumes",
+			existingID:   "vol-1",
+			existingPath: "/dev/xvdcc",
+			volumeID:     "vol-1",
+			expectedPath: "/dev/xvdcc",
+		},
+		{
+			name:         "success: same volumes with /dev/sdX path",
+			existingID:   "vol-3",
+			existingPath: "/dev/sdf",
+			volumeID:     "vol-3",
+			expectedPath: "/dev/sdf",
+		},
+		{
+			name:         "success: same volumes with weird path",
+			existingID:   "vol-42",
+			existingPath: "/weird/path",
+			volumeID:     "vol-42",
+			expectedPath: "/weird/path",
+		},
+	}
+	// Use a shared DeviceManager to make sure that there are no race conditions
+	dm := NewDeviceManager()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeInstance := newFakeInstance("fake-instance", tc.existingID, tc.existingPath)
+
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			assertDevice(t, dev, tc.existingID == tc.volumeID, err)
+
+			if dev.Path != tc.expectedPath {
+				t.Fatalf("Expected path %v got %v", tc.expectedPath, dev.Path)
+			}
+		})
+	}
+}
+
 func TestGetDevice(t *testing.T) {
 	testCases := []struct {
 		name               string

@@ -1,5 +1,5 @@
 ## E2E Testing
-E2E test verifies the funcitonality of EBS CSI driver in the context of Kubernetes. It exercises driver feature e2e including static provisioning, dynamic provisioning, volume scheduling, mount options, etc.
+E2E test verifies the functionality of EBS CSI driver in the context of Kubernetes. It exercises driver feature e2e including static provisioning, dynamic provisioning, volume scheduling, mount options, etc.
 
 ### Requirements
 1. AWS credential is [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
@@ -9,6 +9,11 @@ E2E test verifies the funcitonality of EBS CSI driver in the context of Kubernet
 1. curl
 1. sed
 1. Golang 1.11+
+
+### Running a specific test
+1. Make sure you have a cluster up with ebs csi driver deployed
+2. Current directory is `/aws-ebs-csi-driver/tests/e2e`
+3. Run `'ginkgo run --focus='should create multiple PV objects, bind to PVCs and attach all to a single pod'`
 
 ### Notes
 Some tests marked with `[env]` require specific environmental variables to be set, if not set these tests will be skipped.

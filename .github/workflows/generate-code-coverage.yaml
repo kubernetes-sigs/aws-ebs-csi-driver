@@ -1,0 +1,55 @@
+name: Generate Code Coverage
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cover-base:
+    name: Generate Base Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Generate report
+        run: |
+          go test -coverprofile base-coverage.tmp ./cmd/... ./pkg/...
+          cat base-coverage.tmp | grep -v "mock_" > base-coverage.out
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: base-coverage
+          path: base-coverage.out
+
+  cover-pr:
+    name: Generate PR Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Generate report
+        run: |
+          go test -coverprofile pr-coverage.tmp ./cmd/... ./pkg/...
+          cat pr-coverage.tmp | grep -v "mock_" > pr-coverage.out
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: pr-coverage
+          path: pr-coverage.out

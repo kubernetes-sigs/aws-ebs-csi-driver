@@ -32,6 +32,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -73,20 +75,6 @@ const (
 	gp3MaxTotalIOPS             = 16000
 	gp3MinTotalIOPS             = 3000
 	gp3MaxIOPSPerGB             = 500
-)
-
-const (
-	gp3MinTotalThroughput = 250  // in MiB/s
-	gp3MaxTotalThroughput = 1000 // in MiB/s
-)
-
-const (
-	gp3ScalingMinSize       = 200  // Volume size at which we start linearly scaling IOPs/Throughput
-	gp3ScalingMinIOPs       = 3000 // IOPs for volume sizes less than or equal to the scaling min size.
-	gp3ScalingMinThroughput = 125  // Throughput for volume sizes less than or equal to the scaling min size.
-	gp3ScalingMaxSize       = 1000 // Volume size at which we stop linearly scaling IOPs/Throughput and hit max value.
-	gp3ScalingMaxIOPs       = 5000 // IOPs for volume sizes greater than or equal to the scaling max size.
-	gp3ScalingMaxThroughput = 250  // Throughput for volume sizes greater than or equal to the scaling max size.
 )
 
 var (
@@ -148,12 +136,12 @@ const (
 	AWSTagKeyPrefix = "aws:"
 	//AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
-	// AwsEbsReconcileGP3PerformanceTagKey is the tag to identify if a gp3 volume performance
-	// should be reconciled by the controller. This tag is necessary to ensure the performance
-	// will be reconciled when modifying the volume size, because the available CSI interface
-	// doesn't expose annotations or any other method that could be used to check if the
-	// corresponding volume is configured to be automatically reconciled in modification requests
-	AwsEbsReconcileGP3PerformanceTagKey = "ebs.csi.aws.com/reconcile"
+)
+
+// Batcher
+const (
+	volumeIDBatcher batcherType = iota
+	volumeTagBatcher
 )
 
 var (
@@ -203,22 +191,29 @@ type Disk struct {
 
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
-	CapacityBytes           int64
-	Tags                    map[string]string
-	VolumeType              string
-	IOPSPerGB               int
-	AllowIOPSPerGBIncrease  bool
-	ReconcileGP3Performance bool
-	IOPS                    int
-	Throughput              int
-	AvailabilityZone        string
-	OutpostArn              string
-	Encrypted               bool
-	BlockExpress            bool
+	CapacityBytes          int64
+	Tags                   map[string]string
+	VolumeType             string
+	IOPSPerGB              int
+	AllowIOPSPerGBIncrease bool
+	IOPS                   int
+	Throughput             int
+	AvailabilityZone       string
+	OutpostArn             string
+	Encrypted              bool
+	BlockExpress           bool
+	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
 	SnapshotID string
+}
+
+// ModifyDiskOptions represents parameters to modify an EBS volume
+type ModifyDiskOptions struct {
+	VolumeType string
+	IOPS       int
+	Throughput int
 }
 
 // Snapshot represents an EBS volume snapshot
@@ -247,22 +242,41 @@ type ec2ListSnapshotsResponse struct {
 	NextToken *string
 }
 
+// batcherType is an enum representing the types of batchers available.
+type batcherType int
+
+// batcherManager maintains a collection of batchers for different types of tasks.
+type batcherManager struct {
+	batchers map[batcherType]*batcher.Batcher[string, *ec2.Volume]
+}
+
 type cloud struct {
 	region string
-	ec2    EC2
+	ec2    ec2iface.EC2API
 	dm     dm.DeviceManager
+	bm     *batcherManager
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string, awsSdkDebugLog bool) (Cloud, error) {
-	RegisterMetrics()
-	return newEC2Cloud(region, awsSdkDebugLog)
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (Cloud, error) {
+	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra)
+
+	if batching {
+		klog.V(4).InfoS("NewCloud: batching enabled")
+		cloudInstance, ok := c.(*cloud)
+		if !ok {
+			return nil, fmt.Errorf("expected *cloud type but got %T", c)
+		}
+		cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+	}
+
+	return c, nil
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
+func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string) Cloud {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
@@ -273,7 +287,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
 		customResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-			if service == endpoints.Ec2ServiceID {
+			if service == ec2.EndpointsID {
 				return endpoints.ResolvedEndpoint{
 					URL:           endpoint,
 					SigningRegion: region,
@@ -289,7 +303,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 	}
 
 	// Set the env var so that the session appends custom user agent string
-	os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
+	if userAgentExtra != "" {
+		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion+"-"+userAgentExtra)
+	} else {
+		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
+	}
 
 	svc := ec2.New(session.Must(session.NewSession(awsConfig)))
 	svc.Handlers.AfterRetry.PushFrontNamed(request.NamedHandler{
@@ -305,7 +323,135 @@ func newEC2Cloud(region string, awsSdkDebugLog bool) (Cloud, error) {
 		region: region,
 		dm:     dm.NewDeviceManager(),
 		ec2:    svc,
-	}, nil
+	}
+}
+
+// newBatcherManager initializes a new instance of batcherManager.
+func newBatcherManager(svc ec2iface.EC2API) *batcherManager {
+	return &batcherManager{
+		batchers: map[batcherType]*batcher.Batcher[string, *ec2.Volume]{
+			volumeIDBatcher: batcher.New(500, 1*time.Second, func(ids []string) (map[string]*ec2.Volume, error) {
+				return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
+			}),
+			volumeTagBatcher: batcher.New(500, 1*time.Second, func(names []string) (map[string]*ec2.Volume, error) {
+				return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
+			}),
+		},
+	}
+}
+
+// getBatcher fetches a specific type of batcher from the batcherManager.
+func (bm *batcherManager) getBatcher(b batcherType) *batcher.Batcher[string, *ec2.Volume] {
+	return bm.batchers[b]
+}
+
+// executes a batched DescribeVolumes API call depending on the type of batcher.
+func execBatchDescribeVolumes(svc ec2iface.EC2API, input []string, batcher batcherType) (map[string]*ec2.Volume, error) {
+	var request *ec2.DescribeVolumesInput
+
+	switch batcher {
+	case volumeIDBatcher:
+		klog.V(7).InfoS("execBatchDescribeVolumes", "volumeIds", input)
+		request = &ec2.DescribeVolumesInput{
+			VolumeIds: aws.StringSlice(input),
+		}
+
+	case volumeTagBatcher:
+		klog.V(7).InfoS("execBatchDescribeVolumes", "names", input)
+		filters := []*ec2.Filter{
+			{
+				Name:   aws.String("tag:" + VolumeNameTagKey),
+				Values: aws.StringSlice(input),
+			},
+		}
+		request = &ec2.DescribeVolumesInput{
+			Filters: filters,
+		}
+
+	default:
+		return nil, fmt.Errorf("execBatchDescribeVolumes: unsupported request type")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	resp, err := describeVolumes(ctx, svc, request)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*ec2.Volume)
+
+	for _, volume := range resp {
+		key, err := extractVolumeKey(volume, batcher)
+		if err != nil {
+			klog.Warningf("execBatchDescribeVolumes: skipping volume: %v, reason: %v", volume, err)
+			continue
+		}
+		result[key] = volume
+	}
+
+	klog.V(7).InfoS("execBatchDescribeVolumes: success", "result", result)
+	return result, nil
+}
+
+// batchDescribeVolumes processes a DescribeVolumes request. Depending on the request,
+// it determines the appropriate batcher to use, queues the task, and waits for the result.
+func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+	var bType batcherType
+	var task string
+
+	switch {
+	case len(request.VolumeIds) == 1 && request.VolumeIds[0] != nil:
+		bType = volumeIDBatcher
+		task = *request.VolumeIds[0]
+
+	case len(request.Filters) == 1 && *request.Filters[0].Name == "tag:"+VolumeNameTagKey && len(request.Filters[0].Values) == 1:
+		bType = volumeTagBatcher
+		task = *request.Filters[0].Values[0]
+
+	default:
+		return nil, fmt.Errorf("batchDescribeVolumes: invalid request, request: %v", request)
+	}
+
+	ch := make(chan batcher.BatchResult[*ec2.Volume])
+
+	b := c.bm.getBatcher(bType)
+	b.AddTask(task, ch)
+
+	r := <-ch
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if r.Result == nil {
+		return nil, fmt.Errorf("batchDescribeVolumes: no volume found %s", task)
+	}
+	return r.Result, nil
+}
+
+// extractVolumeKey retrieves the key associated with a given volume based on the batcher type.
+// For the volumeIDBatcher type, it returns the volume's ID.
+// For other types, it searches for the VolumeNameTagKey within the volume's tags.
+func extractVolumeKey(v *ec2.Volume, batcher batcherType) (string, error) {
+	if batcher == volumeIDBatcher {
+		if v.VolumeId == nil {
+			return "", errors.New("extractVolumeKey: missing volume ID")
+		}
+		return *v.VolumeId, nil
+	}
+	for _, tag := range v.Tags {
+		klog.V(7).InfoS("extractVolumeKey: processing tag", "volume", v, "*tag.Key", *tag.Key, "VolumeNameTagKey", VolumeNameTagKey)
+		if tag.Key == nil || tag.Value == nil {
+			klog.V(7).InfoS("extractVolumeKey: skipping volume due to missing tag", "volume", v, "tag", tag)
+			continue
+		}
+		if *tag.Key == VolumeNameTagKey {
+			klog.V(7).InfoS("extractVolumeKey: found volume name tag", "volume", v, "tag", tag)
+			return *tag.Value, nil
+		}
+	}
+	return "", errors.New("extractVolumeKey: missing VolumeNameTagKey in volume tags")
 }
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
@@ -324,22 +470,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	if diskOptions.IOPS > 0 && diskOptions.IOPSPerGB > 0 {
 		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both")
-	}
-
-	if diskOptions.IOPS > 0 && diskOptions.ReconcileGP3Performance {
-		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPS or ReconcileGP3Performance, not both")
-	}
-
-	if diskOptions.Throughput > 0 && diskOptions.ReconcileGP3Performance {
-		return nil, fmt.Errorf("invalid StorageClass parameters; specify either Throughput or ReconcileGP3Performance, not both")
-	}
-
-	if diskOptions.IOPSPerGB > 0 && diskOptions.ReconcileGP3Performance {
-		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPSPerGb or ReconcileGP3Performance, not both")
-	}
-
-	if diskOptions.VolumeType != VolumeTypeGP3 && diskOptions.ReconcileGP3Performance {
-		return nil, fmt.Errorf("invalid StorageClass parameters; ReconcileGP3Performance is only allowed for gp3 volumes")
 	}
 
 	createType = diskOptions.VolumeType
@@ -366,20 +496,17 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		maxIops = gp3MaxTotalIOPS
 		minIops = gp3MinTotalIOPS
 		maxIopsPerGb = gp3MaxIOPSPerGB
-
-		if diskOptions.ReconcileGP3Performance {
-			throughput = getGP3ReconciledThroughput(capacityGiB)
-		} else {
-			throughput = int64(diskOptions.Throughput)
-		}
+		throughput = int64(diskOptions.Throughput)
 	default:
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
+	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
+		return nil, fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes")
+	}
+
 	if maxIops > 0 {
-		if createType == VolumeTypeGP3 && diskOptions.ReconcileGP3Performance {
-			requestedIops = getGP3ReconciledIOPS(capacityGiB)
-		} else if diskOptions.IOPS > 0 {
+		if diskOptions.IOPS > 0 {
 			requestedIops = int64(diskOptions.IOPS)
 		} else if diskOptions.IOPSPerGB > 0 {
 			requestedIops = int64(diskOptions.IOPSPerGB) * capacityGiB
@@ -396,7 +523,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		copiedValue := value
 		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
 	}
-
 	tagSpec := ec2.TagSpecification{
 		ResourceType: aws.String("volume"),
 		Tags:         tags,
@@ -404,11 +530,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	zone := diskOptions.AvailabilityZone
 	if zone == "" {
-		var err error
 		zone, err = c.randomAvailabilityZone(ctx)
-		klog.V(5).Infof("[Debug] AZ is not provided. Using node AZ [%s]", zone)
+		klog.V(5).InfoS("[Debug] AZ is not provided. Using node AZ", "zone", zone)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get availability zone %s", err)
+			return nil, fmt.Errorf("failed to get availability zone %w", err)
 		}
 	}
 
@@ -416,11 +541,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(volumeName))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String(zone),
-		ClientToken:      aws.String(hex.EncodeToString(clientToken[:])),
-		Size:             aws.Int64(capacityGiB),
-		VolumeType:       aws.String(createType),
-		Encrypted:        aws.Bool(diskOptions.Encrypted),
+		AvailabilityZone:   aws.String(zone),
+		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
+		Size:               aws.Int64(capacityGiB),
+		VolumeType:         aws.String(createType),
+		Encrypted:          aws.Bool(diskOptions.Encrypted),
+		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 	}
 
 	if !util.IsSBE(zone) {
@@ -439,7 +565,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if iops > 0 {
 		requestInput.Iops = aws.Int64(iops)
 	}
-	if throughput > 0 && diskOptions.VolumeType == VolumeTypeGP3 {
+	if throughput > 0 {
 		requestInput.Throughput = aws.Int64(throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
@@ -455,7 +581,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if isAWSErrorIdempotentParameterMismatch(err) {
 			return nil, ErrIdempotentParameterMismatch
 		}
-		return nil, fmt.Errorf("could not create volume in EC2: %v", err)
+		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
 
 	volumeID := aws.StringValue(response.VolumeId)
@@ -472,11 +598,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		// To avoid leaking volume, we should delete the volume just created
 		// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
 		if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
-			klog.Errorf("%v failed to be deleted, this may cause volume leak", volumeID)
+			klog.ErrorS(error, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
 		} else {
-			klog.V(5).Infof("[Debug] %v is deleted because it is not in desired state within retry limit", volumeID)
+			klog.V(5).InfoS("[Debug] volume is deleted because it is not in desired state within retry limit", "volumeID", volumeID)
 		}
-		return nil, fmt.Errorf("failed to get an available volume in EC2: %v", err)
+		return nil, fmt.Errorf("failed to get an available volume in EC2: %w", err)
 	}
 
 	outpostArn := aws.StringValue(response.OutpostArn)
@@ -490,15 +616,66 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if err != nil {
 			// To avoid leaking volume, we should delete the volume just created
 			// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
-			if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
-				klog.Errorf("%v failed to be deleted, this may cause volume leak", volumeID)
+			if _, error := c.DeleteDisk(ctx, volumeID); err != nil {
+				klog.ErrorS(error, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
 			} else {
-				klog.V(5).Infof("[Debug] %v is deleted because there was an error while attaching the tags", volumeID)
+				klog.V(5).InfoS("volume is deleted because there was an error while attaching the tags", "volumeID", volumeID)
 			}
-			return nil, fmt.Errorf("could not attach tags to volume: %v. %v", volumeID, err)
+			return nil, fmt.Errorf("could not attach tags to volume: %v. %w", volumeID, err)
 		}
 	}
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
+}
+
+// ResizeOrModifyDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit, and/or modifies an EBS
+// volume with the parameters in ModifyDiskOptions.
+// The resizing operation is performed only when newSizeBytes != 0.
+// It returns the volume size after this call or an error if the size couldn't be determined or the volume couldn't be modified.
+func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int64, error) {
+	if newSizeBytes != 0 {
+		klog.V(4).InfoS("Received Resize and/or Modify Disk request", "volumeID", volumeID, "newSizeBytes", newSizeBytes, "options", options)
+	} else {
+		klog.V(4).InfoS("Received Modify Disk request", "volumeID", volumeID, "options", options)
+	}
+
+	newSizeGiB := util.RoundUpGiB(newSizeBytes)
+	needsModification, volumeSize, err := c.validateModifyVolume(ctx, volumeID, newSizeGiB, options)
+	if err != nil || !needsModification {
+		return volumeSize, err
+	}
+
+	req := &ec2.ModifyVolumeInput{
+		VolumeId: aws.String(volumeID),
+	}
+	if newSizeBytes != 0 {
+		req.Size = aws.Int64(newSizeGiB)
+	}
+	if options.IOPS != 0 {
+		req.Iops = aws.Int64(int64(options.IOPS))
+	}
+	if options.VolumeType != "" {
+		req.VolumeType = aws.String(options.VolumeType)
+	}
+	if options.Throughput != 0 {
+		req.Throughput = aws.Int64(int64(options.Throughput))
+	}
+
+	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+	if err != nil {
+		return 0, fmt.Errorf("unable to modify AWS volume %q: %w", volumeID, err)
+	}
+
+	// If the volume modification isn't immediately completed, wait for it to finish
+	state := aws.StringValue(response.VolumeModification.ModificationState)
+	if !volumeModificationDone(state) {
+		err = c.waitForVolumeModification(ctx, volumeID)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// Perform one final check on the volume
+	return c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -507,7 +684,7 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 		if isAWSErrorVolumeNotFound(err) {
 			return false, ErrNotFound
 		}
-		return false, fmt.Errorf("DeleteDisk could not delete volume: %v", err)
+		return false, fmt.Errorf("DeleteDisk could not delete volume: %w", err)
 	}
 	return true, nil
 }
@@ -531,40 +708,19 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			VolumeId:   aws.String(volumeID),
 		}
 
-		resp, err := c.ec2.AttachVolumeWithContext(ctx, request)
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok {
-				if awsErr.Code() == "VolumeInUse" {
-					return "", ErrVolumeInUse
-				}
-			}
-			return "", fmt.Errorf("could not attach volume %q to node %q: %v", volumeID, nodeID, err)
+		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
+		if attachErr != nil {
+			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
-		klog.V(5).Infof("[Debug] AttachVolume volume=%q instance=%q request returned %v", volumeID, nodeID, resp)
-
+		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
-	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
+	_, err = c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
 
 	// This is the only situation where we taint the device
 	if err != nil {
 		device.Taint()
 		return "", err
-	}
-
-	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
-	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
-	// which could theoretically be against a different device (or even instance).
-	if attachment == nil {
-		// Impossible?
-		return "", fmt.Errorf("unexpected state: attachment nil after attached %q to %q", volumeID, nodeID)
-	}
-	if device.Path != aws.StringValue(attachment.Device) {
-		// Already checked in waitForAttachmentState(), but just to be sure...
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested device %q but found %q", volumeID, nodeID, device.Path, aws.StringValue(attachment.Device))
-	}
-	if *instance.InstanceId != aws.StringValue(attachment.InstanceId) {
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested instance %q but found %q", volumeID, nodeID, *instance.InstanceId, aws.StringValue(attachment.InstanceId))
 	}
 
 	// TODO: Check volume capability matches for ALREADY_EXISTS
@@ -587,7 +743,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	defer device.Release(true)
 
 	if !device.IsAlreadyAssigned {
-		klog.Warningf("DetachDisk called on non-attached volume: %s", volumeID)
+		klog.InfoS("DetachDisk: called on non-attached volume", "volumeID", volumeID)
 	}
 
 	request := &ec2.DetachVolumeInput{
@@ -602,7 +758,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 			isAWSErrorVolumeNotFound(err) {
 			return ErrNotFound
 		}
-		return fmt.Errorf("could not detach volume %q from node %q: %v", volumeID, nodeID, err)
+		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
 	}
 
 	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeDetachedState, *instance.InstanceId, "", false)
@@ -611,7 +767,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	}
 	if attachment != nil {
 		// We expect it to be nil, it is (maybe) interesting if it is not
-		klog.V(2).Infof("waitForAttachmentState returned non-nil attachment with state=detached: %v", attachment)
+		klog.V(2).InfoS("waitForAttachmentState returned non-nil attachment with state=detached", "attachment", attachment)
 	}
 
 	return nil
@@ -631,7 +787,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 
 	var attachment *ec2.VolumeAttachment
 
-	verifyVolumeFunc := func() (bool, error) {
+	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
 		request := &ec2.DescribeVolumesInput{
 			VolumeIds: []*string{
 				aws.String(volumeID),
@@ -644,54 +800,44 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			if isAWSErrorVolumeNotFound(err) {
 				if expectedState == volumeDetachedState {
 					// The disk doesn't exist, assume it's detached, log warning and stop waiting
-					klog.Warningf("Waiting for volume %q to be detached but the volume does not exist", volumeID)
+					klog.InfoS("Waiting for volume to be detached but the volume does not exist", "volumeID", volumeID)
 					return true, nil
 				}
 				if expectedState == volumeAttachedState {
 					// The disk doesn't exist, complain, give up waiting and report error
-					klog.Warningf("Waiting for volume %q to be attached but the volume does not exist", volumeID)
+					klog.InfoS("Waiting for volume to be attached but the volume does not exist", "volumeID", volumeID)
 					return false, err
 				}
 			}
 
-			klog.Warningf("Ignoring error from describe volume for volume %q; will retry: %q", volumeID, err)
+			klog.InfoS("Ignoring error from describe volume, will retry", "volumeID", volumeID, "err", err)
 			return false, nil
 		}
 
-		if len(volume.Attachments) > 1 {
-			// Shouldn't happen; log so we know if it is
-			klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
+		if volume.MultiAttachEnabled != nil && !*volume.MultiAttachEnabled && len(volume.Attachments) > 1 {
+			klog.InfoS("Found multiple attachments for volume", "volumeID", volumeID, "volume", volume)
+			return false, fmt.Errorf("volume %q has multiple attachments", volumeID)
 		}
+
 		attachmentState := ""
+
 		for _, a := range volume.Attachments {
-			if attachmentState != "" {
-				// Shouldn't happen; log so we know if it is
-				klog.Warningf("Found multiple attachments for volume %q: %v", volumeID, volume)
-			}
-			if a.State != nil {
-				attachment = a
-				attachmentState = *a.State
-			} else {
-				// Shouldn't happen; log so we know if it is
-				klog.Warningf("Ignoring nil attachment state for volume %q: %v", volumeID, a)
+			if a.State != nil && a.InstanceId != nil {
+				if aws.StringValue(a.InstanceId) == expectedInstance {
+					attachmentState = aws.StringValue(a.State)
+					attachment = a
+				}
 			}
 		}
+
 		if attachmentState == "" {
 			attachmentState = volumeDetachedState
 		}
-		if attachment != nil {
-			// AWS eventual consistency can go back in time.
-			// For example, we're waiting for a volume to be attached as /dev/xvdba, but AWS can tell us it's
-			// attached as /dev/xvdbb, where it was attached before and it was already detached.
-			// Retry couple of times, hoping AWS starts reporting the right status.
+
+		if attachment != nil && attachment.Device != nil && expectedState == volumeAttachedState {
 			device := aws.StringValue(attachment.Device)
-			if expectedDevice != "" && device != "" && device != expectedDevice {
-				klog.Warningf("Expected device %s %s for volume %s, but found device %s %s", expectedDevice, expectedState, volumeID, device, attachmentState)
-				return false, nil
-			}
-			instanceID := aws.StringValue(attachment.InstanceId)
-			if expectedInstance != "" && instanceID != "" && instanceID != expectedInstance {
-				klog.Warningf("Expected instance %s/%s for volume %s, but found instance %s/%s", expectedInstance, expectedState, volumeID, instanceID, attachmentState)
+			if device != expectedDevice {
+				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
 				return false, nil
 			}
 		}
@@ -713,11 +859,11 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return true, nil
 		}
 		// continue waiting
-		klog.V(2).Infof("Waiting for volume %q state: actual=%s, desired=%s", volumeID, attachmentState, expectedState)
+		klog.InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
 		return false, nil
 	}
 
-	return attachment, wait.ExponentialBackoff(backoff, verifyVolumeFunc)
+	return attachment, wait.ExponentialBackoffWithContext(ctx, backoff, verifyVolumeFunc)
 }
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
@@ -801,7 +947,7 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 
 	res, err := c.ec2.CreateSnapshotWithContext(ctx, request)
 	if err != nil {
-		return nil, fmt.Errorf("error creating snapshot of volume %s: %v", volumeID, err)
+		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
 	if res == nil {
 		return nil, fmt.Errorf("nil CreateSnapshotResponse")
@@ -818,7 +964,7 @@ func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success 
 		if isAWSErrorSnapshotNotFound(err) {
 			return false, ErrNotFound
 		}
-		return false, fmt.Errorf("DeleteSnapshot could not delete volume: %v", err)
+		return false, fmt.Errorf("DeleteSnapshot could not delete volume: %w", err)
 	}
 	return true, nil
 }
@@ -920,11 +1066,29 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 	return snapshot
 }
 
-func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+	request := &ec2.EnableFastSnapshotRestoresInput{
+		AvailabilityZones: aws.StringSlice(availabilityZones),
+		SourceSnapshotIds: []*string{
+			aws.String(snapshotID),
+		},
+	}
+	klog.V(4).InfoS("Creating Fast Snapshot Restores", "snapshotID", snapshotID, "availabilityZones", availabilityZones)
+	response, err := c.ec2.EnableFastSnapshotRestoresWithContext(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if len(response.Unsuccessful) > 0 {
+		return response, fmt.Errorf("failed to create fast snapshot restores for snapshot %s: %v", snapshotID, response.Unsuccessful)
+	}
+	return response, nil
+}
+
+func describeVolumes(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 	for {
-		response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
+		response, err := svc.DescribeVolumesWithContext(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -935,14 +1099,25 @@ func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput
 		}
 		request.NextToken = nextToken
 	}
+	return volumes, nil
+}
 
-	if l := len(volumes); l > 1 {
-		return nil, ErrMultiDisks
-	} else if l < 1 {
-		return nil, ErrNotFound
+func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+	if c.bm == nil {
+		volumes, err := describeVolumes(ctx, c.ec2, request)
+		if err != nil {
+			return nil, err
+		}
+
+		if l := len(volumes); l > 1 {
+			return nil, ErrMultiDisks
+		} else if l < 1 {
+			return nil, ErrNotFound
+		}
+		return volumes[0], nil
+	} else {
+		return c.batchDescribeVolumes(request)
 	}
-
-	return volumes[0], nil
 }
 
 func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {
@@ -958,7 +1133,7 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 			if isAWSErrorInstanceNotFound(err) {
 				return nil, ErrNotFound
 			}
-			return nil, fmt.Errorf("error listing AWS instances: %q", err)
+			return nil, fmt.Errorf("error listing AWS instances: %w", err)
 		}
 
 		for _, reservation := range response.Reservations {
@@ -1044,7 +1219,7 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 		},
 	}
 
-	err := wait.Poll(checkInterval, checkTimeout, func() (done bool, err error) {
+	err := wait.PollUntilContextTimeout(ctx, checkInterval, checkTimeout, false, func(ctx context.Context) (done bool, err error) {
 		vol, err := c.getVolume(ctx, request)
 		if err != nil {
 			return true, err
@@ -1062,8 +1237,9 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 // and has the given code. More information on AWS error codes at:
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
 func isAWSError(err error, code string) bool {
-	if awsError, ok := err.(awserr.Error); ok {
-		if awsError.Code() == code {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		if awsErr.Code() == code {
 			return true
 		}
 	}
@@ -1118,99 +1294,10 @@ func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
 }
 
-// ResizeDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit.
-// It returns the volume size after this call or an error if the size couldn't be determined.
-func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes int64) (int64, error) {
-	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
-	}
-	volume, err := c.getVolume(ctx, request)
-	if err != nil {
-		return 0, err
-	}
-
-	// AWS resizes in chunks of GiB (not GB)
-	newSizeGiB := util.RoundUpGiB(newSizeBytes)
-	oldSizeGiB := aws.Int64Value(volume.Size)
-
-	latestMod, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
-
-	if latestMod != nil && modFetchError == nil {
-		state := aws.StringValue(latestMod.ModificationState)
-		if state == ec2.VolumeModificationStateModifying {
-			_, err = c.waitForVolumeSize(ctx, volumeID)
-			if err != nil {
-				return oldSizeGiB, err
-			}
-			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
-		}
-	}
-
-	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
-	// that means we have an API problem.
-	if modFetchError != nil && modFetchError != VolumeNotBeingModified {
-		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %v", volumeID, modFetchError)
-	}
-
-	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
-	// volume modifications objects or volume has completed previously issued modification request.
-	if oldSizeGiB >= newSizeGiB {
-		klog.V(5).Infof("[Debug] Volume %q current size (%d GiB) is greater or equal to the new size (%d GiB)", volumeID, oldSizeGiB, newSizeGiB)
-		_, err = c.waitForVolumeSize(ctx, volumeID)
-		if err != nil && err != VolumeNotBeingModified {
-			return oldSizeGiB, err
-		}
-		return oldSizeGiB, nil
-	}
-
-	req := &ec2.ModifyVolumeInput{
-		VolumeId: aws.String(volumeID),
-		Size:     aws.Int64(newSizeGiB),
-	}
-
-	// If the volume type is gp3 we are going to mimic the old gp2 behavior in which
-	// both IOPS and Throughput were coupled to disk size.
-	// We check that this is not going to reduce the IOPs and Throughput for those volumes
-	// where we have added an enhanced storage class.
-	volumeType := aws.StringValue(volume.VolumeType)
-	if volumeType == ec2.VolumeTypeGp3 && hasGP3PerformanceReconcileTag(volume) {
-		iops := getGP3ReconciledIOPS(newSizeGiB)
-		if volume.Iops != nil && iops > *volume.Iops {
-			req.Iops = aws.Int64(iops)
-		}
-
-		throughput := getGP3ReconciledThroughput(newSizeGiB)
-		if volume.Throughput != nil && throughput > *volume.Throughput {
-			req.Throughput = aws.Int64(throughput)
-		}
-	}
-
-	klog.V(4).Infof("expanding volume %q to size %d", volumeID, newSizeGiB)
-	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
-	if err != nil {
-		return 0, fmt.Errorf("could not modify AWS volume %q: %v", volumeID, err)
-	}
-
-	mod := response.VolumeModification
-
-	state := aws.StringValue(mod.ModificationState)
-	if volumeModificationDone(state) {
-		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
-	}
-
-	_, err = c.waitForVolumeSize(ctx, volumeID)
-	if err != nil {
-		return oldSizeGiB, err
-	}
-	return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
-}
-
 // Checks for desired size on volume by also verifying volume size by describing volume.
 // This is to get around potential eventual consistency problems with describing volume modifications
 // objects and ensuring that we read two different objects to verify volume state.
-func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGiB int64) (int64, error) {
+func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredSizeGiB int64, options *ModifyDiskOptions) (int64, error) {
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []*string{
 			aws.String(volumeID),
@@ -1222,31 +1309,42 @@ func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGi
 	}
 
 	// AWS resizes in chunks of GiB (not GB)
-	oldSizeGiB := aws.Int64Value(volume.Size)
-	if oldSizeGiB >= newSizeGiB {
-		return oldSizeGiB, nil
+	realSizeGiB := aws.Int64Value(volume.Size)
+
+	// Check if there is a mismatch between the requested modification and the current volume
+	// If there is, the volume is still modifying and we should not return a success
+	if realSizeGiB < desiredSizeGiB {
+		return realSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, desiredSizeGiB)
+	} else if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to iops %d", volumeID, options.IOPS)
+	} else if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to type %q", volumeID, options.VolumeType)
+	} else if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to throughput %d", volumeID, options.Throughput)
 	}
-	return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, newSizeGiB)
+
+	return realSizeGiB, nil
 }
 
-// waitForVolumeSize waits for a volume modification to finish and return its size.
-func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, error) {
+// waitForVolumeModification waits for a volume modification to finish.
+func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) error {
 	backoff := wait.Backoff{
 		Duration: volumeModificationDuration,
 		Factor:   volumeModificationWaitFactor,
 		Steps:    volumeModificationWaitSteps,
 	}
 
-	var modVolSizeGiB int64
 	waitErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		m, err := c.getLatestVolumeModification(ctx, volumeID)
-		if err != nil {
+		// Consider volumes that have never been modified as done
+		if err != nil && errors.Is(err, VolumeNotBeingModified) {
+			return true, nil
+		} else if err != nil {
 			return false, err
 		}
 
 		state := aws.StringValue(m.ModificationState)
 		if volumeModificationDone(state) {
-			modVolSizeGiB = aws.Int64Value(m.TargetSize)
 			return true, nil
 		}
 
@@ -1254,10 +1352,10 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) (int64, 
 	})
 
 	if waitErr != nil {
-		return 0, waitErr
+		return waitErr
 	}
 
-	return modVolSizeGiB, nil
+	return nil
 }
 
 // getLatestVolumeModification returns the last modification of the volume.
@@ -1272,7 +1370,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 		if isAWSErrorModificationNotFound(err) {
 			return nil, VolumeNotBeingModified
 		}
-		return nil, fmt.Errorf("error describing modifications in volume %q: %v", volumeID, err)
+		return nil, fmt.Errorf("error describing modifications in volume %q: %w", volumeID, err)
 	}
 
 	volumeMods := mod.VolumesModifications
@@ -1300,6 +1398,94 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	return zones[0], nil
 }
 
+// AvailabilityZones returns availability zones from the given region
+func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
+	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
+	if err != nil {
+		return nil, fmt.Errorf("error describing availability zones: %w", err)
+	}
+	zones := make(map[string]struct{})
+	for _, zone := range response.AvailabilityZones {
+		zones[*zone.ZoneName] = struct{}{}
+	}
+	return zones, nil
+}
+
+func needsVolumeModification(volume *ec2.Volume, newSizeGiB int64, options *ModifyDiskOptions) bool {
+	oldSizeGiB := aws.Int64Value(volume.Size)
+	needsModification := false
+
+	if oldSizeGiB < newSizeGiB {
+		needsModification = true
+	}
+	if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+		needsModification = true
+	}
+	if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+		needsModification = true
+	}
+	if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+		needsModification = true
+	}
+
+	return needsModification
+}
+
+func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int64, options *ModifyDiskOptions) (bool, int64, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return true, 0, err
+	}
+
+	oldSizeGiB := aws.Int64Value(volume.Size)
+
+	latestMod, err := c.getLatestVolumeModification(ctx, volumeID)
+	if err != nil && !errors.Is(err, VolumeNotBeingModified) {
+		return true, oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, err)
+	}
+
+	state := ""
+	// latestMod can be nil if the volume has never been modified
+	if latestMod != nil {
+		state = aws.StringValue(latestMod.ModificationState)
+		if state == ec2.VolumeModificationStateModifying {
+			// If volume is already modifying, detour to waiting for it to modify
+			klog.V(5).InfoS("[Debug] Watching ongoing modification", "volumeID", volumeID)
+			err = c.waitForVolumeModification(ctx, volumeID)
+			if err != nil {
+				return true, oldSizeGiB, err
+			}
+			returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
+			return false, returnGiB, returnErr
+		}
+	}
+
+	// At this point, we know we are starting a new volume modification
+	// If we're asked to modify a volume to its current state, ignore the request and immediately return a success
+	if !needsVolumeModification(volume, newSizeGiB, options) {
+		klog.V(5).InfoS("[Debug] Skipping modification for volume due to matching stats", "volumeID", volumeID)
+		// Wait for any existing modifications to prevent race conditions where DescribeVolume(s) returns the new
+		// state before the volume is actually finished modifying
+		err = c.waitForVolumeModification(ctx, volumeID)
+		if err != nil {
+			return true, oldSizeGiB, err
+		}
+		returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
+		return false, returnGiB, returnErr
+	}
+
+	if state == ec2.VolumeModificationStateOptimizing {
+		return true, 0, fmt.Errorf("volume %q in OPTIMIZING state, cannot currently modify", volumeID)
+	}
+
+	return true, 0, nil
+}
+
 func volumeModificationDone(state string) bool {
 	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
 		return true
@@ -1318,36 +1504,6 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 	return volumeAttachmentList
 }
 
-func calculateGP3ReconciledIOPS(sizeGiB int64) (int64, error) {
-	newIops := getGP3ReconciledIOPS(sizeGiB)
-	newIops, err := capIOPS(VolumeTypeGP3, sizeGiB, newIops, gp3MinTotalIOPS, gp3MaxTotalIOPS, gp3MaxIOPSPerGB, true)
-	if err != nil {
-		return 0, err
-	}
-
-	return newIops, nil
-}
-
-// Calculate the corresponding IOPS value for gp3 volumes
-//
-// If the volume type is gp3 we provision IOPs proportionally to the disk size, capping it
-// at a reasonable level for most users.  Analysis shows that most users  don't use much more
-// than the baseline 3000 IOPs that we receive for free with gp3, and very few exceed 5000, so
-// we cap it there for cost reasons. The users that do use more IOPs generally have larger volumes,
-// with the increase starting around the 200GiB mark, so we start scaling there and reach a
-// maximum for 1TiB volumes and above, between those values we linearly interpolate.
-// We truncate values to the nearest 5 IOPs.
-func getGP3ReconciledIOPS(sizeGiB int64) int64 {
-	if sizeGiB < gp3ScalingMinSize {
-		return gp3ScalingMinIOPs
-	}
-	if sizeGiB > gp3ScalingMaxSize {
-		return gp3ScalingMaxIOPs
-	}
-
-	return gp3ScalingMinIOPs + 5*(((sizeGiB-gp3ScalingMinSize)*(gp3ScalingMaxIOPs-gp3ScalingMinIOPs))/(gp3ScalingMaxSize-gp3ScalingMinSize)/5)
-}
-
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
 func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) (int64, error) {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
@@ -1360,72 +1516,19 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 	if iops < minTotalIOPS {
 		if allowIncrease {
 			iops = minTotalIOPS
-			klog.V(5).Infof("[Debug] Increased IOPS for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, iops)
+			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 		} else {
 			return 0, fmt.Errorf("invalid IOPS: %d is too low, it must be at least %d", iops, minTotalIOPS)
 		}
 	}
 	if iops > maxTotalIOPS {
 		iops = maxTotalIOPS
-		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, iops)
+		klog.V(5).InfoS("[Debug] Capped IOPS, volume at the max supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 	}
 	maxIopsByCapacity := maxIOPSPerGB * requestedCapacityGiB
 	if iops > maxIopsByCapacity && maxIopsByCapacity >= minTotalIOPS {
 		iops = maxIopsByCapacity
-		klog.V(5).Infof("[Debug] Capped IOPS for %s %d GB volume at %d IOPS/GB: %d", volumeType, requestedCapacityGiB, maxIOPSPerGB, iops)
+		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
 	return iops, nil
-}
-
-// Calculate the corresponding throughput value for gp3 volumes
-//
-// If the volume type is gp3 we provision throughput proportionally to the disk size, capping it
-// at a reasonable level for most users.  Analysis shows that most users  don't use much more
-// than the baseline 125 MiB/s that we receive for free with gp3, and very few exceed 250 (which was the
-// previous max for GP2 volumes), so we cap it there for cost reasons. The users that do use more
-// throughput generally have larger volumes, with the increase starting around the 200GiB mark
-// so we start scaling there and reach a maximum for 1TiB volumes and above, between those values we linearly interpolate.
-// We truncate values to the nearest 5 MiB/s.
-func getGP3ReconciledThroughput(sizeGiB int64) int64 {
-	if sizeGiB < gp3ScalingMinSize {
-		return gp3ScalingMinThroughput
-	}
-	if sizeGiB > gp3ScalingMaxSize {
-		return gp3ScalingMaxThroughput
-	}
-
-	return gp3ScalingMinThroughput + 5*(((sizeGiB-gp3ScalingMinSize)*(gp3ScalingMaxThroughput-gp3ScalingMinThroughput))/(gp3ScalingMaxSize-gp3ScalingMinSize)/5)
-}
-
-// Calculate actual Throughput for a volume an cap it at supported AWS limits.
-func capThroughput(volumeType string, requestedCapacityGiB, requestedThroughput, minTotalThroughput, maxTotalThroughput int64) int64 {
-	// If requestedThroughput is zero, the user did not request a specific amount, and the default will be used
-	if requestedThroughput == 0 {
-		return 0
-	}
-
-	throughput := requestedThroughput
-
-	if throughput < minTotalThroughput {
-		throughput = minTotalThroughput
-		klog.V(5).Infof("[Debug] Increased Throughput for %s %d GB volume to the min supported limit: %d", volumeType, requestedCapacityGiB, throughput)
-	}
-
-	if throughput > maxTotalThroughput {
-		throughput = maxTotalThroughput
-		klog.V(5).Infof("[Debug] Capped Throughput for %s %d GB volume at the max supported limit: %d", volumeType, requestedCapacityGiB, throughput)
-	}
-
-	return throughput
-}
-
-// hasGP3PerformanceReconcileTag checks if a volume has the gp3 reconcile tag
-func hasGP3PerformanceReconcileTag(volume *ec2.Volume) bool {
-	for _, tag := range volume.Tags {
-		if aws.StringValue(tag.Key) == AwsEbsReconcileGP3PerformanceTagKey && aws.StringValue(tag.Value) == "true" {
-			return true
-		}
-	}
-
-	return false
 }

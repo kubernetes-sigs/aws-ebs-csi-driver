@@ -20,21 +20,33 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/request"
-
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	"k8s.io/klog/v2"
 )
 
-// RecordRequestsComplete is added to the Complete chain; called after any request
+// RecordRequestsHandler is added to the Complete chain; called after any request
 func RecordRequestsHandler(r *request.Request) {
-	recordAWSMetric(operationName(r), time.Since(r.Time).Seconds(), r.Error)
+	labels := map[string]string{
+		"request": operationName(r),
+	}
+
+	if r.Error != nil {
+		metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+	} else {
+		duration := time.Since(r.Time).Seconds()
+		metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+	}
 }
 
-// RecordThrottlesAfterRetry is added to the AfterRetry chain; called after any error
+// RecordThrottledRequestsHandler is added to the AfterRetry chain; called after any error
 func RecordThrottledRequestsHandler(r *request.Request) {
+	labels := map[string]string{
+		"operation_name": operationName(r),
+	}
+
 	if r.IsErrorThrottle() {
-		recordAWSThrottlesMetric(operationName(r))
-		klog.Warningf("Got RequestLimitExceeded error on AWS request (%s)",
-			describeRequest(r))
+		metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+		klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", describeRequest(r))
 	}
 }
 

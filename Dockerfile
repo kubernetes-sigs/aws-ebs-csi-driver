@@ -15,7 +15,7 @@
 # See
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 # for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
-FROM --platform=$BUILDPLATFORM golang:1.19 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.21 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 COPY go.* .
 ARG GOPROXY
@@ -26,22 +26,18 @@ ARG TARGETARCH
 ARG VERSION
 RUN OS=$TARGETOS ARCH=$TARGETARCH make $TARGETOS/$TARGETARCH
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest.2 AS linux-amazon
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23 AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
 
-FROM mcr.microsoft.com/windows/servercore:1809 AS windows-1809
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al2 AS linux-al2
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
+ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
+
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:1809 AS windows-ltsc2019
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
 
-FROM mcr.microsoft.com/windows/servercore:20H2 AS windows-20H2
-COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
-ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
-
-FROM mcr.microsoft.com/windows/servercore:ltsc2019 AS windows-ltsc2019
-COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
-ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
-
-FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS windows-ltsc2022
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2022 AS windows-ltsc2022
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]

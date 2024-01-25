@@ -169,7 +169,7 @@ func TestValidateDriverOptions(t *testing.T) {
 		{
 			name:   "fail because validateMode fails",
 			mode:   Mode("unknown"),
-			expErr: fmt.Errorf("Invalid mode: Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode}),
+			expErr: fmt.Errorf("Invalid mode: %w", fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode})),
 		},
 		{
 			name: "fail because validateExtraVolumeTags fails",
@@ -177,7 +177,7 @@ func TestValidateDriverOptions(t *testing.T) {
 			extraVolumeTags: map[string]string{
 				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Invalid extra tags: Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength),
+			expErr: fmt.Errorf("Invalid extra tags: %w", fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
 		},
 	}
 
