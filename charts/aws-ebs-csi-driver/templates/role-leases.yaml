@@ -4,6 +4,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   name: ebs-csi-leases-role
   labels:
+    # Labels
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 rules:
 - apiGroups: ["coordination.k8s.io"]
