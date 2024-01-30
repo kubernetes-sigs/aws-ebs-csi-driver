@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+
 	// "errors"
 	"sync"
 	"testing"
@@ -40,9 +41,11 @@ func TestBasicRequestCoalescingSuccess(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -95,9 +98,11 @@ func TestRequestFail(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -164,9 +169,11 @@ func TestPartialFail(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -249,9 +256,11 @@ func TestSequentialRequests(t *testing.T) {
 	}).Times(2)
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -307,9 +316,11 @@ func TestDuplicateRequest(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -372,9 +383,11 @@ func TestContextTimeout(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 
@@ -438,9 +451,11 @@ func TestResponseReturnTiming(t *testing.T) {
 	})
 
 	awsDriver := controllerService{
-		cloud:               mockCloud,
-		inFlight:            internal.NewInFlight(),
-		driverOptions:       &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		driverOptions: &DriverOptions{
+			modifyVolumeRequestHandlerTimeout: 2 * time.Second,
+		},
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 

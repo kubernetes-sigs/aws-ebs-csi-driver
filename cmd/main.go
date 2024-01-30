@@ -73,6 +73,7 @@ func main() {
 		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
 		driver.WithOtelTracing(options.ServerOptions.EnableOtelTracing),
 		driver.WithBatching(options.ControllerOptions.Batching),
+		driver.WithModifyVolumeRequestHandlerTimeout(options.ControllerOptions.ModifyVolumeRequestHandlerTimeout),
 	)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")

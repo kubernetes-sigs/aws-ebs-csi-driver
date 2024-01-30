@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -64,24 +65,26 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint            string
-	extraTags           map[string]string
-	mode                Mode
-	volumeAttachLimit   int64
-	kubernetesClusterID string
-	awsSdkDebugLog      bool
-	batching            bool
-	warnOnInvalidTag    bool
-	userAgentExtra      string
-	otelTracing         bool
+	endpoint                          string
+	extraTags                         map[string]string
+	mode                              Mode
+	volumeAttachLimit                 int64
+	kubernetesClusterID               string
+	awsSdkDebugLog                    bool
+	batching                          bool
+	warnOnInvalidTag                  bool
+	userAgentExtra                    string
+	otelTracing                       bool
+	modifyVolumeRequestHandlerTimeout time.Duration
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
 	driverOptions := DriverOptions{
-		endpoint: DefaultCSIEndpoint,
-		mode:     AllMode,
+		endpoint:                          DefaultCSIEndpoint,
+		mode:                              AllMode,
+		modifyVolumeRequestHandlerTimeout: DefaultModifyVolumeRequestHandlerTimeout,
 	}
 	for _, option := range options {
 		option(&driverOptions)
@@ -251,5 +254,11 @@ func WithUserAgentExtra(userAgentExtra string) func(*DriverOptions) {
 func WithOtelTracing(enableOtelTracing bool) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.otelTracing = enableOtelTracing
+	}
+}
+
+func WithModifyVolumeRequestHandlerTimeout(timeout time.Duration) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.modifyVolumeRequestHandlerTimeout = timeout
 	}
 }
