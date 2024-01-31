@@ -259,6 +259,9 @@ func WithOtelTracing(enableOtelTracing bool) func(*DriverOptions) {
 
 func WithModifyVolumeRequestHandlerTimeout(timeout time.Duration) func(*DriverOptions) {
 	return func(o *DriverOptions) {
+		if timeout == 0 {
+			return
+		}
 		o.modifyVolumeRequestHandlerTimeout = timeout
 	}
 }
