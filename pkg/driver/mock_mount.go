@@ -14,7 +14,6 @@ import (
 
 // MockMounter is a mock of Mounter interface.
 type MockMounter struct {
-	mount_utils.Interface
 	ctrl     *gomock.Controller
 	recorder *MockMounterMockRecorder
 }
