@@ -13,6 +13,7 @@ import (
 
 // MockProxyMounter is a mock of ProxyMounter interface.
 type MockProxyMounter struct {
+	mount.Interface
 	ctrl     *gomock.Controller
 	recorder *MockProxyMounterMockRecorder
 }
