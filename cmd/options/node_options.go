@@ -31,8 +31,22 @@ type NodeOptions struct {
 	// itself (dynamically discovering the maximum number of attachable volume per EC2 machine type, see also
 	// https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/347).
 	VolumeAttachLimit int64
+
+	// DisableVolumeAttachLimitFromMetadata disables the volume attach limit calculation from instances metadata.
+	// When false (default), the CSI driver calculates the volume attach limit as:
+	// the number supported by the instance type - nr. of network cards - nr. of volumes attached to the instance
+	// at the boot time.
+	// The network cards are counted only on relevant instance types (e.g. Nitro instances).
+	// Nr. of volumes attached to the instance at the boot time may include CSI volumes, which is not correct
+	// and breaks attach limit calculation when a node is rebooted without draining.
+	// See https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1808 for details.
+	// When true, the CSI driver calculates the volume attach limit as:
+	// the number supported by the instance type - nr. of network cards - 1 for the root volume.
+	// This behavior is useful when a node can be rebooted without draining with CSI volumes attached.
+	DisableVolumeAttachLimitFromMetadata bool
 }
 
 func (o *NodeOptions) AddFlags(fs *flag.FlagSet) {
 	fs.Int64Var(&o.VolumeAttachLimit, "volume-attach-limit", -1, "Value for the maximum number of volumes attachable per node. If specified, the limit applies to all nodes. If not specified, the value is approximated from the instance type.")
+	fs.BoolVar(&o.DisableVolumeAttachLimitFromMetadata, "disable-volume-attach-limit-from-metadata", false, "Disable volume attach limit calculation from instance metadata.")
 }

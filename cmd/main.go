@@ -67,6 +67,7 @@ func main() {
 		driver.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
+		driver.WithVolumeAttachLimitFromMetadata(options.NodeOptions.DisableVolumeAttachLimitFromMetadata),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),

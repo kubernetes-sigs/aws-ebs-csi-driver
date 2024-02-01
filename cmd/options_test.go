@@ -51,6 +51,9 @@ func TestGetOptions(t *testing.T) {
 		awsSdkDebugFlagValue := true
 		VolumeAttachLimitFlagName := "volume-attach-limit"
 		var VolumeAttachLimit int64 = 42
+		disableVolumeAttachLimitFromMetadataFlagName := "disable-volume-attach-limit-from-metadata"
+		disableVolumeAttachLimitFromMetadata := false
+
 		userAgentExtraFlag := "user-agent-extra"
 		userAgentExtraFlagValue := "test"
 		otelTracingFlagName := "enable-otel-tracing"
@@ -129,6 +132,13 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.NodeOptions.VolumeAttachLimit != VolumeAttachLimit {
 				t.Fatalf("expected VolumeAttachLimit to be %d but it is %d", VolumeAttachLimit, options.NodeOptions.VolumeAttachLimit)
+			}
+			disableVolumeAttachLimitFromMetadataFlag := flagSet.Lookup(disableVolumeAttachLimitFromMetadataFlagName)
+			if disableVolumeAttachLimitFromMetadataFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", disableVolumeAttachLimitFromMetadataFlagName)
+			}
+			if options.NodeOptions.DisableVolumeAttachLimitFromMetadata != disableVolumeAttachLimitFromMetadata {
+				t.Fatalf("expected disableVolumeAttachLimitFromMetadata to be %t but it is %t", disableVolumeAttachLimitFromMetadata, options.NodeOptions.DisableVolumeAttachLimitFromMetadata)
 			}
 		}
 

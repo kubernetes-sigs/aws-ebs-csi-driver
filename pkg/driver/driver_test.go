@@ -78,6 +78,15 @@ func TestWithVolumeAttachLimit(t *testing.T) {
 	}
 }
 
+func TestWithVolumeAttachLimitFromMetadata(t *testing.T) {
+	var value bool = true
+	options := &DriverOptions{}
+	WithVolumeAttachLimitFromMetadata(value)(options)
+	if options.disableVolumeAttachFromMetadata != value {
+		t.Fatalf("expected disableVolumeAttachFromMetadata option got set to %t but is set to %t", value, options.disableVolumeAttachFromMetadata)
+	}
+}
+
 func TestWithClusterID(t *testing.T) {
 	var id string = "test-cluster-id"
 	options := &DriverOptions{}
