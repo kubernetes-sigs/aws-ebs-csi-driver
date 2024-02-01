@@ -54,6 +54,11 @@ func TestControllerOptions(t *testing.T) {
 			found: true,
 		},
 		{
+			name:  "lookup modify-volume-request-handler-timeout",
+			flag:  "modify-volume-request-handler-timeout",
+			found: true,
+		},
+		{
 			name:  "fail for non-desired flag",
 			flag:  "some-other-flag",
 			found: false,

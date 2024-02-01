@@ -19,6 +19,7 @@ package driver
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestWithEndpoint(t *testing.T) {
@@ -119,5 +120,15 @@ func TestWithBatching(t *testing.T) {
 	WithBatching(batching)(options)
 	if options.batching != batching {
 		t.Fatalf("expected batching option got set to %v but is set to %v", batching, options.batching)
+	}
+}
+
+func TestWithModifyVolumeRequestHandlerTimeout(t *testing.T) {
+	timeout := 15 * time.Second
+	options := &DriverOptions{}
+	WithModifyVolumeRequestHandlerTimeout(timeout)(options)
+	if options.modifyVolumeRequestHandlerTimeout != timeout {
+		t.Fatalf("expected modifyVolumeRequestHandlerTimeout option got set to %v but is set to %v",
+			timeout, options.modifyVolumeRequestHandlerTimeout)
 	}
 }

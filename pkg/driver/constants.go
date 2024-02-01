@@ -16,6 +16,8 @@ limitations under the License.
 
 package driver
 
+import "time"
+
 // constants of keys in PublishContext
 const (
 	// devicePathKey represents key for device path in PublishContext
@@ -156,7 +158,8 @@ const (
 
 // constants for default command line flag values
 const (
-	DefaultCSIEndpoint = "unix://tmp/csi.sock"
+	DefaultCSIEndpoint                       = "unix://tmp/csi.sock"
+	DefaultModifyVolumeRequestHandlerTimeout = 2 * time.Second
 )
 
 // constants for disk block size
