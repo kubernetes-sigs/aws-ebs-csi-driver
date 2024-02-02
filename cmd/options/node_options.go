@@ -31,8 +31,16 @@ type NodeOptions struct {
 	// itself (dynamically discovering the maximum number of attachable volume per EC2 machine type, see also
 	// https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/347).
 	VolumeAttachLimit int64
+
+	// ReservedVolumeAttachments specifies number of volume attachments reserved for system use.
+	// Typically 1 for the root disk, but may be larger when more system disks are attached to nodes.
+	// This option is not used when --volume-attach-limit is specified.
+	// When -1, the amount of reserved attachments is loaded from instance metadata that captured state at node boot
+	// and may include not only system disks but also CSI volumes (and therefore it may be wrong).
+	ReservedVolumeAttachments int
 }
 
 func (o *NodeOptions) AddFlags(fs *flag.FlagSet) {
-	fs.Int64Var(&o.VolumeAttachLimit, "volume-attach-limit", -1, "Value for the maximum number of volumes attachable per node. If specified, the limit applies to all nodes. If not specified, the value is approximated from the instance type.")
+	fs.Int64Var(&o.VolumeAttachLimit, "volume-attach-limit", -1, "Value for the maximum number of volumes attachable per node. If specified, the limit applies to all nodes and overrides --reserved-volume-attachments. If not specified, the value is approximated from the instance type.")
+	fs.IntVar(&o.ReservedVolumeAttachments, "reserved-volume-attachments", -1, "Number of volume attachments reserved for system use. Not used when --volume-attach-limit is specified. The total amount of volume attachments for a node is computed as: <nr. of attachments for corresponding instance type> - <number of NICs, if relevant to the instance type> - <reserved-volume-attachments value>. When -1, the amount of reserved attachments is loaded from instance metadata that captured state at node boot and may include not only system disks but also CSI volumes.")
 }

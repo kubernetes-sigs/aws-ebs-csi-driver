@@ -51,6 +51,9 @@ func TestGetOptions(t *testing.T) {
 		awsSdkDebugFlagValue := true
 		VolumeAttachLimitFlagName := "volume-attach-limit"
 		var VolumeAttachLimit int64 = 42
+		reservedVolumeAttachmentsFlagName := "reserved-volume-attachments"
+		reservedVolumeAttachments := -1
+
 		userAgentExtraFlag := "user-agent-extra"
 		userAgentExtraFlagValue := "test"
 		otelTracingFlagName := "enable-otel-tracing"
@@ -129,6 +132,13 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.NodeOptions.VolumeAttachLimit != VolumeAttachLimit {
 				t.Fatalf("expected VolumeAttachLimit to be %d but it is %d", VolumeAttachLimit, options.NodeOptions.VolumeAttachLimit)
+			}
+			reservedVolumeAttachmentsFlag := flagSet.Lookup(reservedVolumeAttachmentsFlagName)
+			if reservedVolumeAttachmentsFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", reservedVolumeAttachmentsFlagName)
+			}
+			if options.NodeOptions.ReservedVolumeAttachments != reservedVolumeAttachments {
+				t.Fatalf("expected reservedVolumeAttachmentsFlagName to be %d but it is %d", reservedVolumeAttachments, options.NodeOptions.ReservedVolumeAttachments)
 			}
 		}
 

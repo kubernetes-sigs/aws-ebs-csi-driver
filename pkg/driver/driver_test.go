@@ -78,6 +78,15 @@ func TestWithVolumeAttachLimit(t *testing.T) {
 	}
 }
 
+func TestWithVolumeAttachLimitFromMetadata(t *testing.T) {
+	value := 10
+	options := &DriverOptions{}
+	WithReservedVolumeAttachments(value)(options)
+	if options.reservedVolumeAttachments != value {
+		t.Fatalf("expected reservedVolumeAttachments option got set to %d but is set to %d", value, options.reservedVolumeAttachments)
+	}
+}
+
 func TestWithClusterID(t *testing.T) {
 	var id string = "test-cluster-id"
 	options := &DriverOptions{}
