@@ -349,6 +349,7 @@ node:
             - a1.2xlarge
             - a1.4xlarge
   nodeSelector: {}
+  daemonSetAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
