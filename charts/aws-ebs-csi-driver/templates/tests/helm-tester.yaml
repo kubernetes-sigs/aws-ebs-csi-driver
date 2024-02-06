@@ -214,6 +214,10 @@ spec:
       volumeMounts:
       - name: config-vol
         mountPath: /etc/config
+  # kubekins-e2e v1 image is linux amd64 only.
+  nodeSelector:
+    kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
   serviceAccountName: ebs-csi-driver-test
   volumes:
     - name: config-vol
