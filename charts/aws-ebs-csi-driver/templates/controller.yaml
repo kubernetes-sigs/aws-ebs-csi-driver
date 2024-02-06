@@ -6,6 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+  {{- with .Values.controller.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.controller.replicaCount }}
   {{- if or (kindIs "float64" .Values.controller.revisionHistoryLimit) (kindIs "int64" .Values.controller.revisionHistoryLimit) }}

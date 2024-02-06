@@ -237,6 +237,7 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
+  deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   priorityClassName: system-cluster-critical
