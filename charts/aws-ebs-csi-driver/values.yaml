@@ -237,6 +237,7 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
+  deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   priorityClassName: system-cluster-critical
@@ -349,6 +350,7 @@ node:
             - a1.2xlarge
             - a1.4xlarge
   nodeSelector: {}
+  daemonSetAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
