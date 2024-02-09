@@ -1,5 +1,47 @@
 # Frequently Asked Questions
 
+## 6-Minute Delays in Attaching Volumes
+
+### What causes 6-minute delays in attaching volumes?
+
+After a node is preempted, pods using persistent volumes may experience a 6+ minute restart delay. This occurs when a volume is not cleanly unmounted, as indicated by `Node.Status.VolumesInUse`. The Attach/Detach controller in `kube-controller-manager` waits for 6 minutes before issuing a force detach. This delay in pod restart can prevent potential data corruption due to unclean mounts.
+
+### What behaviors have been observed that contribute to this issue?
+
+- The EBS CSI Driver node pod on the node may get terminated before the workload's volumes are unmounted, leading to unmount failures.
+- The operating system might shut down before volume unmount is completed, even with remaining time in the `shutdownGracePeriod`.
+
+### What are the symptoms of this issue?
+
+```
+Warning  FailedAttachVolume      6m51s              attachdetach-controller  Multi-Attach error for volume "pvc-4a86c32c-fbce-11ea-b7d2-0ad358e4e824" Volume is already exclusively attached to one node and can't be attached to another
+```
+
+### What steps can be taken to mitigate this issue?
+
+1. **Graceful Termination:** Ensure instances are gracefully terminated, which is a best practice in Kubernetes. This allows the CSI driver to clean up volumes before the node is terminated utilizing the preStop lifecycle hook.
+
+2. **Configure Kubelet for Graceful Node Shutdown:** For unexpected shutdowns, it is highly recommended to configure the Kubelet for graceful node shutdown. Using the standard EKS-optimized AMI, you can configure the kubelet for graceful node shutdown with the following user data script:
+
+```bash
+  #!/bin/bash
+  echo -e "InhibitDelayMaxSec=45\n" >> /etc/systemd/logind.conf
+  systemctl restart systemd-logind
+  echo "$(jq ".shutdownGracePeriod=\"45s\"" /etc/kubernetes/kubelet/kubelet-config.json)" > /etc/kubernetes/kubelet/kubelet-config.json
+  echo "$(jq ".shutdownGracePeriodCriticalPods=\"15s\"" /etc/kubernetes/kubelet/kubelet-config.json)" > /etc/kubernetes/kubelet/kubelet-config.json
+  systemctl restart kubelet
+```
+
+3. **Spot Instances and Karpenter Best Practices:** When using Spot Instances with Karpenter, enable [interruption handling](https://aws.github.io/aws-eks-best-practices/karpenter/#enable-interruption-handling-when-using-spot) to manage involuntary interruptions gracefully. Karpenter supports native interruption handling, which cordons, drains, and terminates nodes ahead of interruption events, maximizing workload cleanup time.
+
+### What is the PreStop lifecycle hook?
+
+The [PreStop](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) hook executes to check for remaining `VolumeAttachment` objects when a node is being drained for termination. If the node is not being drained, the check is skipped. The hook uses Kubernetes informers to monitor the deletion of `VolumeAttachment` objects, waiting until all attachments associated with the node are removed before proceeding.
+
+### How do I enable the PreStop lifecycle hook?
+
+The PreStop lifecycle hook is enabled by default in the AWS EBS CSI driver. It will execute when a node is being drained for termination.
+
 ## Driver performance for large-scale clusters
 
 ### Summary of scalability-related changes in v1.25
