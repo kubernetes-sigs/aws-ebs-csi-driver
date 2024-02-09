@@ -69,6 +69,7 @@ type DriverOptions struct {
 	extraTags                         map[string]string
 	mode                              Mode
 	volumeAttachLimit                 int64
+	reservedVolumeAttachments         int
 	kubernetesClusterID               string
 	awsSdkDebugLog                    bool
 	batching                          bool
@@ -218,6 +219,12 @@ func WithMode(mode Mode) func(*DriverOptions) {
 func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.volumeAttachLimit = volumeAttachLimit
+	}
+}
+
+func WithReservedVolumeAttachments(reservedVolumeAttachments int) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.reservedVolumeAttachments = reservedVolumeAttachments
 	}
 }
 
