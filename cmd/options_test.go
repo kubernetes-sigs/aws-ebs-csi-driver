@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/klog/v2"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
@@ -215,6 +216,39 @@ func TestGetOptions(t *testing.T) {
 
 				if exitCode != 0 {
 					t.Fatalf("expected exit code 0 but got %d", exitCode)
+				}
+				if !calledExit {
+					t.Fatalf("expect osExit to be called, but wasn't")
+				}
+			},
+		},
+		{
+			name: "both volume-attach-limit and reserved-volume-attachments specified",
+			testFunc: func(t *testing.T) {
+				oldOSExit := klog.OsExit
+				defer func() { klog.OsExit = oldOSExit }()
+
+				var exitCode int
+				calledExit := false
+				testExit := func(code int) {
+					exitCode = code
+					calledExit = true
+				}
+				klog.OsExit = testExit
+
+				oldArgs := os.Args
+				defer func() { os.Args = oldArgs }()
+				os.Args = []string{
+					"aws-ebs-csi-driver",
+					"--volume-attach-limit=10",
+					"--reserved-volume-attachments=10",
+				}
+
+				flagSet := flag.NewFlagSet("test-flagset", flag.ContinueOnError)
+				_ = GetOptions(flagSet)
+
+				if exitCode != 1 {
+					t.Fatalf("expected exit code 1 but got %d", exitCode)
 				}
 				if !calledExit {
 					t.Fatalf("expect osExit to be called, but wasn't")

@@ -55,3 +55,56 @@ func TestNodeOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate(t *testing.T) {
+	testCases := []struct {
+		name        string
+		options     *NodeOptions
+		expectError bool
+	}{
+		{
+			name: "valid VolumeAttachLimit",
+			options: &NodeOptions{
+				VolumeAttachLimit:         42,
+				ReservedVolumeAttachments: -1,
+			},
+			expectError: false,
+		},
+		{
+			name: "valid ReservedVolumeAttachments",
+			options: &NodeOptions{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: 42,
+			},
+			expectError: false,
+		},
+		{
+			name: "default options",
+			options: &NodeOptions{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectError: false,
+		},
+		{
+			name: "both options set",
+			options: &NodeOptions{
+				VolumeAttachLimit:         1,
+				ReservedVolumeAttachments: 1,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.options.Validate()
+			if tc.expectError && err == nil {
+				t.Errorf("Expected error, got nil")
+			}
+			if !tc.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
+}
