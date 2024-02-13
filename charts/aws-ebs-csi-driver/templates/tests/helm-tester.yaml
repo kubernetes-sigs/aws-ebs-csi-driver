@@ -193,10 +193,16 @@ metadata:
   annotations:
     "helm.sh/hook": test
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+    "ignore-check.kube-linter.io/run-as-non-root": "kubetest2 image runs as root"
+    "ignore-check.kube-linter.io/no-read-only-root-fs": "test pod requires privileged access"
 spec:
   containers:
     - name: kubetest2
       image: {{ default "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20231206-f7b83ffbe6-master" (.Values.helmTester).image }}
+      resources:
+        requests:
+          cpu: 1600m
+          memory: 3Gi
       command: [ "/bin/sh", "-c" ]
       args:
         - |
