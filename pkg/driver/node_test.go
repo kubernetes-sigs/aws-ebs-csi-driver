@@ -2331,6 +2331,9 @@ func TestNodeGetInfo(t *testing.T) {
 			if at.Segments[TopologyKey] != tc.availabilityZone {
 				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[TopologyKey])
 			}
+			if at.Segments[WellKnownTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.Segments[WellKnownTopologyKey])
+			}
 
 			if at.Segments[AwsAccountIDKey] != tc.outpostArn.AccountID {
 				t.Fatalf("Expected AwsAccountId %q, got %q", tc.outpostArn.AccountID, at.Segments[AwsAccountIDKey])
