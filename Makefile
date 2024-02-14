@@ -240,7 +240,7 @@ update/gomod:
 
 .PHONY: update/shfmt
 update/shfmt: bin/shfmt
-	./bin/shfmt -w -i 2 -d .
+	./bin/shfmt -w -i 2 -d ./hack/
 
 ## Verifiers
 # Linters and similar
