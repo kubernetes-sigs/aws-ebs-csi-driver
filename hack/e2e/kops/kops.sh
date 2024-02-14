@@ -119,7 +119,7 @@ function kops_patch_cluster_file() {
   jq "$FILTER" "$CLUSTER_FILE_JSON" >"$CLUSTER_FILE_0"
 
   # Patch only the json objects
-  kubectl patch -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$KOPS_PATCH_FILE")" -o json >"$CLUSTER_FILE_1"
+  kubectl patch --kubeconfig /dev/null -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$KOPS_PATCH_FILE")" -o json >"$CLUSTER_FILE_1"
   mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
 
   # Delete the original json objects, add the patched
@@ -141,7 +141,7 @@ function kops_patch_cluster_file() {
 function yaml_to_json() {
   IN=${1}
   OUT=${2}
-  kubectl patch -f "$IN" --local -p "{}" --type merge -o json | jq '.' -s >"$OUT"
+  kubectl patch --kubeconfig /dev/null -f "$IN" --local -p "{}" --type merge -o json | jq '.' -s >"$OUT"
 }
 
 function json_to_yaml() {
