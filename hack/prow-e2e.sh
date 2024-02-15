@@ -60,9 +60,12 @@ export KOPS_BUCKET=${KOPS_BUCKET:-"k8s-kops-csi-shared-e2e"}
 # Always use us-west-2 in CI, no matter where the local client is
 export AWS_REGION=us-west-2
 
-make cluster/create || exit 1
-make e2e/${TEST}
-E2E_PASSED=$?
+if make cluster/create; then
+  make e2e/${TEST}
+  E2E_PASSED=$?
+else
+  E2E_PASSED=1
+fi
 make cluster/delete
 
 echo "E2E_PASSED: ${E2E_PASSED}"
