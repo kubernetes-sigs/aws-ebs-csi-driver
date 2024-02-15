@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	defaultMaxDelay = 50 * time.Millisecond
+	slowMaxDelay    = 5 * defaultMaxDelay
+)
+
 func mockExecution(inputs []string) (map[string]string, error) {
 	results := make(map[string]string)
 	for _, input := range inputs {
@@ -39,7 +44,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: single task",
 			mockFunc:     mockExecution,
 			maxEntries:   10,
-			maxDelay:     1 * time.Second,
+			maxDelay:     defaultMaxDelay,
 			tasks:        []string{"task1"},
 			expectResult: true,
 			expectErrors: false,
@@ -48,7 +53,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: multiple tasks",
 			mockFunc:     mockExecution,
 			maxEntries:   10,
-			maxDelay:     1 * time.Second,
+			maxDelay:     defaultMaxDelay,
 			tasks:        []string{"task1", "task2", "task3"},
 			expectResult: true,
 			expectErrors: false,
@@ -57,7 +62,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: same task",
 			mockFunc:     mockExecution,
 			maxEntries:   10,
-			maxDelay:     1 * time.Second,
+			maxDelay:     defaultMaxDelay,
 			tasks:        []string{"task1", "task1", "task1"},
 			expectResult: true,
 			expectErrors: false,
@@ -66,7 +71,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: max capacity",
 			mockFunc:     mockExecution,
 			maxEntries:   5,
-			maxDelay:     100 * time.Second,
+			maxDelay:     slowMaxDelay,
 			tasks:        []string{"task1", "task2", "task3", "task4", "task5"},
 			expectResult: true,
 			expectErrors: false,
@@ -75,7 +80,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: max delay",
 			mockFunc:     mockExecution,
 			maxEntries:   100,
-			maxDelay:     2 * time.Second,
+			maxDelay:     defaultMaxDelay,
 			tasks:        []string{"task1", "task2", "task3", "task4"},
 			expectResult: true,
 			expectErrors: false,
@@ -84,7 +89,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: no execution without max delay or max entries",
 			mockFunc:     mockExecution,
 			maxEntries:   10,
-			maxDelay:     15 * time.Second,
+			maxDelay:     slowMaxDelay,
 			tasks:        []string{"task1", "task2", "task3"},
 			expectResult: false,
 		},
@@ -92,7 +97,7 @@ func TestBatcher(t *testing.T) {
 			name:         "TestBatcher: error handling",
 			mockFunc:     mockExecutionWithError,
 			maxEntries:   10,
-			maxDelay:     1 * time.Second,
+			maxDelay:     defaultMaxDelay,
 			tasks:        []string{"errorTask"},
 			expectErrors: true,
 		},
@@ -139,7 +144,7 @@ func TestBatcher(t *testing.T) {
 					if r.Result != task && tc.expectResult {
 						t.Errorf("Expected result for task %v, but got %v", task, r.Result)
 					}
-				case <-time.After(10 * time.Second):
+				case <-time.After(slowMaxDelay - defaultMaxDelay):
 					if tc.expectResult {
 						t.Errorf("Timed out waiting for result of task %d", i)
 					}
