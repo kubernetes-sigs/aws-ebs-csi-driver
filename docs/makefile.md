@@ -88,6 +88,10 @@ Build and push a multi-arch image of the driver based on the OSes in `ALL_OS`, a
 
 Run all unit tests with race condition checking enabled.
 
+### `make test/coverage`
+
+Outputs a filtered version of the each package's unit test coverage profiling via go's coverage tool to a local `coverage.html` file.
+
 ### `make test-sanity`
 
 Run the official [CSI sanity tests](https://github.com/kubernetes-csi/csi-test). _Warning: Currently, 3 of the tests are known to fail incorrectly._

@@ -76,6 +76,13 @@ clean:
 test:
 	go test -v -race ./cmd/... ./pkg/...
 
+.PHONY: test/coverage
+test/coverage:
+	go test -coverprofile=cover.out ./cmd/... ./pkg/...
+	grep -v "mock" cover.out > filtered_cover.out
+	go tool cover -html=filtered_cover.out -o coverage.html
+	rm cover.out filtered_cover.out
+
 .PHONY: test-sanity
 test-sanity:
 	go test -v -race ./tests/sanity/...
