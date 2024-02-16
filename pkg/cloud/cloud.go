@@ -963,14 +963,6 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}, nil
 }
 
-func (c *cloud) IsExistInstance(ctx context.Context, nodeID string) bool {
-	instance, err := c.getInstance(ctx, nodeID)
-	if err != nil || instance == nil {
-		return false
-	}
-	return true
-}
-
 func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
 	descriptions := "Created by AWS EBS CSI driver for volume " + volumeID
 
