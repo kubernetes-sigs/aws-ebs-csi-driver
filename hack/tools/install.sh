@@ -17,27 +17,27 @@
 set -euo pipefail
 
 # https://pypi.org/project/awscli/
-AWSCLI_VERSION="1.31.7"
+AWSCLI_VERSION="1.32.44"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.10.1"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.165.0"
+EKSCTL_VERSION="v0.171.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.13.2"
+GINKGO_VERSION="v2.15.0"
 # https://github.com/golangci/golangci-lint
 GOLANGCI_LINT_VERSION="v1.54.0"
 # https://github.com/helm/helm
-HELM_VERSION="v3.13.2"
+HELM_VERSION="v3.14.1"
 # https://github.com/kubernetes/kops
 KOPS_VERSION="v1.29.0-alpha.3"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
-# https://github.com/patrickvane/shfmt
-SHFMT_VERSION="v3.7.0"
+# https://github.com/mvdan/sh
+SHFMT_VERSION="v3.8.0"
 # https://pypi.org/project/yamale/
 YAMALE_VERSION="4.0.4"
 # https://pypi.org/project/yamllint/
-YAMLLINT_VERSION="1.32.0"
+YAMLLINT_VERSION="1.35.1"
 
 OS="$(go env GOHOSTOS)"
 ARCH="$(go env GOHOSTARCH)"
