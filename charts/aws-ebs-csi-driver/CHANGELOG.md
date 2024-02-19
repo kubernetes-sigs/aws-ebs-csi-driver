@@ -1,4 +1,20 @@
 # Helm chart
+## v2.28.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This is the last minor version of the EBS CSI Driver Helm chart to support upgrading with `--reuse-values`. Future versions of the chart (starting with `v2.29.0`) will not test for `--reuse-values` compatibility and upgrading with `--reuse-values` will likely fail. Users of `--reuse-values` are strongly encouraged to migrate to `--reset-then-reuse-values`.
+
+For more information see [the deprecation announcement](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864).
+
+### Other Changes
+* Bump driver version to `v1.28.0` and sidecars to latest versions
+* Add labels to leases role used by EBS CSI controller ([#1914](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1914), [@cHiv0rz](https://github.com/cHiv0rz))
+* Enforce `linux` and `amd64` node affinity for helm tester pod ([#1922](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1922), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add configuration for `DaemonSet` annotations ([#1923](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1923), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Incorporate KubeLinter recommended best practices for chart tester pod ([#1924](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1924), [@torredil](https://github.com/torredil))
+* Add configuration for chart tester pod image ([#1928](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1928), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 ## v2.27.0
 * Bump driver version to `v1.27.0`
 * Add parameters for tuning revisionHistoryLimit and emptyDir volumes ([#1840](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1840), [@bodgit](https://github.com/bodgit))
