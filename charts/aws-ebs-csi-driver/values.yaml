@@ -377,7 +377,12 @@ node:
   # Enable the linux daemonset creation
   enableLinux: true
   enableWindows: false
+  # The number of attachment slots to reserve for system use (and not to be used for CSI volumes)
+  # When this parameter is not specified (or set to -1), the EBS CSI Driver will attempt to determine the number of reserved slots via heuristic
+  # Cannot be specified at the same time as `node.volumeAttachLimit`
+  reservedVolumeAttachments:
   # The "maximum number of attachable volumes" per node
+  # Cannot be specified at the same time as `node.reservedVolumeAttachments`
   volumeAttachLimit:
   updateStrategy:
     type: RollingUpdate
