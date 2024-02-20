@@ -1,4 +1,8 @@
 # Helm chart
+## v2.28.1
+* Add `reservedVolumeAttachments` that overrides heuristic-determined reserved attachments via  `--reserved-volume-attachments` CLI option from [PR #1919](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1919) through Helm ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko)) 
+* Add `additionalArgs` parameter to node daemonSet ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 ## v2.28.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
