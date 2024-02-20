@@ -332,6 +332,7 @@ node:
   loggingFormat: text
   logLevel: 2
   priorityClassName:
+  additionalArgs: []
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:

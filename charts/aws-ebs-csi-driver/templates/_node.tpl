@@ -80,6 +80,9 @@ spec:
             {{- if .Values.node.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
+            {{- range .Values.node.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
