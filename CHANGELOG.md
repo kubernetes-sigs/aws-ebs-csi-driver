@@ -1,3 +1,22 @@
+# v1.28.0
+### Notable Changes
+* Add ability to override heuristic-determined reserved attachments via  `--reserved-volume-attachments` CLI option ([#1919](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1919), [@jsafrane](https://github.com/jsafrane))
+    * In its default behavior, the EBS CSI Driver will attempt to guess the number of reserved volume slots via IMDS metadata (when it is available). Specifying the `--reserved-volume-attachments` CLI option overrides this heuristic value with a user-supplied value.
+    * It is strongly encouraged for users that need to reserve a well-known number of volume slots for non-CSI volumes (such as mounting an extra volume for `/var/lib/docker` data) use this new CLI option to avoid incorrect or incosistent behavior from the heuristic.
+* Report zone via well-known topology key in NodeGetInfo ([#1931](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1931), [@ConnorJC3](https://github.com/ConnorJC3))
+    * A future release of the EBS CSI Driver will migrate the topology key for created volumes from `topology.ebs.csi.aws.com/zone` to the well-known and standard `topology.kubernetes.io/zone`.
+    * After this future migration, downgrades of the EBS CSI Driver to versions prior to `v1.28.0` will become impossible in some environments (particularly, environments not running the [AWS CCM](https://github.com/kubernetes/cloud-provider-aws)).
+
+### Bug Fixes
+* Fix three tooling papercuts ([#1933](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1933), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Improvements
+* Add scalability FAQ entry ([#1894](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1894), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add 6 minute attachment delay FAQ entry ([#1927](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1927), [@torredil](https://github.com/torredil))
+* Add `--modify-volume-request-handler-timeout` CLI option ([#1915](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1915), [@andrewcharlton](https://github.com/andrewcharlton))
+* Add `Makefile` target for code coverage report ([#1932](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1932), [@torredil](https://github.com/torredil))
+* Bump dependencies for release; Add m7i-flex instance type to dedicated limits list ([#1936](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1936), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.27.0
 ### Notable Changes
 * Enable use of driver on AMIs with instance store mounts ([#1889](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1889), [@ConnorJC3](https://github.com/ConnorJC3))
