@@ -1,3 +1,19 @@
+/*
+Copyright 2024 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package driver
 
 import (
@@ -15,7 +31,9 @@ import (
 )
 
 const (
-	ModificationKeyVolumeType = "volumeType"
+	ModificationKeyVolumeType = "type"
+	// Retained for backwards compatibility, but not recommended
+	DeprecatedModificationKeyVolumeType = "volumeType"
 
 	ModificationKeyIOPS = "iops"
 
@@ -187,43 +205,15 @@ func (d *controllerService) ModifyVolumeProperties(
 		return nil, err
 	}
 
+	options, err := parseModifyVolumeParameters(req.GetParameters())
+	if err != nil {
+		return nil, err
+	}
+
 	name := req.GetName()
-	modifyOptions := cloud.ModifyDiskOptions{}
-	for key, value := range req.GetParameters() {
-		switch key {
-		case ModificationKeyIOPS:
-			iops, err := strconv.Atoi(value)
-			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
-			}
-			modifyOptions.IOPS = iops
-		case ModificationKeyThroughput:
-			throughput, err := strconv.Atoi(value)
-			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
-			}
-			modifyOptions.Throughput = throughput
-		case ModificationKeyVolumeType:
-			modifyOptions.VolumeType = value
-		}
-	}
-
-	responseChan := make(chan modifyVolumeResponse)
-	request := modifyVolumeRequest{
-		modifyDiskOptions: modifyOptions,
-		responseChan:      responseChan,
-	}
-
-	// Intentionally not pass in context as we deal with context locally in this method
-	d.addModifyVolumeRequest(name, &request) //nolint:contextcheck
-
-	select {
-	case response := <-responseChan:
-		if response.err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not modify volume %q: %v", name, response.err)
-		}
-	case <-ctx.Done():
-		return nil, status.Errorf(codes.Internal, "Could not modify volume %q: context cancelled", name)
+	err = d.modifyVolumeWithCoalescing(ctx, name, options)
+	if err != nil {
+		return nil, err
 	}
 
 	return &rpc.ModifyVolumePropertiesResponse{}, nil
@@ -234,5 +224,59 @@ func validateModifyVolumePropertiesRequest(req *rpc.ModifyVolumePropertiesReques
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
+	return nil
+}
+
+func parseModifyVolumeParameters(params map[string]string) (*cloud.ModifyDiskOptions, error) {
+	options := cloud.ModifyDiskOptions{}
+
+	for key, value := range params {
+		switch key {
+		case ModificationKeyIOPS:
+			iops, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
+			}
+			options.IOPS = iops
+		case ModificationKeyThroughput:
+			throughput, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
+			}
+			options.Throughput = throughput
+		case DeprecatedModificationKeyVolumeType:
+			if _, ok := params[ModificationKeyVolumeType]; ok {
+				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")
+				continue
+			}
+			klog.InfoS("Key `volumeType` is deprecated, please use `type` instead")
+			options.VolumeType = value
+		case ModificationKeyVolumeType:
+			options.VolumeType = value
+		}
+	}
+
+	return &options, nil
+}
+
+func (d *controllerService) modifyVolumeWithCoalescing(ctx context.Context, volume string, options *cloud.ModifyDiskOptions) error {
+	responseChan := make(chan modifyVolumeResponse)
+	request := modifyVolumeRequest{
+		modifyDiskOptions: *options,
+		responseChan:      responseChan,
+	}
+
+	// Intentionally not pass in context as we deal with context locally in this method
+	d.addModifyVolumeRequest(volume, &request) //nolint:contextcheck
+
+	select {
+	case response := <-responseChan:
+		if response.err != nil {
+			return status.Errorf(codes.Internal, "Could not modify volume %q: %v", volume, response.err)
+		}
+	case <-ctx.Done():
+		return status.Errorf(codes.Internal, "Could not modify volume %q: context cancelled", volume)
+	}
+
 	return nil
 }

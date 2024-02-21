@@ -1,10 +1,25 @@
+/*
+Copyright 2024 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package driver
 
 import (
 	"context"
 	"fmt"
 
-	// "errors"
 	"sync"
 	"testing"
 	"time"
@@ -19,8 +34,75 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
 
-// TestBasicRequestCoalescingSuccess tests the success case of coalescing 2 requests from ControllerExpandVolume and ModifyVolumeProperties respectively.
-func TestBasicRequestCoalescingSuccess(t *testing.T) {
+type modifyVolumeExecutor func(ctx context.Context, driver controllerService, name string, params map[string]string) error
+
+func externalResizerModifyVolume(ctx context.Context, driver controllerService, name string, params map[string]string) error {
+	_, err := driver.ControllerModifyVolume(ctx, &csi.ControllerModifyVolumeRequest{
+		VolumeId:          name,
+		MutableParameters: params,
+	})
+	return err
+}
+
+func modifierForK8sModifyVolume(ctx context.Context, driver controllerService, name string, params map[string]string) error {
+	_, err := driver.ModifyVolumeProperties(ctx, &rpc.ModifyVolumePropertiesRequest{
+		Name:       name,
+		Parameters: params,
+	})
+	return err
+}
+
+func TestVolumeModificationWithCoalescing(t *testing.T) {
+	testCases := []struct {
+		name         string
+		testFunction func(t *testing.T, executor modifyVolumeExecutor)
+	}{
+		{
+			name:         "basic request coalescing success",
+			testFunction: testBasicRequestCoalescingSuccess,
+		},
+		{
+			name:         "request fail",
+			testFunction: testRequestFail,
+		},
+		{
+			name:         "partial fail",
+			testFunction: testPartialFail,
+		},
+		{
+			name:         "sequential requests",
+			testFunction: testSequentialRequests,
+		},
+		{
+			name:         "duplicate requests",
+			testFunction: testDuplicateRequest,
+		},
+		{
+			name:         "context timeout",
+			testFunction: testContextTimeout,
+		},
+		{
+			name:         "timing",
+			testFunction: testResponseReturnTiming,
+		},
+	}
+
+	for _, tc := range testCases {
+		// Not strictly necessary but required by `go vet`
+		tc := tc
+		t.Run(tc.name+" - volume-modifier-for-k8s", func(t *testing.T) {
+			t.Parallel()
+			tc.testFunction(t, modifierForK8sModifyVolume)
+		})
+		t.Run(tc.name+": external-resizier", func(t *testing.T) {
+			t.Parallel()
+			tc.testFunction(t, externalResizerModifyVolume)
+		})
+	}
+}
+
+// TestBasicRequestCoalescingSuccess tests the success case of coalescing 2 requests from ControllerExpandVolume and a modify function respectively.
+func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -65,16 +147,13 @@ func TestBasicRequestCoalescingSuccess(t *testing.T) {
 		}
 		wg.Done()
 	})
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType,
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType,
 		})
 
 		if err != nil {
-			t.Error("ModifyVolumeProperties returned error")
+			t.Error("Modify returned error")
 		}
 		wg.Done()
 	})
@@ -83,7 +162,7 @@ func TestBasicRequestCoalescingSuccess(t *testing.T) {
 }
 
 // TestRequestFail tests failing requests from ResizeOrModifyDisk failure.
-func TestRequestFail(t *testing.T) {
+func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -122,16 +201,13 @@ func TestRequestFail(t *testing.T) {
 		}
 		wg.Done()
 	})
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType,
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType,
 		})
 
 		if err == nil {
-			t.Error("ModifyVolumeProperties should fail")
+			t.Error("Modify should fail")
 		}
 		wg.Done()
 	})
@@ -144,7 +220,7 @@ func TestRequestFail(t *testing.T) {
 // 2) Change volume type to NewVolumeType1
 // 3) Change volume type to NewVolumeType2
 // The expected result is the resizing request succeeds and one of the volume-type requests fails.
-func TestPartialFail(t *testing.T) {
+func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType1 = "gp3"
 	const NewVolumeType2 = "io2"
 	const NewSize = 5 * util.GiB
@@ -195,22 +271,16 @@ func TestPartialFail(t *testing.T) {
 		}
 		wg.Done()
 	})
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType1, // gp3
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType1, // gp3
 		})
 		volumeType1Err = err != nil
 		wg.Done()
 	})
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType2, // io2
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType2, // io2
 		})
 		if err != nil {
 			klog.InfoS("Got err io2")
@@ -241,7 +311,7 @@ func TestPartialFail(t *testing.T) {
 }
 
 // TestSequential tests sending 2 requests sequentially.
-func TestSequentialRequests(t *testing.T) {
+func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -284,16 +354,13 @@ func TestSequentialRequests(t *testing.T) {
 	// We expect ModifyVolume to be called by the end of this sleep
 	time.Sleep(5 * time.Second)
 
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType,
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType,
 		})
 
 		if err != nil {
-			t.Error("ModifyVolumeProperties returned error")
+			t.Error("Modify returned error")
 		}
 		wg.Done()
 	})
@@ -302,7 +369,7 @@ func TestSequentialRequests(t *testing.T) {
 }
 
 // TestDuplicateRequest tests sending multiple same requests roughly in parallel.
-func TestDuplicateRequest(t *testing.T) {
+func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
 
@@ -341,15 +408,12 @@ func TestDuplicateRequest(t *testing.T) {
 			}
 			wg.Done()
 		})
-		go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-			_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-				Name: volumeID,
-				Parameters: map[string]string{
-					ModificationKeyVolumeType: "io2",
-				},
+		go wrapTimeout(t, "Modify timed out", func() {
+			err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+				ModificationKeyVolumeType: "io2",
 			})
 			if err != nil {
-				t.Error("Duplicate ModifyVolumeProperties request should succeed")
+				t.Error("Duplicate Modify request should succeed")
 			}
 			wg.Done()
 		})
@@ -359,7 +423,7 @@ func TestDuplicateRequest(t *testing.T) {
 }
 
 // TestContextTimeout tests request failing due to context cancellation and the behavior of the following request.
-func TestContextTimeout(t *testing.T) {
+func testContextTimeout(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -412,16 +476,13 @@ func TestContextTimeout(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 	cancel()
 
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType,
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType,
 		})
 
 		if err != nil {
-			t.Error("ModifyVolumeProperties returned error")
+			t.Error("Modify returned error")
 		}
 		wg.Done()
 	})
@@ -430,7 +491,7 @@ func TestContextTimeout(t *testing.T) {
 }
 
 // TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk
-func TestResponseReturnTiming(t *testing.T) {
+func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	var ec2ModifyVolumeFinished = false
@@ -478,19 +539,16 @@ func TestResponseReturnTiming(t *testing.T) {
 		}
 		wg.Done()
 	})
-	go wrapTimeout(t, "ModifyVolumeProperties timed out", func() {
-		_, err := awsDriver.ModifyVolumeProperties(context.Background(), &rpc.ModifyVolumePropertiesRequest{
-			Name: volumeID,
-			Parameters: map[string]string{
-				ModificationKeyVolumeType: NewVolumeType,
-			},
+	go wrapTimeout(t, "Modify timed out", func() {
+		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			ModificationKeyVolumeType: NewVolumeType,
 		})
 
 		if !ec2ModifyVolumeFinished {
-			t.Error("ModifyVolumeProperties returned success BEFORE ResizeOrModifyDisk returns")
+			t.Error("Modify returned success BEFORE ResizeOrModifyDisk returns")
 		}
 		if err != nil {
-			t.Error("ModifyVolumeProperties returned error")
+			t.Error("Modify returned error")
 		}
 
 		wg.Done()
