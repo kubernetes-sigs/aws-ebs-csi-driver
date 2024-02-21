@@ -17,13 +17,14 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"time"
 )
 
 const (
@@ -137,6 +138,21 @@ func WaitForPvToModify(c clientset.Interface, ns *v1.Namespace, pvName string, e
 		}
 	}
 	return fmt.Errorf("gave up after waiting %v for pv %q to complete modifying", timeout, pvName)
+}
+
+// WaitForVacToApplyToPv waits for a PV's VAC to match the PVC's VAC
+func WaitForVacToApplyToPv(c clientset.Interface, ns *v1.Namespace, pvName string, expectedVac string, timeout time.Duration, interval time.Duration) error {
+	framework.Logf("waiting up to %v for pv in namespace %q to be modified via VAC", timeout, ns.Name)
+
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(interval) {
+		modifyingPv, _ := c.CoreV1().PersistentVolumes().Get(context.TODO(), pvName, metav1.GetOptions{})
+
+		if modifyingPv.Spec.VolumeAttributesClassName != nil && *modifyingPv.Spec.VolumeAttributesClassName == expectedVac {
+			framework.Logf("vac updated to %v", *modifyingPv.Spec.VolumeAttributesClassName)
+			return nil
+		}
+	}
+	return fmt.Errorf("gave up after waiting %v for pv %q to complete modifying via VAC", timeout, pvName)
 }
 
 func CreateVolumeDetails(createVolumeParameters map[string]string, volumeSize string) *VolumeDetails {

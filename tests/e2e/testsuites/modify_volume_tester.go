@@ -17,9 +17,11 @@ package testsuites
 import (
 	"context"
 	"fmt"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/storage/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -41,7 +43,14 @@ var (
 	volumeSize = "10Gi" // Different from driver.MinimumSizeForVolumeType to simplify iops, throughput, volumeType modification
 )
 
-func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Namespace, ebsDriver driver.PVTestDriver) {
+type ModifyTestType int64
+
+const (
+	VolumeModifierForK8s ModifyTestType = iota
+	ExternalResizer
+)
+
+func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Namespace, ebsDriver driver.PVTestDriver, testType ModifyTestType) {
 	By("setting up pvc")
 	volumeDetails := CreateVolumeDetails(modifyVolumeTest.CreateVolumeParameters, volumeSize)
 	testVolume, _ := volumeDetails.SetupDynamicPersistentVolumeClaim(c, ns, ebsDriver)
@@ -59,7 +68,22 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 
 	By("modifying the pvc")
 	modifyingPvc, _ := c.CoreV1().PersistentVolumeClaims(ns.Name).Get(context.TODO(), testVolume.persistentVolumeClaim.Name, metav1.GetOptions{})
-	AnnotatePvc(modifyingPvc, modifyVolumeTest.ModifyVolumeAnnotations)
+	if testType == VolumeModifierForK8s {
+		AnnotatePvc(modifyingPvc, modifyVolumeTest.ModifyVolumeAnnotations)
+	} else if testType == ExternalResizer {
+		vac, err := c.StorageV1alpha1().VolumeAttributesClasses().Create(context.Background(), &v1alpha1.VolumeAttributesClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      formatOptionMountPod.pod.Name,
+				Namespace: ns.Name,
+			},
+			DriverName: "ebs.csi.aws.com",
+			Parameters: modifyVolumeTest.ModifyVolumeAnnotations,
+		}, metav1.CreateOptions{})
+		framework.ExpectNoError(err)
+
+		vacName := vac.Name
+		modifyingPvc.Spec.VolumeAttributesClassName = &vacName
+	}
 
 	var updatedPvcSize resource.Quantity
 	if modifyVolumeTest.ShouldResizeVolume {
@@ -73,9 +97,12 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 	}
 	framework.Logf("updated pvc: %s\n", modifiedPvc.Annotations)
 
-	// Confirm Volume Modified
 	By("wait for and confirm pv modification")
-	err = WaitForPvToModify(c, ns, testVolume.persistentVolume.Name, modifyVolumeTest.ModifyVolumeAnnotations, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
+	if testType == VolumeModifierForK8s {
+		err = WaitForPvToModify(c, ns, testVolume.persistentVolume.Name, modifyVolumeTest.ModifyVolumeAnnotations, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
+	} else if testType == ExternalResizer {
+		err = WaitForVacToApplyToPv(c, ns, testVolume.persistentVolume.Name, *modifyingPvc.Spec.VolumeAttributesClassName, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
+	}
 	framework.ExpectNoError(err, fmt.Sprintf("fail to modify pv(%s): %v", modifyingPvc.Name, err))
 	if modifyVolumeTest.ShouldResizeVolume {
 		err = WaitForPvToResize(c, ns, testVolume.persistentVolume.Name, updatedPvcSize, DefaultResizeTimout, DefaultK8sApiPollingInterval)
