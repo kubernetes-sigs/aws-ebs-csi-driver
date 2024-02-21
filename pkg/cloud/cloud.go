@@ -1253,7 +1253,7 @@ func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshot
 // On a random AWS account (shared among several developers) it took 4s on average.
 func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	var (
-		checkInterval = 3 * time.Second
+		checkInterval = 1 * time.Second
 		// This timeout can be "ovewritten" if the value returned by ctx.Deadline()
 		// comes sooner. That value comes from the external provisioner controller.
 		checkTimeout = 1 * time.Minute
