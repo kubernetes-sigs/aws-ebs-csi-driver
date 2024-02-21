@@ -51,6 +51,7 @@ var (
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+		csi.ControllerServiceCapability_RPC_MODIFY_VOLUME,
 	}
 )
 
@@ -232,6 +233,23 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 			}
 		}
+	}
+
+	modifyOptions, err := parseModifyVolumeParameters(req.GetMutableParameters())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter: %v", err)
+	}
+
+	// "Values specified in mutable_parameters MUST take precedence over the values from parameters."
+	// https://github.com/container-storage-interface/spec/blob/master/spec.md#createvolume
+	if modifyOptions.VolumeType != "" {
+		volumeType = modifyOptions.VolumeType
+	}
+	if modifyOptions.IOPS != 0 {
+		iops = modifyOptions.IOPS
+	}
+	if modifyOptions.Throughput != 0 {
+		throughput = modifyOptions.Throughput
 	}
 
 	responseCtx := map[string]string{}
@@ -602,7 +620,23 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 func (d *controllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerModifyVolume: called", "args", *req)
-	return nil, status.Error(codes.Unimplemented, "")
+
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	options, err := parseModifyVolumeParameters(req.GetMutableParameters())
+	if err != nil {
+		return nil, err
+	}
+
+	err = d.modifyVolumeWithCoalescing(ctx, volumeID, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return &csi.ControllerModifyVolumeResponse{}, nil
 }
 
 func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
