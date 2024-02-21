@@ -44,6 +44,8 @@ const (
 	defaultVolumeID = "vol-test-1234"
 	defaultNodeID   = "node-1234"
 	defaultPath     = "/dev/xvdaa"
+
+	defaultCreateDiskDeadline = time.Second * 5
 )
 
 func generateVolumes(volIdCount, volTagCount int) []*ec2.Volume {
@@ -807,7 +809,8 @@ func TestCreateDisk(t *testing.T) {
 				VolumeId:   aws.String("snap-test-volume"),
 				State:      aws.String("completed"),
 			}
-			ctx := context.Background()
+			ctx, ctxCancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+			defer ctxCancel()
 
 			if tc.expCreateVolumeInput != nil {
 				matcher := eqCreateVolume(tc.expCreateVolumeInput)
