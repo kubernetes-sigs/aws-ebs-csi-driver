@@ -88,13 +88,12 @@ func TestVolumeModificationWithCoalescing(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		// Not strictly necessary but required by `go vet`
-		tc := tc
-		t.Run(tc.name+" - volume-modifier-for-k8s", func(t *testing.T) {
+		tc := tc // Not strictly necessary but required by `go vet`
+		t.Run(tc.name+": volume-modifier-for-k8s", func(t *testing.T) {
 			t.Parallel()
 			tc.testFunction(t, modifierForK8sModifyVolume)
 		})
-		t.Run(tc.name+": external-resizier", func(t *testing.T) {
+		t.Run(tc.name+": external-resizer", func(t *testing.T) {
 			t.Parallel()
 			tc.testFunction(t, externalResizerModifyVolume)
 		})
