@@ -225,7 +225,113 @@ func executeDescribeVolumesTest(t *testing.T, c *cloud, volumeIDs, volumeNames [
 			}
 			resultCh <- volume
 			// passing `request` as a parameter to create a copy
-			// TODO remove after https://github.com/golang/go/discussions/56010 is implemented
+			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
+		}(request, r[i], e[i])
+	}
+
+	wg.Wait()
+
+	for i := range requests {
+		select {
+		case result := <-r[i]:
+			if result == nil {
+				t.Errorf("Received nil result for a request")
+			}
+		case err := <-e[i]:
+			if expErr == nil {
+				t.Errorf("Error while processing request: %v", err)
+			}
+			if !errors.Is(err, expErr) {
+				t.Errorf("Expected error %v, but got %v", expErr, err)
+			}
+		default:
+			t.Errorf("Did not receive a result or an error for a request")
+		}
+	}
+}
+
+func TestBatchDescribeInstances(t *testing.T) {
+	testCases := []struct {
+		name        string
+		instanceIds []string
+		mockFunc    func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation)
+		expErr      error
+	}{
+		{
+			name:        "TestBatchDescribeInstances: instance by ID",
+			instanceIds: []string{"i-001", "i-002", "i-003"},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
+				reservationOutput := &ec2.DescribeInstancesOutput{Reservations: reservations}
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(reservationOutput, expErr).Times(1)
+			},
+			expErr: nil,
+		},
+		{
+			name:        "TestBatchDescribeInstances: EC2 API generic error",
+			instanceIds: []string{"i-001", "i-002", "i-003"},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
+				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+			},
+			expErr: fmt.Errorf("generic EC2 API error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+			cloudInstance := c.(*cloud)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+
+			// Setup mocks
+			var instances []*ec2.Instance
+			for _, instanceId := range tc.instanceIds {
+				instances = append(instances, &ec2.Instance{InstanceId: aws.String(instanceId)})
+			}
+			reservation := &ec2.Reservation{Instances: instances}
+			reservations := []*ec2.Reservation{reservation}
+			tc.mockFunc(mockEC2, tc.expErr, reservations)
+
+			executeDescribeInstancesTest(t, cloudInstance, tc.instanceIds, tc.expErr)
+		})
+	}
+}
+
+func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIds []string, expErr error) {
+	var wg sync.WaitGroup
+
+	getRequestForID := func(id string) *ec2.DescribeInstancesInput {
+		return &ec2.DescribeInstancesInput{InstanceIds: []*string{&id}}
+	}
+
+	requests := make([]*ec2.DescribeInstancesInput, 0, len(instanceIds))
+	for _, instanceID := range instanceIds {
+		requests = append(requests, getRequestForID(instanceID))
+	}
+
+	r := make([]chan *ec2.Instance, len(requests))
+	e := make([]chan error, len(requests))
+
+	for i, request := range requests {
+		wg.Add(1)
+		r[i] = make(chan *ec2.Instance, 1)
+		e[i] = make(chan error, 1)
+
+		go func(req *ec2.DescribeInstancesInput, resultCh chan *ec2.Instance, errCh chan error) {
+			defer wg.Done()
+			instance, err := c.batchDescribeInstances(req)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			resultCh <- instance
+			// passing `request` as a parameter to create a copy
+			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
 		}(request, r[i], e[i])
 	}
 
