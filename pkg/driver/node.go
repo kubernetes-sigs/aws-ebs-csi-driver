@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 )
@@ -68,6 +69,8 @@ var (
 		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 	}
 
+	// taintRemovalInitialDelay is the initial delay for node taint removal
+	taintRemovalInitialDelay = 1 * time.Second
 	// taintRemovalBackoff is the exponential backoff configuration for node taint removal
 	taintRemovalBackoff = wait.Backoff{
 		Duration: 500 * time.Millisecond,
@@ -103,7 +106,9 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 
 	// Remove taint from node to indicate driver startup success
 	// This is done at the last possible moment to prevent race conditions or false positive removals
-	go removeTaintInBackground(cloud.DefaultKubernetesAPIClient, removeNotReadyTaint)
+	time.AfterFunc(taintRemovalInitialDelay, func() {
+		removeTaintInBackground(cloud.DefaultKubernetesAPIClient, removeNotReadyTaint)
+	})
 
 	return nodeService{
 		metadata:         metadata,
@@ -896,6 +901,11 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 		return err
 	}
 
+	err = checkAllocatable(clientset, nodeName)
+	if err != nil {
+		return err
+	}
+
 	var taintsToKeep []corev1.Taint
 	for _, taint := range node.Spec.Taints {
 		if taint.Key != AgentNotReadyNodeTaintKey {
@@ -934,6 +944,25 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 	}
 	klog.InfoS("Removed taint(s) from local node", "node", nodeName)
 	return nil
+}
+
+func checkAllocatable(clientset kubernetes.Interface, nodeName string) error {
+	csiNode, err := clientset.StorageV1().CSINodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: %w", nodeName, err)
+	}
+
+	for _, driver := range csiNode.Spec.Drivers {
+		if driver.Name == DriverName {
+			if driver.Allocatable != nil && driver.Allocatable.Count != nil {
+				klog.InfoS("CSINode Allocatable value is set", "nodeName", nodeName, "count", *driver.Allocatable.Count)
+				return nil
+			}
+			return fmt.Errorf("isAllocatableSet: allocatable value not set for driver on node %s", nodeName)
+		}
+	}
+
+	return fmt.Errorf("isAllocatableSet: driver not found on node %s", nodeName)
 }
 
 func recheckFormattingOptionParameter(context map[string]string, key string, fsConfigs map[string]fileSystemConfig, fsType string) (value string, err error) {
