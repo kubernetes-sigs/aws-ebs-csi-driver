@@ -123,8 +123,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", fu
 	for testName, modifyVolumeTest := range modifyVolumeTests {
 		modifyVolumeTest := modifyVolumeTest
 		Context(testName, func() {
-			It("will modify associated PV and EBS Volume", func() {
-				modifyVolumeTest.Run(cs, ns, ebsDriver)
+			It("will modify associated PV and EBS Volume via volume-modifier-for-k8s", func() {
+				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.VolumeModifierForK8s)
+			})
+			It("will modify associated PV and EBS Volume via external-resizer", func() {
+				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.ExternalResizer)
 			})
 		})
 	}

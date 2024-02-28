@@ -1,0 +1,9 @@
+---
+apiVersion: storage.k8s.io/v1alpha1
+kind: VolumeAttributesClass
+metadata:
+  name: io2-class
+driverName: ebs.csi.aws.com
+parameters:
+  type: io2
+  iops: "10000"

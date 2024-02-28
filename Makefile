@@ -118,7 +118,7 @@ e2e/single-az: bin/helm bin/ginkgo
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
 	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true" \
+	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true,sidecars.provisioner.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.resizer.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true'" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/multi-az

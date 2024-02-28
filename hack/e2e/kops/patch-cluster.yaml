@@ -1,4 +1,12 @@
 spec:
+  kubeAPIServer:
+    featureGates:
+      VolumeAttributesClass: "true"
+    runtimeConfig:
+      storage.k8s.io/v1alpha1: "true"
+  kubeControllerManager:
+    featureGates:
+      VolumeAttributesClass: "true"
   additionalPolicies:
     node: |
       [
