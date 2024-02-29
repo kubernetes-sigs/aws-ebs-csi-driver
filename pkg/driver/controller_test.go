@@ -247,7 +247,7 @@ func TestCreateVolume(t *testing.T) {
 						Requisite: []*csi.Topology{
 							{
 								Segments: map[string]string{
-									TopologyKey:     expZone,
+									ZoneTopologyKey: expZone,
 									AwsAccountIDKey: outpostArn.AccountID,
 									AwsOutpostIDKey: outpostArn.Resource,
 									AwsRegionKey:    outpostArn.Region,
@@ -264,7 +264,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{
-								TopologyKey:     expZone,
+								ZoneTopologyKey: expZone,
 								AwsAccountIDKey: outpostArn.AccountID,
 								AwsOutpostIDKey: outpostArn.Resource,
 								AwsRegionKey:    outpostArn.Region,
@@ -1283,7 +1283,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{TopologyKey: expZone},
+								Segments: map[string]string{ZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1296,7 +1296,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{TopologyKey: expZone},
+								Segments: map[string]string{ZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1307,7 +1307,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{TopologyKey: expZone},
+							Segments: map[string]string{ZoneTopologyKey: expZone},
 						},
 					},
 				}
@@ -2043,27 +2043,27 @@ func TestPickAvailabilityZone(t *testing.T) {
 		expZone     string
 	}{
 		{
-			name: "Return WellKnownTopologyKey if present from preferred",
+			name: "Return WellKnownZoneTopologyKey if present from preferred",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: ""},
+						Segments: map[string]string{ZoneTopologyKey: ""},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
 					},
 				},
 			},
 			expZone: "foobar",
 		},
 		{
-			name: "Return WellKnownTopologyKey if present from requisite",
+			name: "Return WellKnownZoneTopologyKey if present from requisite",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
 					},
 				},
 			},
@@ -2074,12 +2074,12 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: ""},
+						Segments: map[string]string{ZoneTopologyKey: ""},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 			},
@@ -2090,7 +2090,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 			},
@@ -2135,13 +2135,13 @@ func TestGetOutpostArn(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							TopologyKey:     expZone,
+							ZoneTopologyKey: expZone,
 							AwsAccountIDKey: outpostArn.AccountID,
 							AwsOutpostIDKey: outpostArn.Resource,
 							AwsRegionKey:    outpostArn.Region,
@@ -2159,7 +2159,7 @@ func TestGetOutpostArn(t *testing.T) {
 				Requisite: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							TopologyKey:     expZone,
+							ZoneTopologyKey: expZone,
 							AwsAccountIDKey: outpostArn.AccountID,
 							AwsOutpostIDKey: outpostArn.Resource,
 							AwsRegionKey:    outpostArn.Region,

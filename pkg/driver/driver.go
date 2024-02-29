@@ -51,9 +51,10 @@ const (
 	AwsRegionKey    = "topology." + DriverName + "/region"
 	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
 
-	WellKnownTopologyKey = "topology.kubernetes.io/zone"
-	// DEPRECATED Use the WellKnownTopologyKey instead
-	TopologyKey = "topology." + DriverName + "/zone"
+	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
+	// DEPRECATED Use the WellKnownZoneTopologyKey instead
+	ZoneTopologyKey = "topology." + DriverName + "/zone"
+	OSTopologyKey   = "kubernetes.io/os"
 )
 
 type Driver struct {

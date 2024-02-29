@@ -873,22 +873,22 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 		return ""
 	}
 	for _, topology := range requirement.GetPreferred() {
-		zone, exists := topology.GetSegments()[WellKnownTopologyKey]
+		zone, exists := topology.GetSegments()[WellKnownZoneTopologyKey]
 		if exists {
 			return zone
 		}
 
-		zone, exists = topology.GetSegments()[TopologyKey]
+		zone, exists = topology.GetSegments()[ZoneTopologyKey]
 		if exists {
 			return zone
 		}
 	}
 	for _, topology := range requirement.GetRequisite() {
-		zone, exists := topology.GetSegments()[WellKnownTopologyKey]
+		zone, exists := topology.GetSegments()[WellKnownZoneTopologyKey]
 		if exists {
 			return zone
 		}
-		zone, exists = topology.GetSegments()[TopologyKey]
+		zone, exists = topology.GetSegments()[ZoneTopologyKey]
 		if exists {
 			return zone
 		}
@@ -928,7 +928,7 @@ func newCreateVolumeResponse(disk *cloud.Disk, ctx map[string]string) *csi.Creat
 		}
 	}
 
-	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+	segments := map[string]string{ZoneTopologyKey: disk.AvailabilityZone}
 
 	arn, err := arn.Parse(disk.OutpostArn)
 
