@@ -24,7 +24,7 @@ log() {
 }
 
 check_dependencies() {
-  local readonly dependencies=("yq" "git" "vi" "sed")
+  local readonly dependencies=("yq" "git" "sed")
 
   for cmd in "${dependencies[@]}"; do
     if ! command -v "${cmd}" &>/dev/null; then
@@ -88,10 +88,14 @@ parse_args() {
 
 update_readme() {
   log "Updating README.md"
-  # vi macro that adds new driver version 'Container Images' row to README.md
-  vi -s <(echo "gg/## Container Images
-  jjjjyy:%s/${PREV_DRIVER_VERSION}/${NEW_DRIVER_VERSION}/g
-  jjjjjjp:wq") "$README_PATH"
+  $SED "/^## Container Images$/,+5 s/$PREV_DRIVER_VERSION/$NEW_DRIVER_VERSION/g" -i "$README_PATH"
+
+  # If the major/minor version has changed, we also need to replace the old prev version with the new previous version
+  # (If not, that means this is a patch release, and we shouldn't change the other version)
+  if [ "${PREV_DRIVER_VERSION%.*}" != "${NEW_DRIVER_VERSION%.*}" ]; then
+    OLD_VERSION_TO_REPLACE=$($SED -n "/^## Container Images$/,+5 p" "$README_PATH" | tail -n 1 | grep -o " v[^ ]* " | tr -d " ")
+    $SED "/^## Container Images$/,+5 s/$OLD_VERSION_TO_REPLACE/$PREV_DRIVER_VERSION/g" -i "$README_PATH"
+  fi
 }
 
 update_makefile() {

@@ -14,56 +14,14 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 * **Block Volumes** - Consume an EBS volume as a [raw block device](https://kubernetes-csi.github.io/docs/raw-block.html).
 * **Volume Snapshots** - Create and restore [snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) taken from a volume in Kubernetes.
 * **Volume Resizing** - Expand the volume by specifying a new size in the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims) (PVC).
+* **Volume Modification** - Change the properties (type, iops, or throughput) [via a `VolumeAttributesClass`](examples/kubernetes/modify-volume).
 
 ## Container Images
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | v1.28.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.28.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.28.0                      |
-
-<details>
-<summary>Previous Images</summary>
-
-| Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
-|----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | v1.27.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.27.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.27.0                      |
-| v1.26.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.26.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.26.1                      |
-| v1.26.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.26.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.26.0                      |
-| v1.25.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.25.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.25.0                      |
-| v1.24.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.24.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.24.1                      |
-| v1.24.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.24.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.24.0                      |
-| v1.23.2        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.23.2                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.23.2                      |
-| v1.23.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.23.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.23.1                      |
-| v1.23.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.23.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.23.0                      |
-| v1.22.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.22.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.22.1                      |
-| v1.22.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.22.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.22.0                      |
-| v1.21.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.21.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.21.0                      |
-| v1.20.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.20.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.20.0                      |
-| v1.19.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.19.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.19.0                      |
-| v1.18.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.18.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.18.0                      |
-| v1.17.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.17.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.17.0                      |
-| v1.16.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.16.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.16.1                      |
-| v1.16.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.16.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.16.0                      |
-| v1.15.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.15.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.15.1                      |
-| v1.15.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.15.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.15.0                      |
-| v1.14.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.14.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.14.1                      |
-| v1.14.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.14.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.14.0                      |
-| v1.13.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.13.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.13.0                      |
-| v1.12.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.12.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.1                      |
-| v1.12.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.12.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.12.0                      |
-| v1.11.5        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.11.5                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.5                      |
-| v1.11.4        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.11.4                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.4                      |
-| v1.11.3        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.11.3                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.3                      |
-| v1.11.2        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.11.2                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.11.2                      |
-| v1.10.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.10.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.10.0                      |
-| v1.9.0         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.9.0                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.9.0                       |
-| v1.8.0         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.8.0                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.8.0                       |
-| v1.7.0         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.7.0                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.7.0                       |
-| v1.6.2         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.6.2                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.2                       |
-| v1.6.1         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.6.1                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.1                       |
-| v1.6.0         | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.6.0                                            | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.6.0                       |
-
-</details>
 
 ## Releases
 
@@ -85,7 +43,9 @@ This policy is non-binding and subject to change.
 
 ## Compatibility
 
-The EBS CSI Driver is compatible with Kubernetes versions v1.17+ and implements the CSI Specification v1.1.0.
+The EBS CSI Driver is compatible with all Kubernetes versions supported by [the Kubernetes project](https://kubernetes.io/releases/) and/or [Amazon EKS (including extended support versions)](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html).
+
+The EBS CSI Driver implements the [Container Storage Interface specification](https://github.com/container-storage-interface/spec/blob/master/spec.md) version `v1.9.0`.
 
 ## Documentation
 
