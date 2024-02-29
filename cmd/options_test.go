@@ -161,6 +161,16 @@ func TestGetOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "no options at all - expect all mode",
+			testFunc: func(t *testing.T) {
+				options := testFunc(t, nil, false, false, false)
+
+				if options.DriverMode != driver.AllMode {
+					t.Fatalf("expected driver mode to be %q but it is %q", driver.AllMode, options.DriverMode)
+				}
+			},
+		},
+		{
 			name: "all mode given - expect all mode",
 			testFunc: func(t *testing.T) {
 				options := testFunc(t, []string{"all"}, true, true, true)
