@@ -38,6 +38,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -2403,6 +2405,35 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{}, nil)
 
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node-123",
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name: DriverName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq("test-node-123"), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
@@ -2414,16 +2445,52 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
 								Key:    AgentNotReadyNodeTaintKey,
-								Effect: "NoExecute",
+								Effect: corev1.TaintEffectNoExecute,
 							},
 						},
 					},
 				}, nil)
-				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Failed to patch node!"))
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				mockNode.EXPECT().
+					Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("Failed to patch node!")).
+					Times(1)
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
@@ -2436,22 +2503,184 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
 								Key:    AgentNotReadyNodeTaintKey,
-								Effect: "NoSchedule",
+								Effect: corev1.TaintEffectNoSchedule,
 							},
 						},
 					},
 				}, nil)
-				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				mockNode.EXPECT().
+					Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, nil).
+					Times(1)
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
 			},
 			expResult: nil,
+		},
+		{
+			name: "failed to get CSINode",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(nil, fmt.Errorf("Failed to get CSINode")).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: Failed to get CSINode", nodeName),
+		},
+		{
+			name: "allocatable value not set for driver on node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: allocatable value not set for driver on node %s", nodeName),
+		},
+		{
+			name: "driver not found on node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: driver not found on node %s", nodeName),
 		},
 	}
 	for _, tc := range testCases {
@@ -2462,8 +2691,13 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			k8sClientGetter := tc.setup(t, mockCtl)
 			result := removeNotReadyTaint(k8sClientGetter)
 
-			if !reflect.DeepEqual(result, tc.expResult) {
-				t.Fatalf("Expected result `%v`, got result `%v`", tc.expResult, result)
+			if (result == nil) != (tc.expResult == nil) {
+				t.Fatalf("expected %v, got %v", tc.expResult, result)
+			}
+			if result != nil && tc.expResult != nil {
+				if result.Error() != tc.expResult.Error() {
+					t.Fatalf("Expected error message `%v`, got `%v`", tc.expResult.Error(), result.Error())
+				}
 			}
 		})
 	}
