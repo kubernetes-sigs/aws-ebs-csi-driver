@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -592,10 +593,12 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	klog.V(4).InfoS("NodeGetInfo: called", "args", *req)
 
 	zone := d.metadata.GetAvailabilityZone()
+	osType := runtime.GOOS
 
 	segments := map[string]string{
-		TopologyKey:          zone,
-		WellKnownTopologyKey: zone,
+		ZoneTopologyKey:          zone,
+		WellKnownZoneTopologyKey: zone,
+		OSTopologyKey:            osType,
 	}
 
 	outpostArn := d.metadata.GetOutpostArn()

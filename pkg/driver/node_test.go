@@ -26,6 +26,7 @@ import (
 	"io/fs"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -2330,11 +2331,14 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 			at := resp.GetAccessibleTopology()
-			if at.Segments[TopologyKey] != tc.availabilityZone {
-				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[TopologyKey])
+			if at.Segments[ZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[ZoneTopologyKey])
 			}
-			if at.Segments[WellKnownTopologyKey] != tc.availabilityZone {
-				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.Segments[WellKnownTopologyKey])
+			if at.Segments[WellKnownZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.Segments[WellKnownZoneTopologyKey])
+			}
+			if at.Segments[OSTopologyKey] != runtime.GOOS {
+				t.Fatalf("Expected os topology %q, got %q", runtime.GOOS, at.Segments[OSTopologyKey])
 			}
 
 			if at.Segments[AwsAccountIDKey] != tc.outpostArn.AccountID {
