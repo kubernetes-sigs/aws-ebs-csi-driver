@@ -149,6 +149,6 @@ function json_to_yaml() {
   OUT=${2}
   for ((i = 0; i < $(jq length "$IN"); i++)); do
     echo "---" >>"$OUT"
-    jq ".[$i]" "$IN" | kubectl patch -f - --local -p "{}" --type merge -o yaml >>"$OUT"
+    jq ".[$i]" "$IN" | kubectl patch --kubeconfig /dev/null -f - --local -p "{}" --type merge -o yaml >>"$OUT"
   done
 }

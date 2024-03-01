@@ -55,7 +55,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		toStderr = fs.Bool("logtostderr", false, "log to standard error instead of files. DEPRECATED: will be removed in a future release.")
 
 		args = os.Args[1:]
-		mode = driver.AllMode
+		cmd  = string(driver.AllMode)
 
 		serverOptions     = options.ServerOptions{}
 		controllerOptions = options.ControllerOptions{}
@@ -73,47 +73,38 @@ func GetOptions(fs *flag.FlagSet) *Options {
 
 	logsapi.AddFlags(c, fs)
 
-	if len(os.Args) > 1 {
-		cmd := os.Args[1]
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		cmd = os.Args[1]
+		args = os.Args[2:]
+	}
 
-		switch {
-		case cmd == string(driver.ControllerMode):
-			controllerOptions.AddFlags(fs)
-			args = os.Args[2:]
-			mode = driver.ControllerMode
-
-		case cmd == string(driver.NodeMode):
-			nodeOptions.AddFlags(fs)
-			args = os.Args[2:]
-			mode = driver.NodeMode
-
-		case cmd == string(driver.AllMode):
-			controllerOptions.AddFlags(fs)
-			nodeOptions.AddFlags(fs)
-			args = os.Args[2:]
-
-		case strings.HasPrefix(cmd, "-"):
-			controllerOptions.AddFlags(fs)
-			nodeOptions.AddFlags(fs)
-			args = os.Args[1:]
-
-		case cmd == "pre-stop-hook":
-			clientset, clientErr := cloud.DefaultKubernetesAPIClient()
-			if clientErr != nil {
-				klog.ErrorS(err, "unable to communicate with k8s API")
-			} else {
-				err = hooks.PreStop(clientset)
-				if err != nil {
-					klog.ErrorS(err, "failed to execute PreStop lifecycle hook")
-					klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-				}
+	switch cmd {
+	case "pre-stop-hook":
+		clientset, clientErr := cloud.DefaultKubernetesAPIClient()
+		if clientErr != nil {
+			klog.ErrorS(err, "unable to communicate with k8s API")
+		} else {
+			err = hooks.PreStop(clientset)
+			if err != nil {
+				klog.ErrorS(err, "failed to execute PreStop lifecycle hook")
+				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 			}
-			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
-
-		default:
-			fmt.Printf("unknown command: %s: expected %q, %q or %q", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
-			os.Exit(1)
 		}
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+
+	case string(driver.ControllerMode):
+		controllerOptions.AddFlags(fs)
+
+	case string(driver.NodeMode):
+		nodeOptions.AddFlags(fs)
+
+	case string(driver.AllMode):
+		controllerOptions.AddFlags(fs)
+		nodeOptions.AddFlags(fs)
+
+	default:
+		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 
 	if err = fs.Parse(args); err != nil {
@@ -125,7 +116,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		klog.ErrorS(err, "failed to validate and apply logging configuration")
 	}
 
-	if mode != driver.ControllerMode {
+	if cmd != string(driver.ControllerMode) {
 		// nodeOptions must have been populated from the cmdline, validate them.
 		if err := nodeOptions.Validate(); err != nil {
 			klog.Error(err.Error())
@@ -148,7 +139,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 	}
 
 	return &Options{
-		DriverMode: mode,
+		DriverMode: driver.Mode(cmd),
 
 		ServerOptions:     &serverOptions,
 		ControllerOptions: &controllerOptions,
