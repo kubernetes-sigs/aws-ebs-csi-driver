@@ -466,4 +466,5 @@ useOldCSIDriver: false
 
 # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
 helmTester:
+  enabled: true
   image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20231206-f7b83ffbe6-master"

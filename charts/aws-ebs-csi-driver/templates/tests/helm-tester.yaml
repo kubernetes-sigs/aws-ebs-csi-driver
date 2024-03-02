@@ -1,3 +1,4 @@
+{{- if .Values.helmTester.enabled -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -212,7 +213,7 @@ spec:
           kubectl config set-credentials sa --token=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
           kubectl config set-context kubetest2 --user=sa && kubectl config use-context kubetest2
           kubectl get crd volumesnapshots.snapshot.storage.k8s.io
-          if [ $? -eq 0 ]; then 
+          if [ $? -eq 0 ]; then
             SNAPSHOTS="|snapshot fields"
           fi
           export FOCUS_REGEX="\bebs.csi.aws.com\b.+(validate content|resize volume|offline PVC|AllowedTopologies|store data$SNAPSHOTS)"
@@ -230,3 +231,4 @@ spec:
       configMap:
         name: ebs-csi-driver-test
   restartPolicy: Never
+{{- end }}
