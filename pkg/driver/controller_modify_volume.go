@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -183,7 +184,7 @@ func (d *controllerService) executeModifyVolumeRequest(volumeID string, req *mod
 	defer cancel()
 	actualSizeGiB, err := d.cloud.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
 	if err != nil {
-		return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
+		return 0, err
 	} else {
 		return actualSizeGiB, nil
 	}
@@ -272,6 +273,9 @@ func (d *controllerService) modifyVolumeWithCoalescing(ctx context.Context, volu
 	select {
 	case response := <-responseChan:
 		if response.err != nil {
+			if errors.Is(response.err, cloud.ErrInvalidArgument) {
+				return status.Errorf(codes.InvalidArgument, "Could not modify volume %q: %v", volume, response.err)
+			}
 			return status.Errorf(codes.Internal, "Could not modify volume %q: %v", volume, response.err)
 		}
 	case <-ctx.Done():

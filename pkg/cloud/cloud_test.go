@@ -1926,8 +1926,52 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				AvailabilityZone: aws.String(defaultZone),
 				VolumeType:       aws.String("gp2"),
 			},
+			modifiedVolumeError: awserr.New("GenericErr", "Generic error that does not involve invalid parameters", nil),
+			expErr:              awserr.New("GenericErr", "Generic error that does not involve invalid parameters", nil),
+		},
+		{
+			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned InvalidParameterCombination",
+			volumeID: "vol-test",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP2",
+				IOPS:       3000,
+			},
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp2"),
+			},
 			modifiedVolumeError: awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
-			expErr:              awserr.New("InvalidParameterCombination", "The parameter iops is not supported for gp2 volumes", nil),
+			expErr:              ErrInvalidArgument,
+		},
+		{
+			name:     "failure: returned returned ErrInvalidArgument when ModifyVolume returned UnknownVolumeType",
+			volumeID: "vol-test",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GPFake",
+			},
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp2"),
+			},
+			modifiedVolumeError: awserr.New("UnknownVolumeType", "Unsupported volume type 'GPFake' for volume creation.", nil),
+			expErr:              ErrInvalidArgument,
+		},
+		{
+			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned InvalidParameterValue",
+			volumeID: "vol-test",
+			modifyDiskOptions: &ModifyDiskOptions{
+				VolumeType: "GP3",
+				IOPS:       9999999,
+			},
+			existingVolume: &ec2.Volume{
+				VolumeId:         aws.String("vol-test"),
+				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       aws.String("gp2"),
+			},
+			modifiedVolumeError: awserr.New("InvalidParameterValue", "Volume iops of 9999999 is too high; maximum is x", nil),
+			expErr:              ErrInvalidArgument,
 		},
 		{
 			name:     "success: does not call ModifyVolume when no modification required",
@@ -2016,6 +2060,12 @@ func TestResizeOrModifyDisk(t *testing.T) {
 			if err != nil {
 				if tc.expErr == nil {
 					t.Fatalf("ResizeOrModifyDisk() failed: expected no error, got: %v", err)
+				} else {
+					if errors.Is(tc.expErr, ErrInvalidArgument) {
+						if !errors.Is(err, ErrInvalidArgument) {
+							t.Fatalf("ResizeOrModifyDisk() failed: expected ErrInvalidArgument, got: %v", err)
+						}
+					}
 				}
 			} else {
 				if tc.expErr != nil {
