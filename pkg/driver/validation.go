@@ -17,6 +17,7 @@ limitations under the License.
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -32,6 +33,10 @@ func ValidateDriverOptions(options *DriverOptions) error {
 
 	if err := validateMode(options.mode); err != nil {
 		return fmt.Errorf("Invalid mode: %w", err)
+	}
+
+	if options.modifyVolumeRequestHandlerTimeout == 0 {
+		return errors.New("Invalid modifyVolumeRequestHandlerTimeout: Timeout cannot be zero")
 	}
 
 	return nil

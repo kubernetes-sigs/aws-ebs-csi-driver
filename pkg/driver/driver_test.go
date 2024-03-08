@@ -19,6 +19,7 @@ package driver
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestWithEndpoint(t *testing.T) {
@@ -77,6 +78,15 @@ func TestWithVolumeAttachLimit(t *testing.T) {
 	}
 }
 
+func TestWithVolumeAttachLimitFromMetadata(t *testing.T) {
+	value := 10
+	options := &DriverOptions{}
+	WithReservedVolumeAttachments(value)(options)
+	if options.reservedVolumeAttachments != value {
+		t.Fatalf("expected reservedVolumeAttachments option got set to %d but is set to %d", value, options.reservedVolumeAttachments)
+	}
+}
+
 func TestWithClusterID(t *testing.T) {
 	var id string = "test-cluster-id"
 	options := &DriverOptions{}
@@ -101,5 +111,33 @@ func TestWithUserAgentExtra(t *testing.T) {
 	WithUserAgentExtra(userAgentExtra)(options)
 	if options.userAgentExtra != userAgentExtra {
 		t.Fatalf("expected userAgentExtra option got set to %s but is set to %s", userAgentExtra, options.userAgentExtra)
+	}
+}
+
+func TestWithOtelTracing(t *testing.T) {
+	var enableOtelTracing bool = true
+	options := &DriverOptions{}
+	WithOtelTracing(enableOtelTracing)(options)
+	if options.otelTracing != enableOtelTracing {
+		t.Fatalf("expected otelTracing option got set to %v but is set to %v", enableOtelTracing, options.otelTracing)
+	}
+}
+
+func TestWithBatching(t *testing.T) {
+	var batching bool = true
+	options := &DriverOptions{}
+	WithBatching(batching)(options)
+	if options.batching != batching {
+		t.Fatalf("expected batching option got set to %v but is set to %v", batching, options.batching)
+	}
+}
+
+func TestWithModifyVolumeRequestHandlerTimeout(t *testing.T) {
+	timeout := 15 * time.Second
+	options := &DriverOptions{}
+	WithModifyVolumeRequestHandlerTimeout(timeout)(options)
+	if options.modifyVolumeRequestHandlerTimeout != timeout {
+		t.Fatalf("expected modifyVolumeRequestHandlerTimeout option got set to %v but is set to %v",
+			timeout, options.modifyVolumeRequestHandlerTimeout)
 	}
 }

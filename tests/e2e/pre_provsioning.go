@@ -37,7 +37,7 @@ import (
 
 const (
 	defaultDiskSize   = 4
-	defaultVoluemType = awscloud.VolumeTypeGP3
+	defaultVolumeType = awscloud.VolumeTypeGP3
 
 	awsAvailabilityZonesEnv = "AWS_AVAILABILITY_ZONES"
 
@@ -83,12 +83,12 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 		diskOptions := &awscloud.DiskOptions{
 			CapacityBytes:    defaultDiskSizeBytes,
-			VolumeType:       defaultVoluemType,
+			VolumeType:       defaultVolumeType,
 			AvailabilityZone: availabilityZone,
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region, false, "")
+		cloud, err = awscloud.NewCloud(region, false, "", true)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
@@ -118,14 +118,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 
 	AfterEach(func() {
 		if !skipManuallyDeletingVolume {
-			_, err := cloud.WaitForAttachmentState(context.Background(), volumeID, "detached", "", "", false)
-			if err != nil {
-				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
-			}
-			ok, err := cloud.DeleteDisk(context.Background(), volumeID)
-			if err != nil || !ok {
-				Fail(fmt.Sprintf("could not delete volume %q: %v", volumeID, err))
-			}
+			deleteDiskWithRetry(cloud, volumeID)
 		}
 	})
 
@@ -135,9 +128,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeID:  volumeID,
-						FSType:    ebscsidriver.FSTypeExt4,
-						ClaimSize: diskSize,
+						VolumeID:                   volumeID,
+						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+						ClaimSize:                  diskSize,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -179,9 +172,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						VolumeID:  volumeID,
-						FSType:    ebscsidriver.FSTypeExt4,
-						ClaimSize: diskSize,
+						VolumeID:                   volumeID,
+						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+						ClaimSize:                  diskSize,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -202,10 +195,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumes := []testsuites.VolumeDetails{
 			{
-				VolumeID:      volumeID,
-				FSType:        ebscsidriver.FSTypeExt4,
-				ClaimSize:     diskSize,
-				ReclaimPolicy: &reclaimPolicy,
+				VolumeID:                   volumeID,
+				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+				ClaimSize:                  diskSize,
+				ReclaimPolicy:              &reclaimPolicy,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -220,10 +213,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		skipManuallyDeletingVolume = true
 		volumes := []testsuites.VolumeDetails{
 			{
-				VolumeID:      volumeID,
-				FSType:        ebscsidriver.FSTypeExt4,
-				ClaimSize:     diskSize,
-				ReclaimPolicy: &reclaimPolicy,
+				VolumeID:                   volumeID,
+				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
+				ClaimSize:                  diskSize,
+				ReclaimPolicy:              &reclaimPolicy,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -233,3 +226,114 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 		test.Run(cs, ns)
 	})
 })
+
+var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", func() {
+	f := framework.NewDefaultFramework("ebs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
+
+	var (
+		cs                         clientset.Interface
+		ns                         *v1.Namespace
+		ebsDriver                  driver.PreProvisionedVolumeTestDriver
+		cloud                      awscloud.Cloud
+		volumeID                   string
+		skipManuallyDeletingVolume bool
+	)
+
+	BeforeEach(func() {
+		cs = f.ClientSet
+		ns = f.Namespace
+		ebsDriver = driver.InitEbsCSIDriver()
+
+		if os.Getenv(awsAvailabilityZonesEnv) == "" {
+			Skip(fmt.Sprintf("env %q not set", awsAvailabilityZonesEnv))
+		}
+		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
+		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
+		region := availabilityZone[0 : len(availabilityZone)-1]
+
+		diskOptions := &awscloud.DiskOptions{
+			CapacityBytes:      defaultDiskSizeBytes,
+			VolumeType:         awscloud.VolumeTypeIO2,
+			MultiAttachEnabled: true,
+			AvailabilityZone:   availabilityZone,
+			IOPS:               1000,
+			Tags:               map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
+		}
+		var err error
+		cloud, err = awscloud.NewCloud(region, false, "", true)
+		if err != nil {
+			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
+		}
+		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+		disk, err := cloud.CreateDisk(context.Background(), fmt.Sprintf("pvc-%d", r1.Uint64()), diskOptions)
+		if err != nil {
+			Fail(fmt.Sprintf("could not provision a volume: %v", err))
+		}
+		volumeID = disk.VolumeID
+		By(fmt.Sprintf("Successfully provisioned EBS volume: %q\n", volumeID))
+	})
+
+	AfterEach(func() {
+		if !skipManuallyDeletingVolume {
+			deleteDiskWithRetry(cloud, volumeID)
+		}
+	})
+
+	It("should succeed multi-attach pre-provisioned IO2 block device", func() {
+		reclaimPolicy := v1.PersistentVolumeReclaimDelete
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:    v1.ReadWriteMany,
+						VolumeID:      volumeID,
+						ReclaimPolicy: &reclaimPolicy,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:    v1.ReadWriteMany,
+						VolumeID:      volumeID,
+						ReclaimPolicy: &reclaimPolicy,
+					},
+				},
+			},
+		}
+		test := testsuites.StaticallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: v1.PersistentVolumeBlock,
+			VolumeType: awscloud.VolumeTypeIO2,
+			VolumeID:   volumeID,
+			AccessMode: v1.ReadWriteMany,
+		}
+		test.Run(cs, ns)
+	})
+})
+
+func deleteDiskWithRetry(cloud awscloud.Cloud, volumeID string) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		ok, err := cloud.DeleteDisk(context.Background(), volumeID)
+		if err == nil && ok {
+			return
+		}
+		<-ticker.C
+	}
+}

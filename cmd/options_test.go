@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/klog/v2"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
@@ -51,8 +52,15 @@ func TestGetOptions(t *testing.T) {
 		awsSdkDebugFlagValue := true
 		VolumeAttachLimitFlagName := "volume-attach-limit"
 		var VolumeAttachLimit int64 = 42
+		reservedVolumeAttachmentsFlagName := "reserved-volume-attachments"
+		reservedVolumeAttachments := -1
+
 		userAgentExtraFlag := "user-agent-extra"
 		userAgentExtraFlagValue := "test"
+		otelTracingFlagName := "enable-otel-tracing"
+		otelTracingFlagValue := true
+		batchingFlagName := "batching"
+		batchingFlagValue := true
 
 		args := append([]string{
 			"aws-ebs-csi-driver",
@@ -60,11 +68,13 @@ func TestGetOptions(t *testing.T) {
 
 		if withServerOptions {
 			args = append(args, "--"+endpointFlagName+"="+endpoint)
+			args = append(args, "--"+otelTracingFlagName+"="+strconv.FormatBool(otelTracingFlagValue))
 		}
 		if withControllerOptions {
 			args = append(args, "--"+extraTagsFlagName+"="+extraTagKey+"="+extraTagValue)
 			args = append(args, "--"+awsSdkDebugFlagName+"="+strconv.FormatBool(awsSdkDebugFlagValue))
 			args = append(args, "--"+userAgentExtraFlag+"="+userAgentExtraFlagValue)
+			args = append(args, "--"+batchingFlagName+"="+strconv.FormatBool(batchingFlagValue))
 		}
 		if withNodeOptions {
 			args = append(args, "--"+VolumeAttachLimitFlagName+"="+strconv.FormatInt(VolumeAttachLimit, 10))
@@ -82,6 +92,10 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.ServerOptions.Endpoint != endpoint {
 				t.Fatalf("expected endpoint to be %q but it is %q", endpoint, options.ServerOptions.Endpoint)
+			}
+			otelTracingFlag := flagSet.Lookup(otelTracingFlagName)
+			if otelTracingFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", otelTracingFlagName)
 			}
 		}
 
@@ -103,6 +117,13 @@ func TestGetOptions(t *testing.T) {
 			if options.ControllerOptions.UserAgentExtra != userAgentExtraFlagValue {
 				t.Fatalf("expected user agent string to be %q but it is %q", userAgentExtraFlagValue, options.ControllerOptions.UserAgentExtra)
 			}
+			batchingFlag := flagSet.Lookup(batchingFlagName)
+			if batchingFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", batchingFlagName)
+			}
+			if options.ControllerOptions.Batching != batchingFlagValue {
+				t.Fatalf("expected sdk debug flag to be %v but it is %v", batchingFlagValue, options.ControllerOptions.Batching)
+			}
 		}
 
 		if withNodeOptions {
@@ -112,6 +133,13 @@ func TestGetOptions(t *testing.T) {
 			}
 			if options.NodeOptions.VolumeAttachLimit != VolumeAttachLimit {
 				t.Fatalf("expected VolumeAttachLimit to be %d but it is %d", VolumeAttachLimit, options.NodeOptions.VolumeAttachLimit)
+			}
+			reservedVolumeAttachmentsFlag := flagSet.Lookup(reservedVolumeAttachmentsFlagName)
+			if reservedVolumeAttachmentsFlag == nil {
+				t.Fatalf("expected %q flag to be added but it is not", reservedVolumeAttachmentsFlagName)
+			}
+			if options.NodeOptions.ReservedVolumeAttachments != reservedVolumeAttachments {
+				t.Fatalf("expected reservedVolumeAttachmentsFlagName to be %d but it is %d", reservedVolumeAttachments, options.NodeOptions.ReservedVolumeAttachments)
 			}
 		}
 
@@ -126,6 +154,16 @@ func TestGetOptions(t *testing.T) {
 			name: "no controller mode given - expect all mode",
 			testFunc: func(t *testing.T) {
 				options := testFunc(t, nil, true, true, true)
+
+				if options.DriverMode != driver.AllMode {
+					t.Fatalf("expected driver mode to be %q but it is %q", driver.AllMode, options.DriverMode)
+				}
+			},
+		},
+		{
+			name: "no options at all - expect all mode",
+			testFunc: func(t *testing.T) {
+				options := testFunc(t, nil, false, false, false)
 
 				if options.DriverMode != driver.AllMode {
 					t.Fatalf("expected driver mode to be %q but it is %q", driver.AllMode, options.DriverMode)
@@ -188,6 +226,39 @@ func TestGetOptions(t *testing.T) {
 
 				if exitCode != 0 {
 					t.Fatalf("expected exit code 0 but got %d", exitCode)
+				}
+				if !calledExit {
+					t.Fatalf("expect osExit to be called, but wasn't")
+				}
+			},
+		},
+		{
+			name: "both volume-attach-limit and reserved-volume-attachments specified",
+			testFunc: func(t *testing.T) {
+				oldOSExit := klog.OsExit
+				defer func() { klog.OsExit = oldOSExit }()
+
+				var exitCode int
+				calledExit := false
+				testExit := func(code int) {
+					exitCode = code
+					calledExit = true
+				}
+				klog.OsExit = testExit
+
+				oldArgs := os.Args
+				defer func() { os.Args = oldArgs }()
+				os.Args = []string{
+					"aws-ebs-csi-driver",
+					"--volume-attach-limit=10",
+					"--reserved-volume-attachments=10",
+				}
+
+				flagSet := flag.NewFlagSet("test-flagset", flag.ContinueOnError)
+				_ = GetOptions(flagSet)
+
+				if exitCode != 1 {
+					t.Fatalf("expected exit code 1 but got %d", exitCode)
 				}
 				if !calledExit {
 					t.Fatalf("expect osExit to be called, but wasn't")

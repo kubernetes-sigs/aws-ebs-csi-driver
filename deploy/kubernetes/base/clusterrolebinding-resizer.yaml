@@ -9,7 +9,6 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-controller-sa
-    namespace: default
 roleRef:
   kind: ClusterRole
   name: ebs-external-resizer-role

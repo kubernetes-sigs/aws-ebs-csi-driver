@@ -19,9 +19,12 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v3.5.0-eks-1-27-7"
+      tag: "v4.0.0-eks-1-29-5"
     logLevel: 2
+    # Additional parameters provided by external-provisioner.
     additionalArgs: []
+    # Grant additional permissions to external-provisioner
+    additionalClusterRoleRules:
     resources: {}
     # Tune leader lease election for csi-provisioner.
     # Leader election is on by default.
@@ -41,7 +44,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.3.0-eks-1-27-7"
+      tag: "v4.5.0-eks-1-29-5"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -53,7 +56,10 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by external-attacher.
     additionalArgs: []
+    # Grant additional permissions to external-attacher
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -65,9 +71,12 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v6.2.2-eks-1-27-7"
+      tag: "v7.0.0-eks-1-29-5"
     logLevel: 2
+    # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
+    # Grant additional permissions to csi-snapshotter
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -76,7 +85,8 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.10.0-eks-1-27-7"
+      tag: "v2.12.0-eks-1-29-5"
+    # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -87,7 +97,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.8.0-eks-1-27-7"
+      tag: "v1.10.0-eks-1-29-5"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -99,7 +109,10 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by external-resizer.
     additionalArgs: []
+    # Grant additional permissions to external-resizer
+    additionalClusterRoleRules: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -109,19 +122,29 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.8.0-eks-1-27-7"
+      tag: "v2.10.0-eks-1-29-5"
     logLevel: 2
+    # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+    livenessProbe:
+      exec:
+        command:
+        - /csi-node-driver-registrar
+        - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+        - --mode=kubelet-registration-probe
+      initialDelaySeconds: 30
+      periodSeconds: 90
+      timeoutSeconds: 15
   volumemodifier:
     env: []
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.1.1"
+      tag: "v0.2.1"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
@@ -131,6 +154,7 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
+    # Additional parameters provided by volume-modifier-for-k8s.
     additionalArgs: []
     resources: {}
     securityContext:
@@ -151,8 +175,10 @@ awsAccessSecret:
   accessKey: access_key
 
 controller:
+  batching: true
   volumeModificationFeature:
     enabled: false
+  # Additional parameters provided by aws-ebs-csi-driver controller.
   additionalArgs: []
   sdkDebugLog: false
   loggingFormat: text
@@ -211,6 +237,7 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
+  deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   priorityClassName: system-cluster-critical
@@ -220,6 +247,9 @@ controller:
   # region: us-east-1
   region:
   replicaCount: 2
+  revisionHistoryLimit: 10
+  socketDirVolume:
+    emptyDir: {}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -239,6 +269,8 @@ controller:
     create: true
     name: ebs-csi-controller-sa
     annotations: {}
+    ## Enable if EKS IAM for SA is used
+    # eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
     automountServiceAccountToken: true
   tolerations:
     - key: CriticalAddonsOnly
@@ -288,6 +320,10 @@ controller:
   # - name: wait
   #   image: busybox
   #   command: [ 'sh', '-c', "sleep 20" ]
+  # Enable opentelemetry tracing for the plugin running on the daemonset
+  otelTracing: {}
+  #  otelServiceName: ebs-csi-controller
+  #  otelExporterEndpoint: "http://localhost:4317"
 
 node:
   env: []
@@ -296,6 +332,7 @@ node:
   loggingFormat: text
   logLevel: 2
   priorityClassName:
+  additionalArgs: []
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -305,7 +342,16 @@ node:
             operator: NotIn
             values:
             - fargate
+          - key: node.kubernetes.io/instance-type
+            operator: NotIn
+            values:
+            - a1.medium
+            - a1.large
+            - a1.xlarge
+            - a1.2xlarge
+            - a1.4xlarge
   nodeSelector: {}
+  daemonSetAnnotations: {}
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
@@ -319,18 +365,31 @@ node:
       memory: 40Mi
     limits:
       memory: 256Mi
+  revisionHistoryLimit: 10
+  probeDirVolume:
+    emptyDir: {}
   serviceAccount:
     create: true
     name: ebs-csi-node-sa
     annotations: {}
+    ## Enable if EKS IAM for SA is used
+    # eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
     automountServiceAccountToken: true
+  # Enable the linux daemonset creation
+  enableLinux: true
   enableWindows: false
+  # The number of attachment slots to reserve for system use (and not to be used for CSI volumes)
+  # When this parameter is not specified (or set to -1), the EBS CSI Driver will attempt to determine the number of reserved slots via heuristic
+  # Cannot be specified at the same time as `node.volumeAttachLimit`
+  reservedVolumeAttachments:
   # The "maximum number of attachable volumes" per node
+  # Cannot be specified at the same time as `node.reservedVolumeAttachments`
   volumeAttachLimit:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: "10%"
+  hostNetwork: false
   # securityContext on the node pod
   securityContext:
     # The node pod must be run as root to bind to the registration/driver sockets
@@ -354,6 +413,22 @@ node:
   containerSecurityContext:
     readOnlyRootFilesystem: true
     privileged: true
+  # Enable opentelemetry tracing for the plugin running on the daemonset
+  otelTracing: {}
+  #  otelServiceName: ebs-csi-node
+  #  otelExporterEndpoint: "http://localhost:4317"
+
+additionalDaemonSets:
+  # Additional node DaemonSets, using the node config structure
+  # See docs/additional-daemonsets.md for more information
+  #
+  # example:
+  #   nodeSelector:
+  #     node.kubernetes.io/instance-type: c5.large
+  #   volumeAttachLimit: 15
+
+# Enable compatibility for the A1 instance family via use of an AL2-based image in a separate DaemonSet
+# a1CompatibilityDaemonSet: true
 
 storageClasses: []
 # Add StorageClass resources like:
@@ -377,6 +452,9 @@ volumeSnapshotClasses: []
 #   # annotation metadata
 #   annotations:
 #     snapshot.storage.kubernetes.io/is-default-class: "true"
+#   # label metadata
+#   labels:
+#     my-label-is: supercool
 #   # deletionPolicy must be specified
 #   deletionPolicy: Delete
 #   parameters:
@@ -385,3 +463,7 @@ volumeSnapshotClasses: []
 # Intended for use with older clusters that cannot easily replace the CSIDriver object
 # This parameter should always be false for new installations
 useOldCSIDriver: false
+
+# Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
+helmTester:
+  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20231206-f7b83ffbe6-master"

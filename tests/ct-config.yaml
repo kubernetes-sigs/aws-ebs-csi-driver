@@ -4,11 +4,12 @@ validate-maintainers: false
 check-version-increment: false
 charts:
   - charts/aws-ebs-csi-driver
-helm-extra-args: "--timeout 3000s"
+helm-extra-args: "--timeout 600s"
 upgrade: true
 skip-missing-values: true
 namespace: kube-system
 release-label: release
-kubectl-timeout: 3000s
+kubectl-timeout: 600s
 skip-clean-up: false
 print-logs: true
+debug: true

@@ -17,15 +17,15 @@ limitations under the License.
 package main
 
 import (
-	"net/http"
+	"context"
+	"time"
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	logsapi "k8s.io/component-base/logs/api/v1"
 	json "k8s.io/component-base/logs/json"
-	"k8s.io/component-base/metrics/legacyregistry"
 
 	"k8s.io/klog/v2"
 )
@@ -39,17 +39,26 @@ func main() {
 
 	options := GetOptions(fs)
 
-	cloud.RegisterMetrics()
-	if options.ServerOptions.HttpEndpoint != "" {
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", legacyregistry.HandlerWithReset())
-		go func() {
-			err := http.ListenAndServe(options.ServerOptions.HttpEndpoint, mux)
-			if err != nil {
-				klog.ErrorS(err, "failed to listen & serve metrics", "endpoint", options.ServerOptions.HttpEndpoint)
-				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	// Start tracing as soon as possible
+	if options.ServerOptions.EnableOtelTracing {
+		exporter, err := driver.InitOtelTracing()
+		if err != nil {
+			klog.ErrorS(err, "failed to initialize otel tracing")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		// Exporter will flush traces on shutdown
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := exporter.Shutdown(ctx); err != nil {
+				klog.ErrorS(err, "could not shutdown otel exporter")
 			}
 		}()
+	}
+
+	if options.ServerOptions.HttpEndpoint != "" {
+		r := metrics.InitializeRecorder()
+		r.InitializeMetricsHandler(options.ServerOptions.HttpEndpoint, "/metrics")
 	}
 
 	drv, err := driver.NewDriver(
@@ -58,10 +67,14 @@ func main() {
 		driver.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
 		driver.WithMode(options.DriverMode),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
+		driver.WithReservedVolumeAttachments(options.NodeOptions.ReservedVolumeAttachments),
 		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithAwsSdkDebugLog(options.ControllerOptions.AwsSdkDebugLog),
 		driver.WithWarnOnInvalidTag(options.ControllerOptions.WarnOnInvalidTag),
 		driver.WithUserAgentExtra(options.ControllerOptions.UserAgentExtra),
+		driver.WithOtelTracing(options.ServerOptions.EnableOtelTracing),
+		driver.WithBatching(options.ControllerOptions.Batching),
+		driver.WithModifyVolumeRequestHandlerTimeout(options.ControllerOptions.ModifyVolumeRequestHandlerTimeout),
 	)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")

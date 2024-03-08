@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
+	"runtime"
 	"strings"
+	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -34,6 +35,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 )
@@ -45,7 +48,7 @@ const (
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 
-	//sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
+	// sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
 	sbeDeviceVolumeAttachmentLimit = 10
 )
 
@@ -65,6 +68,15 @@ var (
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 		csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
 		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+	}
+
+	// taintRemovalInitialDelay is the initial delay for node taint removal
+	taintRemovalInitialDelay = 1 * time.Second
+	// taintRemovalBackoff is the exponential backoff configuration for node taint removal
+	taintRemovalBackoff = wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   2,
+		Steps:    10, // Max delay = 0.5 * 2^9 = ~4 minutes
 	}
 )
 
@@ -95,10 +107,9 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 
 	// Remove taint from node to indicate driver startup success
 	// This is done at the last possible moment to prevent race conditions or false positive removals
-	err = removeNotReadyTaint(cloud.DefaultKubernetesAPIClient)
-	if err != nil {
-		klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
-	}
+	time.AfterFunc(taintRemovalInitialDelay, func() {
+		removeTaintInBackground(cloud.DefaultKubernetesAPIClient, removeNotReadyTaint)
+	})
 
 	return nodeService{
 		metadata:         metadata,
@@ -157,21 +168,30 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	context := req.GetVolumeContext()
-	blockSize, ok := context[BlockSizeKey]
-	if ok {
-		// This check is already performed on the controller side
-		// However, because it is potentially security-sensitive, we redo it here to be safe
-		_, err := strconv.Atoi(blockSize)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid blockSize (aborting!): %v", err)
-		}
 
-		// In the case that the default fstype does not support custom block sizes we could
-		// be using an invalid fstype, so recheck that here
-		if _, ok = BlockSizeExcludedFSTypes[strings.ToLower(fsType)]; ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Cannot use block size with fstype %s", fsType)
-		}
-
+	blockSize, err := recheckFormattingOptionParameter(context, BlockSizeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	inodeSize, err := recheckFormattingOptionParameter(context, InodeSizeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	bytesPerInode, err := recheckFormattingOptionParameter(context, BytesPerInodeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	numInodes, err := recheckFormattingOptionParameter(context, NumberOfInodesKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	ext4BigAlloc, err := recheckFormattingOptionParameter(context, Ext4BigAllocKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
+	ext4ClusterSize, err := recheckFormattingOptionParameter(context, Ext4ClusterSizeKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
 	}
 
 	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
@@ -245,6 +265,25 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 			blockSize = "size=" + blockSize
 		}
 		formatOptions = append(formatOptions, "-b", blockSize)
+	}
+	if len(inodeSize) > 0 {
+		option := "-I"
+		if fsType == FSTypeXfs {
+			option, inodeSize = "-i", "size="+inodeSize
+		}
+		formatOptions = append(formatOptions, option, inodeSize)
+	}
+	if len(bytesPerInode) > 0 {
+		formatOptions = append(formatOptions, "-i", bytesPerInode)
+	}
+	if len(numInodes) > 0 {
+		formatOptions = append(formatOptions, "-N", numInodes)
+	}
+	if ext4BigAlloc == "true" {
+		formatOptions = append(formatOptions, "-O", "bigalloc")
+	}
+	if len(ext4ClusterSize) > 0 {
+		formatOptions = append(formatOptions, "-C", ext4ClusterSize)
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {
@@ -322,7 +361,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 }
 
 func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	klog.V(4).Infof("NodeExpandVolume: called", "args", *req)
+	klog.V(4).InfoS("NodeExpandVolume: called", "args", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -551,12 +590,15 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 }
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	klog.V(4).Infof("NodeGetInfo: called", "args", *req)
+	klog.V(4).InfoS("NodeGetInfo: called", "args", *req)
 
 	zone := d.metadata.GetAvailabilityZone()
+	osType := runtime.GOOS
 
 	segments := map[string]string{
-		TopologyKey: zone,
+		ZoneTopologyKey:          zone,
+		WellKnownZoneTopologyKey: zone,
+		OSTopologyKey:            osType,
 	}
 
 	outpostArn := d.metadata.GetOutpostArn()
@@ -750,22 +792,29 @@ func (d *nodeService) getVolumesLimit() int64 {
 
 	isNitro := cloud.IsNitroInstanceType(instanceType)
 	availableAttachments := cloud.GetMaxAttachments(isNitro)
-	blockVolumes := d.metadata.GetNumBlockDeviceMappings()
 
-	// For Nitro instances, attachments are shared between EBS volumes, ENIs and NVMe instance stores
-	if isNitro {
+	reservedVolumeAttachments := d.driverOptions.reservedVolumeAttachments
+	if reservedVolumeAttachments == -1 {
+		reservedVolumeAttachments = d.metadata.GetNumBlockDeviceMappings() + 1 // +1 for the root device
+	}
+
+	dedicatedLimit := cloud.GetDedicatedLimitForInstanceType(instanceType)
+	maxEBSAttachments, ok := cloud.GetEBSLimitForInstanceType(instanceType)
+	if ok {
+		availableAttachments = min(maxEBSAttachments, availableAttachments)
+	}
+	// For special dedicated limit instance types, the limit is only for EBS volumes
+	// For (all other) Nitro instances, attachments are shared between EBS volumes, ENIs and NVMe instance stores
+	if dedicatedLimit != 0 {
+		availableAttachments = dedicatedLimit
+	} else if isNitro {
 		enis := d.metadata.GetNumAttachedENIs()
 		nvmeInstanceStoreVolumes := cloud.GetNVMeInstanceStoreVolumesForInstanceType(instanceType)
 		availableAttachments = availableAttachments - enis - nvmeInstanceStoreVolumes
 	}
-	availableAttachments = availableAttachments - blockVolumes - 1 // -1 for root device
-	if availableAttachments < 0 {
-		availableAttachments = 0
-	}
-
-	maxEBSAttachments, ok := cloud.GetEBSLimitForInstanceType(instanceType)
-	if ok {
-		availableAttachments = min(maxEBSAttachments, availableAttachments)
+	availableAttachments = availableAttachments - reservedVolumeAttachments
+	if availableAttachments <= 0 {
+		availableAttachments = 1
 	}
 
 	return int64(availableAttachments)
@@ -818,6 +867,22 @@ type JSONPatch struct {
 	Value interface{} `json:"value"`
 }
 
+// removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff
+func removeTaintInBackground(k8sClient cloud.KubernetesAPIClient, removalFunc func(cloud.KubernetesAPIClient) error) {
+	backoffErr := wait.ExponentialBackoff(taintRemovalBackoff, func() (bool, error) {
+		err := removalFunc(k8sClient)
+		if err != nil {
+			klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
+			return false, nil
+		}
+		return true, nil
+	})
+
+	if backoffErr != nil {
+		klog.ErrorS(backoffErr, "Retries exhausted, giving up attempting to remove node taint(s)")
+	}
+}
+
 // removeNotReadyTaint removes the taint ebs.csi.aws.com/agent-not-ready from the local node
 // This taint can be optionally applied by users to prevent startup race conditions such as
 // https://github.com/kubernetes/kubernetes/issues/95911
@@ -830,11 +895,16 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 
 	clientset, err := k8sClient()
 	if err != nil {
-		klog.V(4).InfoS("Failed to communicate with k8s API, skipping taint removal")
-		return nil //lint:ignore nilerr Failing to communicate with k8s API is a soft failure
+		klog.V(4).InfoS("Failed to setup k8s client")
+		return nil //lint:ignore nilerr If there are no k8s credentials, treat that as a soft failure
 	}
 
 	node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = checkAllocatable(clientset, nodeName)
 	if err != nil {
 		return err
 	}
@@ -877,4 +947,41 @@ func removeNotReadyTaint(k8sClient cloud.KubernetesAPIClient) error {
 	}
 	klog.InfoS("Removed taint(s) from local node", "node", nodeName)
 	return nil
+}
+
+func checkAllocatable(clientset kubernetes.Interface, nodeName string) error {
+	csiNode, err := clientset.StorageV1().CSINodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: %w", nodeName, err)
+	}
+
+	for _, driver := range csiNode.Spec.Drivers {
+		if driver.Name == DriverName {
+			if driver.Allocatable != nil && driver.Allocatable.Count != nil {
+				klog.InfoS("CSINode Allocatable value is set", "nodeName", nodeName, "count", *driver.Allocatable.Count)
+				return nil
+			}
+			return fmt.Errorf("isAllocatableSet: allocatable value not set for driver on node %s", nodeName)
+		}
+	}
+
+	return fmt.Errorf("isAllocatableSet: driver not found on node %s", nodeName)
+}
+
+func recheckFormattingOptionParameter(context map[string]string, key string, fsConfigs map[string]fileSystemConfig, fsType string) (value string, err error) {
+	v, ok := context[key]
+	if ok {
+		// This check is already performed on the controller side
+		// However, because it is potentially security-sensitive, we redo it here to be safe
+		if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
+			return "", status.Errorf(codes.InvalidArgument, "Invalid %s (aborting!): %v", key, err)
+		}
+
+		// In the case that the default fstype does not support custom sizes we could
+		// be using an invalid fstype, so recheck that here
+		if supported := fsConfigs[strings.ToLower(fsType)].isParameterSupported(key); !supported {
+			return "", status.Errorf(codes.InvalidArgument, "Cannot use %s with fstype %s", key, fsType)
+		}
+	}
+	return v, nil
 }

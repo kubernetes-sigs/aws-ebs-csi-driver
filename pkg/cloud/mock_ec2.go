@@ -1086,6 +1086,56 @@ func (mr *MockEC2APIMockRecorder) AssociateInstanceEventWindowWithContext(arg0, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociateInstanceEventWindowWithContext", reflect.TypeOf((*MockEC2API)(nil).AssociateInstanceEventWindowWithContext), varargs...)
 }
 
+// AssociateIpamByoasn mocks base method.
+func (m *MockEC2API) AssociateIpamByoasn(arg0 *ec2.AssociateIpamByoasnInput) (*ec2.AssociateIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AssociateIpamByoasn", arg0)
+	ret0, _ := ret[0].(*ec2.AssociateIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AssociateIpamByoasn indicates an expected call of AssociateIpamByoasn.
+func (mr *MockEC2APIMockRecorder) AssociateIpamByoasn(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociateIpamByoasn", reflect.TypeOf((*MockEC2API)(nil).AssociateIpamByoasn), arg0)
+}
+
+// AssociateIpamByoasnRequest mocks base method.
+func (m *MockEC2API) AssociateIpamByoasnRequest(arg0 *ec2.AssociateIpamByoasnInput) (*request.Request, *ec2.AssociateIpamByoasnOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AssociateIpamByoasnRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.AssociateIpamByoasnOutput)
+	return ret0, ret1
+}
+
+// AssociateIpamByoasnRequest indicates an expected call of AssociateIpamByoasnRequest.
+func (mr *MockEC2APIMockRecorder) AssociateIpamByoasnRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociateIpamByoasnRequest", reflect.TypeOf((*MockEC2API)(nil).AssociateIpamByoasnRequest), arg0)
+}
+
+// AssociateIpamByoasnWithContext mocks base method.
+func (m *MockEC2API) AssociateIpamByoasnWithContext(arg0 context.Context, arg1 *ec2.AssociateIpamByoasnInput, arg2 ...request.Option) (*ec2.AssociateIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AssociateIpamByoasnWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.AssociateIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AssociateIpamByoasnWithContext indicates an expected call of AssociateIpamByoasnWithContext.
+func (mr *MockEC2APIMockRecorder) AssociateIpamByoasnWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssociateIpamByoasnWithContext", reflect.TypeOf((*MockEC2API)(nil).AssociateIpamByoasnWithContext), varargs...)
+}
+
 // AssociateIpamResourceDiscovery mocks base method.
 func (m *MockEC2API) AssociateIpamResourceDiscovery(arg0 *ec2.AssociateIpamResourceDiscoveryInput) (*ec2.AssociateIpamResourceDiscoveryOutput, error) {
 	m.ctrl.T.Helper()
@@ -10586,6 +10636,56 @@ func (mr *MockEC2APIMockRecorder) DeprovisionByoipCidrWithContext(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeprovisionByoipCidrWithContext", reflect.TypeOf((*MockEC2API)(nil).DeprovisionByoipCidrWithContext), varargs...)
 }
 
+// DeprovisionIpamByoasn mocks base method.
+func (m *MockEC2API) DeprovisionIpamByoasn(arg0 *ec2.DeprovisionIpamByoasnInput) (*ec2.DeprovisionIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeprovisionIpamByoasn", arg0)
+	ret0, _ := ret[0].(*ec2.DeprovisionIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeprovisionIpamByoasn indicates an expected call of DeprovisionIpamByoasn.
+func (mr *MockEC2APIMockRecorder) DeprovisionIpamByoasn(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeprovisionIpamByoasn", reflect.TypeOf((*MockEC2API)(nil).DeprovisionIpamByoasn), arg0)
+}
+
+// DeprovisionIpamByoasnRequest mocks base method.
+func (m *MockEC2API) DeprovisionIpamByoasnRequest(arg0 *ec2.DeprovisionIpamByoasnInput) (*request.Request, *ec2.DeprovisionIpamByoasnOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeprovisionIpamByoasnRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DeprovisionIpamByoasnOutput)
+	return ret0, ret1
+}
+
+// DeprovisionIpamByoasnRequest indicates an expected call of DeprovisionIpamByoasnRequest.
+func (mr *MockEC2APIMockRecorder) DeprovisionIpamByoasnRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeprovisionIpamByoasnRequest", reflect.TypeOf((*MockEC2API)(nil).DeprovisionIpamByoasnRequest), arg0)
+}
+
+// DeprovisionIpamByoasnWithContext mocks base method.
+func (m *MockEC2API) DeprovisionIpamByoasnWithContext(arg0 context.Context, arg1 *ec2.DeprovisionIpamByoasnInput, arg2 ...request.Option) (*ec2.DeprovisionIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeprovisionIpamByoasnWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DeprovisionIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeprovisionIpamByoasnWithContext indicates an expected call of DeprovisionIpamByoasnWithContext.
+func (mr *MockEC2APIMockRecorder) DeprovisionIpamByoasnWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeprovisionIpamByoasnWithContext", reflect.TypeOf((*MockEC2API)(nil).DeprovisionIpamByoasnWithContext), varargs...)
+}
+
 // DeprovisionIpamPoolCidr mocks base method.
 func (m *MockEC2API) DeprovisionIpamPoolCidr(arg0 *ec2.DeprovisionIpamPoolCidrInput) (*ec2.DeprovisionIpamPoolCidrOutput, error) {
 	m.ctrl.T.Helper()
@@ -11466,6 +11566,89 @@ func (mr *MockEC2APIMockRecorder) DescribeByoipCidrsWithContext(arg0, arg1 inter
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeByoipCidrsWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeByoipCidrsWithContext), varargs...)
+}
+
+// DescribeCapacityBlockOfferings mocks base method.
+func (m *MockEC2API) DescribeCapacityBlockOfferings(arg0 *ec2.DescribeCapacityBlockOfferingsInput) (*ec2.DescribeCapacityBlockOfferingsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeCapacityBlockOfferings", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeCapacityBlockOfferingsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeCapacityBlockOfferings indicates an expected call of DescribeCapacityBlockOfferings.
+func (mr *MockEC2APIMockRecorder) DescribeCapacityBlockOfferings(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCapacityBlockOfferings", reflect.TypeOf((*MockEC2API)(nil).DescribeCapacityBlockOfferings), arg0)
+}
+
+// DescribeCapacityBlockOfferingsPages mocks base method.
+func (m *MockEC2API) DescribeCapacityBlockOfferingsPages(arg0 *ec2.DescribeCapacityBlockOfferingsInput, arg1 func(*ec2.DescribeCapacityBlockOfferingsOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeCapacityBlockOfferingsPages", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeCapacityBlockOfferingsPages indicates an expected call of DescribeCapacityBlockOfferingsPages.
+func (mr *MockEC2APIMockRecorder) DescribeCapacityBlockOfferingsPages(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCapacityBlockOfferingsPages", reflect.TypeOf((*MockEC2API)(nil).DescribeCapacityBlockOfferingsPages), arg0, arg1)
+}
+
+// DescribeCapacityBlockOfferingsPagesWithContext mocks base method.
+func (m *MockEC2API) DescribeCapacityBlockOfferingsPagesWithContext(arg0 context.Context, arg1 *ec2.DescribeCapacityBlockOfferingsInput, arg2 func(*ec2.DescribeCapacityBlockOfferingsOutput, bool) bool, arg3 ...request.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeCapacityBlockOfferingsPagesWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeCapacityBlockOfferingsPagesWithContext indicates an expected call of DescribeCapacityBlockOfferingsPagesWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeCapacityBlockOfferingsPagesWithContext(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCapacityBlockOfferingsPagesWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeCapacityBlockOfferingsPagesWithContext), varargs...)
+}
+
+// DescribeCapacityBlockOfferingsRequest mocks base method.
+func (m *MockEC2API) DescribeCapacityBlockOfferingsRequest(arg0 *ec2.DescribeCapacityBlockOfferingsInput) (*request.Request, *ec2.DescribeCapacityBlockOfferingsOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeCapacityBlockOfferingsRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DescribeCapacityBlockOfferingsOutput)
+	return ret0, ret1
+}
+
+// DescribeCapacityBlockOfferingsRequest indicates an expected call of DescribeCapacityBlockOfferingsRequest.
+func (mr *MockEC2APIMockRecorder) DescribeCapacityBlockOfferingsRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCapacityBlockOfferingsRequest", reflect.TypeOf((*MockEC2API)(nil).DescribeCapacityBlockOfferingsRequest), arg0)
+}
+
+// DescribeCapacityBlockOfferingsWithContext mocks base method.
+func (m *MockEC2API) DescribeCapacityBlockOfferingsWithContext(arg0 context.Context, arg1 *ec2.DescribeCapacityBlockOfferingsInput, arg2 ...request.Option) (*ec2.DescribeCapacityBlockOfferingsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeCapacityBlockOfferingsWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeCapacityBlockOfferingsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeCapacityBlockOfferingsWithContext indicates an expected call of DescribeCapacityBlockOfferingsWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeCapacityBlockOfferingsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCapacityBlockOfferingsWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeCapacityBlockOfferingsWithContext), varargs...)
 }
 
 // DescribeCapacityReservationFleets mocks base method.
@@ -14475,6 +14658,89 @@ func (mr *MockEC2APIMockRecorder) DescribeInstanceStatusWithContext(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceStatusWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceStatusWithContext), varargs...)
 }
 
+// DescribeInstanceTopology mocks base method.
+func (m *MockEC2API) DescribeInstanceTopology(arg0 *ec2.DescribeInstanceTopologyInput) (*ec2.DescribeInstanceTopologyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceTopology", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeInstanceTopologyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeInstanceTopology indicates an expected call of DescribeInstanceTopology.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTopology(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTopology", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTopology), arg0)
+}
+
+// DescribeInstanceTopologyPages mocks base method.
+func (m *MockEC2API) DescribeInstanceTopologyPages(arg0 *ec2.DescribeInstanceTopologyInput, arg1 func(*ec2.DescribeInstanceTopologyOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceTopologyPages", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeInstanceTopologyPages indicates an expected call of DescribeInstanceTopologyPages.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTopologyPages(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTopologyPages", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTopologyPages), arg0, arg1)
+}
+
+// DescribeInstanceTopologyPagesWithContext mocks base method.
+func (m *MockEC2API) DescribeInstanceTopologyPagesWithContext(arg0 context.Context, arg1 *ec2.DescribeInstanceTopologyInput, arg2 func(*ec2.DescribeInstanceTopologyOutput, bool) bool, arg3 ...request.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeInstanceTopologyPagesWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DescribeInstanceTopologyPagesWithContext indicates an expected call of DescribeInstanceTopologyPagesWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTopologyPagesWithContext(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTopologyPagesWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTopologyPagesWithContext), varargs...)
+}
+
+// DescribeInstanceTopologyRequest mocks base method.
+func (m *MockEC2API) DescribeInstanceTopologyRequest(arg0 *ec2.DescribeInstanceTopologyInput) (*request.Request, *ec2.DescribeInstanceTopologyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeInstanceTopologyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DescribeInstanceTopologyOutput)
+	return ret0, ret1
+}
+
+// DescribeInstanceTopologyRequest indicates an expected call of DescribeInstanceTopologyRequest.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTopologyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTopologyRequest", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTopologyRequest), arg0)
+}
+
+// DescribeInstanceTopologyWithContext mocks base method.
+func (m *MockEC2API) DescribeInstanceTopologyWithContext(arg0 context.Context, arg1 *ec2.DescribeInstanceTopologyInput, arg2 ...request.Option) (*ec2.DescribeInstanceTopologyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeInstanceTopologyWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeInstanceTopologyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeInstanceTopologyWithContext indicates an expected call of DescribeInstanceTopologyWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTopologyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTopologyWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTopologyWithContext), varargs...)
+}
+
 // DescribeInstanceTypeOfferings mocks base method.
 func (m *MockEC2API) DescribeInstanceTypeOfferings(arg0 *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 	m.ctrl.T.Helper()
@@ -14805,6 +15071,56 @@ func (mr *MockEC2APIMockRecorder) DescribeInternetGatewaysWithContext(arg0, arg1
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInternetGatewaysWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeInternetGatewaysWithContext), varargs...)
+}
+
+// DescribeIpamByoasn mocks base method.
+func (m *MockEC2API) DescribeIpamByoasn(arg0 *ec2.DescribeIpamByoasnInput) (*ec2.DescribeIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeIpamByoasn", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeIpamByoasn indicates an expected call of DescribeIpamByoasn.
+func (mr *MockEC2APIMockRecorder) DescribeIpamByoasn(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeIpamByoasn", reflect.TypeOf((*MockEC2API)(nil).DescribeIpamByoasn), arg0)
+}
+
+// DescribeIpamByoasnRequest mocks base method.
+func (m *MockEC2API) DescribeIpamByoasnRequest(arg0 *ec2.DescribeIpamByoasnInput) (*request.Request, *ec2.DescribeIpamByoasnOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeIpamByoasnRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DescribeIpamByoasnOutput)
+	return ret0, ret1
+}
+
+// DescribeIpamByoasnRequest indicates an expected call of DescribeIpamByoasnRequest.
+func (mr *MockEC2APIMockRecorder) DescribeIpamByoasnRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeIpamByoasnRequest", reflect.TypeOf((*MockEC2API)(nil).DescribeIpamByoasnRequest), arg0)
+}
+
+// DescribeIpamByoasnWithContext mocks base method.
+func (m *MockEC2API) DescribeIpamByoasnWithContext(arg0 context.Context, arg1 *ec2.DescribeIpamByoasnInput, arg2 ...request.Option) (*ec2.DescribeIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeIpamByoasnWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeIpamByoasnWithContext indicates an expected call of DescribeIpamByoasnWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeIpamByoasnWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeIpamByoasnWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeIpamByoasnWithContext), varargs...)
 }
 
 // DescribeIpamPools mocks base method.
@@ -16017,6 +16333,56 @@ func (mr *MockEC2APIMockRecorder) DescribeLocalGatewaysWithContext(arg0, arg1 in
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLocalGatewaysWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeLocalGatewaysWithContext), varargs...)
+}
+
+// DescribeLockedSnapshots mocks base method.
+func (m *MockEC2API) DescribeLockedSnapshots(arg0 *ec2.DescribeLockedSnapshotsInput) (*ec2.DescribeLockedSnapshotsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeLockedSnapshots", arg0)
+	ret0, _ := ret[0].(*ec2.DescribeLockedSnapshotsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeLockedSnapshots indicates an expected call of DescribeLockedSnapshots.
+func (mr *MockEC2APIMockRecorder) DescribeLockedSnapshots(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLockedSnapshots", reflect.TypeOf((*MockEC2API)(nil).DescribeLockedSnapshots), arg0)
+}
+
+// DescribeLockedSnapshotsRequest mocks base method.
+func (m *MockEC2API) DescribeLockedSnapshotsRequest(arg0 *ec2.DescribeLockedSnapshotsInput) (*request.Request, *ec2.DescribeLockedSnapshotsOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeLockedSnapshotsRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DescribeLockedSnapshotsOutput)
+	return ret0, ret1
+}
+
+// DescribeLockedSnapshotsRequest indicates an expected call of DescribeLockedSnapshotsRequest.
+func (mr *MockEC2APIMockRecorder) DescribeLockedSnapshotsRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLockedSnapshotsRequest", reflect.TypeOf((*MockEC2API)(nil).DescribeLockedSnapshotsRequest), arg0)
+}
+
+// DescribeLockedSnapshotsWithContext mocks base method.
+func (m *MockEC2API) DescribeLockedSnapshotsWithContext(arg0 context.Context, arg1 *ec2.DescribeLockedSnapshotsInput, arg2 ...request.Option) (*ec2.DescribeLockedSnapshotsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeLockedSnapshotsWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeLockedSnapshotsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeLockedSnapshotsWithContext indicates an expected call of DescribeLockedSnapshotsWithContext.
+func (mr *MockEC2APIMockRecorder) DescribeLockedSnapshotsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLockedSnapshotsWithContext", reflect.TypeOf((*MockEC2API)(nil).DescribeLockedSnapshotsWithContext), varargs...)
 }
 
 // DescribeManagedPrefixLists mocks base method.
@@ -22349,6 +22715,71 @@ func (mr *MockEC2APIMockRecorder) DisableFastSnapshotRestoresWithContext(arg0, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableFastSnapshotRestoresWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableFastSnapshotRestoresWithContext), varargs...)
 }
 
+// DisableImage mocks base method.
+func (m *MockEC2API) DisableImage(arg0 *ec2.DisableImageInput) (*ec2.DisableImageOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableImage", arg0)
+	ret0, _ := ret[0].(*ec2.DisableImageOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableImage indicates an expected call of DisableImage.
+func (mr *MockEC2APIMockRecorder) DisableImage(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImage", reflect.TypeOf((*MockEC2API)(nil).DisableImage), arg0)
+}
+
+// DisableImageBlockPublicAccess mocks base method.
+func (m *MockEC2API) DisableImageBlockPublicAccess(arg0 *ec2.DisableImageBlockPublicAccessInput) (*ec2.DisableImageBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableImageBlockPublicAccess", arg0)
+	ret0, _ := ret[0].(*ec2.DisableImageBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableImageBlockPublicAccess indicates an expected call of DisableImageBlockPublicAccess.
+func (mr *MockEC2APIMockRecorder) DisableImageBlockPublicAccess(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageBlockPublicAccess", reflect.TypeOf((*MockEC2API)(nil).DisableImageBlockPublicAccess), arg0)
+}
+
+// DisableImageBlockPublicAccessRequest mocks base method.
+func (m *MockEC2API) DisableImageBlockPublicAccessRequest(arg0 *ec2.DisableImageBlockPublicAccessInput) (*request.Request, *ec2.DisableImageBlockPublicAccessOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableImageBlockPublicAccessRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DisableImageBlockPublicAccessOutput)
+	return ret0, ret1
+}
+
+// DisableImageBlockPublicAccessRequest indicates an expected call of DisableImageBlockPublicAccessRequest.
+func (mr *MockEC2APIMockRecorder) DisableImageBlockPublicAccessRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageBlockPublicAccessRequest", reflect.TypeOf((*MockEC2API)(nil).DisableImageBlockPublicAccessRequest), arg0)
+}
+
+// DisableImageBlockPublicAccessWithContext mocks base method.
+func (m *MockEC2API) DisableImageBlockPublicAccessWithContext(arg0 context.Context, arg1 *ec2.DisableImageBlockPublicAccessInput, arg2 ...request.Option) (*ec2.DisableImageBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisableImageBlockPublicAccessWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DisableImageBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableImageBlockPublicAccessWithContext indicates an expected call of DisableImageBlockPublicAccessWithContext.
+func (mr *MockEC2APIMockRecorder) DisableImageBlockPublicAccessWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageBlockPublicAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableImageBlockPublicAccessWithContext), varargs...)
+}
+
 // DisableImageDeprecation mocks base method.
 func (m *MockEC2API) DisableImageDeprecation(arg0 *ec2.DisableImageDeprecationInput) (*ec2.DisableImageDeprecationOutput, error) {
 	m.ctrl.T.Helper()
@@ -22397,6 +22828,41 @@ func (mr *MockEC2APIMockRecorder) DisableImageDeprecationWithContext(arg0, arg1 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageDeprecationWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableImageDeprecationWithContext), varargs...)
+}
+
+// DisableImageRequest mocks base method.
+func (m *MockEC2API) DisableImageRequest(arg0 *ec2.DisableImageInput) (*request.Request, *ec2.DisableImageOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableImageRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DisableImageOutput)
+	return ret0, ret1
+}
+
+// DisableImageRequest indicates an expected call of DisableImageRequest.
+func (mr *MockEC2APIMockRecorder) DisableImageRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageRequest", reflect.TypeOf((*MockEC2API)(nil).DisableImageRequest), arg0)
+}
+
+// DisableImageWithContext mocks base method.
+func (m *MockEC2API) DisableImageWithContext(arg0 context.Context, arg1 *ec2.DisableImageInput, arg2 ...request.Option) (*ec2.DisableImageOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisableImageWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DisableImageOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableImageWithContext indicates an expected call of DisableImageWithContext.
+func (mr *MockEC2APIMockRecorder) DisableImageWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableImageWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableImageWithContext), varargs...)
 }
 
 // DisableIpamOrganizationAdminAccount mocks base method.
@@ -22497,6 +22963,56 @@ func (mr *MockEC2APIMockRecorder) DisableSerialConsoleAccessWithContext(arg0, ar
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableSerialConsoleAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableSerialConsoleAccessWithContext), varargs...)
+}
+
+// DisableSnapshotBlockPublicAccess mocks base method.
+func (m *MockEC2API) DisableSnapshotBlockPublicAccess(arg0 *ec2.DisableSnapshotBlockPublicAccessInput) (*ec2.DisableSnapshotBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableSnapshotBlockPublicAccess", arg0)
+	ret0, _ := ret[0].(*ec2.DisableSnapshotBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableSnapshotBlockPublicAccess indicates an expected call of DisableSnapshotBlockPublicAccess.
+func (mr *MockEC2APIMockRecorder) DisableSnapshotBlockPublicAccess(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableSnapshotBlockPublicAccess", reflect.TypeOf((*MockEC2API)(nil).DisableSnapshotBlockPublicAccess), arg0)
+}
+
+// DisableSnapshotBlockPublicAccessRequest mocks base method.
+func (m *MockEC2API) DisableSnapshotBlockPublicAccessRequest(arg0 *ec2.DisableSnapshotBlockPublicAccessInput) (*request.Request, *ec2.DisableSnapshotBlockPublicAccessOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableSnapshotBlockPublicAccessRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DisableSnapshotBlockPublicAccessOutput)
+	return ret0, ret1
+}
+
+// DisableSnapshotBlockPublicAccessRequest indicates an expected call of DisableSnapshotBlockPublicAccessRequest.
+func (mr *MockEC2APIMockRecorder) DisableSnapshotBlockPublicAccessRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableSnapshotBlockPublicAccessRequest", reflect.TypeOf((*MockEC2API)(nil).DisableSnapshotBlockPublicAccessRequest), arg0)
+}
+
+// DisableSnapshotBlockPublicAccessWithContext mocks base method.
+func (m *MockEC2API) DisableSnapshotBlockPublicAccessWithContext(arg0 context.Context, arg1 *ec2.DisableSnapshotBlockPublicAccessInput, arg2 ...request.Option) (*ec2.DisableSnapshotBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisableSnapshotBlockPublicAccessWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DisableSnapshotBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableSnapshotBlockPublicAccessWithContext indicates an expected call of DisableSnapshotBlockPublicAccessWithContext.
+func (mr *MockEC2APIMockRecorder) DisableSnapshotBlockPublicAccessWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableSnapshotBlockPublicAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).DisableSnapshotBlockPublicAccessWithContext), varargs...)
 }
 
 // DisableTransitGatewayRouteTablePropagation mocks base method.
@@ -22947,6 +23463,56 @@ func (mr *MockEC2APIMockRecorder) DisassociateInstanceEventWindowWithContext(arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisassociateInstanceEventWindowWithContext", reflect.TypeOf((*MockEC2API)(nil).DisassociateInstanceEventWindowWithContext), varargs...)
+}
+
+// DisassociateIpamByoasn mocks base method.
+func (m *MockEC2API) DisassociateIpamByoasn(arg0 *ec2.DisassociateIpamByoasnInput) (*ec2.DisassociateIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisassociateIpamByoasn", arg0)
+	ret0, _ := ret[0].(*ec2.DisassociateIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisassociateIpamByoasn indicates an expected call of DisassociateIpamByoasn.
+func (mr *MockEC2APIMockRecorder) DisassociateIpamByoasn(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisassociateIpamByoasn", reflect.TypeOf((*MockEC2API)(nil).DisassociateIpamByoasn), arg0)
+}
+
+// DisassociateIpamByoasnRequest mocks base method.
+func (m *MockEC2API) DisassociateIpamByoasnRequest(arg0 *ec2.DisassociateIpamByoasnInput) (*request.Request, *ec2.DisassociateIpamByoasnOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisassociateIpamByoasnRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.DisassociateIpamByoasnOutput)
+	return ret0, ret1
+}
+
+// DisassociateIpamByoasnRequest indicates an expected call of DisassociateIpamByoasnRequest.
+func (mr *MockEC2APIMockRecorder) DisassociateIpamByoasnRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisassociateIpamByoasnRequest", reflect.TypeOf((*MockEC2API)(nil).DisassociateIpamByoasnRequest), arg0)
+}
+
+// DisassociateIpamByoasnWithContext mocks base method.
+func (m *MockEC2API) DisassociateIpamByoasnWithContext(arg0 context.Context, arg1 *ec2.DisassociateIpamByoasnInput, arg2 ...request.Option) (*ec2.DisassociateIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisassociateIpamByoasnWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.DisassociateIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisassociateIpamByoasnWithContext indicates an expected call of DisassociateIpamByoasnWithContext.
+func (mr *MockEC2APIMockRecorder) DisassociateIpamByoasnWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisassociateIpamByoasnWithContext", reflect.TypeOf((*MockEC2API)(nil).DisassociateIpamByoasnWithContext), varargs...)
 }
 
 // DisassociateIpamResourceDiscovery mocks base method.
@@ -23649,6 +24215,71 @@ func (mr *MockEC2APIMockRecorder) EnableFastSnapshotRestoresWithContext(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableFastSnapshotRestoresWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableFastSnapshotRestoresWithContext), varargs...)
 }
 
+// EnableImage mocks base method.
+func (m *MockEC2API) EnableImage(arg0 *ec2.EnableImageInput) (*ec2.EnableImageOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableImage", arg0)
+	ret0, _ := ret[0].(*ec2.EnableImageOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableImage indicates an expected call of EnableImage.
+func (mr *MockEC2APIMockRecorder) EnableImage(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImage", reflect.TypeOf((*MockEC2API)(nil).EnableImage), arg0)
+}
+
+// EnableImageBlockPublicAccess mocks base method.
+func (m *MockEC2API) EnableImageBlockPublicAccess(arg0 *ec2.EnableImageBlockPublicAccessInput) (*ec2.EnableImageBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableImageBlockPublicAccess", arg0)
+	ret0, _ := ret[0].(*ec2.EnableImageBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableImageBlockPublicAccess indicates an expected call of EnableImageBlockPublicAccess.
+func (mr *MockEC2APIMockRecorder) EnableImageBlockPublicAccess(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageBlockPublicAccess", reflect.TypeOf((*MockEC2API)(nil).EnableImageBlockPublicAccess), arg0)
+}
+
+// EnableImageBlockPublicAccessRequest mocks base method.
+func (m *MockEC2API) EnableImageBlockPublicAccessRequest(arg0 *ec2.EnableImageBlockPublicAccessInput) (*request.Request, *ec2.EnableImageBlockPublicAccessOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableImageBlockPublicAccessRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.EnableImageBlockPublicAccessOutput)
+	return ret0, ret1
+}
+
+// EnableImageBlockPublicAccessRequest indicates an expected call of EnableImageBlockPublicAccessRequest.
+func (mr *MockEC2APIMockRecorder) EnableImageBlockPublicAccessRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageBlockPublicAccessRequest", reflect.TypeOf((*MockEC2API)(nil).EnableImageBlockPublicAccessRequest), arg0)
+}
+
+// EnableImageBlockPublicAccessWithContext mocks base method.
+func (m *MockEC2API) EnableImageBlockPublicAccessWithContext(arg0 context.Context, arg1 *ec2.EnableImageBlockPublicAccessInput, arg2 ...request.Option) (*ec2.EnableImageBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableImageBlockPublicAccessWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.EnableImageBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableImageBlockPublicAccessWithContext indicates an expected call of EnableImageBlockPublicAccessWithContext.
+func (mr *MockEC2APIMockRecorder) EnableImageBlockPublicAccessWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageBlockPublicAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableImageBlockPublicAccessWithContext), varargs...)
+}
+
 // EnableImageDeprecation mocks base method.
 func (m *MockEC2API) EnableImageDeprecation(arg0 *ec2.EnableImageDeprecationInput) (*ec2.EnableImageDeprecationOutput, error) {
 	m.ctrl.T.Helper()
@@ -23697,6 +24328,41 @@ func (mr *MockEC2APIMockRecorder) EnableImageDeprecationWithContext(arg0, arg1 i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageDeprecationWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableImageDeprecationWithContext), varargs...)
+}
+
+// EnableImageRequest mocks base method.
+func (m *MockEC2API) EnableImageRequest(arg0 *ec2.EnableImageInput) (*request.Request, *ec2.EnableImageOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableImageRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.EnableImageOutput)
+	return ret0, ret1
+}
+
+// EnableImageRequest indicates an expected call of EnableImageRequest.
+func (mr *MockEC2APIMockRecorder) EnableImageRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageRequest", reflect.TypeOf((*MockEC2API)(nil).EnableImageRequest), arg0)
+}
+
+// EnableImageWithContext mocks base method.
+func (m *MockEC2API) EnableImageWithContext(arg0 context.Context, arg1 *ec2.EnableImageInput, arg2 ...request.Option) (*ec2.EnableImageOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableImageWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.EnableImageOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableImageWithContext indicates an expected call of EnableImageWithContext.
+func (mr *MockEC2APIMockRecorder) EnableImageWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableImageWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableImageWithContext), varargs...)
 }
 
 // EnableIpamOrganizationAdminAccount mocks base method.
@@ -23847,6 +24513,56 @@ func (mr *MockEC2APIMockRecorder) EnableSerialConsoleAccessWithContext(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableSerialConsoleAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableSerialConsoleAccessWithContext), varargs...)
+}
+
+// EnableSnapshotBlockPublicAccess mocks base method.
+func (m *MockEC2API) EnableSnapshotBlockPublicAccess(arg0 *ec2.EnableSnapshotBlockPublicAccessInput) (*ec2.EnableSnapshotBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableSnapshotBlockPublicAccess", arg0)
+	ret0, _ := ret[0].(*ec2.EnableSnapshotBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableSnapshotBlockPublicAccess indicates an expected call of EnableSnapshotBlockPublicAccess.
+func (mr *MockEC2APIMockRecorder) EnableSnapshotBlockPublicAccess(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableSnapshotBlockPublicAccess", reflect.TypeOf((*MockEC2API)(nil).EnableSnapshotBlockPublicAccess), arg0)
+}
+
+// EnableSnapshotBlockPublicAccessRequest mocks base method.
+func (m *MockEC2API) EnableSnapshotBlockPublicAccessRequest(arg0 *ec2.EnableSnapshotBlockPublicAccessInput) (*request.Request, *ec2.EnableSnapshotBlockPublicAccessOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableSnapshotBlockPublicAccessRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.EnableSnapshotBlockPublicAccessOutput)
+	return ret0, ret1
+}
+
+// EnableSnapshotBlockPublicAccessRequest indicates an expected call of EnableSnapshotBlockPublicAccessRequest.
+func (mr *MockEC2APIMockRecorder) EnableSnapshotBlockPublicAccessRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableSnapshotBlockPublicAccessRequest", reflect.TypeOf((*MockEC2API)(nil).EnableSnapshotBlockPublicAccessRequest), arg0)
+}
+
+// EnableSnapshotBlockPublicAccessWithContext mocks base method.
+func (m *MockEC2API) EnableSnapshotBlockPublicAccessWithContext(arg0 context.Context, arg1 *ec2.EnableSnapshotBlockPublicAccessInput, arg2 ...request.Option) (*ec2.EnableSnapshotBlockPublicAccessOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableSnapshotBlockPublicAccessWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.EnableSnapshotBlockPublicAccessOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableSnapshotBlockPublicAccessWithContext indicates an expected call of EnableSnapshotBlockPublicAccessWithContext.
+func (mr *MockEC2APIMockRecorder) EnableSnapshotBlockPublicAccessWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableSnapshotBlockPublicAccessWithContext", reflect.TypeOf((*MockEC2API)(nil).EnableSnapshotBlockPublicAccessWithContext), varargs...)
 }
 
 // EnableTransitGatewayRouteTablePropagation mocks base method.
@@ -25048,6 +25764,56 @@ func (mr *MockEC2APIMockRecorder) GetHostReservationPurchasePreviewWithContext(a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostReservationPurchasePreviewWithContext", reflect.TypeOf((*MockEC2API)(nil).GetHostReservationPurchasePreviewWithContext), varargs...)
 }
 
+// GetImageBlockPublicAccessState mocks base method.
+func (m *MockEC2API) GetImageBlockPublicAccessState(arg0 *ec2.GetImageBlockPublicAccessStateInput) (*ec2.GetImageBlockPublicAccessStateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImageBlockPublicAccessState", arg0)
+	ret0, _ := ret[0].(*ec2.GetImageBlockPublicAccessStateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImageBlockPublicAccessState indicates an expected call of GetImageBlockPublicAccessState.
+func (mr *MockEC2APIMockRecorder) GetImageBlockPublicAccessState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageBlockPublicAccessState", reflect.TypeOf((*MockEC2API)(nil).GetImageBlockPublicAccessState), arg0)
+}
+
+// GetImageBlockPublicAccessStateRequest mocks base method.
+func (m *MockEC2API) GetImageBlockPublicAccessStateRequest(arg0 *ec2.GetImageBlockPublicAccessStateInput) (*request.Request, *ec2.GetImageBlockPublicAccessStateOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImageBlockPublicAccessStateRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.GetImageBlockPublicAccessStateOutput)
+	return ret0, ret1
+}
+
+// GetImageBlockPublicAccessStateRequest indicates an expected call of GetImageBlockPublicAccessStateRequest.
+func (mr *MockEC2APIMockRecorder) GetImageBlockPublicAccessStateRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageBlockPublicAccessStateRequest", reflect.TypeOf((*MockEC2API)(nil).GetImageBlockPublicAccessStateRequest), arg0)
+}
+
+// GetImageBlockPublicAccessStateWithContext mocks base method.
+func (m *MockEC2API) GetImageBlockPublicAccessStateWithContext(arg0 context.Context, arg1 *ec2.GetImageBlockPublicAccessStateInput, arg2 ...request.Option) (*ec2.GetImageBlockPublicAccessStateOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetImageBlockPublicAccessStateWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.GetImageBlockPublicAccessStateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImageBlockPublicAccessStateWithContext indicates an expected call of GetImageBlockPublicAccessStateWithContext.
+func (mr *MockEC2APIMockRecorder) GetImageBlockPublicAccessStateWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageBlockPublicAccessStateWithContext", reflect.TypeOf((*MockEC2API)(nil).GetImageBlockPublicAccessStateWithContext), varargs...)
+}
+
 // GetInstanceTypesFromInstanceRequirements mocks base method.
 func (m *MockEC2API) GetInstanceTypesFromInstanceRequirements(arg0 *ec2.GetInstanceTypesFromInstanceRequirementsInput) (*ec2.GetInstanceTypesFromInstanceRequirementsOutput, error) {
 	m.ctrl.T.Helper()
@@ -25345,6 +26111,56 @@ func (mr *MockEC2APIMockRecorder) GetIpamDiscoveredAccountsWithContext(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIpamDiscoveredAccountsWithContext", reflect.TypeOf((*MockEC2API)(nil).GetIpamDiscoveredAccountsWithContext), varargs...)
+}
+
+// GetIpamDiscoveredPublicAddresses mocks base method.
+func (m *MockEC2API) GetIpamDiscoveredPublicAddresses(arg0 *ec2.GetIpamDiscoveredPublicAddressesInput) (*ec2.GetIpamDiscoveredPublicAddressesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIpamDiscoveredPublicAddresses", arg0)
+	ret0, _ := ret[0].(*ec2.GetIpamDiscoveredPublicAddressesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIpamDiscoveredPublicAddresses indicates an expected call of GetIpamDiscoveredPublicAddresses.
+func (mr *MockEC2APIMockRecorder) GetIpamDiscoveredPublicAddresses(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIpamDiscoveredPublicAddresses", reflect.TypeOf((*MockEC2API)(nil).GetIpamDiscoveredPublicAddresses), arg0)
+}
+
+// GetIpamDiscoveredPublicAddressesRequest mocks base method.
+func (m *MockEC2API) GetIpamDiscoveredPublicAddressesRequest(arg0 *ec2.GetIpamDiscoveredPublicAddressesInput) (*request.Request, *ec2.GetIpamDiscoveredPublicAddressesOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIpamDiscoveredPublicAddressesRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.GetIpamDiscoveredPublicAddressesOutput)
+	return ret0, ret1
+}
+
+// GetIpamDiscoveredPublicAddressesRequest indicates an expected call of GetIpamDiscoveredPublicAddressesRequest.
+func (mr *MockEC2APIMockRecorder) GetIpamDiscoveredPublicAddressesRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIpamDiscoveredPublicAddressesRequest", reflect.TypeOf((*MockEC2API)(nil).GetIpamDiscoveredPublicAddressesRequest), arg0)
+}
+
+// GetIpamDiscoveredPublicAddressesWithContext mocks base method.
+func (m *MockEC2API) GetIpamDiscoveredPublicAddressesWithContext(arg0 context.Context, arg1 *ec2.GetIpamDiscoveredPublicAddressesInput, arg2 ...request.Option) (*ec2.GetIpamDiscoveredPublicAddressesOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetIpamDiscoveredPublicAddressesWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.GetIpamDiscoveredPublicAddressesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIpamDiscoveredPublicAddressesWithContext indicates an expected call of GetIpamDiscoveredPublicAddressesWithContext.
+func (mr *MockEC2APIMockRecorder) GetIpamDiscoveredPublicAddressesWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIpamDiscoveredPublicAddressesWithContext", reflect.TypeOf((*MockEC2API)(nil).GetIpamDiscoveredPublicAddressesWithContext), varargs...)
 }
 
 // GetIpamDiscoveredResourceCidrs mocks base method.
@@ -26128,6 +26944,89 @@ func (mr *MockEC2APIMockRecorder) GetReservedInstancesExchangeQuoteWithContext(a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReservedInstancesExchangeQuoteWithContext", reflect.TypeOf((*MockEC2API)(nil).GetReservedInstancesExchangeQuoteWithContext), varargs...)
 }
 
+// GetSecurityGroupsForVpc mocks base method.
+func (m *MockEC2API) GetSecurityGroupsForVpc(arg0 *ec2.GetSecurityGroupsForVpcInput) (*ec2.GetSecurityGroupsForVpcOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecurityGroupsForVpc", arg0)
+	ret0, _ := ret[0].(*ec2.GetSecurityGroupsForVpcOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecurityGroupsForVpc indicates an expected call of GetSecurityGroupsForVpc.
+func (mr *MockEC2APIMockRecorder) GetSecurityGroupsForVpc(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupsForVpc", reflect.TypeOf((*MockEC2API)(nil).GetSecurityGroupsForVpc), arg0)
+}
+
+// GetSecurityGroupsForVpcPages mocks base method.
+func (m *MockEC2API) GetSecurityGroupsForVpcPages(arg0 *ec2.GetSecurityGroupsForVpcInput, arg1 func(*ec2.GetSecurityGroupsForVpcOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecurityGroupsForVpcPages", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetSecurityGroupsForVpcPages indicates an expected call of GetSecurityGroupsForVpcPages.
+func (mr *MockEC2APIMockRecorder) GetSecurityGroupsForVpcPages(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupsForVpcPages", reflect.TypeOf((*MockEC2API)(nil).GetSecurityGroupsForVpcPages), arg0, arg1)
+}
+
+// GetSecurityGroupsForVpcPagesWithContext mocks base method.
+func (m *MockEC2API) GetSecurityGroupsForVpcPagesWithContext(arg0 context.Context, arg1 *ec2.GetSecurityGroupsForVpcInput, arg2 func(*ec2.GetSecurityGroupsForVpcOutput, bool) bool, arg3 ...request.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSecurityGroupsForVpcPagesWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetSecurityGroupsForVpcPagesWithContext indicates an expected call of GetSecurityGroupsForVpcPagesWithContext.
+func (mr *MockEC2APIMockRecorder) GetSecurityGroupsForVpcPagesWithContext(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupsForVpcPagesWithContext", reflect.TypeOf((*MockEC2API)(nil).GetSecurityGroupsForVpcPagesWithContext), varargs...)
+}
+
+// GetSecurityGroupsForVpcRequest mocks base method.
+func (m *MockEC2API) GetSecurityGroupsForVpcRequest(arg0 *ec2.GetSecurityGroupsForVpcInput) (*request.Request, *ec2.GetSecurityGroupsForVpcOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecurityGroupsForVpcRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.GetSecurityGroupsForVpcOutput)
+	return ret0, ret1
+}
+
+// GetSecurityGroupsForVpcRequest indicates an expected call of GetSecurityGroupsForVpcRequest.
+func (mr *MockEC2APIMockRecorder) GetSecurityGroupsForVpcRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupsForVpcRequest", reflect.TypeOf((*MockEC2API)(nil).GetSecurityGroupsForVpcRequest), arg0)
+}
+
+// GetSecurityGroupsForVpcWithContext mocks base method.
+func (m *MockEC2API) GetSecurityGroupsForVpcWithContext(arg0 context.Context, arg1 *ec2.GetSecurityGroupsForVpcInput, arg2 ...request.Option) (*ec2.GetSecurityGroupsForVpcOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSecurityGroupsForVpcWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.GetSecurityGroupsForVpcOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecurityGroupsForVpcWithContext indicates an expected call of GetSecurityGroupsForVpcWithContext.
+func (mr *MockEC2APIMockRecorder) GetSecurityGroupsForVpcWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroupsForVpcWithContext", reflect.TypeOf((*MockEC2API)(nil).GetSecurityGroupsForVpcWithContext), varargs...)
+}
+
 // GetSerialConsoleAccessStatus mocks base method.
 func (m *MockEC2API) GetSerialConsoleAccessStatus(arg0 *ec2.GetSerialConsoleAccessStatusInput) (*ec2.GetSerialConsoleAccessStatusOutput, error) {
 	m.ctrl.T.Helper()
@@ -26176,6 +27075,56 @@ func (mr *MockEC2APIMockRecorder) GetSerialConsoleAccessStatusWithContext(arg0, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleAccessStatusWithContext", reflect.TypeOf((*MockEC2API)(nil).GetSerialConsoleAccessStatusWithContext), varargs...)
+}
+
+// GetSnapshotBlockPublicAccessState mocks base method.
+func (m *MockEC2API) GetSnapshotBlockPublicAccessState(arg0 *ec2.GetSnapshotBlockPublicAccessStateInput) (*ec2.GetSnapshotBlockPublicAccessStateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSnapshotBlockPublicAccessState", arg0)
+	ret0, _ := ret[0].(*ec2.GetSnapshotBlockPublicAccessStateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSnapshotBlockPublicAccessState indicates an expected call of GetSnapshotBlockPublicAccessState.
+func (mr *MockEC2APIMockRecorder) GetSnapshotBlockPublicAccessState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotBlockPublicAccessState", reflect.TypeOf((*MockEC2API)(nil).GetSnapshotBlockPublicAccessState), arg0)
+}
+
+// GetSnapshotBlockPublicAccessStateRequest mocks base method.
+func (m *MockEC2API) GetSnapshotBlockPublicAccessStateRequest(arg0 *ec2.GetSnapshotBlockPublicAccessStateInput) (*request.Request, *ec2.GetSnapshotBlockPublicAccessStateOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSnapshotBlockPublicAccessStateRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.GetSnapshotBlockPublicAccessStateOutput)
+	return ret0, ret1
+}
+
+// GetSnapshotBlockPublicAccessStateRequest indicates an expected call of GetSnapshotBlockPublicAccessStateRequest.
+func (mr *MockEC2APIMockRecorder) GetSnapshotBlockPublicAccessStateRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotBlockPublicAccessStateRequest", reflect.TypeOf((*MockEC2API)(nil).GetSnapshotBlockPublicAccessStateRequest), arg0)
+}
+
+// GetSnapshotBlockPublicAccessStateWithContext mocks base method.
+func (m *MockEC2API) GetSnapshotBlockPublicAccessStateWithContext(arg0 context.Context, arg1 *ec2.GetSnapshotBlockPublicAccessStateInput, arg2 ...request.Option) (*ec2.GetSnapshotBlockPublicAccessStateOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSnapshotBlockPublicAccessStateWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.GetSnapshotBlockPublicAccessStateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSnapshotBlockPublicAccessStateWithContext indicates an expected call of GetSnapshotBlockPublicAccessStateWithContext.
+func (mr *MockEC2APIMockRecorder) GetSnapshotBlockPublicAccessStateWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotBlockPublicAccessStateWithContext", reflect.TypeOf((*MockEC2API)(nil).GetSnapshotBlockPublicAccessStateWithContext), varargs...)
 }
 
 // GetSpotPlacementScores mocks base method.
@@ -27606,6 +28555,56 @@ func (mr *MockEC2APIMockRecorder) ListSnapshotsInRecycleBinWithContext(arg0, arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshotsInRecycleBinWithContext", reflect.TypeOf((*MockEC2API)(nil).ListSnapshotsInRecycleBinWithContext), varargs...)
+}
+
+// LockSnapshot mocks base method.
+func (m *MockEC2API) LockSnapshot(arg0 *ec2.LockSnapshotInput) (*ec2.LockSnapshotOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockSnapshot", arg0)
+	ret0, _ := ret[0].(*ec2.LockSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LockSnapshot indicates an expected call of LockSnapshot.
+func (mr *MockEC2APIMockRecorder) LockSnapshot(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSnapshot", reflect.TypeOf((*MockEC2API)(nil).LockSnapshot), arg0)
+}
+
+// LockSnapshotRequest mocks base method.
+func (m *MockEC2API) LockSnapshotRequest(arg0 *ec2.LockSnapshotInput) (*request.Request, *ec2.LockSnapshotOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockSnapshotRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.LockSnapshotOutput)
+	return ret0, ret1
+}
+
+// LockSnapshotRequest indicates an expected call of LockSnapshotRequest.
+func (mr *MockEC2APIMockRecorder) LockSnapshotRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSnapshotRequest", reflect.TypeOf((*MockEC2API)(nil).LockSnapshotRequest), arg0)
+}
+
+// LockSnapshotWithContext mocks base method.
+func (m *MockEC2API) LockSnapshotWithContext(arg0 context.Context, arg1 *ec2.LockSnapshotInput, arg2 ...request.Option) (*ec2.LockSnapshotOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "LockSnapshotWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.LockSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LockSnapshotWithContext indicates an expected call of LockSnapshotWithContext.
+func (mr *MockEC2APIMockRecorder) LockSnapshotWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSnapshotWithContext", reflect.TypeOf((*MockEC2API)(nil).LockSnapshotWithContext), varargs...)
 }
 
 // ModifyAddressAttribute mocks base method.
@@ -31008,6 +32007,56 @@ func (mr *MockEC2APIMockRecorder) ProvisionByoipCidrWithContext(arg0, arg1 inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvisionByoipCidrWithContext", reflect.TypeOf((*MockEC2API)(nil).ProvisionByoipCidrWithContext), varargs...)
 }
 
+// ProvisionIpamByoasn mocks base method.
+func (m *MockEC2API) ProvisionIpamByoasn(arg0 *ec2.ProvisionIpamByoasnInput) (*ec2.ProvisionIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProvisionIpamByoasn", arg0)
+	ret0, _ := ret[0].(*ec2.ProvisionIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProvisionIpamByoasn indicates an expected call of ProvisionIpamByoasn.
+func (mr *MockEC2APIMockRecorder) ProvisionIpamByoasn(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvisionIpamByoasn", reflect.TypeOf((*MockEC2API)(nil).ProvisionIpamByoasn), arg0)
+}
+
+// ProvisionIpamByoasnRequest mocks base method.
+func (m *MockEC2API) ProvisionIpamByoasnRequest(arg0 *ec2.ProvisionIpamByoasnInput) (*request.Request, *ec2.ProvisionIpamByoasnOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProvisionIpamByoasnRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.ProvisionIpamByoasnOutput)
+	return ret0, ret1
+}
+
+// ProvisionIpamByoasnRequest indicates an expected call of ProvisionIpamByoasnRequest.
+func (mr *MockEC2APIMockRecorder) ProvisionIpamByoasnRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvisionIpamByoasnRequest", reflect.TypeOf((*MockEC2API)(nil).ProvisionIpamByoasnRequest), arg0)
+}
+
+// ProvisionIpamByoasnWithContext mocks base method.
+func (m *MockEC2API) ProvisionIpamByoasnWithContext(arg0 context.Context, arg1 *ec2.ProvisionIpamByoasnInput, arg2 ...request.Option) (*ec2.ProvisionIpamByoasnOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProvisionIpamByoasnWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.ProvisionIpamByoasnOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProvisionIpamByoasnWithContext indicates an expected call of ProvisionIpamByoasnWithContext.
+func (mr *MockEC2APIMockRecorder) ProvisionIpamByoasnWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvisionIpamByoasnWithContext", reflect.TypeOf((*MockEC2API)(nil).ProvisionIpamByoasnWithContext), varargs...)
+}
+
 // ProvisionIpamPoolCidr mocks base method.
 func (m *MockEC2API) ProvisionIpamPoolCidr(arg0 *ec2.ProvisionIpamPoolCidrInput) (*ec2.ProvisionIpamPoolCidrOutput, error) {
 	m.ctrl.T.Helper()
@@ -31106,6 +32155,56 @@ func (mr *MockEC2APIMockRecorder) ProvisionPublicIpv4PoolCidrWithContext(arg0, a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvisionPublicIpv4PoolCidrWithContext", reflect.TypeOf((*MockEC2API)(nil).ProvisionPublicIpv4PoolCidrWithContext), varargs...)
+}
+
+// PurchaseCapacityBlock mocks base method.
+func (m *MockEC2API) PurchaseCapacityBlock(arg0 *ec2.PurchaseCapacityBlockInput) (*ec2.PurchaseCapacityBlockOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PurchaseCapacityBlock", arg0)
+	ret0, _ := ret[0].(*ec2.PurchaseCapacityBlockOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PurchaseCapacityBlock indicates an expected call of PurchaseCapacityBlock.
+func (mr *MockEC2APIMockRecorder) PurchaseCapacityBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurchaseCapacityBlock", reflect.TypeOf((*MockEC2API)(nil).PurchaseCapacityBlock), arg0)
+}
+
+// PurchaseCapacityBlockRequest mocks base method.
+func (m *MockEC2API) PurchaseCapacityBlockRequest(arg0 *ec2.PurchaseCapacityBlockInput) (*request.Request, *ec2.PurchaseCapacityBlockOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PurchaseCapacityBlockRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.PurchaseCapacityBlockOutput)
+	return ret0, ret1
+}
+
+// PurchaseCapacityBlockRequest indicates an expected call of PurchaseCapacityBlockRequest.
+func (mr *MockEC2APIMockRecorder) PurchaseCapacityBlockRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurchaseCapacityBlockRequest", reflect.TypeOf((*MockEC2API)(nil).PurchaseCapacityBlockRequest), arg0)
+}
+
+// PurchaseCapacityBlockWithContext mocks base method.
+func (m *MockEC2API) PurchaseCapacityBlockWithContext(arg0 context.Context, arg1 *ec2.PurchaseCapacityBlockInput, arg2 ...request.Option) (*ec2.PurchaseCapacityBlockOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PurchaseCapacityBlockWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.PurchaseCapacityBlockOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PurchaseCapacityBlockWithContext indicates an expected call of PurchaseCapacityBlockWithContext.
+func (mr *MockEC2APIMockRecorder) PurchaseCapacityBlockWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurchaseCapacityBlockWithContext", reflect.TypeOf((*MockEC2API)(nil).PurchaseCapacityBlockWithContext), varargs...)
 }
 
 // PurchaseHostReservation mocks base method.
@@ -34024,6 +35123,56 @@ func (mr *MockEC2APIMockRecorder) UnassignPrivateNatGatewayAddressWithContext(ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnassignPrivateNatGatewayAddressWithContext", reflect.TypeOf((*MockEC2API)(nil).UnassignPrivateNatGatewayAddressWithContext), varargs...)
 }
 
+// UnlockSnapshot mocks base method.
+func (m *MockEC2API) UnlockSnapshot(arg0 *ec2.UnlockSnapshotInput) (*ec2.UnlockSnapshotOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnlockSnapshot", arg0)
+	ret0, _ := ret[0].(*ec2.UnlockSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnlockSnapshot indicates an expected call of UnlockSnapshot.
+func (mr *MockEC2APIMockRecorder) UnlockSnapshot(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockSnapshot", reflect.TypeOf((*MockEC2API)(nil).UnlockSnapshot), arg0)
+}
+
+// UnlockSnapshotRequest mocks base method.
+func (m *MockEC2API) UnlockSnapshotRequest(arg0 *ec2.UnlockSnapshotInput) (*request.Request, *ec2.UnlockSnapshotOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnlockSnapshotRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*ec2.UnlockSnapshotOutput)
+	return ret0, ret1
+}
+
+// UnlockSnapshotRequest indicates an expected call of UnlockSnapshotRequest.
+func (mr *MockEC2APIMockRecorder) UnlockSnapshotRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockSnapshotRequest", reflect.TypeOf((*MockEC2API)(nil).UnlockSnapshotRequest), arg0)
+}
+
+// UnlockSnapshotWithContext mocks base method.
+func (m *MockEC2API) UnlockSnapshotWithContext(arg0 context.Context, arg1 *ec2.UnlockSnapshotInput, arg2 ...request.Option) (*ec2.UnlockSnapshotOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UnlockSnapshotWithContext", varargs...)
+	ret0, _ := ret[0].(*ec2.UnlockSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnlockSnapshotWithContext indicates an expected call of UnlockSnapshotWithContext.
+func (mr *MockEC2APIMockRecorder) UnlockSnapshotWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockSnapshotWithContext", reflect.TypeOf((*MockEC2API)(nil).UnlockSnapshotWithContext), varargs...)
+}
+
 // UnmonitorInstances mocks base method.
 func (m *MockEC2API) UnmonitorInstances(arg0 *ec2.UnmonitorInstancesInput) (*ec2.UnmonitorInstancesOutput, error) {
 	m.ctrl.T.Helper()
@@ -34964,6 +36113,39 @@ func (mr *MockEC2APIMockRecorder) WaitUntilSpotInstanceRequestFulfilledWithConte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilSpotInstanceRequestFulfilledWithContext", reflect.TypeOf((*MockEC2API)(nil).WaitUntilSpotInstanceRequestFulfilledWithContext), varargs...)
+}
+
+// WaitUntilStoreImageTaskComplete mocks base method.
+func (m *MockEC2API) WaitUntilStoreImageTaskComplete(arg0 *ec2.DescribeStoreImageTasksInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilStoreImageTaskComplete", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilStoreImageTaskComplete indicates an expected call of WaitUntilStoreImageTaskComplete.
+func (mr *MockEC2APIMockRecorder) WaitUntilStoreImageTaskComplete(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStoreImageTaskComplete", reflect.TypeOf((*MockEC2API)(nil).WaitUntilStoreImageTaskComplete), arg0)
+}
+
+// WaitUntilStoreImageTaskCompleteWithContext mocks base method.
+func (m *MockEC2API) WaitUntilStoreImageTaskCompleteWithContext(arg0 context.Context, arg1 *ec2.DescribeStoreImageTasksInput, arg2 ...request.WaiterOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "WaitUntilStoreImageTaskCompleteWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilStoreImageTaskCompleteWithContext indicates an expected call of WaitUntilStoreImageTaskCompleteWithContext.
+func (mr *MockEC2APIMockRecorder) WaitUntilStoreImageTaskCompleteWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStoreImageTaskCompleteWithContext", reflect.TypeOf((*MockEC2API)(nil).WaitUntilStoreImageTaskCompleteWithContext), varargs...)
 }
 
 // WaitUntilSubnetAvailable mocks base method.

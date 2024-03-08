@@ -1,6 +1,5 @@
 ---
 # Source: aws-ebs-csi-driver/templates/node.yaml
-# Node Service
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -8,6 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: ebs-csi-node
@@ -31,12 +31,21 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+              - key: node.kubernetes.io/instance-type
+                operator: NotIn
+                values:
+                - a1.medium
+                - a1.large
+                - a1.xlarge
+                - a1.2xlarge
+                - a1.4xlarge
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: ebs-csi-node-sa
       priorityClassName: system-node-critical
       tolerations:
         - operator: Exists
+      hostNetwork: false
       securityContext:
         fsGroup: 0
         runAsGroup: 0
@@ -44,7 +53,7 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.21.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.28.0
           imagePullPolicy: IfNotPresent
           args:
             - node
@@ -87,8 +96,12 @@ spec:
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.8.0-eks-1-27-7
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.10.0-eks-1-29-5
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -102,12 +115,12 @@ spec:
           livenessProbe:
             exec:
               command:
-                - /csi-node-driver-registrar
-                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-                - --mode=kubelet-registration-probe
+              - /csi-node-driver-registrar
+              - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+              - --mode=kubelet-registration-probe
             initialDelaySeconds: 30
-            timeoutSeconds: 15
             periodSeconds: 90
+            timeoutSeconds: 15
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -125,7 +138,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.10.0-eks-1-27-7
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.12.0-eks-1-29-5
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock

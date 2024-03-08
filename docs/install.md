@@ -52,7 +52,7 @@ You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS mana
 
 #### Kustomize
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.21"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.28"
 ```
 
 *Note: Using the master branch to deploy the driver is not supported as the master branch may contain upcoming features incompatible with the currently released stable version of the driver.*
@@ -72,6 +72,8 @@ helm upgrade --install aws-ebs-csi-driver \
 ```
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
+For each container (including the controller, node, and sidecars), there is an `additionalArgs` that accepts arguments that are not explicitly specified, such as `--retry-interval-start`, `--retry-interval-max` and
+`--timeout` that provisioner and attacher provides, or `--kube-api-burst`, `--kube-api-qps` etc.
 
 #### Once the driver has been deployed, verify the pods are running:
 ```sh

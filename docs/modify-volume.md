@@ -1,29 +1,50 @@
 # Volume Modification
 
-The EBS CSI Driver (starting from v1.19.0) supports volume modification through PVC annotations. This allows users to modify volume properties (e.g., volume type, IOPS, and throughput). 
+The EBS CSI Driver (starting from v1.19.0) supports volume modification through two methods:
+- Via the standardized CSI RPC `ControllerModifyVolume` (on Kubernetes, this is done via [`VolumeAttributesClass`](https://github.com/awslabs/volume-modifier-for-k8s))
+- Volume annotations via [`volume-modifier-for-k8s`](https://github.com/awslabs/volume-modifier-for-k8s)
 
 ## Installation
-This feature is opt-in. 
 
-To install this feature through the Helm chart, users must set `controller.volumeModificationFeature.enabled` in `values.yaml` to `true`.
+### `ControllerModifyVolume` via `VolumeAttributesClass` (Recommended)
+
+`VolumeAttributesClass` support is controlled by the Kubernetes `VolumeAttributesClass` [feature gate](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+
+To use this feature, it must be enabled in the following places:
+- `VolumeAttributesClass` feature gate on `kube-apiserver` (consult your Kubernetes distro's documentation)
+- `storage.k8s.io/v1alpha1` enabled in `kube-apiserver` via [`runtime-config`](https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/) (consult your Kubernetes distro's documentation)
+- `VolumeAttributesClass` feature gate on `kube-controller-manager` (consult your Kubernetes distro's documentation)
+- `VolumeAttributesClass` feature gate on `external-provisioner` (add `--feature-gates=VolumeAttributesClass=true` to `sidecars.provisioner.additionalArgs` when using the EBS CSI Helm chart)
+- `VolumeAttributesClass` feature gate on `kube-controller-manager` (add `--feature-gates=VolumeAttributesClass=true` to `sidecars.resizer.additionalArgs` when using the EBS CSI Helm chart)
+
+For more information, see the [Kubernetes documentation for the feature](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/).
+
+### `volume-modifier-for-k8s`
+
+To enable this feature through the Helm chart, users must set `controller.volumeModificationFeature.enabled` in `values.yaml` to `true`.
 
 This will install an additional sidecar (`volumemodifier`) that watches the Kubernetes API server for changes to PVC annotations and triggers an RPC call against the CSI driver.
 
-## Usage
+## Parameters
 
-Users can specify the following PVC annotations:
+Users can specify the following modification parameters:
 
-- `ebs.csi.aws.com/volumeType`: to update the volume type
-- `ebs.csi.aws.com/iops`: to update the IOPS
-- `ebs.csi.aws.com/throughput`: to update the throughput
+- `type`: to update the volume type
+- `iops`: to update the IOPS
+- `throughput`: to update the throughput
 
 ## Considerations
 
 - Keep in mind the [6 hour cooldown period](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyVolume.html) for EBS ModifyVolume. Multiple ModifyVolume calls for the same volume within a 6 hour period will fail. 
-- It is not yet possible to update both the annotations and capacity of the PVC at the same time. This results in multiple RPC calls to the driver, and only one of them will succeed (due to the cooldown period). A future release of the driver will lift this restriction.
 - Ensure that the desired volume properties are permissible. The driver does minimum client side validation. 
 
 ## Example
+
+### `ControllerModifyVolume` via `VolumeAttributesClass`
+
+See the [EBS CSI example with manifests](../examples/kubernetes/modify-volume).
+
+### `volume-modifier-for-k8s`
 
 #### 1) Create a PVC.
 
@@ -101,7 +122,7 @@ Events:
 ```
 $ pv=$(k get -o json pvc ebs-claim | jq -r '.spec | .volumeName')
 $ volumename=$(k get -o json pv $pv | jq -r '.spec | .csi | .volumeHandle')
-$ aws ec2 describe-volumes —volume-id $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
+$ aws ec2 describe-volumes —volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
 "gp3 3000 125"
 ```
 
@@ -196,7 +217,7 @@ Do **NOT** delete these annotations. These annotations are used by the sidecar t
 
 #### 6) (Optional) Validate the volume has been modified in EBS.
 ```
-$ aws ec2 describe-volumes --volume-id $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
+$ aws ec2 describe-volumes --volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
 "io2 4000 null"
 ```
 

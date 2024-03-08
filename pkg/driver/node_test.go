@@ -26,6 +26,7 @@ import (
 	"io/fs"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -34,9 +35,12 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -275,6 +279,99 @@ func TestNodeStageVolume(t *testing.T) {
 			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
 				successExpectMock(mockMounter, mockDeviceIdentifier)
 				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-b", "1024"}))
+			},
+		},
+		{
+			name: "success with inode size in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{InodeSizeKey: "256"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-I", "256"}))
+			},
+		},
+		{
+			name: "success with inode size in xfs",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: FSTypeXfs,
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId:      volumeID,
+				VolumeContext: map[string]string{InodeSizeKey: "256"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeXfs), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-i", "size=256"}))
+			},
+		},
+		{
+			name: "success with bytes-per-inode",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{BytesPerInodeKey: "8192"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-i", "8192"}))
+			},
+		},
+		{
+			name: "success with number-of-inodes",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{NumberOfInodesKey: "13107200"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-N", "13107200"}))
+			},
+		},
+		{
+			name: "success with bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc"}))
+			},
+		},
+		{
+			name: "success with custom cluster size and bigalloc feature flag enabled in ext4",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{DevicePathKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+				VolumeContext:     map[string]string{Ext4BigAllocKey: "true", Ext4ClusterSizeKey: "16384"},
+			},
+			expectMock: func(mockMounter MockMounter, mockDeviceIdentifier MockDeviceIdentifier) {
+				successExpectMock(mockMounter, mockDeviceIdentifier)
+				mockMounter.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(defaultFsType), gomock.Any(), gomock.Nil(), gomock.Eq([]string{"-O", "bigalloc", "-C", "16384"}))
 			},
 		},
 		{
@@ -1926,171 +2023,261 @@ func TestNodeGetInfo(t *testing.T) {
 	validOutpostArn, _ := arn.Parse(strings.ReplaceAll("arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0", "outpost/", ""))
 	emptyOutpostArn := arn.ARN{}
 	testCases := []struct {
-		name              string
-		instanceID        string
-		instanceType      string
-		availabilityZone  string
-		region            string
-		attachedENIs      int
-		blockDevices      int
-		volumeAttachLimit int64
-		expMaxVolumes     int64
-		outpostArn        arn.ARN
+		name                      string
+		instanceID                string
+		instanceType              string
+		availabilityZone          string
+		region                    string
+		attachedENIs              int
+		blockDevices              int
+		volumeAttachLimit         int64
+		reservedVolumeAttachments int
+		expMaxVolumes             int64
+		outpostArn                arn.ARN
 	}{
 		{
-			name:              "non-nitro instance success normal",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t2.medium",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			expMaxVolumes:     38,
-			attachedENIs:      1,
-			outpostArn:        emptyOutpostArn,
+			name:                      "non-nitro instance success normal",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t2.medium",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			expMaxVolumes:             38,
+			attachedENIs:              1,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "success normal with overwrite",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t2.medium",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: 42,
-			expMaxVolumes:     42,
-			outpostArn:        emptyOutpostArn,
+			name:                      "success normal with overwrite",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t2.medium",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         42,
+			reservedVolumeAttachments: -1,
+			expMaxVolumes:             42,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "nitro instance success normal",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      2,
-			expMaxVolumes:     25, // 28 (max) - 2 (enis) - 1 (root)
-			outpostArn:        emptyOutpostArn,
+			name:                      "nitro instance success normal",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              2,
+			expMaxVolumes:             25, // 28 (max) - 2 (enis) - 1 (root)
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "nitro instance success normal with NVMe",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "m5d.large",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      2,
-			expMaxVolumes:     24,
-			outpostArn:        emptyOutpostArn,
+			name:                      "nitro instance success normal with NVMe",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m5d.large",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              2,
+			expMaxVolumes:             24,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "success normal with NVMe and overwrite",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "m5d.large",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: 30,
-			expMaxVolumes:     30,
-			outpostArn:        emptyOutpostArn,
+			name:                      "success normal with NVMe and overwrite",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m5d.large",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         30,
+			reservedVolumeAttachments: -1,
+			expMaxVolumes:             30,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "success normal outposts",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "m5d.large",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: 30,
-			expMaxVolumes:     30,
-			outpostArn:        validOutpostArn,
+			name:                      "success normal outposts",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m5d.large",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         30,
+			reservedVolumeAttachments: -1,
+			expMaxVolumes:             30,
+			outpostArn:                validOutpostArn,
 		},
 		{
-			name:              "baremetal instances max EBS attachment limit",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "c6i.metal",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			expMaxVolumes:     26, // 28 (max) - 1 (eni) - 1 (root)
-			outpostArn:        emptyOutpostArn,
+			name:                      "baremetal instances max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "c6i.metal",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             26, // 28 (max) - 1 (eni) - 1 (root)
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "high memory baremetal instances max EBS attachment limit",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "u-12tb1.metal",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			expMaxVolumes:     19,
-			outpostArn:        emptyOutpostArn,
+			name:                      "high memory baremetal instances max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "u-12tb1.metal",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             17,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "mac instances max EBS attachment limit",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "mac1.metal",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			expMaxVolumes:     16,
-			outpostArn:        emptyOutpostArn,
+			name:                      "mac instances max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "mac1.metal",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             14,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "inf1.24xlarge instace max EBS attachment limit",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "inf1.24xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			expMaxVolumes:     11,
-			outpostArn:        emptyOutpostArn,
+			name:                      "inf1.24xlarge instace max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "inf1.24xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             9,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "nitro instances already attached EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      2,
-			expMaxVolumes:     24,
-			outpostArn:        emptyOutpostArn,
+			name:                      "nitro instances already attached EBS volumes",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			blockDevices:              2,
+			expMaxVolumes:             24,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "nitro instance already attached max EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      27,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
+			name:                      "nitro instance already attached max EBS volumes",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			blockDevices:              27,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "non-nitro instance already attached max EBS volumes",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "m5.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      1,
-			blockDevices:      39,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
+			name:                      "nitro instance already attached max EBS volumes ignoring mapped volumes in metadata",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: 1,
+			attachedENIs:              1,
+			blockDevices:              27,
+			expMaxVolumes:             26,
+			outpostArn:                emptyOutpostArn,
 		},
 		{
-			name:              "nitro instance already attached max ENIs",
-			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t3.xlarge",
-			availabilityZone:  "us-west-2b",
-			region:            "us-west-2",
-			volumeAttachLimit: -1,
-			attachedENIs:      27,
-			blockDevices:      1,
-			expMaxVolumes:     0,
-			outpostArn:        emptyOutpostArn,
+			name:                      "non-nitro instance already attached max EBS volumes",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m5.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			blockDevices:              39,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "non-nitro instance ignoring mapped volumes in metadata",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m5.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: 1,
+			attachedENIs:              10,
+			blockDevices:              39,
+			expMaxVolumes:             17,
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "nitro instance already attached max ENIs",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              27,
+			blockDevices:              1,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "nitro instance already attached max ENIs ignoring mapped volumes in metadata",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "t3.xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: 1,
+			attachedENIs:              27,
+			blockDevices:              1,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "nitro instance with dedicated limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "m7i.48xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              2,
+			expMaxVolumes:             127, // 128 (max) - 1 (root)
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "d3.8xlarge instance max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "d3.8xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
+		},
+		{
+			name:                      "d3en.12xlarge instance max EBS attachment limit",
+			instanceID:                "i-123456789abcdef01",
+			instanceType:              "d3en.12xlarge",
+			availabilityZone:          "us-west-2b",
+			region:                    "us-west-2",
+			volumeAttachLimit:         -1,
+			reservedVolumeAttachments: -1,
+			attachedENIs:              1,
+			expMaxVolumes:             1,
+			outpostArn:                emptyOutpostArn,
 		},
 	}
 	for _, tc := range testCases {
@@ -2099,7 +2286,8 @@ func TestNodeGetInfo(t *testing.T) {
 			defer mockCtl.Finish()
 
 			driverOptions := &DriverOptions{
-				volumeAttachLimit: tc.volumeAttachLimit,
+				volumeAttachLimit:         tc.volumeAttachLimit,
+				reservedVolumeAttachments: tc.reservedVolumeAttachments,
 			}
 
 			mockMounter := NewMockMounter(mockCtl)
@@ -2113,8 +2301,10 @@ func TestNodeGetInfo(t *testing.T) {
 
 			if tc.volumeAttachLimit < 0 {
 				mockMetadata.EXPECT().GetInstanceType().Return(tc.instanceType)
-				mockMetadata.EXPECT().GetNumBlockDeviceMappings().Return(tc.blockDevices)
-				if cloud.IsNitroInstanceType(tc.instanceType) {
+				if tc.reservedVolumeAttachments == -1 {
+					mockMetadata.EXPECT().GetNumBlockDeviceMappings().Return(tc.blockDevices)
+				}
+				if cloud.IsNitroInstanceType(tc.instanceType) && cloud.GetDedicatedLimitForInstanceType(tc.instanceType) == 0 {
 					mockMetadata.EXPECT().GetNumAttachedENIs().Return(tc.attachedENIs)
 				}
 			}
@@ -2141,8 +2331,14 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 			at := resp.GetAccessibleTopology()
-			if at.Segments[TopologyKey] != tc.availabilityZone {
-				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[TopologyKey])
+			if at.Segments[ZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[ZoneTopologyKey])
+			}
+			if at.Segments[WellKnownZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.Segments[WellKnownZoneTopologyKey])
+			}
+			if at.Segments[OSTopologyKey] != runtime.GOOS {
+				t.Fatalf("Expected os topology %q, got %q", runtime.GOOS, at.Segments[OSTopologyKey])
 			}
 
 			if at.Segments[AwsAccountIDKey] != tc.outpostArn.AccountID {
@@ -2213,6 +2409,35 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{}, nil)
 
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node-123",
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name: DriverName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq("test-node-123"), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
@@ -2224,16 +2449,52 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
 								Key:    AgentNotReadyNodeTaintKey,
-								Effect: "NoExecute",
+								Effect: corev1.TaintEffectNoExecute,
 							},
 						},
 					},
 				}, nil)
-				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Failed to patch node!"))
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				mockNode.EXPECT().
+					Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("Failed to patch node!")).
+					Times(1)
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
@@ -2246,22 +2507,184 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
 								Key:    AgentNotReadyNodeTaintKey,
-								Effect: "NoSchedule",
+								Effect: corev1.TaintEffectNoSchedule,
 							},
 						},
 					},
 				}, nil)
-				mockNode.EXPECT().Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				count := int32(1)
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+								Allocatable: &v1.VolumeNodeResources{
+									Count: &count,
+								},
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				mockNode.EXPECT().
+					Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, nil).
+					Times(1)
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
 			},
 			expResult: nil,
+		},
+		{
+			name: "failed to get CSINode",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(nil, fmt.Errorf("Failed to get CSINode")).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: Failed to get CSINode", nodeName),
+		},
+		{
+			name: "allocatable value not set for driver on node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{
+						Drivers: []v1.CSINodeDriver{
+							{
+								Name:   DriverName,
+								NodeID: nodeName,
+							},
+						},
+					},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: allocatable value not set for driver on node %s", nodeName),
+		},
+		{
+			name: "driver not found on node",
+			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Setenv("CSI_NODE_NAME", nodeName)
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: corev1.NodeSpec{
+						Taints: []corev1.Taint{
+							{
+								Key:    AgentNotReadyNodeTaintKey,
+								Effect: corev1.TaintEffectNoSchedule,
+							},
+						},
+					},
+				}, nil)
+
+				storageV1Mock := NewMockStorageV1Interface(mockCtl)
+				getNodeMock.(*MockKubernetesClient).EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+
+				csiNodesMock := NewMockCSINodeInterface(mockCtl)
+				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
+
+				mockCSINode := &v1.CSINode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: nodeName,
+					},
+					Spec: v1.CSINodeSpec{},
+				}
+
+				csiNodesMock.EXPECT().
+					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Return(mockCSINode, nil).
+					Times(1)
+
+				return func() (kubernetes.Interface, error) {
+					return getNodeMock, nil
+				}
+			},
+			expResult: fmt.Errorf("isAllocatableSet: driver not found on node %s", nodeName),
 		},
 	}
 	for _, tc := range testCases {
@@ -2272,11 +2695,31 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			k8sClientGetter := tc.setup(t, mockCtl)
 			result := removeNotReadyTaint(k8sClientGetter)
 
-			if !reflect.DeepEqual(result, tc.expResult) {
-				t.Fatalf("Expected result `%v`, got result `%v`", tc.expResult, result)
+			if (result == nil) != (tc.expResult == nil) {
+				t.Fatalf("expected %v, got %v", tc.expResult, result)
+			}
+			if result != nil && tc.expResult != nil {
+				if result.Error() != tc.expResult.Error() {
+					t.Fatalf("Expected error message `%v`, got `%v`", tc.expResult.Error(), result.Error())
+				}
 			}
 		})
 	}
+}
+
+func TestRemoveTaintInBackground(t *testing.T) {
+	mockRemovalCount := 0
+	mockRemovalFunc := func(_ cloud.KubernetesAPIClient) error {
+		mockRemovalCount += 1
+		if mockRemovalCount == 3 {
+			return nil
+		} else {
+			return fmt.Errorf("Taint removal failed!")
+		}
+	}
+
+	removeTaintInBackground(nil, mockRemovalFunc)
+	assert.Equal(t, mockRemovalCount, 3)
 }
 
 func getNodeMock(mockCtl *gomock.Controller, nodeName string, returnNode *corev1.Node, returnError error) (kubernetes.Interface, *MockNodeInterface) {

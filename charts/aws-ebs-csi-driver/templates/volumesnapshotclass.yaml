@@ -8,6 +8,9 @@ metadata:
   {{- with .annotations }}
   annotations: {{- . | toYaml | trim | nindent 4 }}
   {{- end }}
+  {{- with .labels }}
+  labels: {{- . | toYaml | trim | nindent 4 }}
+  {{- end }}
 driver: ebs.csi.aws.com
 deletionPolicy: {{ .deletionPolicy }}
 {{- with .parameters }}

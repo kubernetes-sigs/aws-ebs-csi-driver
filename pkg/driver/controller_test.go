@@ -53,8 +53,8 @@ func TestNewControllerService(t *testing.T) {
 		testErr    = errors.New("test error")
 		testRegion = "test-region"
 
-		getNewCloudFunc = func(expectedRegion string, _ bool) func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
-			return func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
+		getNewCloudFunc = func(expectedRegion string, _ bool) func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
+			return func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
 				if region != expectedRegion {
 					t.Fatalf("expected region %q but got %q", expectedRegion, region)
 				}
@@ -66,7 +66,7 @@ func TestNewControllerService(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		region                string
-		newCloudFunc          func(string, bool, string) (cloud.Cloud, error)
+		newCloudFunc          func(string, bool, string, bool) (cloud.Cloud, error)
 		newMetadataFuncErrors bool
 		expectPanic           bool
 	}{
@@ -78,7 +78,7 @@ func TestNewControllerService(t *testing.T) {
 		{
 			name:   "AWS_REGION variable set, newCloud errors",
 			region: "foo",
-			newCloudFunc: func(region string, awsSdkDebugLog bool, userAgentExtra string) (cloud.Cloud, error) {
+			newCloudFunc: func(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (cloud.Cloud, error) {
 				return nil, testErr
 			},
 			expectPanic: true,
@@ -165,6 +165,26 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 	}
+	multiAttachVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Block{
+				Block: &csi.VolumeCapability_BlockVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+			},
+		},
+	}
+	invalidMultiAttachVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+			},
+		},
+	}
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
@@ -227,7 +247,7 @@ func TestCreateVolume(t *testing.T) {
 						Requisite: []*csi.Topology{
 							{
 								Segments: map[string]string{
-									TopologyKey:     expZone,
+									ZoneTopologyKey: expZone,
 									AwsAccountIDKey: outpostArn.AccountID,
 									AwsOutpostIDKey: outpostArn.Resource,
 									AwsRegionKey:    outpostArn.Region,
@@ -244,7 +264,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{
-								TopologyKey:     expZone,
+								ZoneTopologyKey: expZone,
 								AwsAccountIDKey: outpostArn.AccountID,
 								AwsOutpostIDKey: outpostArn.Resource,
 								AwsRegionKey:    outpostArn.Region,
@@ -1132,6 +1152,55 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with mutable parameters",
+			testFunc: func(t *testing.T) {
+				volSize := int64(20 * 1024 * 1024 * 1024)
+				capRange := &csi.CapacityRange{RequiredBytes: volSize}
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      capRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeGP3,
+						IopsKey:       "5000",
+					},
+					MutableParameters: map[string]string{
+						IopsKey: "4000",
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.Name,
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(volSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
+					assert.Equal(t, 4000, diskOptions.IOPS)
+					return mockDisk, nil
+				})
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
 			name: "fail with invalid volume parameter",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
@@ -1263,7 +1332,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{TopologyKey: expZone},
+								Segments: map[string]string{ZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1276,7 +1345,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{TopologyKey: expZone},
+								Segments: map[string]string{ZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1287,7 +1356,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{TopologyKey: expZone},
+							Segments: map[string]string{ZoneTopologyKey: expZone},
 						},
 					},
 				}
@@ -1635,15 +1704,13 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "success with block size",
+			name: "success multi-attach",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
-					VolumeCapabilities: stdVolCap,
-					Parameters: map[string]string{
-						BlockSizeKey: "4096",
-					},
+					VolumeCapabilities: multiAttachVolCap,
+					Parameters:         nil,
 				}
 
 				ctx := context.Background()
@@ -1666,29 +1733,218 @@ func TestCreateVolume(t *testing.T) {
 					driverOptions: &DriverOptions{},
 				}
 
-				response, err := awsDriver.CreateVolume(ctx, req)
-				if err != nil {
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
+			},
+		},
+		{
+			name: "fail multi-attach - invalid mount capability",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: invalidMultiAttachVolCap,
+				}
 
-				context := response.Volume.VolumeContext
-				if blockSize, ok := context[BlockSizeKey]; ok {
-					if blockSize != "4096" {
-						t.Fatalf("Invalid %s in VolumeContext (got %s expected 4096)", BlockSizeKey, blockSize)
-					}
-				} else {
-					t.Fatalf("Missing key %s in VolumeContext", BlockSizeKey)
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := controllerService{
+					cloud:         mockCloud,
+					inFlight:      internal.NewInFlight(),
+					driverOptions: &DriverOptions{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err == nil {
+					t.Fatalf("Expected CreateVolume to fail but got no error")
+				}
+				srvErr, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("Could not get error status code from error: %v", srvErr)
+				}
+				if srvErr.Code() != codes.InvalidArgument {
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
 				}
 			},
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestCreateVolumeWithFormattingParameters(t *testing.T) {
+	stdVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+		},
+	}
+	stdVolSize := int64(5 * 1024 * 1024 * 1024)
+	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
+
+	testCases := []struct {
+		name                       string
+		formattingOptionParameters map[string]string
+		errExpected                bool
+	}{
+		{
+			name: "success with block size",
+			formattingOptionParameters: map[string]string{
+				BlockSizeKey: "4096",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with inode size",
+			formattingOptionParameters: map[string]string{
+				InodeSizeKey: "256",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with bytes-per-inode",
+			formattingOptionParameters: map[string]string{
+				BytesPerInodeKey: "8192",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with number-of-inodes",
+			formattingOptionParameters: map[string]string{
+				NumberOfInodesKey: "13107200",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with ext4 big alloc option",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey: "true",
+			},
+			errExpected: false,
+		},
+		{
+			name: "success with ext4 bigalloc option and custom cluster size",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "true",
+				Ext4ClusterSizeKey: "16384",
+			},
+			errExpected: false,
+		},
+		{
+			name: "failure with block size",
+			formattingOptionParameters: map[string]string{
+				BlockSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with inode size",
+			formattingOptionParameters: map[string]string{
+				InodeSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with bytes-per-inode",
+			formattingOptionParameters: map[string]string{
+				BytesPerInodeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with number-of-inodes",
+			formattingOptionParameters: map[string]string{
+				NumberOfInodesKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with ext4 custom cluster size",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "true",
+				Ext4ClusterSizeKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with ext4 bigalloc option and cluster size mismatch",
+			formattingOptionParameters: map[string]string{
+				Ext4BigAllocKey:    "false",
+				Ext4ClusterSizeKey: "16384",
+			},
+			errExpected: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			req := &csi.CreateVolumeRequest{
+				Name:               "random-vol-name",
+				CapacityRange:      stdCapRange,
+				VolumeCapabilities: stdVolCap,
+				Parameters:         tc.formattingOptionParameters,
+			}
+
+			ctx := context.Background()
+
+			mockDisk := &cloud.Disk{
+				VolumeID:         req.Name,
+				AvailabilityZone: expZone,
+				CapacityGiB:      util.BytesToGiB(stdVolSize),
+			}
+
+			mockCtl := gomock.NewController(t)
+
+			mockCloud := cloud.NewMockCloud(mockCtl)
+
+			// CreateDisk not called on Unhappy Case
+			if !tc.errExpected {
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				defer mockCtl.Finish()
+			}
+
+			awsDriver := controllerService{
+				cloud:         mockCloud,
+				inFlight:      internal.NewInFlight(),
+				driverOptions: &DriverOptions{},
+			}
+
+			response, err := awsDriver.CreateVolume(ctx, req)
+
+			// Splits happy case tests from unhappy case tests
+			if !tc.errExpected {
+				assert.Nilf(err, "Unexpected error: %w", err)
+
+				volCtx := response.Volume.VolumeContext
+
+				for formattingParamKey, formattingParamValue := range tc.formattingOptionParameters {
+					createdFormattingParamValue, ok := volCtx[formattingParamKey]
+					assert.Truef(ok, "Missing key %s in VolumeContext", formattingParamKey)
+
+					assert.Equalf(createdFormattingParamValue, formattingParamValue, "Invalid %s in VolumeContext", formattingParamKey)
+				}
+			} else {
+				assert.NotNilf(err, "CreateVolume did not return an error")
+
+				checkExpectedErrorCode(t, err, codes.InvalidArgument)
+			}
+		})
 	}
 }
 
@@ -1836,27 +2092,27 @@ func TestPickAvailabilityZone(t *testing.T) {
 		expZone     string
 	}{
 		{
-			name: "Return WellKnownTopologyKey if present from preferred",
+			name: "Return WellKnownZoneTopologyKey if present from preferred",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: ""},
+						Segments: map[string]string{ZoneTopologyKey: ""},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
 					},
 				},
 			},
 			expZone: "foobar",
 		},
 		{
-			name: "Return WellKnownTopologyKey if present from requisite",
+			name: "Return WellKnownZoneTopologyKey if present from requisite",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone, WellKnownTopologyKey: "foobar"},
+						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
 					},
 				},
 			},
@@ -1867,12 +2123,12 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: ""},
+						Segments: map[string]string{ZoneTopologyKey: ""},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 			},
@@ -1883,7 +2139,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 			},
@@ -1928,13 +2184,13 @@ func TestGetOutpostArn(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{TopologyKey: expZone},
+						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							TopologyKey:     expZone,
+							ZoneTopologyKey: expZone,
 							AwsAccountIDKey: outpostArn.AccountID,
 							AwsOutpostIDKey: outpostArn.Resource,
 							AwsRegionKey:    outpostArn.Region,
@@ -1952,7 +2208,7 @@ func TestGetOutpostArn(t *testing.T) {
 				Requisite: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							TopologyKey:     expZone,
+							ZoneTopologyKey: expZone,
 							AwsAccountIDKey: outpostArn.AccountID,
 							AwsOutpostIDKey: outpostArn.Resource,
 							AwsRegionKey:    outpostArn.Region,
@@ -3214,16 +3470,6 @@ func TestControllerPublishVolume(t *testing.T) {
 			errorCode: codes.Internal,
 		},
 		{
-			name:             "Fail when volume is already attached to another node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
-			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", (cloud.ErrVolumeInUse))
-			},
-			errorCode: codes.FailedPrecondition,
-		},
-		{
 			name:             "Aborted error when AttachDisk operation already in-flight",
 			volumeId:         "vol-test",
 			nodeId:           expInstanceID,
@@ -3232,7 +3478,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			},
 			errorCode: codes.Aborted,
 			setupFunc: func(controllerService *controllerService) {
-				controllerService.inFlight.Insert("vol-test")
+				controllerService.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
 	}
@@ -3328,7 +3574,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			nodeId:    expInstanceID,
 			errorCode: codes.Aborted,
 			setupFunc: func(driver *controllerService) {
-				driver.inFlight.Insert("vol-test")
+				driver.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
 	}
@@ -3418,12 +3664,13 @@ func TestControllerExpandVolume(t *testing.T) {
 			}
 
 			mockCloud := cloud.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().ResizeDisk(gomock.Eq(ctx), gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
+			mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(tc.req.VolumeId), gomock.Any(), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
 
 			awsDriver := controllerService{
-				cloud:         mockCloud,
-				inFlight:      internal.NewInFlight(),
-				driverOptions: &DriverOptions{},
+				cloud:               mockCloud,
+				inFlight:            internal.NewInFlight(),
+				driverOptions:       &DriverOptions{},
+				modifyVolumeManager: newModifyVolumeManager(),
 			}
 
 			resp, err := awsDriver.ControllerExpandVolume(ctx, tc.req)

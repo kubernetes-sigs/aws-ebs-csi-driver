@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -33,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -137,6 +139,14 @@ const (
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
 
+// Batcher
+const (
+	volumeIDBatcher batcherType = iota
+	volumeTagBatcher
+
+	batchDescribeTimeout = 30 * time.Second
+)
+
 var (
 	// ErrMultiDisks is an error that is returned when multiple
 	// disks are found with the same volume name.
@@ -154,9 +164,6 @@ var (
 
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("Resource already exists")
-
-	// ErrVolumeInUse is returned when a volume is already attached to an instance.
-	ErrVolumeInUse = errors.New("Request volume is already attached to an instance")
 
 	// ErrMultiSnapshots is returned when multiple snapshots are found
 	// with the same ID
@@ -195,6 +202,7 @@ type DiskOptions struct {
 	OutpostArn             string
 	Encrypted              bool
 	BlockExpress           bool
+	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -234,26 +242,37 @@ type ec2ListSnapshotsResponse struct {
 	NextToken *string
 }
 
+// batcherType is an enum representing the types of batchers available.
+type batcherType int
+
+// batcherManager maintains a collection of batchers for different types of tasks.
+type batcherManager struct {
+	volumeIDBatcher   *batcher.Batcher[string, *ec2.Volume]
+	volumeTagBatcher  *batcher.Batcher[string, *ec2.Volume]
+	instanceIDBatcher *batcher.Batcher[string, *ec2.Instance]
+}
+
 type cloud struct {
 	region string
 	ec2    ec2iface.EC2API
 	dm     dm.DeviceManager
+	bm     *batcherManager
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Cloud, error) {
-	RegisterMetrics()
-	return newEC2Cloud(region, awsSdkDebugLog, userAgentExtra)
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (Cloud, error) {
+	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching)
+	return c, nil
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Cloud, error) {
+func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool) Cloud {
 	awsConfig := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
-		// Set MaxRetries to a high value. It will be "ovewritten" if context deadline comes sooner.
+		// Set MaxRetries to a high value. It will be "overwritten" if context deadline comes sooner.
 		MaxRetries: aws.Int(8),
 	}
 
@@ -292,11 +311,141 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string) (Clo
 		Fn:   RecordRequestsHandler,
 	})
 
+	var bm *batcherManager
+	if batchingEnabled {
+		klog.V(4).InfoS("newEC2Cloud: batching enabled")
+		bm = newBatcherManager(svc)
+	}
+
 	return &cloud{
 		region: region,
 		dm:     dm.NewDeviceManager(),
 		ec2:    svc,
-	}, nil
+		bm:     bm,
+	}
+}
+
+// newBatcherManager initializes a new instance of batcherManager.
+func newBatcherManager(svc ec2iface.EC2API) *batcherManager {
+	return &batcherManager{
+		volumeIDBatcher: batcher.New(500, 1*time.Second, func(ids []string) (map[string]*ec2.Volume, error) {
+			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
+		}),
+		volumeTagBatcher: batcher.New(500, 1*time.Second, func(names []string) (map[string]*ec2.Volume, error) {
+			return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
+		}),
+		instanceIDBatcher: batcher.New(50, 300*time.Millisecond, func(names []string) (map[string]*ec2.Instance, error) {
+			return execBatchDescribeInstances(svc, names)
+		}),
+	}
+}
+
+// execBatchDescribeVolumes executes a batched DescribeVolumes API call depending on the type of batcher.
+func execBatchDescribeVolumes(svc ec2iface.EC2API, input []string, batcher batcherType) (map[string]*ec2.Volume, error) {
+	var request *ec2.DescribeVolumesInput
+
+	switch batcher {
+	case volumeIDBatcher:
+		klog.V(7).InfoS("execBatchDescribeVolumes", "volumeIds", input)
+		request = &ec2.DescribeVolumesInput{
+			VolumeIds: aws.StringSlice(input),
+		}
+
+	case volumeTagBatcher:
+		klog.V(7).InfoS("execBatchDescribeVolumes", "names", input)
+		filters := []*ec2.Filter{
+			{
+				Name:   aws.String("tag:" + VolumeNameTagKey),
+				Values: aws.StringSlice(input),
+			},
+		}
+		request = &ec2.DescribeVolumesInput{
+			Filters: filters,
+		}
+
+	default:
+		return nil, fmt.Errorf("execBatchDescribeVolumes: unsupported request type")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+	defer cancel()
+
+	resp, err := describeVolumes(ctx, svc, request)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*ec2.Volume)
+
+	for _, volume := range resp {
+		key, err := extractVolumeKey(volume, batcher)
+		if err != nil {
+			klog.Warningf("execBatchDescribeVolumes: skipping volume: %v, reason: %v", volume, err)
+			continue
+		}
+		result[key] = volume
+	}
+
+	klog.V(7).InfoS("execBatchDescribeVolumes: success", "result", result)
+	return result, nil
+}
+
+// batchDescribeVolumes processes a DescribeVolumes request. Depending on the request,
+// it determines the appropriate batcher to use, queues the task, and waits for the result.
+func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+	var b *batcher.Batcher[string, *ec2.Volume]
+	var task string
+
+	switch {
+	case len(request.VolumeIds) == 1 && request.VolumeIds[0] != nil:
+		b = c.bm.volumeIDBatcher
+		task = *request.VolumeIds[0]
+
+	case len(request.Filters) == 1 && *request.Filters[0].Name == "tag:"+VolumeNameTagKey && len(request.Filters[0].Values) == 1:
+		b = c.bm.volumeTagBatcher
+		task = *request.Filters[0].Values[0]
+
+	default:
+		return nil, fmt.Errorf("batchDescribeVolumes: invalid request, request: %v", request)
+	}
+
+	ch := make(chan batcher.BatchResult[*ec2.Volume])
+
+	b.AddTask(task, ch)
+
+	r := <-ch
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if r.Result == nil {
+		return nil, ErrNotFound
+	}
+	return r.Result, nil
+}
+
+// extractVolumeKey retrieves the key associated with a given volume based on the batcher type.
+// For the volumeIDBatcher type, it returns the volume's ID.
+// For other types, it searches for the VolumeNameTagKey within the volume's tags.
+func extractVolumeKey(v *ec2.Volume, batcher batcherType) (string, error) {
+	if batcher == volumeIDBatcher {
+		if v.VolumeId == nil {
+			return "", errors.New("extractVolumeKey: missing volume ID")
+		}
+		return *v.VolumeId, nil
+	}
+	for _, tag := range v.Tags {
+		klog.V(7).InfoS("extractVolumeKey: processing tag", "volume", v, "*tag.Key", *tag.Key, "VolumeNameTagKey", VolumeNameTagKey)
+		if tag.Key == nil || tag.Value == nil {
+			klog.V(7).InfoS("extractVolumeKey: skipping volume due to missing tag", "volume", v, "tag", tag)
+			continue
+		}
+		if *tag.Key == VolumeNameTagKey {
+			klog.V(7).InfoS("extractVolumeKey: found volume name tag", "volume", v, "tag", tag)
+			return *tag.Value, nil
+		}
+	}
+	return "", errors.New("extractVolumeKey: missing VolumeNameTagKey in volume tags")
 }
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
@@ -346,16 +495,17 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
+	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
+		return nil, fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes")
+	}
+
 	if maxIops > 0 {
 		if diskOptions.IOPS > 0 {
 			requestedIops = int64(diskOptions.IOPS)
 		} else if diskOptions.IOPSPerGB > 0 {
 			requestedIops = int64(diskOptions.IOPSPerGB) * capacityGiB
 		}
-		iops, err = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
-		if err != nil {
-			return nil, err
-		}
+		iops = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	var tags []*ec2.Tag
@@ -382,11 +532,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(volumeName))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone: aws.String(zone),
-		ClientToken:      aws.String(hex.EncodeToString(clientToken[:])),
-		Size:             aws.Int64(capacityGiB),
-		VolumeType:       aws.String(createType),
-		Encrypted:        aws.Bool(diskOptions.Encrypted),
+		AvailabilityZone:   aws.String(zone),
+		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
+		Size:               aws.Int64(capacityGiB),
+		VolumeType:         aws.String(createType),
+		Encrypted:          aws.Bool(diskOptions.Encrypted),
+		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 	}
 
 	if !util.IsSBE(zone) {
@@ -437,7 +588,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if err := c.waitForVolume(ctx, volumeID); err != nil {
 		// To avoid leaking volume, we should delete the volume just created
 		// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
-		if _, error := c.DeleteDisk(ctx, volumeID); err != nil {
+		if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
 			klog.ErrorS(error, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
 		} else {
 			klog.V(5).InfoS("[Debug] volume is deleted because it is not in desired state within retry limit", "volumeID", volumeID)
@@ -467,12 +618,29 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
 }
 
-func (c *cloud) ModifyDisk(ctx context.Context, volumeID string, options *ModifyDiskOptions) error {
-	klog.V(4).InfoS("Received ModifyDisk request", "volumeID", volumeID, "options", options)
+// ResizeOrModifyDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit, and/or modifies an EBS
+// volume with the parameters in ModifyDiskOptions.
+// The resizing operation is performed only when newSizeBytes != 0.
+// It returns the volume size after this call or an error if the size couldn't be determined or the volume couldn't be modified.
+func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int64, error) {
+	if newSizeBytes != 0 {
+		klog.V(4).InfoS("Received Resize and/or Modify Disk request", "volumeID", volumeID, "newSizeBytes", newSizeBytes, "options", options)
+	} else {
+		klog.V(4).InfoS("Received Modify Disk request", "volumeID", volumeID, "options", options)
+	}
+
+	newSizeGiB := util.RoundUpGiB(newSizeBytes)
+	needsModification, volumeSize, err := c.validateModifyVolume(ctx, volumeID, newSizeGiB, options)
+	if err != nil || !needsModification {
+		return volumeSize, err
+	}
+
 	req := &ec2.ModifyVolumeInput{
 		VolumeId: aws.String(volumeID),
 	}
-
+	if newSizeBytes != 0 {
+		req.Size = aws.Int64(newSizeGiB)
+	}
 	if options.IOPS != 0 {
 		req.Iops = aws.Int64(int64(options.IOPS))
 	}
@@ -483,19 +651,22 @@ func (c *cloud) ModifyDisk(ctx context.Context, volumeID string, options *Modify
 		req.Throughput = aws.Int64(int64(options.Throughput))
 	}
 
-	res, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
-		return fmt.Errorf("unable to modify AWS volume %q: %w", volumeID, err)
+		return 0, fmt.Errorf("unable to modify AWS volume %q: %w", volumeID, err)
 	}
 
-	mod := res.VolumeModification
-	state := aws.StringValue(mod.ModificationState)
-
-	if volumeModificationDone(state) {
-		return nil
+	// If the volume modification isn't immediately completed, wait for it to finish
+	state := aws.StringValue(response.VolumeModification.ModificationState)
+	if !volumeModificationDone(state) {
+		err = c.waitForVolumeModification(ctx, volumeID)
+		if err != nil {
+			return 0, err
+		}
 	}
 
-	return c.waitForVolumeSize(ctx, volumeID)
+	// Perform one final check on the volume
+	return c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
@@ -509,13 +680,89 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	return true, nil
 }
 
+// executes a batched DescribeInstances API call
+func execBatchDescribeInstances(svc ec2iface.EC2API, input []string) (map[string]*ec2.Instance, error) {
+	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
+	request := &ec2.DescribeInstancesInput{
+		InstanceIds: aws.StringSlice(input),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+	defer cancel()
+
+	resp, err := describeInstances(ctx, svc, request)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*ec2.Instance)
+
+	for _, instance := range resp {
+		if instance.InstanceId == nil {
+			klog.Warningf("execBatchDescribeInstances: skipping instance: %v, reason: missing instance ID", instance)
+			continue
+		}
+		result[*instance.InstanceId] = instance
+	}
+
+	klog.V(7).InfoS("execBatchDescribeInstances: success", "result", result)
+	return result, nil
+}
+
+// batchDescribeInstances processes a DescribeInstances request by queuing the task and waiting for the result.
+func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ec2.Instance, error) {
+	var task string
+
+	if len(request.InstanceIds) == 1 && request.InstanceIds[0] != nil {
+		task = *request.InstanceIds[0]
+	} else {
+		return nil, fmt.Errorf("batchDescribeInstances: invalid request, request: %v", request)
+	}
+
+	ch := make(chan batcher.BatchResult[*ec2.Instance])
+
+	b := c.bm.instanceIDBatcher
+	b.AddTask(task, ch)
+
+	r := <-ch
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if r.Result == nil {
+		return nil, ErrNotFound
+	}
+	return r.Result, nil
+}
+
+// Node likely bad device names cache
+// Remember device names that are already in use on an instance and use them last when attaching volumes
+// This works around device names that are used but do not appear in the mapping from DescribeInstanceStatus
+const cacheForgetDelay = 1 * time.Hour
+
+type cachedNode struct {
+	timer          *time.Timer
+	likelyBadNames map[string]struct{}
+}
+
+var cacheMutex sync.Mutex
+var nodeDeviceCache map[string]cachedNode = map[string]cachedNode{}
+
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
 
-	device, err := c.dm.NewDevice(instance, volumeID)
+	likelyBadNames := map[string]struct{}{}
+	cacheMutex.Lock()
+	if node, ok := nodeDeviceCache[nodeID]; ok {
+		likelyBadNames = node.likelyBadNames
+		node.timer.Reset(cacheForgetDelay)
+	}
+	cacheMutex.Unlock()
+
+	device, err := c.dm.NewDevice(instance, volumeID, likelyBadNames)
 	if err != nil {
 		return "", err
 	}
@@ -530,38 +777,47 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 
 		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
 		if attachErr != nil {
-			var awsErr awserr.Error
-			if errors.As(attachErr, &awsErr) {
-				if awsErr.Code() == "VolumeInUse" {
-					return "", ErrVolumeInUse
+			if isAWSErrorBlockDeviceInUse(attachErr) {
+				cacheMutex.Lock()
+				if node, ok := nodeDeviceCache[nodeID]; ok {
+					// Node already had existing cached bad names, add on to the list
+					node.likelyBadNames[device.Path] = struct{}{}
+					node.timer.Reset(cacheForgetDelay)
+				} else {
+					// Node has no existing cached bad device names, setup a new struct instance
+					nodeDeviceCache[nodeID] = cachedNode{
+						timer: time.AfterFunc(cacheForgetDelay, func() {
+							// If this ever fires, the node has not had a volume attached for an hour
+							// In order to prevent a semi-permanent memory leak, delete it from the map
+							cacheMutex.Lock()
+							delete(nodeDeviceCache, nodeID)
+							cacheMutex.Unlock()
+						}),
+						likelyBadNames: map[string]struct{}{
+							device.Path: {},
+						},
+					}
 				}
+				cacheMutex.Unlock()
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
+		cacheMutex.Lock()
+		if node, ok := nodeDeviceCache[nodeID]; ok {
+			// Remove succesfully attached devices from the "likely bad" list
+			delete(node.likelyBadNames, device.Path)
+			node.timer.Reset(cacheForgetDelay)
+		}
+		cacheMutex.Unlock()
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
-	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
+	_, err = c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
 
 	// This is the only situation where we taint the device
 	if err != nil {
 		device.Taint()
 		return "", err
-	}
-
-	// Double check the attachment to be 100% sure we attached the correct volume at the correct mountpoint
-	// It could happen otherwise that we see the volume attached from a previous/separate AttachVolume call,
-	// which could theoretically be against a different device (or even instance).
-	if attachment == nil {
-		// Impossible?
-		return "", fmt.Errorf("unexpected state: attachment nil after attached %q to %q", volumeID, nodeID)
-	}
-	if device.Path != aws.StringValue(attachment.Device) {
-		// Already checked in waitForAttachmentState(), but just to be sure...
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested device %q but found %q", volumeID, nodeID, device.Path, aws.StringValue(attachment.Device))
-	}
-	if *instance.InstanceId != aws.StringValue(attachment.InstanceId) {
-		return "", fmt.Errorf("disk attachment of %q to %q failed: requested instance %q but found %q", volumeID, nodeID, *instance.InstanceId, aws.StringValue(attachment.InstanceId))
 	}
 
 	// TODO: Check volume capability matches for ALREADY_EXISTS
@@ -655,40 +911,30 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return false, nil
 		}
 
-		if len(volume.Attachments) > 1 {
-			// Shouldn't happen; log so we know if it is
+		if volume.MultiAttachEnabled != nil && !*volume.MultiAttachEnabled && len(volume.Attachments) > 1 {
 			klog.InfoS("Found multiple attachments for volume", "volumeID", volumeID, "volume", volume)
+			return false, fmt.Errorf("volume %q has multiple attachments", volumeID)
 		}
+
 		attachmentState := ""
+
 		for _, a := range volume.Attachments {
-			if attachmentState != "" {
-				// Shouldn't happen; log so we know if it is
-				klog.InfoS("Found multiple attachments for volume", "volumeID", volumeID, "volume", volume)
-			}
-			if a.State != nil {
-				attachment = a
-				attachmentState = *a.State
-			} else {
-				// Shouldn't happen; log so we know if it is
-				klog.InfoS("Ignoring nil attachment state for volume", "volumeID", volumeID, "attachment", a)
+			if a.State != nil && a.InstanceId != nil {
+				if aws.StringValue(a.InstanceId) == expectedInstance {
+					attachmentState = aws.StringValue(a.State)
+					attachment = a
+				}
 			}
 		}
+
 		if attachmentState == "" {
 			attachmentState = volumeDetachedState
 		}
-		if attachment != nil {
-			// AWS eventual consistency can go back in time.
-			// For example, we're waiting for a volume to be attached as /dev/xvdba, but AWS can tell us it's
-			// attached as /dev/xvdbb, where it was attached before and it was already detached.
-			// Retry couple of times, hoping AWS starts reporting the right status.
+
+		if attachment != nil && attachment.Device != nil && expectedState == volumeAttachedState {
 			device := aws.StringValue(attachment.Device)
-			if expectedDevice != "" && device != "" && device != expectedDevice {
-				klog.InfoS("Expected device for volume not found", "expectedDevice", expectedDevice, "expectedState", expectedState, "volumeID", volumeID, "device", device, "attachmentState", attachmentState)
-				return false, nil
-			}
-			instanceID := aws.StringValue(attachment.InstanceId)
-			if expectedInstance != "" && instanceID != "" && instanceID != expectedInstance {
-				klog.InfoS("Expected instance for volume not found", "expectedInstance", expectedInstance, "expectedState", expectedState, "volumeID", volumeID, "instanceID", instanceID, "attachmentState", attachmentState)
+			if device != expectedDevice {
+				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
 				return false, nil
 			}
 		}
@@ -710,7 +956,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return true, nil
 		}
 		// continue waiting
-		klog.V(4).InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
+		klog.InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
 		return false, nil
 	}
 
@@ -766,14 +1012,6 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		OutpostArn:       aws.StringValue(volume.OutpostArn),
 		Attachments:      getVolumeAttachmentsList(volume),
 	}, nil
-}
-
-func (c *cloud) IsExistInstance(ctx context.Context, nodeID string) bool {
-	instance, err := c.getInstance(ctx, nodeID)
-	if err != nil || instance == nil {
-		return false
-	}
-	return true
 }
 
 func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
@@ -935,11 +1173,11 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 	return response, nil
 }
 
-func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+func describeVolumes(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
 	var volumes []*ec2.Volume
 	var nextToken *string
 	for {
-		response, err := c.ec2.DescribeVolumesWithContext(ctx, request)
+		response, err := svc.DescribeVolumesWithContext(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -950,25 +1188,32 @@ func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput
 		}
 		request.NextToken = nextToken
 	}
-
-	if l := len(volumes); l > 1 {
-		return nil, ErrMultiDisks
-	} else if l < 1 {
-		return nil, ErrNotFound
-	}
-
-	return volumes[0], nil
+	return volumes, nil
 }
 
-func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {
-	instances := []*ec2.Instance{}
-	request := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&nodeID},
-	}
+func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+	if c.bm == nil {
+		volumes, err := describeVolumes(ctx, c.ec2, request)
+		if err != nil {
+			return nil, err
+		}
 
+		if l := len(volumes); l > 1 {
+			return nil, ErrMultiDisks
+		} else if l < 1 {
+			return nil, ErrNotFound
+		}
+		return volumes[0], nil
+	} else {
+		return c.batchDescribeVolumes(request)
+	}
+}
+
+func describeInstances(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeInstancesInput) ([]*ec2.Instance, error) {
+	instances := []*ec2.Instance{}
 	var nextToken *string
 	for {
-		response, err := c.ec2.DescribeInstancesWithContext(ctx, request)
+		response, err := svc.DescribeInstancesWithContext(ctx, request)
 		if err != nil {
 			if isAWSErrorInstanceNotFound(err) {
 				return nil, ErrNotFound
@@ -986,14 +1231,30 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 		}
 		request.NextToken = nextToken
 	}
+	return instances, nil
+}
 
-	if l := len(instances); l > 1 {
-		return nil, fmt.Errorf("found %d instances with ID %q", l, nodeID)
-	} else if l < 1 {
-		return nil, ErrNotFound
+func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {
+	request := &ec2.DescribeInstancesInput{
+		InstanceIds: []*string{&nodeID},
 	}
 
-	return instances[0], nil
+	if c.bm == nil {
+		instances, err := describeInstances(ctx, c.ec2, request)
+		if err != nil {
+			return nil, err
+		}
+
+		if l := len(instances); l > 1 {
+			return nil, fmt.Errorf("found %d instances with ID %q", l, nodeID)
+		} else if l < 1 {
+			return nil, ErrNotFound
+		}
+
+		return instances[0], nil
+	} else {
+		return c.batchDescribeInstances(request)
+	}
 }
 
 func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2.Snapshot, error) {
@@ -1134,82 +1395,22 @@ func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
 }
 
-// ResizeDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit.
-// It returns the volume size after this call or an error if the size couldn't be determined.
-func (c *cloud) ResizeDisk(ctx context.Context, volumeID string, newSizeBytes int64) (int64, error) {
-	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
-	}
-	volume, err := c.getVolume(ctx, request)
-	if err != nil {
-		return 0, err
-	}
-
-	// AWS resizes in chunks of GiB (not GB)
-	newSizeGiB := util.RoundUpGiB(newSizeBytes)
-	oldSizeGiB := aws.Int64Value(volume.Size)
-
-	latestMod, modFetchError := c.getLatestVolumeModification(ctx, volumeID)
-
-	if latestMod != nil && modFetchError == nil {
-		state := aws.StringValue(latestMod.ModificationState)
-		if state == ec2.VolumeModificationStateModifying {
-			err = c.waitForVolumeSize(ctx, volumeID)
-			if err != nil {
-				return oldSizeGiB, err
-			}
-			return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+// isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
+// given error appears to be a block device name already in use error.
+func isAWSErrorBlockDeviceInUse(err error) bool {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		if awsErr.Code() == "InvalidParameterValue" && strings.Contains(awsErr.Message(), "already in use") {
+			return true
 		}
 	}
-
-	// if there was an error fetching volume modifications and it was anything other than VolumeNotBeingModified error
-	// that means we have an API problem.
-	if modFetchError != nil && !errors.Is(modFetchError, VolumeNotBeingModified) {
-		return oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, modFetchError)
-	}
-
-	// Even if existing volume size is greater than user requested size, we should ensure that there are no pending
-	// volume modifications objects or volume has completed previously issued modification request.
-	if oldSizeGiB >= newSizeGiB {
-		klog.V(5).InfoS("[Debug] Volume", "volumeID", volumeID, "oldSizeGiB", oldSizeGiB, "newSizeGiB", newSizeGiB)
-		err = c.waitForVolumeSize(ctx, volumeID)
-		if err != nil && !errors.Is(err, VolumeNotBeingModified) {
-			return oldSizeGiB, err
-		}
-		return oldSizeGiB, nil
-	}
-
-	req := &ec2.ModifyVolumeInput{
-		VolumeId: aws.String(volumeID),
-		Size:     aws.Int64(newSizeGiB),
-	}
-
-	klog.V(4).InfoS("expanding volume", "volumeID", volumeID, "newSizeGiB", newSizeGiB)
-	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
-	if err != nil {
-		return 0, fmt.Errorf("could not modify AWS volume %q: %w", volumeID, err)
-	}
-
-	mod := response.VolumeModification
-
-	state := aws.StringValue(mod.ModificationState)
-	if volumeModificationDone(state) {
-		return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
-	}
-
-	err = c.waitForVolumeSize(ctx, volumeID)
-	if err != nil {
-		return oldSizeGiB, err
-	}
-	return c.checkDesiredSize(ctx, volumeID, newSizeGiB)
+	return false
 }
 
 // Checks for desired size on volume by also verifying volume size by describing volume.
 // This is to get around potential eventual consistency problems with describing volume modifications
 // objects and ensuring that we read two different objects to verify volume state.
-func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGiB int64) (int64, error) {
+func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredSizeGiB int64, options *ModifyDiskOptions) (int64, error) {
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []*string{
 			aws.String(volumeID),
@@ -1221,15 +1422,25 @@ func (c *cloud) checkDesiredSize(ctx context.Context, volumeID string, newSizeGi
 	}
 
 	// AWS resizes in chunks of GiB (not GB)
-	oldSizeGiB := aws.Int64Value(volume.Size)
-	if oldSizeGiB >= newSizeGiB {
-		return oldSizeGiB, nil
+	realSizeGiB := aws.Int64Value(volume.Size)
+
+	// Check if there is a mismatch between the requested modification and the current volume
+	// If there is, the volume is still modifying and we should not return a success
+	if realSizeGiB < desiredSizeGiB {
+		return realSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, desiredSizeGiB)
+	} else if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to iops %d", volumeID, options.IOPS)
+	} else if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to type %q", volumeID, options.VolumeType)
+	} else if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+		return realSizeGiB, fmt.Errorf("volume %q is still being modified to throughput %d", volumeID, options.Throughput)
 	}
-	return oldSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, newSizeGiB)
+
+	return realSizeGiB, nil
 }
 
-// waitForVolumeSize waits for a volume modification to finish.
-func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) error {
+// waitForVolumeModification waits for a volume modification to finish.
+func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) error {
 	backoff := wait.Backoff{
 		Duration: volumeModificationDuration,
 		Factor:   volumeModificationWaitFactor,
@@ -1238,7 +1449,10 @@ func (c *cloud) waitForVolumeSize(ctx context.Context, volumeID string) error {
 
 	waitErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		m, err := c.getLatestVolumeModification(ctx, volumeID)
-		if err != nil {
+		// Consider volumes that have never been modified as done
+		if err != nil && errors.Is(err, VolumeNotBeingModified) {
+			return true, nil
+		} else if err != nil {
 			return false, err
 		}
 
@@ -1310,6 +1524,81 @@ func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, err
 	return zones, nil
 }
 
+func needsVolumeModification(volume *ec2.Volume, newSizeGiB int64, options *ModifyDiskOptions) bool {
+	oldSizeGiB := aws.Int64Value(volume.Size)
+	needsModification := false
+
+	if oldSizeGiB < newSizeGiB {
+		needsModification = true
+	}
+	if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+		needsModification = true
+	}
+	if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+		needsModification = true
+	}
+	if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+		needsModification = true
+	}
+
+	return needsModification
+}
+
+func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int64, options *ModifyDiskOptions) (bool, int64, error) {
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []*string{
+			aws.String(volumeID),
+		},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return true, 0, err
+	}
+
+	oldSizeGiB := aws.Int64Value(volume.Size)
+
+	latestMod, err := c.getLatestVolumeModification(ctx, volumeID)
+	if err != nil && !errors.Is(err, VolumeNotBeingModified) {
+		return true, oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, err)
+	}
+
+	state := ""
+	// latestMod can be nil if the volume has never been modified
+	if latestMod != nil {
+		state = aws.StringValue(latestMod.ModificationState)
+		if state == ec2.VolumeModificationStateModifying {
+			// If volume is already modifying, detour to waiting for it to modify
+			klog.V(5).InfoS("[Debug] Watching ongoing modification", "volumeID", volumeID)
+			err = c.waitForVolumeModification(ctx, volumeID)
+			if err != nil {
+				return true, oldSizeGiB, err
+			}
+			returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
+			return false, returnGiB, returnErr
+		}
+	}
+
+	// At this point, we know we are starting a new volume modification
+	// If we're asked to modify a volume to its current state, ignore the request and immediately return a success
+	if !needsVolumeModification(volume, newSizeGiB, options) {
+		klog.V(5).InfoS("[Debug] Skipping modification for volume due to matching stats", "volumeID", volumeID)
+		// Wait for any existing modifications to prevent race conditions where DescribeVolume(s) returns the new
+		// state before the volume is actually finished modifying
+		err = c.waitForVolumeModification(ctx, volumeID)
+		if err != nil {
+			return true, oldSizeGiB, err
+		}
+		returnGiB, returnErr := c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
+		return false, returnGiB, returnErr
+	}
+
+	if state == ec2.VolumeModificationStateOptimizing {
+		return true, 0, fmt.Errorf("volume %q in OPTIMIZING state, cannot currently modify", volumeID)
+	}
+
+	return true, 0, nil
+}
+
 func volumeModificationDone(state string) bool {
 	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
 		return true
@@ -1329,10 +1618,10 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 }
 
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
-func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) (int64, error) {
+func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) int64 {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
 	if requestedIops == 0 {
-		return 0, nil
+		return 0
 	}
 
 	iops := requestedIops
@@ -1341,8 +1630,6 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		if allowIncrease {
 			iops = minTotalIOPS
 			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
-		} else {
-			return 0, fmt.Errorf("invalid IOPS: %d is too low, it must be at least %d", iops, minTotalIOPS)
 		}
 	}
 	if iops > maxTotalIOPS {
@@ -1354,5 +1641,5 @@ func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64,
 		iops = maxIopsByCapacity
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
-	return iops, nil
+	return iops
 }

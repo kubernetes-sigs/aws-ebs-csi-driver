@@ -17,8 +17,11 @@ limitations under the License.
 package options
 
 import (
+	"time"
+
 	flag "github.com/spf13/pflag"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	cliflag "k8s.io/component-base/cli/flag"
 )
 
@@ -39,6 +42,11 @@ type ControllerOptions struct {
 	WarnOnInvalidTag bool
 	// flag to set user agent
 	UserAgentExtra string
+	// flag to enable batching of API calls
+	Batching bool
+	// flag to set the timeout for volume modification requests to be coalesced into a single
+	// volume modification call to AWS.
+	ModifyVolumeRequestHandlerTimeout time.Duration
 }
 
 func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
@@ -48,4 +56,6 @@ func (s *ControllerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&s.AwsSdkDebugLog, "aws-sdk-debug-log", false, "To enable the aws sdk debug log level (default to false).")
 	fs.BoolVar(&s.WarnOnInvalidTag, "warn-on-invalid-tag", false, "To warn on invalid tags, instead of returning an error")
 	fs.StringVar(&s.UserAgentExtra, "user-agent-extra", "", "Extra string appended to user agent.")
+	fs.BoolVar(&s.Batching, "batching", false, "To enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits.")
+	fs.DurationVar(&s.ModifyVolumeRequestHandlerTimeout, "modify-volume-request-handler-timeout", driver.DefaultModifyVolumeRequestHandlerTimeout, "Timeout for the window in which volume modification calls must be received in order for them to coalesce into a single volume modification call to AWS. This must be lower than the csi-resizer and volumemodifier timeouts")
 }

@@ -16,6 +16,8 @@ limitations under the License.
 
 package driver
 
+import "time"
+
 // constants of keys in PublishContext
 const (
 	// devicePathKey represents key for device path in PublishContext
@@ -82,8 +84,26 @@ const (
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
 	BlockExpressKey = "blockexpress"
 
+	// FSTypeKey configures the file system type that will be formatted during volume creation.
+	FSTypeKey = "csi.storage.k8s.io/fstype"
+
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
+
+	// InodeSizeKey configures the inode size when formatting a volume
+	InodeSizeKey = "inodesize"
+
+	// BytesPerInodeKey configures the `bytes-per-inode` when formatting a volume
+	BytesPerInodeKey = "bytesperinode"
+
+	// NumberOfInodesKey configures the `number-of-inodes` when formatting a volume
+	NumberOfInodesKey = "numberofinodes"
+
+	// Ext4ClusterSizeKey enables the bigalloc option when formatting an ext4 volume
+	Ext4BigAllocKey = "ext4bigalloc"
+
+	// Ext4ClusterSizeKey configures the cluster size when formatting an ext4 volume with the bigalloc option enabled
+	Ext4ClusterSizeKey = "ext4clustersize"
 
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
@@ -138,7 +158,8 @@ const (
 
 // constants for default command line flag values
 const (
-	DefaultCSIEndpoint = "unix://tmp/csi.sock"
+	DefaultCSIEndpoint                       = "unix://tmp/csi.sock"
+	DefaultModifyVolumeRequestHandlerTimeout = 2 * time.Second
 )
 
 // constants for disk block size
@@ -161,15 +182,55 @@ const (
 	FSTypeNtfs = "ntfs"
 )
 
-// BlockSizeExcludedFSTypes contains the filesystems that a custom block size is *NOT* supported on
-var (
-	BlockSizeExcludedFSTypes = map[string]struct{}{
-		FSTypeNtfs: {},
-	}
-)
-
 // constants for node k8s API use
 const (
-	// AgentNotReadyTaintKey contains the key of taints to be removed on driver startup
+	// AgentNotReadyNodeTaintKey contains the key of taints to be removed on driver startup
 	AgentNotReadyNodeTaintKey = "ebs.csi.aws.com/agent-not-ready"
+)
+
+type fileSystemConfig struct {
+	NotSupportedParams map[string]struct{}
+}
+
+func (fsConfig fileSystemConfig) isParameterSupported(paramName string) bool {
+	_, notSupported := fsConfig.NotSupportedParams[paramName]
+	return !notSupported
+}
+
+var (
+	FileSystemConfigs = map[string]fileSystemConfig{
+		FSTypeExt2: {
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeExt3: {
+			NotSupportedParams: map[string]struct{}{
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeExt4: {
+			NotSupportedParams: map[string]struct{}{},
+		},
+		FSTypeXfs: {
+			NotSupportedParams: map[string]struct{}{
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+		FSTypeNtfs: {
+			NotSupportedParams: map[string]struct{}{
+				BlockSizeKey:       {},
+				InodeSizeKey:       {},
+				BytesPerInodeKey:   {},
+				NumberOfInodesKey:  {},
+				Ext4BigAllocKey:    {},
+				Ext4ClusterSizeKey: {},
+			},
+		},
+	}
 )

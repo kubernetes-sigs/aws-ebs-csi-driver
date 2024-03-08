@@ -1,4 +1,5 @@
 # Driver Options
+
 There are a couple of driver options that can be passed as arguments when starting the driver container.
 
 | Option argument             | value sample                                      | default                                             | Description         |
@@ -10,3 +11,6 @@ There are a couple of driver options that can be passed as arguments when starti
 | aws-sdk-debug-log           | true                                              | false                                               | If set to true, the driver will enable the aws sdk debug log level|
 | logging-format              | json                                              | text                                                | Sets the log format. Permitted formats: text, json|
 | user-agent-extra            | csi-ebs                                           | helm                                                | Extra string appended to user agent|
+| enable-otel-tracing         | true                                              | false                                               | If set to true, the driver will enable opentelemetry tracing. Might need [additional env variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration) to export the traces to the right collector|
+| batching                    | true                                              | true                                                | If set to true, the driver will enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits at the cost of a small increase to worst-case latency|
+| modify-volume-request-handler-timeout | 10s                                     | 2s                                                  | Timeout for the window in which volume modification calls must be received in order for them to coalesce into a single volume modification call to AWS. If changing this, be aware that the ebs-csi-controller's csi-resizer and volumemodifier containers both have timeouts on the calls they make, if this value exceeds those timeouts it will cause them to always fail and fall into a retry loop, so adjust those values accordingly.

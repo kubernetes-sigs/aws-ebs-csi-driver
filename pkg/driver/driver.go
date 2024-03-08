@@ -20,10 +20,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 )
@@ -47,9 +51,10 @@ const (
 	AwsRegionKey    = "topology." + DriverName + "/region"
 	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
 
-	WellKnownTopologyKey = "topology.kubernetes.io/zone"
-	// DEPRECATED Use the WellKnownTopologyKey instead
-	TopologyKey = "topology." + DriverName + "/zone"
+	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
+	// DEPRECATED Use the WellKnownZoneTopologyKey instead
+	ZoneTopologyKey = "topology." + DriverName + "/zone"
+	OSTopologyKey   = "kubernetes.io/os"
 )
 
 type Driver struct {
@@ -61,22 +66,27 @@ type Driver struct {
 }
 
 type DriverOptions struct {
-	endpoint            string
-	extraTags           map[string]string
-	mode                Mode
-	volumeAttachLimit   int64
-	kubernetesClusterID string
-	awsSdkDebugLog      bool
-	warnOnInvalidTag    bool
-	userAgentExtra      string
+	endpoint                          string
+	extraTags                         map[string]string
+	mode                              Mode
+	volumeAttachLimit                 int64
+	reservedVolumeAttachments         int
+	kubernetesClusterID               string
+	awsSdkDebugLog                    bool
+	batching                          bool
+	warnOnInvalidTag                  bool
+	userAgentExtra                    string
+	otelTracing                       bool
+	modifyVolumeRequestHandlerTimeout time.Duration
 }
 
 func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
 	driverOptions := DriverOptions{
-		endpoint: DefaultCSIEndpoint,
-		mode:     AllMode,
+		endpoint:                          DefaultCSIEndpoint,
+		mode:                              AllMode,
+		modifyVolumeRequestHandlerTimeout: DefaultModifyVolumeRequestHandlerTimeout,
 	}
 	for _, option := range options {
 		option(&driverOptions)
@@ -105,6 +115,30 @@ func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
 	return &driver, nil
 }
 
+func NewFakeDriver(e string, c cloud.Cloud, md *cloud.Metadata, m Mounter) (*Driver, error) {
+	driverOptions := &DriverOptions{
+		endpoint: e,
+		mode:     AllMode,
+	}
+	driver := Driver{
+		options: driverOptions,
+		controllerService: controllerService{
+			cloud:               c,
+			inFlight:            internal.NewInFlight(),
+			driverOptions:       driverOptions,
+			modifyVolumeManager: newModifyVolumeManager(),
+		},
+		nodeService: nodeService{
+			metadata:         md,
+			deviceIdentifier: newNodeDeviceIdentifier(),
+			inFlight:         internal.NewInFlight(),
+			mounter:          m,
+			driverOptions:    driverOptions,
+		},
+	}
+	return &driver, nil
+}
+
 func (d *Driver) Run() error {
 	scheme, addr, err := util.ParseEndpoint(d.options.endpoint)
 	if err != nil {
@@ -123,8 +157,12 @@ func (d *Driver) Run() error {
 		}
 		return resp, err
 	}
+
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(logErr),
+	}
+	if d.options.otelTracing {
+		opts = append(opts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	}
 	d.srv = grpc.NewServer(opts...)
 
@@ -185,6 +223,18 @@ func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
 	}
 }
 
+func WithReservedVolumeAttachments(reservedVolumeAttachments int) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.reservedVolumeAttachments = reservedVolumeAttachments
+	}
+}
+
+func WithBatching(enableBatching bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.batching = enableBatching
+	}
+}
+
 func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.kubernetesClusterID = clusterID
@@ -206,5 +256,20 @@ func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
 func WithUserAgentExtra(userAgentExtra string) func(*DriverOptions) {
 	return func(o *DriverOptions) {
 		o.userAgentExtra = userAgentExtra
+	}
+}
+
+func WithOtelTracing(enableOtelTracing bool) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		o.otelTracing = enableOtelTracing
+	}
+}
+
+func WithModifyVolumeRequestHandlerTimeout(timeout time.Duration) func(*DriverOptions) {
+	return func(o *DriverOptions) {
+		if timeout == 0 {
+			return
+		}
+		o.modifyVolumeRequestHandlerTimeout = timeout
 	}
 }

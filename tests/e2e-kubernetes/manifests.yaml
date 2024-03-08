@@ -14,6 +14,7 @@ DriverInfo:
   SupportedFsType:
     xfs: {}
     ext4: {}
+    ext3: {}
     ntfs: {}
   SupportedMountOption:
     dirsync: {}

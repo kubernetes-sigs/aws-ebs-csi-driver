@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ loudecho "Set up Docker Buildx"
 # and https://github.com/kubernetes-csi/csi-release-tools/blob/master/build.make#L132
 export DOCKER_CLI_EXPERIMENTAL=enabled
 trap "docker buildx rm multiarchimage-buildertest" EXIT
-docker buildx create --use --name multiarchimage-buildertest
+docker buildx create --bootstrap --use --name multiarchimage-buildertest
 
 loudecho "Set up QEMU"
 # See https://github.com/docker/setup-qemu-action
@@ -42,4 +42,4 @@ loudecho "Push manifest list containing amazon linux and windows based images to
 export REGISTRY=$REGISTRY_NAME
 export TAG=$GIT_TAG
 export VERSION=$PULL_BASE_REF
-IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make all-push
+IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make -j $(nproc) all-push-with-a1compat

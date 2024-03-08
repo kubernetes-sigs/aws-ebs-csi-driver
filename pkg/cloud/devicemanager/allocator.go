@@ -34,7 +34,7 @@ type ExistingNames map[string]string
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
 type NameAllocator interface {
-	GetNext(existingNames ExistingNames) (name string, err error)
+	GetNext(existingNames ExistingNames, likelyBadNames map[string]struct{}) (name string, err error)
 }
 
 type nameAllocator struct{}
@@ -43,9 +43,19 @@ var _ NameAllocator = &nameAllocator{}
 
 // GetNext returns a free device name or error when there is no free device name
 // It does this by using a list of legal EBS device names from device_names.go
-func (d *nameAllocator) GetNext(existingNames ExistingNames) (string, error) {
+//
+// likelyBadNames is a map of names that have previously returned an "in use" error when attempting to mount to them
+// These names are unlikely to result in a successful mount, and may be permanently unavailable, so use them last
+func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames map[string]struct{}) (string, error) {
 	for _, name := range deviceNames {
-		if _, found := existingNames[name]; !found {
+		_, existing := existingNames[name]
+		_, likelyBad := likelyBadNames[name]
+		if !existing && !likelyBad {
+			return name, nil
+		}
+	}
+	for name := range likelyBadNames {
+		if _, existing := existingNames[name]; !existing {
 			return name, nil
 		}
 	}
