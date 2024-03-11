@@ -75,8 +75,7 @@ function install_tar_binary() {
   INSTALL_PATH="${1}"
   DOWNLOAD_URL="${2}"
   BINARY_PATH="${3}"
-
-  BINARY_NAME="$(basename "${BINARY_PATH}")"
+  BINARY_NAME="${4:-$(basename "${BINARY_PATH}")}"
 
   if [ "${DOWNLOAD_URL##*.}" = "gz" ]; then
     TAR_EXTRA_FLAGS="-z"
@@ -128,7 +127,8 @@ function install_golangci-lint() {
 function install_helm() {
   INSTALL_PATH="${1}"
 
-  install_tar_binary "${INSTALL_PATH}" "https://get.helm.sh/helm-${HELM_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/helm"
+  install_tar_binary "${INSTALL_PATH}" "https://get.helm.sh/helm-${HELM_VERSION}-${OS}-${ARCH}.tar.gz" "${OS}-${ARCH}/helm" ".helm"
+  cp "$(dirname "${0}")/helm-runner.sh" "${INSTALL_PATH}/helm"
 }
 
 function install_kops() {
