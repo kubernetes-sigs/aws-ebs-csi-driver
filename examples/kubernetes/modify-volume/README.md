@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-This example will only work on a cluster with the `VolumeAttributesClass` feature enabled. For more information see the [installation instructions in the EBS CSI `ModifyVolume` documentation](../docs/modify-volume.md).
+This example will only work on a cluster with the `VolumeAttributesClass` feature enabled. For more information see the [installation instructions in the EBS CSI `ModifyVolume` documentation](/docs/modify-volume.md).
 
 ## Usage
 
