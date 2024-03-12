@@ -174,6 +174,9 @@ var (
 
 	// VolumeNotBeingModified is returned if volume being described is not being modified
 	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
+
+	// ErrInvalidArgument is returned if parameters were rejected by cloud provider
+	ErrInvalidArgument = errors.New("invalid argument")
 )
 
 // Set during build time via -ldflags
@@ -653,7 +656,11 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 
 	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
 	if err != nil {
-		return 0, fmt.Errorf("unable to modify AWS volume %q: %w", volumeID, err)
+		if isAWSErrorInvalidParameter(err) {
+			// Wrap error to preserve original message from AWS as to why this was an invalid argument
+			return 0, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
+		}
+		return 0, err
 	}
 
 	// If the volume modification isn't immediately completed, wait for it to finish
@@ -1402,6 +1409,35 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 	if errors.As(err, &awsErr) {
 		if awsErr.Code() == "InvalidParameterValue" && strings.Contains(awsErr.Message(), "already in use") {
 			return true
+		}
+	}
+	return false
+}
+
+// isAWSErrorInvalidParameter returns a boolean indicating whether the
+// given error is caused by invalid parameters in a EC2 API request.
+func isAWSErrorInvalidParameter(err error) bool {
+	var awsErr awserr.Error
+	if errors.As(err, &awsErr) {
+		switch awsErr.Code() {
+		case "InvalidParameter":
+			return true
+		case "InvalidParameterCombination":
+			return true
+		case "InvalidParameterDependency":
+			return true
+		case "InvalidParameterValue":
+			return true
+		case "UnknownParameter":
+			return true
+		case "UnknownVolumeType":
+			return true
+		case "UnsupportedOperation":
+			return true
+		case "ValidationError":
+			return true
+		default:
+			return false
 		}
 	}
 	return false
