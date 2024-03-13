@@ -531,6 +531,110 @@ func executeDescribeSnapshotsTest(t *testing.T, c *cloud, snapshotIDs, snapshotN
 	}
 }
 
+func TestBatchDescribeVolumesModifications(t *testing.T) {
+	testCases := []struct {
+		name      string
+		volumeIds []string
+		mockFunc  func(mockEC2 *MockEC2API, expErr error, volumeModifications []*ec2.VolumeModification)
+		expErr    error
+	}{
+		{
+			name:      "success: volumeModification by ID",
+			volumeIds: []string{"vol-001", "vol-002", "vol-003"},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []*ec2.VolumeModification) {
+				volumeModificationsOutput := &ec2.DescribeVolumesModificationsOutput{VolumesModifications: volumeModifications}
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Any(), gomock.Any()).Return(volumeModificationsOutput, expErr).Times(1)
+			},
+			expErr: nil,
+		},
+		{
+			name:      "fail: EC2 API generic error",
+			volumeIds: []string{"vol-001", "vol-002", "vol-003"},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []*ec2.VolumeModification) {
+				mockEC2.EXPECT().DescribeVolumesModificationsWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+			},
+			expErr: fmt.Errorf("generic EC2 API error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+			cloudInstance := c.(*cloud)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+
+			// Setup mocks
+			var volumeModifications []*ec2.VolumeModification
+			for _, volumeId := range tc.volumeIds {
+				volumeModifications = append(volumeModifications, &ec2.VolumeModification{VolumeId: aws.String(volumeId)})
+			}
+			tc.mockFunc(mockEC2, tc.expErr, volumeModifications)
+
+			executeDescribeVolumesModificationsTest(t, cloudInstance, tc.volumeIds, tc.expErr)
+		})
+	}
+}
+
+func executeDescribeVolumesModificationsTest(t *testing.T, c *cloud, volumeIds []string, expErr error) {
+	var wg sync.WaitGroup
+
+	getRequestForID := func(id string) *ec2.DescribeVolumesModificationsInput {
+		return &ec2.DescribeVolumesModificationsInput{VolumeIds: []*string{&id}}
+	}
+
+	requests := make([]*ec2.DescribeVolumesModificationsInput, 0, len(volumeIds))
+	for _, volumeId := range volumeIds {
+		requests = append(requests, getRequestForID(volumeId))
+	}
+
+	r := make([]chan *ec2.VolumeModification, len(requests))
+	e := make([]chan error, len(requests))
+
+	for i, request := range requests {
+		wg.Add(1)
+		r[i] = make(chan *ec2.VolumeModification, 1)
+		e[i] = make(chan error, 1)
+
+		go func(req *ec2.DescribeVolumesModificationsInput, resultCh chan *ec2.VolumeModification, errCh chan error) {
+			defer wg.Done()
+			volumeModification, err := c.batchDescribeVolumesModifications(req)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			resultCh <- volumeModification
+			// passing `request` as a parameter to create a copy
+			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
+		}(request, r[i], e[i])
+	}
+
+	wg.Wait()
+
+	for i := range requests {
+		select {
+		case result := <-r[i]:
+			if result == nil {
+				t.Errorf("Received nil result for a request")
+			}
+		case err := <-e[i]:
+			if expErr == nil {
+				t.Errorf("Error while processing request: %v", err)
+			}
+			if !errors.Is(err, expErr) {
+				t.Errorf("Expected error %v, but got %v", expErr, err)
+			}
+		default:
+			t.Errorf("Did not receive a result or an error for a request")
+		}
+	}
+}
+
 func TestCreateDisk(t *testing.T) {
 	testCases := []struct {
 		name                 string
