@@ -86,7 +86,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 		mockFunc func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume)
 	}{
 		{
-			name:    "TestBatchDescribeVolumes: volume by ID",
+			name:    "success: volume by ID",
 			volumes: generateVolumes(10, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -95,7 +95,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "TestBatchDescribeVolumes: volume by tag",
+			name:    "success: volume by tag",
 			volumes: generateVolumes(0, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -104,7 +104,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "TestBatchDescribeVolumes: volume by ID and tag",
+			name:    "success: volume by ID and tag",
 			volumes: generateVolumes(10, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -113,7 +113,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "TestBatchDescribeVolumes: max capacity",
+			name:    "success: max capacity",
 			volumes: generateVolumes(500, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -122,7 +122,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "TestBatchDescribeVolumes: capacity exceeded",
+			name:    "success: capacity exceeded",
 			volumes: generateVolumes(550, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -131,7 +131,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "TestBatchDescribeVolumes: EC2 API generic error",
+			name:    "fail: EC2 API generic error",
 			volumes: generateVolumes(4, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -139,7 +139,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: fmt.Errorf("Generic EC2 API error"),
 		},
 		{
-			name:    "TestBatchDescribeVolumes: volume not found",
+			name:    "fail: volume not found",
 			volumes: generateVolumes(1, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -147,7 +147,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: fmt.Errorf("volume not found"),
 		},
 		{
-			name: "TestBatchDescribeVolumes: invalid tag",
+			name: "fail: invalid tag",
 			volumes: []*ec2.Volume{
 				{
 					Tags: []*ec2.Tag{
@@ -156,7 +156,6 @@ func TestBatchDescribeVolumes(t *testing.T) {
 				},
 			},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
-
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(0)
 			},
@@ -225,7 +224,7 @@ func executeDescribeVolumesTest(t *testing.T, c *cloud, volumeIDs, volumeNames [
 			}
 			resultCh <- volume
 			// passing `request` as a parameter to create a copy
-			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
+			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
 		}(request, r[i], e[i])
 	}
 
@@ -258,7 +257,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 		expErr      error
 	}{
 		{
-			name:        "TestBatchDescribeInstances: instance by ID",
+			name:        "success: instance by ID",
 			instanceIds: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
 				reservationOutput := &ec2.DescribeInstancesOutput{Reservations: reservations}
@@ -267,7 +266,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:        "TestBatchDescribeInstances: EC2 API generic error",
+			name:        "fail: EC2 API generic error",
 			instanceIds: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
 				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -331,7 +330,183 @@ func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIds []string, 
 			}
 			resultCh <- instance
 			// passing `request` as a parameter to create a copy
-			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
+			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
+		}(request, r[i], e[i])
+	}
+
+	wg.Wait()
+
+	for i := range requests {
+		select {
+		case result := <-r[i]:
+			if result == nil {
+				t.Errorf("Received nil result for a request")
+			}
+		case err := <-e[i]:
+			if expErr == nil {
+				t.Errorf("Error while processing request: %v", err)
+			}
+			if !errors.Is(err, expErr) {
+				t.Errorf("Expected error %v, but got %v", expErr, err)
+			}
+		default:
+			t.Errorf("Did not receive a result or an error for a request")
+		}
+	}
+}
+
+func generateSnapshots(snapIDCount, snapTagCount int) []*ec2.Snapshot {
+	snapshots := make([]*ec2.Snapshot, 0, snapIDCount+snapTagCount)
+
+	for i := 0; i < snapIDCount; i++ {
+		snapID := fmt.Sprintf("snap-%d", i)
+		snapshots = append(snapshots, &ec2.Snapshot{SnapshotId: aws.String(snapID)})
+	}
+
+	for i := 0; i < snapTagCount; i++ {
+		snapshotName := fmt.Sprintf("snap-name-%d", i)
+		snapshots = append(snapshots, &ec2.Snapshot{Tags: []*ec2.Tag{{Key: aws.String(SnapshotNameTagKey), Value: aws.String(snapshotName)}}})
+	}
+
+	return snapshots
+}
+
+func extractSnapshotIdentifiers(snapshots []*ec2.Snapshot) (snapshotIDs []string, snapshotNames []string) {
+	for _, snapshot := range snapshots {
+		if snapshot.SnapshotId != nil {
+			snapshotIDs = append(snapshotIDs, *snapshot.SnapshotId)
+		}
+		for _, tag := range snapshot.Tags {
+			if tag.Key != nil && *tag.Key == SnapshotNameTagKey && tag.Value != nil {
+				snapshotNames = append(snapshotNames, *tag.Value)
+			}
+		}
+	}
+	return snapshotIDs, snapshotNames
+}
+
+func TestBatchDescribeSnapshots(t *testing.T) {
+	testCases := []struct {
+		name      string
+		snapshots []*ec2.Snapshot
+		mockFunc  func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot)
+		expErr    error
+	}{
+		{
+			name:      "success: snapshot by ID",
+			snapshots: generateSnapshots(3, 0),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(1)
+			},
+		},
+		{
+			name:      "success: snapshot by tag",
+			snapshots: generateSnapshots(0, 3),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(1)
+			},
+		},
+		{
+			name:      "success: snapshot by ID and tag",
+			snapshots: generateSnapshots(3, 4),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(2)
+			},
+		},
+		{
+			name:      "fail: EC2 API generic error",
+			snapshots: generateSnapshots(3, 2),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(2)
+			},
+			expErr: fmt.Errorf("generic EC2 API error"),
+		},
+		{
+			name:      "fail: Snapshot not found by ID",
+			snapshots: generateSnapshots(3, 0),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots[1:]} // Leave out first snapshot
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(snapshotOutput, nil).Times(1)
+			},
+			expErr: ErrNotFound,
+		},
+		{
+			name:      "fail: Snapshot not found by tag",
+			snapshots: generateSnapshots(0, 2),
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []*ec2.Snapshot) {
+				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots[1:]} // Leave out first snapshot
+				mockEC2.EXPECT().DescribeSnapshotsWithContext(gomock.Any(), gomock.Any()).Return(snapshotOutput, nil).Times(1)
+			},
+			expErr: ErrNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+			cloudInstance := c.(*cloud)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+
+			tc.mockFunc(mockEC2, tc.expErr, tc.snapshots)
+			snapshotIDs, snapshotNames := extractSnapshotIdentifiers(tc.snapshots)
+			executeDescribeSnapshotsTest(t, cloudInstance, snapshotIDs, snapshotNames, tc.expErr)
+		})
+	}
+}
+
+func executeDescribeSnapshotsTest(t *testing.T, c *cloud, snapshotIDs, snapshotNames []string, expErr error) {
+	var wg sync.WaitGroup
+
+	getRequestForID := func(id string) *ec2.DescribeSnapshotsInput {
+		return &ec2.DescribeSnapshotsInput{SnapshotIds: []*string{&id}}
+	}
+
+	getRequestForTag := func(snapName string) *ec2.DescribeSnapshotsInput {
+		return &ec2.DescribeSnapshotsInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("tag:" + SnapshotNameTagKey),
+					Values: []*string{&snapName},
+				},
+			},
+		}
+	}
+
+	requests := make([]*ec2.DescribeSnapshotsInput, 0, len(snapshotIDs)+len(snapshotNames))
+	for _, snapshotID := range snapshotIDs {
+		requests = append(requests, getRequestForID(snapshotID))
+	}
+	for _, snapshotName := range snapshotNames {
+		requests = append(requests, getRequestForTag(snapshotName))
+	}
+
+	r := make([]chan *ec2.Snapshot, len(requests))
+	e := make([]chan error, len(requests))
+
+	for i, request := range requests {
+		wg.Add(1)
+		r[i] = make(chan *ec2.Snapshot, 1)
+		e[i] = make(chan error, 1)
+
+		go func(req *ec2.DescribeSnapshotsInput, resultCh chan *ec2.Snapshot, errCh chan error) {
+			defer wg.Done()
+			snapshot, err := c.batchDescribeSnapshots(req)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			resultCh <- snapshot
+			// passing `request` as a parameter to create a copy
+			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
 		}(request, r[i], e[i])
 	}
 
