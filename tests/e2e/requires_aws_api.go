@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -36,8 +37,13 @@ import (
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
-const testTagName = "testTag"
+const testTagNamePrefix = "testTag"
 const testTagValue = "3.1415926"
+
+// generateTagName appends a random uuid to tag name to prevent clashes on parallel e2e test runs on shared cluster
+func generateTagName() string {
+	return testTagNamePrefix + uuid.NewString()[:8]
+}
 
 func validateEc2Snapshot(ec2Client ec2iface.EC2API, input *ec2.DescribeSnapshotsInput) *ec2.DescribeSnapshotsOutput {
 	describeResult, err := ec2Client.DescribeSnapshots(input)
@@ -78,6 +84,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 	ec2Client := ec2.New(session.Must(session.NewSession()))
 
 	It("should create a volume with additional tags", func() {
+		testTag := generateTagName()
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
@@ -86,7 +93,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 						CreateVolumeParameters: map[string]string{
 							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
 							ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
-							ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTagName, testTagValue),
+							ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTag, testTagValue),
 						},
 						ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
 						VolumeMount: testsuites.DefaultGeneratedVolumeMount,
@@ -101,7 +108,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 				result, err := ec2Client.DescribeVolumes(&ec2.DescribeVolumesInput{
 					Filters: []*ec2.Filter{
 						{
-							Name:   aws.String("tag:" + testTagName),
+							Name:   aws.String("tag:" + testTag),
 							Values: []*string{aws.String(testTagValue)},
 						},
 					},
@@ -119,6 +126,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 	})
 
 	It("should create a snapshot with additional tags", func() {
+		testTag := generateTagName()
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
 			Volumes: []testsuites.VolumeDetails{
@@ -150,13 +158,13 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 			Pod:         pod,
 			RestoredPod: restoredPod,
 			Parameters: map[string]string{
-				ebscsidriver.TagKeyPrefix: fmt.Sprintf("%s=%s", testTagName, testTagValue),
+				ebscsidriver.TagKeyPrefix: fmt.Sprintf("%s=%s", testTag, testTagValue),
 			},
 			ValidateFunc: func(_ *volumesnapshotv1.VolumeSnapshot) {
 				validateEc2Snapshot(ec2Client, &ec2.DescribeSnapshotsInput{
 					Filters: []*ec2.Filter{
 						{
-							Name:   aws.String("tag:" + testTagName),
+							Name:   aws.String("tag:" + testTag),
 							Values: []*string{aws.String(testTagValue)},
 						},
 					},
