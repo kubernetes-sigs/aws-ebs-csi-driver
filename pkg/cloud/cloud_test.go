@@ -86,7 +86,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 		mockFunc func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume)
 	}{
 		{
-			name:    "success: volume by ID",
+			name:    "TestBatchDescribeVolumes: volume by ID",
 			volumes: generateVolumes(10, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -95,7 +95,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "success: volume by tag",
+			name:    "TestBatchDescribeVolumes: volume by tag",
 			volumes: generateVolumes(0, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -104,7 +104,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "success: volume by ID and tag",
+			name:    "TestBatchDescribeVolumes: volume by ID and tag",
 			volumes: generateVolumes(10, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -113,7 +113,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "success: max capacity",
+			name:    "TestBatchDescribeVolumes: max capacity",
 			volumes: generateVolumes(500, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -122,7 +122,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "success: capacity exceeded",
+			name:    "TestBatchDescribeVolumes: capacity exceeded",
 			volumes: generateVolumes(550, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
@@ -131,7 +131,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:    "fail: EC2 API generic error",
+			name:    "TestBatchDescribeVolumes: EC2 API generic error",
 			volumes: generateVolumes(4, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -139,7 +139,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: fmt.Errorf("Generic EC2 API error"),
 		},
 		{
-			name:    "fail: volume not found",
+			name:    "TestBatchDescribeVolumes: volume not found",
 			volumes: generateVolumes(1, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -147,7 +147,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: fmt.Errorf("volume not found"),
 		},
 		{
-			name: "fail: invalid tag",
+			name: "TestBatchDescribeVolumes: invalid tag",
 			volumes: []*ec2.Volume{
 				{
 					Tags: []*ec2.Tag{
@@ -156,6 +156,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 				},
 			},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []*ec2.Volume) {
+
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
 				mockEC2.EXPECT().DescribeVolumesWithContext(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(0)
 			},
@@ -224,7 +225,7 @@ func executeDescribeVolumesTest(t *testing.T, c *cloud, volumeIDs, volumeNames [
 			}
 			resultCh <- volume
 			// passing `request` as a parameter to create a copy
-			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
+			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
 		}(request, r[i], e[i])
 	}
 
@@ -257,7 +258,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 		expErr      error
 	}{
 		{
-			name:        "success: instance by ID",
+			name:        "TestBatchDescribeInstances: instance by ID",
 			instanceIds: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
 				reservationOutput := &ec2.DescribeInstancesOutput{Reservations: reservations}
@@ -266,7 +267,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:        "fail: EC2 API generic error",
+			name:        "TestBatchDescribeInstances: EC2 API generic error",
 			instanceIds: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []*ec2.Reservation) {
 				mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
@@ -330,7 +331,7 @@ func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIds []string, 
 			}
 			resultCh <- instance
 			// passing `request` as a parameter to create a copy
-			// TODO remove after govet stops complaining about https://github.com/golang/go/discussions/56010
+			// TODO remove after upgrading to go v1.22 (see https://github.com/golang/go/discussions/56010)
 		}(request, r[i], e[i])
 	}
 
