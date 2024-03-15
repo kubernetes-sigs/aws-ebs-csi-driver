@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -389,10 +390,10 @@ func TestPreStopHook(t *testing.T) {
 			err := PreStop(mockClient)
 
 			if tc.expErr != nil {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, tc.expErr.Error(), err.Error())
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

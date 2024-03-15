@@ -21,6 +21,7 @@ import (
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -89,9 +90,9 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 			result, err := parseModifyVolumeParameters(tc.params)
 			assert.Equal(t, tc.expectedOptions, result)
 			if tc.expectError {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

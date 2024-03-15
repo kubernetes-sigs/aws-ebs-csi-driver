@@ -2331,30 +2331,30 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 			at := resp.GetAccessibleTopology()
-			if at.Segments[ZoneTopologyKey] != tc.availabilityZone {
-				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.Segments[ZoneTopologyKey])
+			if at.GetSegments()[ZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected topology %q, got %q", tc.availabilityZone, at.GetSegments()[ZoneTopologyKey])
 			}
-			if at.Segments[WellKnownZoneTopologyKey] != tc.availabilityZone {
-				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.Segments[WellKnownZoneTopologyKey])
+			if at.GetSegments()[WellKnownZoneTopologyKey] != tc.availabilityZone {
+				t.Fatalf("Expected (well-known) topology %q, got %q", tc.availabilityZone, at.GetSegments()[WellKnownZoneTopologyKey])
 			}
-			if at.Segments[OSTopologyKey] != runtime.GOOS {
-				t.Fatalf("Expected os topology %q, got %q", runtime.GOOS, at.Segments[OSTopologyKey])
-			}
-
-			if at.Segments[AwsAccountIDKey] != tc.outpostArn.AccountID {
-				t.Fatalf("Expected AwsAccountId %q, got %q", tc.outpostArn.AccountID, at.Segments[AwsAccountIDKey])
+			if at.GetSegments()[OSTopologyKey] != runtime.GOOS {
+				t.Fatalf("Expected os topology %q, got %q", runtime.GOOS, at.GetSegments()[OSTopologyKey])
 			}
 
-			if at.Segments[AwsRegionKey] != tc.outpostArn.Region {
-				t.Fatalf("Expected AwsRegion %q, got %q", tc.outpostArn.Region, at.Segments[AwsRegionKey])
+			if at.GetSegments()[AwsAccountIDKey] != tc.outpostArn.AccountID {
+				t.Fatalf("Expected AwsAccountId %q, got %q", tc.outpostArn.AccountID, at.GetSegments()[AwsAccountIDKey])
 			}
 
-			if at.Segments[AwsOutpostIDKey] != tc.outpostArn.Resource {
-				t.Fatalf("Expected AwsOutpostID %q, got %q", tc.outpostArn.Resource, at.Segments[AwsOutpostIDKey])
+			if at.GetSegments()[AwsRegionKey] != tc.outpostArn.Region {
+				t.Fatalf("Expected AwsRegion %q, got %q", tc.outpostArn.Region, at.GetSegments()[AwsRegionKey])
 			}
 
-			if at.Segments[AwsPartitionKey] != tc.outpostArn.Partition {
-				t.Fatalf("Expected AwsPartition %q, got %q", tc.outpostArn.Partition, at.Segments[AwsPartitionKey])
+			if at.GetSegments()[AwsOutpostIDKey] != tc.outpostArn.Resource {
+				t.Fatalf("Expected AwsOutpostID %q, got %q", tc.outpostArn.Resource, at.GetSegments()[AwsOutpostIDKey])
+			}
+
+			if at.GetSegments()[AwsPartitionKey] != tc.outpostArn.Partition {
+				t.Fatalf("Expected AwsPartition %q, got %q", tc.outpostArn.Partition, at.GetSegments()[AwsPartitionKey])
 			}
 
 			if resp.GetMaxVolumesPerNode() != tc.expMaxVolumes {
@@ -2719,7 +2719,7 @@ func TestRemoveTaintInBackground(t *testing.T) {
 	}
 
 	removeTaintInBackground(nil, mockRemovalFunc)
-	assert.Equal(t, mockRemovalCount, 3)
+	assert.Equal(t, 3, mockRemovalCount)
 }
 
 func getNodeMock(mockCtl *gomock.Controller, nodeName string, returnNode *corev1.Node, returnError error) (kubernetes.Interface, *MockNodeInterface) {

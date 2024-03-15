@@ -90,7 +90,7 @@ func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 	modes := []string{}
 	for _, c := range caps {
-		modes = append(modes, c.AccessMode.GetMode().String())
+		modes = append(modes, c.GetAccessMode().GetMode().String())
 	}
 	return &modes
 }

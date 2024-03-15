@@ -30,6 +30,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFindDevicePath(t *testing.T) {
@@ -185,7 +186,7 @@ func TestFindDevicePath(t *testing.T) {
 				assert.EqualError(t, err, tc.expectError)
 			} else {
 				assert.Equal(t, tc.expectDevicePath, devicePath)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

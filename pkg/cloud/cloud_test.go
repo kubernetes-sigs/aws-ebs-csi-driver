@@ -35,6 +35,7 @@ import (
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -1271,7 +1272,7 @@ func TestAttachDisk(t *testing.T) {
 
 				fakeInstance := newFakeInstance(nodeID, volumeID, path)
 				_, err := dm.NewDevice(fakeInstance, volumeID, map[string]struct{}{})
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				gomock.InOrder(
 					mockEC2.EXPECT().DescribeInstancesWithContext(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID, volumeID), nil),
@@ -1383,16 +1384,16 @@ func TestAttachDisk(t *testing.T) {
 			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
 
 			if tc.expErr != nil {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, tc.expErr, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.path, devicePath)
 			}
 
 			if tc.nodeID2 != "" {
 				devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID2)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.path, devicePath)
 			}
 
@@ -1474,10 +1475,10 @@ func TestDetachDisk(t *testing.T) {
 			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
 
 			if tc.expErr != nil {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, tc.expErr, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			mockCtrl.Finish()

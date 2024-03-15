@@ -65,16 +65,16 @@ var _ = Describe("EBS CSI Driver", func() {
 
 		volume := resp.GetVolume()
 		Expect(volume).NotTo(BeNil(), "Expected valid volume, got nil")
-		waitForVolume(volume.VolumeId, 1 /* number of expected volumes */)
+		waitForVolume(volume.GetVolumeId(), 1 /* number of expected volumes */)
 
 		defer func() {
-			logf("Deleting volume %q", volume.VolumeId)
-			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.VolumeId})
+			logf("Deleting volume %q", volume.GetVolumeId())
+			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.GetVolumeId()})
 			Expect(err).To(BeNil(), "Could not delete volume")
-			waitForVolume(volume.VolumeId, 0 /* number of expected volumes */)
+			waitForVolume(volume.GetVolumeId(), 0 /* number of expected volumes */)
 
-			logf("Deleting volume %q twice", volume.VolumeId)
-			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.VolumeId})
+			logf("Deleting volume %q twice", volume.GetVolumeId())
+			_, err = csiClient.ctrl.DeleteVolume(context.Background(), &csi.DeleteVolumeRequest{VolumeId: volume.GetVolumeId()})
 			Expect(err).To(BeNil(), "Error when trying to delete volume twice")
 		}()
 
@@ -82,7 +82,7 @@ var _ = Describe("EBS CSI Driver", func() {
 		metadata, err := newMetadata()
 		Expect(err).To(BeNil())
 		nodeID := metadata.GetInstanceID()
-		testAttachWriteReadDetach(volume.VolumeId, req.GetName(), nodeID, false)
+		testAttachWriteReadDetach(volume.GetVolumeId(), req.GetName(), nodeID, false)
 
 	})
 })
@@ -122,7 +122,7 @@ func testAttachWriteReadDetach(volumeID, volName, nodeID string, readOnly bool) 
 			VolumeId:          volumeID,
 			StagingTargetPath: stageDir,
 			VolumeCapability:  stdVolCap[0],
-			PublishContext:    map[string]string{"devicePath": respAttach.PublishContext["devicePath"]},
+			PublishContext:    map[string]string{"devicePath": respAttach.GetPublishContext()["devicePath"]},
 		})
 	Expect(err).To(BeNil(), "NodeStageVolume failed with error")
 
