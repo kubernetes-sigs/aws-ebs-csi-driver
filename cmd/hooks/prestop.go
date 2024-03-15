@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	corev1beta1 "sigs.k8s.io/karpenter/pkg/apis/v1beta1"
 )
 
 /*
@@ -60,6 +61,10 @@ func fetchNode(clientset kubernetes.Interface, nodeName string) (*v1.Node, error
 func isNodeBeingDrained(node *v1.Node) bool {
 	for _, taint := range node.Spec.Taints {
 		if taint.Key == v1.TaintNodeUnschedulable && taint.Effect == v1.TaintEffectNoSchedule {
+			return true
+		}
+
+		if corev1beta1.IsDisruptingTaint(taint) {
 			return true
 		}
 	}
