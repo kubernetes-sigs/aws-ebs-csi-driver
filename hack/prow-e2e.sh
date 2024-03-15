@@ -17,6 +17,8 @@
 # This script runs tests in CI by creating a cluster, running the tests,
 # cleaning up (regardless of test success/failure), and passing out the result
 
+unset AWS_ROLE_ARN
+unset AWS_WEB_IDENTITY_TOKEN_FILE
 aws sts get-caller-identity
 exit 0
 
