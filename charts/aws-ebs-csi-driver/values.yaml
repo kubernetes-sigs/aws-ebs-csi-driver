@@ -18,7 +18,7 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-provisioner
       tag: "v4.0.0-eks-1-29-5"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
@@ -43,7 +43,7 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-attacher
       tag: "v4.5.0-eks-1-29-5"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
@@ -70,7 +70,7 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-snapshotter/csi-snapshotter
       tag: "v7.0.0-eks-1-29-5"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
@@ -84,7 +84,7 @@ sidecars:
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/livenessprobe
       tag: "v2.12.0-eks-1-29-5"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
@@ -96,7 +96,7 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-resizer
       tag: "v1.10.0-eks-1-29-5"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
@@ -121,7 +121,7 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/node-driver-registrar
       tag: "v2.10.0-eks-1-29-5"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
