@@ -18,8 +18,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v4.0.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-provisioner
+      tag: "v4.0.0-eks-1-29-10.pre"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -43,8 +43,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.5.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-attacher
+      tag: "v4.5.0-eks-1-29-10.pre"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -70,8 +70,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v7.0.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-snapshotter/csi-snapshotter
+      tag: "v7.0.1-eks-1-29-10.pre"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -84,8 +84,8 @@ sidecars:
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.12.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/livenessprobe
+      tag: "v2.12.0-eks-1-29-10.pre"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -96,8 +96,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.10.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/external-resizer
+      tag: "v1.10.0-eks-1-29-10.pre"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -121,8 +121,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.10.0-eks-1-29-5"
+      repository: public.ecr.aws/h1r8a7l5/kubernetes-csi/node-driver-registrar
+      tag: "v2.10.0-eks-1-29-10.pre"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
