@@ -17,19 +17,19 @@
 set -euo pipefail
 
 # https://pypi.org/project/awscli/
-AWSCLI_VERSION="1.32.44"
+AWSCLI_VERSION="1.32.66"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.10.1"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.171.0"
+EKSCTL_VERSION="v0.174.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.15.0"
+GINKGO_VERSION="v2.17.0"
 # https://github.com/golangci/golangci-lint
 GOLANGCI_LINT_VERSION="v1.56.2"
 # https://github.com/helm/helm
-HELM_VERSION="v3.14.1"
+HELM_VERSION="v3.14.3"
 # https://github.com/kubernetes/kops
-KOPS_VERSION="v1.29.0-alpha.3"
+KOPS_VERSION="v1.29.0-beta.1"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
