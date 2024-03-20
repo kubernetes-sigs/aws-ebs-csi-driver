@@ -21,9 +21,10 @@ package util
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -176,7 +177,7 @@ func TestIsAlphanumeric(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			res := StringIsAlphanumeric(tc.testString)
-			assert.Equalf(t, res, tc.expResult, "Wrong value returned for StringIsAlphanumeric. Expected %s for string %s, got %s", tc.expResult, tc.testString, res)
+			assert.Equalf(t, tc.expResult, res, "Wrong value returned for StringIsAlphanumeric. Expected %s for string %s, got %s", tc.expResult, tc.testString, res)
 		})
 	}
 }

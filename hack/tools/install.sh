@@ -25,7 +25,7 @@ EKSCTL_VERSION="v0.171.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.15.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.54.0"
+GOLANGCI_LINT_VERSION="v1.56.2"
 # https://github.com/helm/helm
 HELM_VERSION="v3.14.1"
 # https://github.com/kubernetes/kops

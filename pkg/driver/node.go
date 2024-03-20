@@ -194,7 +194,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, err
 	}
 
-	mountOptions := collectMountOptions(fsType, mountVolume.MountFlags)
+	mountOptions := collectMountOptions(fsType, mountVolume.GetMountFlags())
 
 	if ok = d.inFlight.Insert(volumeID); !ok {
 		return nil, status.Errorf(codes.Aborted, VolumeOperationAlreadyExists, volumeID)
@@ -204,7 +204,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		d.inFlight.Delete(volumeID)
 	}()
 
-	devicePath, ok := req.PublishContext[DevicePathKey]
+	devicePath, ok := req.GetPublishContext()[DevicePathKey]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
@@ -395,7 +395,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 			// Skip resizing for Block NodeExpandVolume
 			bcap, err := d.getBlockSizeBytes(volumePath)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
+				return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.GetVolumePath(), err)
 			}
 			klog.V(4).InfoS("NodeExpandVolume: called, since given volumePath is a block device, ignoring...", "volumeID", volumeID, "volumePath", volumePath)
 			return &csi.NodeExpandVolumeResponse{CapacityBytes: bcap}, nil
@@ -424,7 +424,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	bcap, err := d.getBlockSizeBytes(devicePath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
+		return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.GetVolumePath(), err)
 	}
 	return &csi.NodeExpandVolumeResponse{CapacityBytes: bcap}, nil
 }
@@ -512,30 +512,30 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
 	klog.V(4).InfoS("NodeGetVolumeStats: called", "args", *req)
-	if len(req.VolumeId) == 0 {
+	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume ID was empty")
 	}
-	if len(req.VolumePath) == 0 {
+	if len(req.GetVolumePath()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume path was empty")
 	}
 
-	exists, err := d.mounter.PathExists(req.VolumePath)
+	exists, err := d.mounter.PathExists(req.GetVolumePath())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "unknown error when stat on %s: %v", req.VolumePath, err)
+		return nil, status.Errorf(codes.Internal, "unknown error when stat on %s: %v", req.GetVolumePath(), err)
 	}
 	if !exists {
-		return nil, status.Errorf(codes.NotFound, "path %s does not exist", req.VolumePath)
+		return nil, status.Errorf(codes.NotFound, "path %s does not exist", req.GetVolumePath())
 	}
 
-	isBlock, err := d.IsBlockDevice(req.VolumePath)
+	isBlock, err := d.IsBlockDevice(req.GetVolumePath())
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to determine whether %s is block device: %v", req.VolumePath, err)
+		return nil, status.Errorf(codes.Internal, "failed to determine whether %s is block device: %v", req.GetVolumePath(), err)
 	}
 	if isBlock {
-		bcap, blockErr := d.getBlockSizeBytes(req.VolumePath)
+		bcap, blockErr := d.getBlockSizeBytes(req.GetVolumePath())
 		if blockErr != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.VolumePath, err)
+			return nil, status.Errorf(codes.Internal, "failed to get block capacity on path %s: %v", req.GetVolumePath(), err)
 		}
 		return &csi.NodeGetVolumeStatsResponse{
 			Usage: []*csi.VolumeUsage{
@@ -547,11 +547,11 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		}, nil
 	}
 
-	metricsProvider := volume.NewMetricsStatFS(req.VolumePath)
+	metricsProvider := volume.NewMetricsStatFS(req.GetVolumePath())
 
 	metrics, err := metricsProvider.GetMetrics()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.VolumePath, err)
+		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.GetVolumePath(), err)
 	}
 
 	return &csi.NodeGetVolumeStatsResponse{
@@ -625,7 +625,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	volumeID := req.GetVolumeId()
 	volumeContext := req.GetVolumeContext()
 
-	devicePath, exists := req.PublishContext[DevicePathKey]
+	devicePath, exists := req.GetPublishContext()[DevicePathKey]
 	if !exists {
 		return status.Error(codes.InvalidArgument, "Device path not provided")
 	}
@@ -740,7 +740,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	target := req.GetTargetPath()
 	source := req.GetStagingTargetPath()
 	if m := mode.Mount; m != nil {
-		for _, f := range m.MountFlags {
+		for _, f := range m.GetMountFlags() {
 			if !hasMountOption(mountOptions, f) {
 				mountOptions = append(mountOptions, f)
 			}

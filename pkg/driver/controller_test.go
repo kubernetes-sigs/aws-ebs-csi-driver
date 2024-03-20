@@ -36,6 +36,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -208,7 +209,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -217,7 +218,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -277,7 +278,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 					OutpostArn:       outpostArn.String(),
@@ -287,7 +288,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -304,7 +305,7 @@ func TestCreateVolume(t *testing.T) {
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
-				// mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
+				// mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
 				vol := resp.GetVolume()
 				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
@@ -344,7 +345,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 					SnapshotID:       "snapshot-id",
@@ -354,7 +355,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -372,10 +373,10 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				snapshotID := ""
-				if rsp.Volume != nil && rsp.Volume.ContentSource != nil && rsp.Volume.ContentSource.GetSnapshot() != nil {
-					snapshotID = rsp.Volume.ContentSource.GetSnapshot().SnapshotId
+				if rsp.GetVolume() != nil && rsp.GetVolume().GetContentSource() != nil && rsp.GetVolume().GetContentSource().GetSnapshot() != nil {
+					snapshotID = rsp.GetVolume().GetContentSource().GetSnapshot().GetSnapshotId()
 				}
-				if rsp.Volume.ContentSource.GetSnapshot().SnapshotId != "snapshot-id" {
+				if rsp.GetVolume().GetContentSource().GetSnapshot().GetSnapshotId() != "snapshot-id" {
 					t.Errorf("Unexpected snapshot ID: %q", snapshotID)
 				}
 			},
@@ -400,7 +401,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 					SnapshotID:       "snapshot-id",
@@ -410,7 +411,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -428,10 +429,10 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				snapshotID := ""
-				if rsp.Volume != nil && rsp.Volume.ContentSource != nil && rsp.Volume.ContentSource.GetSnapshot() != nil {
-					snapshotID = rsp.Volume.ContentSource.GetSnapshot().SnapshotId
+				if rsp.GetVolume() != nil && rsp.GetVolume().GetContentSource() != nil && rsp.GetVolume().GetContentSource().GetSnapshot() != nil {
+					snapshotID = rsp.GetVolume().GetContentSource().GetSnapshot().GetSnapshotId()
 				}
-				if rsp.Volume.ContentSource.GetSnapshot().SnapshotId != "snapshot-id" {
+				if rsp.GetVolume().GetContentSource().GetSnapshot().GetSnapshotId() != "snapshot-id" {
 					t.Errorf("Unexpected snapshot ID: %q", snapshotID)
 				}
 			},
@@ -459,7 +460,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -531,7 +532,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -540,7 +541,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -557,7 +558,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				// Subsequent call returns the created disk
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 				resp, err := awsDriver.CreateVolume(ctx, extraReq)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -613,7 +614,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 				}
 				volSizeBytes, err := getVolSizeBytes(req)
@@ -626,7 +627,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -644,7 +645,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				// Subsequent failure
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(extraReq.Name), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(extraReq.GetName()), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
 				if _, err := awsDriver.CreateVolume(ctx, extraReq); err != nil {
 					srvErr, ok := status.FromError(err)
 					if !ok {
@@ -675,7 +676,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(cloud.DefaultVolumeSize),
 				}
@@ -684,7 +685,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -736,16 +737,16 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
-					CapacityGiB:      util.BytesToGiB(expVol.CapacityBytes),
+					CapacityGiB:      util.BytesToGiB(expVol.GetCapacityBytes()),
 				}
 
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -792,7 +793,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(volSize),
 				}
@@ -801,7 +802,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -834,7 +835,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -843,7 +844,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -876,7 +877,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -885,7 +886,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -918,7 +919,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -927,7 +928,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -960,7 +961,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -969,7 +970,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1001,7 +1002,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1010,7 +1011,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1042,7 +1043,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1051,7 +1052,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1083,7 +1084,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1092,7 +1093,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1125,7 +1126,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1134,7 +1135,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1172,7 +1173,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(volSize),
 				}
@@ -1181,7 +1182,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
 					assert.Equal(t, 4000, diskOptions.IOPS)
 					return mockDisk, nil
 				})
@@ -1364,7 +1365,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1373,7 +1374,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1389,7 +1390,7 @@ func TestCreateVolume(t *testing.T) {
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 				resp, err := awsDriver.CreateVolume(ctx, extraReq)
 				if err != nil {
 					srvErr, ok := status.FromError(err)
@@ -1436,7 +1437,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1454,7 +1455,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:    mockCloud,
@@ -1499,7 +1500,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1519,7 +1520,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:    mockCloud,
@@ -1565,7 +1566,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1585,7 +1586,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1691,7 +1692,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1716,7 +1717,7 @@ func TestCreateVolume(t *testing.T) {
 				ctx := context.Background()
 
 				mockDisk := &cloud.Disk{
-					VolumeID:         req.Name,
+					VolumeID:         req.GetName(),
 					AvailabilityZone: expZone,
 					CapacityGiB:      util.BytesToGiB(stdVolSize),
 				}
@@ -1725,7 +1726,7 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1904,7 +1905,7 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			ctx := context.Background()
 
 			mockDisk := &cloud.Disk{
-				VolumeID:         req.Name,
+				VolumeID:         req.GetName(),
 				AvailabilityZone: expZone,
 				CapacityGiB:      util.BytesToGiB(stdVolSize),
 			}
@@ -1915,7 +1916,7 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 
 			// CreateDisk not called on Unhappy Case
 			if !tc.errExpected {
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 				defer mockCtl.Finish()
 			}
 
@@ -1929,9 +1930,9 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 
 			// Splits happy case tests from unhappy case tests
 			if !tc.errExpected {
-				assert.Nilf(err, "Unexpected error: %w", err)
+				require.NoErrorf(t, err, "Unexpected error: %v", err)
 
-				volCtx := response.Volume.VolumeContext
+				volCtx := response.GetVolume().GetVolumeContext()
 
 				for formattingParamKey, formattingParamValue := range tc.formattingOptionParameters {
 					createdFormattingParamValue, ok := volCtx[formattingParamKey]
@@ -1940,7 +1941,7 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 					assert.Equalf(createdFormattingParamValue, formattingParamValue, "Invalid %s in VolumeContext", formattingParamKey)
 				}
 			} else {
-				assert.NotNilf(err, "CreateVolume did not return an error")
+				require.Error(t, err, "CreateVolume did not return an error")
 
 				checkExpectedErrorCode(t, err, codes.InvalidArgument)
 			}
@@ -1966,7 +1967,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(true, nil)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(true, nil)
 				awsDriver := controllerService{
 					cloud:         mockCloud,
 					inFlight:      internal.NewInFlight(),
@@ -1998,7 +1999,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(false, cloud.ErrNotFound)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, cloud.ErrNotFound)
 				awsDriver := controllerService{
 					cloud:         mockCloud,
 					inFlight:      internal.NewInFlight(),
@@ -2029,7 +2030,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.VolumeId)).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
 				awsDriver := controllerService{
 					cloud:         mockCloud,
 					inFlight:      internal.NewInFlight(),
@@ -2331,7 +2332,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2339,7 +2340,7 @@ func TestCreateSnapshot(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
@@ -2380,7 +2381,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2396,7 +2397,7 @@ func TestCreateSnapshot(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
@@ -2436,7 +2437,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2451,7 +2452,7 @@ func TestCreateSnapshot(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
@@ -2524,7 +2525,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2533,7 +2534,7 @@ func TestCreateSnapshot(t *testing.T) {
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -2591,7 +2592,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2600,7 +2601,7 @@ func TestCreateSnapshot(t *testing.T) {
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Any()).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -2674,7 +2675,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2690,7 +2691,7 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
@@ -2731,7 +2732,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2748,7 +2749,7 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
@@ -2787,7 +2788,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2812,7 +2813,7 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
 				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(map[string]struct{}{
 					"us-east-1a": {}, "us-east-1f": {}}, nil).AnyTimes()
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).Return(expOutput, nil).AnyTimes()
 
 				awsDriver := controllerService{
@@ -2852,7 +2853,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2876,7 +2877,7 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
 				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, fmt.Errorf("error describing availability zones")).AnyTimes()
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).Return(expOutput, nil).AnyTimes()
 
 				awsDriver := controllerService{
@@ -2913,7 +2914,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -2943,7 +2944,7 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
 				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, fmt.Errorf("error describing availability zones")).AnyTimes()
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-west-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).
 					Return(expOutput, fmt.Errorf("Failed to create Fast Snapshot Restores")).AnyTimes()
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
@@ -3014,7 +3015,7 @@ func TestCreateSnapshot(t *testing.T) {
 				ctx := context.Background()
 				mockSnapshot := &cloud.Snapshot{
 					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
-					SourceVolumeID: req.SourceVolumeId,
+					SourceVolumeID: req.GetSourceVolumeId(),
 					Size:           1,
 					CreationTime:   time.Now(),
 				}
@@ -3032,7 +3033,7 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
 				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(map[string]struct{}{
 					"us-east-1a": {}, "us-east-1f": {}}, nil).AnyTimes()
-				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.SourceVolumeId), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}),
 					gomock.Eq(mockSnapshot.SnapshotID)).Return(nil, fmt.Errorf("error")).AnyTimes()
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
@@ -3500,7 +3501,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			}
 
 			if tc.mockAttach != nil {
-				tc.mockAttach(mockCloud, ctx, req.VolumeId, req.NodeId)
+				tc.mockAttach(mockCloud, ctx, req.GetVolumeId(), req.GetNodeId())
 			}
 
 			resp, err := awsDriver.ControllerPublishVolume(ctx, req)
@@ -3508,7 +3509,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				assert.Equal(t, tc.errorCode, status.Code(err))
 				assert.Nil(t, resp)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, resp)
 				assert.Equal(t, tc.expResp, resp)
 			}
@@ -3596,7 +3597,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			}
 
 			if tc.mockDetach != nil {
-				tc.mockDetach(mockCloud, ctx, req.VolumeId, req.NodeId)
+				tc.mockDetach(mockCloud, ctx, req.GetVolumeId(), req.GetNodeId())
 			}
 
 			resp, err := awsDriver.ControllerUnpublishVolume(ctx, req)
@@ -3604,7 +3605,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				assert.Equal(t, tc.errorCode, status.Code(err))
 				assert.Nil(t, resp)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, resp)
 				assert.Equal(t, tc.expResp, resp)
 			}
@@ -3660,11 +3661,11 @@ func TestControllerExpandVolume(t *testing.T) {
 			if tc.newSize != 0 {
 				retSizeGiB = tc.newSize
 			} else {
-				retSizeGiB = util.BytesToGiB(tc.req.CapacityRange.GetRequiredBytes())
+				retSizeGiB = util.BytesToGiB(tc.req.GetCapacityRange().GetRequiredBytes())
 			}
 
 			mockCloud := cloud.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(tc.req.VolumeId), gomock.Any(), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
+			mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(tc.req.GetVolumeId()), gomock.Any(), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
 
 			awsDriver := controllerService{
 				cloud:               mockCloud,
