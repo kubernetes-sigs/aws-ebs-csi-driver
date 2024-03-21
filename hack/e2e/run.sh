@@ -129,7 +129,7 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
     while true; do
       if kubectl get pod ebs-csi-driver-test -n kube-system --kubeconfig "${KUBECONFIG}" &>/dev/null; then
         echo "Pod found, waiting for it to become ready..."
-        if kubectl wait --for=condition=ready pod ebs-csi-driver-test -n kube-system --timeout=60s --kubeconfig "${KUBECONFIG}"; then
+        if kubectl wait --for=condition=ready pod ebs-csi-driver-test -n kube-system --timeout=300s --kubeconfig "${KUBECONFIG}"; then
           echo "Pod is ready, fetching logs..."
           kubectl logs -f ebs-csi-driver-test -n kube-system -c kubetest2 --kubeconfig "${KUBECONFIG}"
         fi
