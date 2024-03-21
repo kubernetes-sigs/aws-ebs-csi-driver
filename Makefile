@@ -18,7 +18,7 @@
 
 ## Variables/Functions
 
-VERSION?=v1.28.0
+VERSION?=v1.29.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)

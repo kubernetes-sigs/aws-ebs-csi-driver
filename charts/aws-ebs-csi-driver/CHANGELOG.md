@@ -1,4 +1,16 @@
 # Helm chart
+## v2.29.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The EBS CSI Driver Helm chart no longer supports upgrading with `--reuse-values`. This chart will not test for `--reuse-values` compatibility and upgrading with `--reuse-values` will likely fail. Users of `--reuse-values` are strongly encouraged to migrate to `--reset-then-reuse-values`.
+
+For more information see [the deprecation announcement](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864).
+
+### Other Changes
+* Bump driver version to `v1.29.0` and sidecars to latest versions
+* Add helm-tester enabled flag ([#1954](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1954), [@nunodomingues-td](https://github.com/nunodomingues-td))
+
 ## v2.28.1
 * Add `reservedVolumeAttachments` that overrides heuristic-determined reserved attachments via  `--reserved-volume-attachments` CLI option from [PR #1919](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1919) through Helm ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko)) 
 * Add `additionalArgs` parameter to node daemonSet ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko))

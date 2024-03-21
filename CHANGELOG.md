@@ -1,3 +1,22 @@
+# v1.29.0
+### Notable Changes
+* Implement KEP3751 ("ControllerModifyVolume") ([#1941](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1941), [@ConnorJC3](https://github.com/ConnorJC3))
+* Batch EC2 DescribeSnapshots calls ([#1958](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1958), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Batch EC2 DescribeInstances calls ([#1947](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1947), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Validate Karpenter Disruption taints as part of preStop node evaluation ([#1969](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1969), [@alexandermarston](https://github.com/alexandermarston))
+* Add OS topology key to node segments map ([#1950](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1950), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Add missing instances to instance store volumes table ([#1966](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1966), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add `c6id` and `r6id` adjusted limits to `volume_limits.go` ([#1961](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1961), [@talnevo](https://github.com/talnevo))
+* Ensure CSINode allocatable count is set on node before removing startup taint ([#1949](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1949), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Upgrade golangci-lint ([#1971](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1971), [@torredil](https://github.com/torredil))
+* Return ErrInvalidArgument in cloud upon EC2 ModifyVolume ([#1960](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1960), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Address CVE GO-2024-2611 ([#1959](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1959), [@torredil](https://github.com/torredil))
+* Upgrade to go v1.22 ([#1948](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1948), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.28.0
 ### Notable Changes
 * Add ability to override heuristic-determined reserved attachments via  `--reserved-volume-attachments` CLI option ([#1919](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1919), [@jsafrane](https://github.com/jsafrane))
