@@ -1,3 +1,7 @@
+# v1.29.1
+### Bug Fixes
+* Correctly forward os.version for Windows images in multi-arch manifests ([#1985](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1985), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.29.0
 ### Notable Changes
 * Implement KEP3751 ("ControllerModifyVolume") ([#1941](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1941), [@ConnorJC3](https://github.com/ConnorJC3))
