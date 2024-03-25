@@ -29,7 +29,7 @@ function ecr_build_and_push() {
   # Only setup buildx builder on Prow, allow local users to use docker cache
   if [ -n "${PROW_JOB_ID:-}" ]; then
     trap "docker buildx rm ebs-csi-multiarch-builder" EXIT
-    docker buildx create --bootstrap --use --name ebs-csi-multiarch-builder
+    docker buildx create --driver-opt=image=moby/buildkit:v0.12.5 --bootstrap --use --name ebs-csi-multiarch-builder
     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   fi
 
