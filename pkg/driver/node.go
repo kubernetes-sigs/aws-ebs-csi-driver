@@ -285,6 +285,9 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if len(ext4ClusterSize) > 0 {
 		formatOptions = append(formatOptions, "-C", ext4ClusterSize)
 	}
+	if fsType == FSTypeXfs {
+		formatOptions = append(formatOptions, "-m", "bigtime=0,inobtcount=0,reflink=0")
+	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {
 		msg := fmt.Sprintf("could not format %q and mount it at %q: %v", source, target, err)
