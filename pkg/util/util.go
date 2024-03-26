@@ -18,6 +18,7 @@ package util
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -28,33 +29,41 @@ import (
 )
 
 const (
-	GiB = 1024 * 1024 * 1024
+	GiB = int64(1024 * 1024 * 1024)
 )
 
 var (
 	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
 )
 
-// RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB
-// in the unit of Bytes
+// RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB
 func RoundUpBytes(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB) * GiB
 }
 
 // RoundUpGiB rounds up the volume size in bytes upto multiplications of GiB
 // in the unit of GiB
-func RoundUpGiB(volumeSizeBytes int64) int64 {
-	return roundUpSize(volumeSizeBytes, GiB)
+func RoundUpGiB(volumeSizeBytes int64) (int32, error) {
+	result := roundUpSize(volumeSizeBytes, GiB)
+	if result > int64(math.MaxInt32) {
+		return 0, fmt.Errorf("rounded up size exceeds maximum value of int32: %d", result)
+	}
+	return int32(result), nil
 }
 
 // BytesToGiB converts Bytes to GiB
-func BytesToGiB(volumeSizeBytes int64) int64 {
-	return volumeSizeBytes / GiB
+func BytesToGiB(volumeSizeBytes int64) int32 {
+	result := volumeSizeBytes / GiB
+	if result > int64(math.MaxInt32) {
+		// Handle overflow
+		return math.MaxInt32
+	}
+	return int32(result)
 }
 
 // GiBToBytes converts GiB to Bytes
-func GiBToBytes(volumeSizeGiB int64) int64 {
-	return volumeSizeGiB * GiB
+func GiBToBytes(volumeSizeGiB int32) int64 {
+	return int64(volumeSizeGiB) * GiB
 }
 
 func ParseEndpoint(endpoint string) (string, string, error) {
@@ -80,8 +89,10 @@ func ParseEndpoint(endpoint string) (string, string, error) {
 	return scheme, addr, nil
 }
 
-// TODO: check division by zero and int overflow
 func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
+	if allocationUnitBytes == 0 {
+		return 0 // Avoid division by zero
+	}
 	return (volumeSizeBytes + allocationUnitBytes - 1) / allocationUnitBytes
 }
 

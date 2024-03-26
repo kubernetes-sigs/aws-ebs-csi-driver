@@ -18,9 +18,9 @@ package cloud
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
-
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"k8s.io/klog/v2"
 )
 
@@ -35,18 +35,53 @@ type Metadata struct {
 	OutpostArn             arn.ARN
 }
 
-const (
-	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
-	outpostArnEndpoint string = "outpost-arn"
-
-	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs
-	enisEndpoint string = "network/interfaces/macs"
-
-	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices
-	blockDevicesEndpoint string = "block-device-mapping"
-)
+type MetadataServiceConfig struct {
+	EC2MetadataClient EC2MetadataClient
+	K8sAPIClient      KubernetesAPIClient
+}
 
 var _ MetadataService = &Metadata{}
+
+func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataService, error) {
+	metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
+	if err == nil {
+		klog.InfoS("ec2 metadata is available")
+		return metadata, nil
+	}
+
+	klog.InfoS("failed to retrieve instance data from ec2 metadata; retrieving instance data from kubernetes api", "err", err)
+	metadata, err = retrieveK8sMetadata(cfg.K8sAPIClient)
+	if err == nil {
+		klog.InfoS("kubernetes api is available")
+		return metadata, nil
+	}
+
+	return nil, fmt.Errorf("error getting instance data from ec2 metadata or kubernetes api")
+}
+
+func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
+	envValue := os.Getenv("AWS_EC2_METADATA_DISABLED")
+	if envValue != "" {
+		klog.InfoS("The AWS_EC2_METADATA_DISABLED environment variable disables access to EC2 IMDS", "enabled", envValue)
+	}
+
+	svc, err := ec2MetadataClient()
+	if err != nil {
+		klog.ErrorS(err, "Failed to initialize EC2 Metadata client")
+		return nil, err
+	}
+	return EC2MetadataInstanceInfo(svc, region)
+}
+
+func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
+	clientset, err := k8sAPIClient()
+	if err != nil {
+		klog.InfoS("error creating kubernetes api client", "err", err)
+		return nil, err
+	}
+
+	return KubernetesAPIInstanceInfo(clientset)
+}
 
 // GetInstanceID returns the instance identification.
 func (m *Metadata) GetInstanceID() string {
@@ -68,10 +103,12 @@ func (m *Metadata) GetAvailabilityZone() string {
 	return m.AvailabilityZone
 }
 
+// GetNumAttachedENIs returns the number of attached ENIs.
 func (m *Metadata) GetNumAttachedENIs() int {
 	return m.NumAttachedENIs
 }
 
+// GetNumBlockDeviceMappings returns the number of block device mappings.
 func (m *Metadata) GetNumBlockDeviceMappings() int {
 	return m.NumBlockDeviceMappings
 }
@@ -79,28 +116,4 @@ func (m *Metadata) GetNumBlockDeviceMappings() int {
 // GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.
 func (m *Metadata) GetOutpostArn() arn.ARN {
 	return m.OutpostArn
-}
-
-func NewMetadataService(ec2MetadataClient EC2MetadataClient, k8sAPIClient KubernetesAPIClient, region string) (MetadataService, error) {
-	klog.InfoS("retrieving instance data from ec2 metadata")
-	svc, err := ec2MetadataClient()
-	if !svc.Available() {
-		klog.InfoS("ec2 metadata is not available")
-	} else if err != nil {
-		klog.InfoS("error creating ec2 metadata client", "err", err)
-	} else {
-		klog.InfoS("ec2 metadata is available")
-		return EC2MetadataInstanceInfo(svc, region)
-	}
-
-	klog.InfoS("retrieving instance data from kubernetes api")
-	clientset, err := k8sAPIClient()
-	if err != nil {
-		klog.InfoS("error creating kubernetes api client", "err", err)
-	} else {
-		klog.InfoS("kubernetes api is available")
-		return KubernetesAPIInstanceInfo(clientset)
-	}
-
-	return nil, fmt.Errorf("error getting instance data from ec2 metadata or kubernetes api")
 }

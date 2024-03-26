@@ -19,8 +19,8 @@ package devicemanager
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 func TestNewDevice(t *testing.T) {
@@ -223,13 +223,15 @@ func TestReleaseDevice(t *testing.T) {
 	}
 }
 
-func newFakeInstance(instanceID, volumeID, devicePath string) *ec2.Instance {
-	return &ec2.Instance{
+func newFakeInstance(instanceID, volumeID, devicePath string) *types.Instance {
+	return &types.Instance{
 		InstanceId: aws.String(instanceID),
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
+		BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
 			{
 				DeviceName: aws.String(devicePath),
-				Ebs:        &ec2.EbsInstanceBlockDevice{VolumeId: aws.String(volumeID)},
+				Ebs: &types.EbsInstanceBlockDevice{
+					VolumeId: aws.String(volumeID),
+				},
 			},
 		},
 	}

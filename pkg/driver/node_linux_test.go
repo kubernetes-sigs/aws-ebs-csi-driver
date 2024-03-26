@@ -249,7 +249,7 @@ func TestVerifyVolumeSerialMatch(t *testing.T) {
 			if tc.expectError {
 				assert.Error(t, result)
 			} else {
-				assert.NoError(t, result)
+				require.NoError(t, result)
 			}
 		})
 	}

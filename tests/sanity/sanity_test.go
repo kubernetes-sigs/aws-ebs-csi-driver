@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 	csisanity "github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -235,7 +234,7 @@ func mockControllerService(c *cloud.MockCloud, mountPath string) {
 	// ListSnapshots
 	c.EXPECT().
 		ListSnapshots(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, sourceVolumeID string, maxResults int64, nextToken string) (*cloud.ListSnapshotsResponse, error) {
+		DoAndReturn(func(ctx context.Context, sourceVolumeID string, maxResults int32, nextToken string) (*cloud.ListSnapshotsResponse, error) {
 			var s []*cloud.Snapshot
 			startIndex := 0
 			var err error
@@ -253,7 +252,7 @@ func mockControllerService(c *cloud.MockCloud, mountPath string) {
 				if snap.SourceVolumeID == sourceVolumeID || sourceVolumeID == "" {
 					if startIndex <= count {
 						s = append(s, snap)
-						if maxResults > 0 && int64(len(s)) >= maxResults {
+						if maxResults > 0 && int32(len(s)) >= maxResults {
 							nextTokenStr = strconv.Itoa(startIndex + int(maxResults))
 							break
 						}
@@ -293,7 +292,7 @@ func mockControllerService(c *cloud.MockCloud, mountPath string) {
 
 	// ResizeOrModifyDisk
 	c.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, volumeID string, newSizeBytes int64, modifyOptions *cloud.ModifyDiskOptions) (int64, error) {
+		func(ctx context.Context, volumeID string, newSizeBytes int64, modifyOptions *cloud.ModifyDiskOptions) (int32, error) {
 			disk, exists := disks[volumeID]
 			if !exists {
 				return 0, cloud.ErrNotFound
@@ -301,8 +300,7 @@ func mockControllerService(c *cloud.MockCloud, mountPath string) {
 			newSizeGiB := util.BytesToGiB(newSizeBytes)
 			disk.CapacityGiB = newSizeGiB
 			disks[volumeID] = disk
-			realSizeGiB := aws.Int64Value(&newSizeGiB)
-			return realSizeGiB, nil
+			return newSizeGiB, nil
 		},
 	).AnyTimes()
 }

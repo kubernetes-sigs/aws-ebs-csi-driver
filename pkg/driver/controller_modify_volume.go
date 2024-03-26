@@ -49,7 +49,7 @@ type modifyVolumeRequest struct {
 }
 
 type modifyVolumeResponse struct {
-	volumeSize int64
+	volumeSize int32
 	err        error
 }
 
@@ -179,7 +179,7 @@ func (d *controllerService) addModifyVolumeRequest(volumeID string, r *modifyVol
 	}
 }
 
-func (d *controllerService) executeModifyVolumeRequest(volumeID string, req *modifyVolumeRequest) (int64, error) {
+func (d *controllerService) executeModifyVolumeRequest(volumeID string, req *modifyVolumeRequest) (int32, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	actualSizeGiB, err := d.cloud.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
@@ -238,13 +238,13 @@ func parseModifyVolumeParameters(params map[string]string) (*cloud.ModifyDiskOpt
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
 			}
-			options.IOPS = iops
+			options.IOPS = int32(iops)
 		case ModificationKeyThroughput:
 			throughput, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
 			}
-			options.Throughput = throughput
+			options.Throughput = int32(throughput)
 		case DeprecatedModificationKeyVolumeType:
 			if _, ok := params[ModificationKeyVolumeType]; ok {
 				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")

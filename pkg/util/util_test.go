@@ -33,29 +33,32 @@ func TestRoundUpBytes(t *testing.T) {
 	var sizeInBytes int64 = 1024
 	actual := RoundUpBytes(sizeInBytes)
 	if actual != 1*GiB {
-		t.Fatalf("Wrong result for RoundUpBytes. Got: %d", actual)
+		t.Fatalf("Wrong result for RoundUpBytes. Got: %d, want: %d", actual, 1*GiB)
 	}
 }
 
 func TestRoundUpGiB(t *testing.T) {
-	var sizeInBytes int64 = 1
-	actual := RoundUpGiB(sizeInBytes)
+	var size int64 = 1
+	actual, err := RoundUpGiB(size)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if actual != 1 {
-		t.Fatalf("Wrong result for RoundUpGiB. Got: %d", actual)
+		t.Fatalf("Wrong result for RoundUpGiB. Got: %d, want: %d", actual, 1)
 	}
 }
 
 func TestBytesToGiB(t *testing.T) {
-	var sizeInBytes int64 = 5 * GiB
-
+	var sizeInBytes int64 = 2147483643
 	actual := BytesToGiB(sizeInBytes)
-	if actual != 5 {
-		t.Fatalf("Wrong result for BytesToGiB. Got: %d", actual)
+	expected := int32(sizeInBytes / GiB)
+	if actual != expected {
+		t.Fatalf("Wrong result for BytesToGiB. Got: %d, want: %d", actual, expected)
 	}
 }
 
 func TestGiBToBytes(t *testing.T) {
-	var sizeInGiB int64 = 3
+	var sizeInGiB int32 = 3
 
 	actual := GiBToBytes(sizeInGiB)
 	if actual != 3*GiB {

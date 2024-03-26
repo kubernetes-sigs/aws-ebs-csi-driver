@@ -15,13 +15,15 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -45,8 +47,8 @@ func generateTagName() string {
 	return testTagNamePrefix + uuid.NewString()[:8]
 }
 
-func validateEc2Snapshot(ec2Client ec2iface.EC2API, input *ec2.DescribeSnapshotsInput) *ec2.DescribeSnapshotsOutput {
-	describeResult, err := ec2Client.DescribeSnapshots(input)
+func validateEc2Snapshot(ctx context.Context, ec2Client *ec2.Client, input *ec2.DescribeSnapshotsInput) *ec2.DescribeSnapshotsOutput {
+	describeResult, err := ec2Client.DescribeSnapshots(ctx, input)
 	if err != nil {
 		Fail(fmt.Sprintf("failed to describe snapshot: %v", err))
 	}
@@ -81,7 +83,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 	})
 
 	// Tests that require that the e2e runner has access to the AWS API
-	ec2Client := ec2.New(session.Must(session.NewSession()))
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		Fail(fmt.Sprintf("failed to load AWS config: %v", err))
+	}
+	ec2Client := ec2.NewFromConfig(cfg)
 
 	It("should create a volume with additional tags", func() {
 		testTag := generateTagName()
@@ -105,11 +111,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 			CSIDriver: ebsDriver,
 			Pods:      pods,
 			ValidateFunc: func() {
-				result, err := ec2Client.DescribeVolumes(&ec2.DescribeVolumesInput{
-					Filters: []*ec2.Filter{
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					Filters: []types.Filter{
 						{
 							Name:   aws.String("tag:" + testTag),
-							Values: []*string{aws.String(testTagValue)},
+							Values: []string{(testTagValue)},
 						},
 					},
 				})
@@ -161,11 +167,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 				ebscsidriver.TagKeyPrefix: fmt.Sprintf("%s=%s", testTag, testTagValue),
 			},
 			ValidateFunc: func(_ *volumesnapshotv1.VolumeSnapshot) {
-				validateEc2Snapshot(ec2Client, &ec2.DescribeSnapshotsInput{
-					Filters: []*ec2.Filter{
+				validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
 						{
 							Name:   aws.String("tag:" + testTag),
-							Values: []*string{aws.String(testTagValue)},
+							Values: []string{(testTagValue)},
 						},
 					},
 				})
@@ -175,7 +181,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 	})
 
 	It("should create a snapshot with FSR enabled", func() {
-		azList, err := ec2Client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+		azList, err := ec2Client.DescribeAvailabilityZones(context.Background(), &ec2.DescribeAvailabilityZonesInput{})
 		if err != nil {
 			Fail(fmt.Sprintf("failed to list AZs: %v", err))
 		}
@@ -215,20 +221,20 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 				ebscsidriver.FastSnapshotRestoreAvailabilityZones: fsrAvailabilityZone,
 			},
 			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
-				describeResult := validateEc2Snapshot(ec2Client, &ec2.DescribeSnapshotsInput{
-					Filters: []*ec2.Filter{
+				describeResult := validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
 						{
 							Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
-							Values: []*string{aws.String("snapshot-" + string(snapshot.UID))},
+							Values: []string{"snapshot-" + string(snapshot.UID)},
 						},
 					},
 				})
 
-				result, err := ec2Client.DescribeFastSnapshotRestores(&ec2.DescribeFastSnapshotRestoresInput{
-					Filters: []*ec2.Filter{
+				result, err := ec2Client.DescribeFastSnapshotRestores(context.Background(), &ec2.DescribeFastSnapshotRestoresInput{
+					Filters: []types.Filter{
 						{
 							Name:   aws.String("snapshot-id"),
-							Values: []*string{describeResult.Snapshots[0].SnapshotId},
+							Values: []string{*describeResult.Snapshots[0].SnapshotId},
 						},
 					},
 				})

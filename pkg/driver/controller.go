@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -82,7 +82,12 @@ func newControllerService(driverOptions *DriverOptions) controllerService {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		klog.V(5).InfoS("[Debug] Retrieving region from metadata service")
-		metadata, err := NewMetadataFunc(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
+
+		cfg := cloud.MetadataServiceConfig{
+			EC2MetadataClient: cloud.DefaultEC2MetadataClient,
+			K8sAPIClient:      cloud.DefaultKubernetesAPIClient,
+		}
+		metadata, err := NewMetadataFunc(cfg, region)
 		if err != nil {
 			klog.ErrorS(err, "Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
 			panic(err)
@@ -133,10 +138,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	var (
 		volumeType             string
-		iopsPerGB              int
+		iopsPerGB              int32
 		allowIOPSPerGBIncrease bool
-		iops                   int
-		throughput             int
+		iops                   int32
+		throughput             int32
 		isEncrypted            bool
 		blockExpress           bool
 		kmsKeyID               string
@@ -162,22 +167,25 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case VolumeTypeKey:
 			volumeType = value
 		case IopsPerGBKey:
-			iopsPerGB, err = strconv.Atoi(value)
-			if err != nil {
+			parseIopsPerGBKey, parseIopsPerGBKeyErr := strconv.ParseInt(value, 10, 32)
+			if parseIopsPerGBKeyErr != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
 			}
+			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
 			allowIOPSPerGBIncrease = value == "true"
 		case IopsKey:
-			iops, err = strconv.Atoi(value)
-			if err != nil {
+			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
+			if parseIopsKeyErr != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", err)
 			}
+			iops = int32(parseIopsKey)
 		case ThroughputKey:
-			throughput, err = strconv.Atoi(value)
-			if err != nil {
+			parseThroughput, parseThroughputErr := strconv.ParseInt(value, 10, 32)
+			if parseThroughputErr != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", err)
 			}
+			throughput = int32(parseThroughput)
 		case EncryptedKey:
 			if value == "true" {
 				isEncrypted = true
@@ -592,7 +600,7 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	// Intentionally not pass in context as we deal with context locally in this method
 	d.addModifyVolumeRequest(volumeID, &modifyVolumeRequest) //nolint:contextcheck
 
-	var actualSizeGiB int64
+	var actualSizeGiB int32
 
 	select {
 	case response := <-responseChan:
@@ -882,7 +890,7 @@ func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 
 	volumeID := req.GetSourceVolumeId()
 	nextToken := req.GetStartingToken()
-	maxEntries := int64(req.GetMaxEntries())
+	maxEntries := req.GetMaxEntries()
 
 	cloudSnapshots, err := d.cloud.ListSnapshots(ctx, volumeID, maxEntries, nextToken)
 	if err != nil {
@@ -995,7 +1003,7 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) (*csi.CreateSnapshotRes
 		Snapshot: &csi.Snapshot{
 			SnapshotId:     snapshot.SnapshotID,
 			SourceVolumeId: snapshot.SourceVolumeID,
-			SizeBytes:      snapshot.Size,
+			SizeBytes:      util.GiBToBytes(snapshot.Size),
 			CreationTime:   ts,
 			ReadyToUse:     snapshot.ReadyToUse,
 		},
@@ -1022,7 +1030,7 @@ func newListSnapshotsResponseEntry(snapshot *cloud.Snapshot) *csi.ListSnapshotsR
 		Snapshot: &csi.Snapshot{
 			SnapshotId:     snapshot.SnapshotID,
 			SourceVolumeId: snapshot.SourceVolumeID,
-			SizeBytes:      snapshot.Size,
+			SizeBytes:      util.GiBToBytes(snapshot.Size),
 			CreationTime:   ts,
 			ReadyToUse:     snapshot.ReadyToUse,
 		},

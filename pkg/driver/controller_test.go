@@ -27,9 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -113,7 +114,7 @@ func TestNewControllerService(t *testing.T) {
 
 				oldNewMetadataFunc := NewMetadataFunc
 				defer func() { NewMetadataFunc = oldNewMetadataFunc }()
-				NewMetadataFunc = func(cloud.EC2MetadataClient, cloud.KubernetesAPIClient, string) (cloud.MetadataService, error) {
+				NewMetadataFunc = func(cfg cloud.MetadataServiceConfig, region string) (cloud.MetadataService, error) {
 					if tc.newMetadataFuncErrors {
 						return nil, testErr
 					}
@@ -1183,7 +1184,7 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).DoAndReturn(func(_ context.Context, _ string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {
-					assert.Equal(t, 4000, diskOptions.IOPS)
+					assert.Equal(t, int32(4000), diskOptions.IOPS)
 					return mockDisk, nil
 				})
 				awsDriver := controllerService{
@@ -2803,10 +2804,10 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 
 				expOutput := &ec2.EnableFastSnapshotRestoresOutput{
-					Successful: []*ec2.EnableFastSnapshotRestoreSuccessItem{{
+					Successful: []types.EnableFastSnapshotRestoreSuccessItem{{
 						AvailabilityZone: aws.String("us-east-1a,us-east-1f"),
 						SnapshotId:       aws.String("snap-test-id")}},
-					Unsuccessful: []*ec2.EnableFastSnapshotRestoreErrorItem{},
+					Unsuccessful: []types.EnableFastSnapshotRestoreErrorItem{},
 				}
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
@@ -2868,10 +2869,10 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 
 				expOutput := &ec2.EnableFastSnapshotRestoresOutput{
-					Successful: []*ec2.EnableFastSnapshotRestoreSuccessItem{{
+					Successful: []types.EnableFastSnapshotRestoreSuccessItem{{
 						AvailabilityZone: aws.String("us-east-1a,us-east-1f"),
 						SnapshotId:       aws.String("snap-test-id")}},
-					Unsuccessful: []*ec2.EnableFastSnapshotRestoreErrorItem{},
+					Unsuccessful: []types.EnableFastSnapshotRestoreErrorItem{},
 				}
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
@@ -2928,13 +2929,13 @@ func TestCreateSnapshot(t *testing.T) {
 					},
 				}
 				expOutput := &ec2.EnableFastSnapshotRestoresOutput{
-					Successful: []*ec2.EnableFastSnapshotRestoreSuccessItem{},
-					Unsuccessful: []*ec2.EnableFastSnapshotRestoreErrorItem{{
+					Successful: []types.EnableFastSnapshotRestoreSuccessItem{},
+					Unsuccessful: []types.EnableFastSnapshotRestoreErrorItem{{
 						SnapshotId: aws.String("snap-test-id"),
-						FastSnapshotRestoreStateErrors: []*ec2.EnableFastSnapshotRestoreStateErrorItem{
+						FastSnapshotRestoreStateErrors: []types.EnableFastSnapshotRestoreStateErrorItem{
 							{
 								AvailabilityZone: aws.String("us-west-1a,us-east-1f"),
-								Error: &ec2.EnableFastSnapshotRestoreStateError{
+								Error: &types.EnableFastSnapshotRestoreStateError{
 									Message: aws.String("failed to create fast snapshot restore"),
 								}},
 						},
@@ -3179,7 +3180,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(0)), gomock.Eq("")).Return(mockCloudSnapshotsResponse, nil)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(0)), gomock.Eq("")).Return(mockCloudSnapshotsResponse, nil)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -3206,7 +3207,7 @@ func TestListSnapshots(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(0)), gomock.Eq("")).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(0)), gomock.Eq("")).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -3334,7 +3335,7 @@ func TestListSnapshots(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int64(4)), gomock.Eq("")).Return(nil, cloud.ErrInvalidMaxResults)
+				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(4)), gomock.Eq("")).Return(nil, cloud.ErrInvalidMaxResults)
 
 				awsDriver := controllerService{
 					cloud:         mockCloud,
@@ -3617,7 +3618,7 @@ func TestControllerExpandVolume(t *testing.T) {
 	testCases := []struct {
 		name     string
 		req      *csi.ControllerExpandVolumeRequest
-		newSize  int64
+		newSize  int32
 		expResp  *csi.ControllerExpandVolumeResponse
 		expError bool
 	}{
@@ -3657,7 +3658,7 @@ func TestControllerExpandVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			var retSizeGiB int64
+			var retSizeGiB int32
 			if tc.newSize != 0 {
 				retSizeGiB = tc.newSize
 			} else {
