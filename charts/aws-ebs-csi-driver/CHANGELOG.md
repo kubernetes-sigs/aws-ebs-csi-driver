@@ -1,4 +1,8 @@
 # Helm chart
+## v2.29.1
+* Bump driver version to `v1.29.1`
+* Remove `--reuse-values` deprecation warning 
+
 ## v2.29.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
