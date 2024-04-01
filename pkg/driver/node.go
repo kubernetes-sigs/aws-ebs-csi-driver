@@ -95,7 +95,13 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 	klog.V(5).InfoS("[Debug] Retrieving node info from metadata service")
 	region := os.Getenv("AWS_REGION")
 	klog.InfoS("regionFromSession Node service", "region", region)
-	metadata, err := cloud.NewMetadataService(cloud.DefaultEC2MetadataClient, cloud.DefaultKubernetesAPIClient, region)
+
+	cfg := cloud.MetadataServiceConfig{
+		EC2MetadataClient: cloud.DefaultEC2MetadataClient,
+		K8sAPIClient:      cloud.DefaultKubernetesAPIClient,
+	}
+
+	metadata, err := cloud.NewMetadataService(cfg, region)
 	if err != nil {
 		panic(err)
 	}

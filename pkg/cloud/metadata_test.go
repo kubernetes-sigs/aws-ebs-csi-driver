@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,419 +17,593 @@ limitations under the License.
 package cloud
 
 import (
-	"fmt"
+	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/golang/mock/gomock"
-	v1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	k8s_testing "k8s.io/client-go/testing"
-)
-
-const (
-	nodeName             = "ip-123-45-67-890.us-west-2.compute.internal"
-	stdInstanceID        = "i-abcdefgh123456789"
-	stdInstanceType      = "t2.medium"
-	stdRegion            = "us-west-2"
-	stdAvailabilityZone  = "us-west-2b"
-	snowRegion           = "snow"
-	snowAvailabilityZone = "snow"
 )
 
 func TestNewMetadataService(t *testing.T) {
-
-	validRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
-	validOutpostArn, _ := arn.Parse(strings.ReplaceAll(validRawOutpostArn, "outpost/", ""))
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
 	testCases := []struct {
-		name                             string
-		ec2metadataAvailable             bool
-		clientsetReactors                func(*fake.Clientset)
-		getInstanceIdentityDocumentValue ec2metadata.EC2InstanceIdentityDocument
-		getInstanceIdentityDocumentError error
-		invalidInstanceIdentityDocument  bool
-		getMetadataValue                 string
-		getMetadataError                 error
-		imdsBlockDeviceOutput            string
-		imdsENIOutput                    string
-		expectedENIs                     int
-		expectedBlockDevices             int
-		expectedOutpostArn               arn.ARN
-		expectedErr                      error
-		node                             v1.Node
-		nodeNameEnvVar                   string
-		regionFromSession                string
+		name             string
+		region           string
+		ec2MetadataError error
+		k8sAPIError      error
+		expectedMetadata *Metadata
+		expectedError    error
 	}{
 		{
-			name:                 "success: normal",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
+			name:   "TestNewMetadataService: EC2 metadata available",
+			region: "us-west-2",
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 2,
 			},
-			imdsENIOutput: "00:00:00:00:00:00",
-			expectedENIs:  1,
 		},
 		{
-			name:                 "success: outpost-arn is available",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
+			name:             "TestNewMetadataService: EC2 metadata error, K8s API available",
+			region:           "us-west-2",
+			ec2MetadataError: errors.New("EC2 metadata error"),
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
 			},
-			getMetadataValue:   validRawOutpostArn,
-			expectedOutpostArn: validOutpostArn,
-			imdsENIOutput:      "00:00:00:00:00:00",
-			expectedENIs:       1,
 		},
 		{
-			name:                 "success: outpost-arn is invalid",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getMetadataValue: "foo",
-			imdsENIOutput:    "00:00:00:00:00:00",
-			expectedENIs:     1,
-		},
-		{
-			name:                 "success: outpost-arn is not found",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			getMetadataError: fmt.Errorf("404"),
-			imdsENIOutput:    "00:00:00:00:00:00",
-			expectedENIs:     1,
-		},
-		{
-			name:                 "success: metadata not available, used k8s api",
-			ec2metadataAvailable: false,
-			node: v1.Node{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Node",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"node.kubernetes.io/instance-type": stdInstanceType,
-						"topology.kubernetes.io/region":    stdRegion,
-						"topology.kubernetes.io/zone":      stdAvailabilityZone,
-					},
-					Name: nodeName,
-				},
-				Spec: v1.NodeSpec{
-					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
-				},
-				Status: v1.NodeStatus{},
-			},
-			expectedENIs:   1,
-			nodeNameEnvVar: nodeName,
-		},
-		{
-			name:                 "failure: metadata not available, k8s client error",
-			ec2metadataAvailable: false,
-			clientsetReactors: func(clientset *fake.Clientset) {
-				clientset.PrependReactor("get", "*", func(action k8s_testing.Action) (handled bool, ret runtime.Object, err error) {
-					return true, nil, fmt.Errorf("client failure")
-				})
-			},
-			expectedErr:    fmt.Errorf("error getting Node %s: client failure", nodeName),
-			nodeNameEnvVar: nodeName,
-		},
-
-		{
-			name:                 "failure: metadata not available, node name env var not set",
-			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("CSI_NODE_NAME env var not set"),
-			nodeNameEnvVar:       "",
-		},
-		{
-			name:                 "failure: metadata not available, no provider ID",
-			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("node providerID empty, cannot parse"),
-			node: v1.Node{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Node",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
-				},
-				Spec: v1.NodeSpec{
-					ProviderID: "",
-				},
-				Status: v1.NodeStatus{},
-			},
-			nodeNameEnvVar: nodeName,
-		},
-		{
-			name:                 "failure: metadata not available, could not retrieve region",
-			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("could not retrieve region from topology label"),
-			node: v1.Node{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Node",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"node.kubernetes.io/instance-type": stdInstanceType,
-						"topology.kubernetes.io/zone":      stdAvailabilityZone,
-					},
-					Name: nodeName,
-				},
-				Spec: v1.NodeSpec{
-					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
-				},
-				Status: v1.NodeStatus{},
-			},
-			nodeNameEnvVar: nodeName,
-		},
-		{
-			name:                 "failure: metadata not available, could not retrieve AZ",
-			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("could not retrieve AZ from topology label"),
-			node: v1.Node{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Node",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"node.kubernetes.io/instance-type": stdInstanceType,
-						"topology.kubernetes.io/region":    stdRegion,
-					},
-					Name: nodeName,
-				},
-				Spec: v1.NodeSpec{
-					ProviderID: "aws:///" + stdAvailabilityZone + "/" + stdInstanceID,
-				},
-				Status: v1.NodeStatus{},
-			},
-			nodeNameEnvVar: nodeName,
-		},
-		{
-			name:                 "failure: metadata not available, invalid instance id",
-			ec2metadataAvailable: false,
-			expectedErr:          fmt.Errorf("did not find aws instance ID in node providerID string"),
-			node: v1.Node{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Node",
-					APIVersion: "v1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"node.kubernetes.io/instance-type": stdInstanceType,
-						"topology.kubernetes.io/region":    stdRegion,
-						"topology.kubernetes.io/zone":      stdAvailabilityZone,
-					},
-					Name: nodeName,
-				},
-				Spec: v1.NodeSpec{
-					ProviderID: "aws:///us-west-2b/i-", // invalid instance ID
-				},
-				Status: v1.NodeStatus{},
-			},
-			nodeNameEnvVar: nodeName,
-		},
-		{
-			name:                             "fail: GetInstanceIdentityDocument returned error",
-			ec2metadataAvailable:             true,
-			getInstanceIdentityDocumentError: fmt.Errorf("foo"),
-			expectedErr:                      fmt.Errorf("could not get EC2 instance identity metadata: foo"),
-		},
-		{
-			name:                 "fail: GetInstanceIdentityDocument returned empty instance",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       "",
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			invalidInstanceIdentityDocument: true,
-			expectedErr:                     fmt.Errorf("could not get valid EC2 instance ID"),
-		},
-		{
-			name:                 "fail: GetInstanceIdentityDocument returned empty region",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           "",
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			invalidInstanceIdentityDocument: true,
-			expectedErr:                     fmt.Errorf("could not get valid EC2 region"),
-		},
-		{
-			name:                 "fail: GetInstanceIdentityDocument returned empty az",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: "",
-			},
-			invalidInstanceIdentityDocument: true,
-			expectedErr:                     fmt.Errorf("could not get valid EC2 availability zone"),
-		},
-		{
-			name:                 "fail: outpost-arn failed",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			imdsENIOutput:    "00:00:00:00:00:00",
-			expectedENIs:     1,
-			getMetadataError: fmt.Errorf("405"),
-			expectedErr:      fmt.Errorf("something went wrong while getting EC2 outpost arn: 405"),
-		},
-		{
-			name:                 "success: GetMetadata() returns correct number of ENIs",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			imdsENIOutput: "00:00:00:00:00:00\n00:00:00:00:00:01",
-			expectedENIs:  2,
-		},
-		{
-			name:                 "success: GetMetadata() returns correct number of block device mappings",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           stdRegion,
-				AvailabilityZone: stdAvailabilityZone,
-			},
-			imdsENIOutput:         "00:00:00:00:00:00",
-			expectedENIs:          1,
-			imdsBlockDeviceOutput: "ami\nroot\nebs1\nebs2",
-			expectedBlockDevices:  2,
-		},
-		{
-			name:                 "success: region from session is snow",
-			ec2metadataAvailable: true,
-			getInstanceIdentityDocumentValue: ec2metadata.EC2InstanceIdentityDocument{
-				InstanceID:       stdInstanceID,
-				InstanceType:     stdInstanceType,
-				Region:           "",
-				AvailabilityZone: "",
-			},
-			imdsENIOutput:        "00:00:00:00:00:00",
-			expectedENIs:         1,
-			regionFromSession:    snowRegion,
-			expectedBlockDevices: 0,
+			name:             "TestNewMetadataService: EC2 metadata error, K8s API error",
+			region:           "us-west-2",
+			ec2MetadataError: errors.New("EC2 metadata error"),
+			k8sAPIError:      errors.New("K8s API error"),
+			expectedError:    errors.New("error getting instance data from ec2 metadata or kubernetes api"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset(&tc.node)
-			clientsetInitialized := false
-			if tc.clientsetReactors != nil {
-				tc.clientsetReactors(clientset)
+			mockEC2Metadata := NewMockEC2Metadata(ctrl)
+			mockK8sClient := func() (kubernetes.Interface, error) {
+				if tc.k8sAPIError != nil {
+					return nil, tc.k8sAPIError
+				}
+				node := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+						Labels: map[string]string{
+							corev1.LabelInstanceTypeStable: "c5.xlarge",
+							corev1.LabelTopologyRegion:     "us-west-2",
+							corev1.LabelTopologyZone:       "us-west-2a",
+						},
+					},
+					Spec: corev1.NodeSpec{
+						ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
+					},
+				}
+				return fake.NewSimpleClientset(node), nil
 			}
 
-			mockCtrl := gomock.NewController(t)
-			mockEC2Metadata := NewMockEC2Metadata(mockCtrl)
+			os.Setenv("CSI_NODE_NAME", "test-node")
 
-			ec2MetadataClient := func() (EC2Metadata, error) { return mockEC2Metadata, nil }
-			k8sAPIClient := func() (kubernetes.Interface, error) { clientsetInitialized = true; return clientset, nil }
+			if tc.ec2MetadataError == nil {
+				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				mockEC2Metadata.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n")),
+				}, nil)
+				mockEC2Metadata.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
+				}, nil)
+				mockEC2Metadata.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
+			}
 
-			mockEC2Metadata.EXPECT().Available().Return(tc.ec2metadataAvailable)
-			if tc.ec2metadataAvailable {
-				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument().Return(tc.getInstanceIdentityDocumentValue, tc.getInstanceIdentityDocumentError)
-
-				// GetMetadata is to get the outpost ARN. It should be skipped if
-				// GetInstanceIdentityDocument returns an error or (somehow?) partial
-				// output
-				if tc.getInstanceIdentityDocumentError == nil && !tc.invalidInstanceIdentityDocument {
-					mockEC2Metadata.EXPECT().GetMetadata(enisEndpoint).Return(tc.imdsENIOutput, nil)
-					mockEC2Metadata.EXPECT().GetMetadata(blockDevicesEndpoint).Return(tc.imdsBlockDeviceOutput, nil).AnyTimes()
-
-					if tc.getMetadataValue != "" || tc.getMetadataError != nil {
-						mockEC2Metadata.EXPECT().GetMetadata(outpostArnEndpoint).Return(tc.getMetadataValue, tc.getMetadataError)
-
-					} else {
-						mockEC2Metadata.EXPECT().GetMetadata(outpostArnEndpoint).Return("", fmt.Errorf("404"))
+			cfg := MetadataServiceConfig{
+				EC2MetadataClient: func() (EC2Metadata, error) {
+					if tc.ec2MetadataError != nil {
+						return nil, tc.ec2MetadataError
 					}
-				}
-
-				if clientsetInitialized == true {
-					t.Errorf("kubernetes client was unexpectedly initialized when metadata is available!")
-					if len(clientset.Actions()) > 0 {
-						t.Errorf("kubernetes client was unexpectedly called! %v", clientset.Actions())
-					}
-				}
+					return mockEC2Metadata, nil
+				},
+				K8sAPIClient: mockK8sClient,
 			}
 
-			os.Setenv("CSI_NODE_NAME", tc.nodeNameEnvVar)
-			var m MetadataService
-			var err error
-			if tc.regionFromSession == snowRegion {
-				m, err = NewMetadataService(ec2MetadataClient, k8sAPIClient, snowRegion)
+			metadata, err := NewMetadataService(cfg, tc.region)
+
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				m, err = NewMetadataService(ec2MetadataClient, k8sAPIClient, stdRegion)
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedMetadata, metadata)
 			}
-			if err != nil {
-				if tc.expectedErr == nil {
-					t.Errorf("got error %q, expected no error", err)
-				} else if err.Error() != tc.expectedErr.Error() {
-					t.Errorf("got error %q, expected %q", err, tc.expectedErr)
-				}
-			} else {
-				if m == nil {
-					t.Fatalf("metadataService is unexpectedly nil!")
-				}
-				if m.GetInstanceID() != stdInstanceID {
-					t.Errorf("NewMetadataService() failed: got wrong instance ID %v, expected %v", m.GetInstanceID(), stdInstanceID)
-				}
-				if m.GetInstanceType() != stdInstanceType {
-					t.Errorf("GetInstanceType() failed: got wrong instance type %v, expected %v", m.GetInstanceType(), stdInstanceType)
-				}
-				if m.GetRegion() != stdRegion && m.GetRegion() != snowRegion {
-					t.Errorf("NewMetadataService() failed: got wrong region %v, expected %v", m.GetRegion(), stdRegion)
-				}
-				if m.GetAvailabilityZone() != stdAvailabilityZone && m.GetAvailabilityZone() != snowAvailabilityZone {
-					t.Errorf("NewMetadataService() failed: got wrong AZ %v, expected %v", m.GetAvailabilityZone(), stdAvailabilityZone)
-				}
-				if m.GetOutpostArn() != tc.expectedOutpostArn {
-					t.Errorf("GetOutpostArn() failed: got %v, expected %v", m.GetOutpostArn(), tc.expectedOutpostArn)
-				}
-				if m.GetNumAttachedENIs() != tc.expectedENIs {
-					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", enisEndpoint, m.GetNumAttachedENIs(), tc.expectedENIs)
-				}
-				if m.GetNumBlockDeviceMappings() != tc.expectedBlockDevices {
-					t.Errorf("GetMetadata() failed for %s: got %v, expected %v", blockDevicesEndpoint, m.GetNumBlockDeviceMappings(), tc.expectedBlockDevices)
-				}
-			}
-			mockCtrl.Finish()
 		})
 	}
+}
+
+func TestEC2MetadataInstanceInfo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testCases := []struct {
+		name              string
+		regionFromSession string
+		mockEC2Metadata   func(m *MockEC2Metadata)
+		expectedMetadata  *Metadata
+		expectedError     error
+	}{
+		{
+			name: "TestEC2MetadataInstanceInfo: Error getting instance identity document",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(nil, errors.New("failed to get instance identity document"))
+			},
+			expectedError: errors.New("could not get EC2 instance identity metadata: failed to get instance identity document"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Empty instance ID",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID: "",
+					},
+				}, nil)
+			},
+			expectedError: errors.New("could not get valid EC2 instance ID"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Empty instance type",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:   "i-1234567890abcdef0",
+						InstanceType: "",
+					},
+				}, nil)
+			},
+			expectedError: errors.New("could not get valid EC2 instance type"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Empty region and invalid region from session",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:   "i-1234567890abcdef0",
+						InstanceType: "c5.xlarge",
+						Region:       "",
+					},
+				}, nil)
+			},
+			expectedError: errors.New("could not get valid EC2 region"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Empty availability zone and invalid region from session",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "",
+					},
+				}, nil)
+			},
+			expectedError: errors.New("could not get valid EC2 availability zone"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Error getting ENIs metadata",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(nil, errors.New("failed to get ENIs metadata"))
+			},
+			expectedError: errors.New("could not get metadata for ENIs: failed to get ENIs metadata"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Error reading ENIs metadata content",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(errReader{}),
+				}, nil)
+			},
+			expectedError: errors.New("could not read ENIs metadata content: failed to read"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Error getting block device mappings metadata",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(nil, errors.New("failed to get block device mappings metadata"))
+			},
+			expectedError: errors.New("could not get metadata for block device mappings: failed to get block device mappings metadata"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Error reading block device mappings metadata content",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(errReader{}),
+				}, nil)
+			},
+			expectedError: errors.New("could not read block device mappings metadata content: failed to read"),
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Valid metadata with outpost ARN",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("arn:aws:outposts:us-west-2:123456789012:outpost/op-1234567890abcdef0")),
+				}, nil)
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        2,
+				NumBlockDeviceMappings: 2,
+				OutpostArn: arn.ARN{
+					Partition: "aws",
+					Service:   "outposts",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Resource:  "op-1234567890abcdef0",
+				},
+			},
+		},
+		{
+			name: "TestEC2MetadataInstanceInfo: Valid metadata without outpost ARN",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "us-west-2",
+						AvailabilityZone: "us-west-2a",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        2,
+				NumBlockDeviceMappings: 2,
+				OutpostArn:             arn.ARN{},
+			},
+		},
+		{
+			name:              "TestEC2MetadataInstanceInfo: Valid metadata retrieving snow region/AZ from session",
+			regionFromSession: "snow",
+			mockEC2Metadata: func(m *MockEC2Metadata) {
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+					InstanceIdentityDocument: imds.InstanceIdentityDocument{
+						InstanceID:       "i-1234567890abcdef0",
+						InstanceType:     "c5.xlarge",
+						Region:           "",
+						AvailabilityZone: "",
+					},
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+				}, nil)
+				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "snow",
+				AvailabilityZone:       "snow",
+				NumAttachedENIs:        2,
+				NumBlockDeviceMappings: 0,
+				OutpostArn:             arn.ARN{},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2Metadata := NewMockEC2Metadata(mockCtrl)
+			tc.mockEC2Metadata(mockEC2Metadata)
+
+			metadata, err := EC2MetadataInstanceInfo(mockEC2Metadata, tc.regionFromSession)
+
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
+				require.Nil(t, metadata)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedMetadata, metadata)
+			}
+		})
+	}
+}
+
+func TestDefaultEC2MetadataClient(t *testing.T) {
+	_, err := DefaultEC2MetadataClient()
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+}
+
+func TestKubernetesAPIInstanceInfo(t *testing.T) {
+	testCases := []struct {
+		name             string
+		nodeName         string
+		node             *corev1.Node
+		expectedError    string
+		expectedMetadata *Metadata
+	}{
+		{
+			name:          "TestKubernetesAPIInstanceInfo: Node name not set",
+			nodeName:      "",
+			expectedError: "CSI_NODE_NAME env var not set",
+		},
+		{
+			name:          "TestKubernetesAPIInstanceInfo: Error getting node",
+			nodeName:      "test-node",
+			expectedError: "error getting Node test-node: nodes \"test-node\" not found",
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: Empty provider ID",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "",
+				},
+			},
+			expectedError: "node providerID empty, cannot parse",
+		},
+		{
+			name:     "Instance ID not found",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/invalid-instance-id",
+				},
+			},
+			expectedError: "did not find aws instance ID in node providerID string",
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: Missing instance type label",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
+				},
+			},
+			expectedError: "could not retrieve instance type from topology label",
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: Missing region label",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable: "c5.xlarge",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
+				},
+			},
+			expectedError: "could not retrieve region from topology label",
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: Missing availability zone label",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable: "c5.xlarge",
+						corev1.LabelTopologyRegion:     "us-west-2",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
+				},
+			},
+			expectedError: "could not retrieve AZ from topology label",
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: Valid instance info",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable: "c5.xlarge",
+						corev1.LabelTopologyRegion:     "us-west-2",
+						corev1.LabelTopologyZone:       "us-west-2a",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
+				},
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			os.Setenv("CSI_NODE_NAME", tc.nodeName)
+			defer os.Unsetenv("CSI_NODE_NAME")
+
+			clientset := fake.NewSimpleClientset()
+			if tc.node != nil {
+				clientset = fake.NewSimpleClientset(tc.node)
+			}
+
+			metadata, err := KubernetesAPIInstanceInfo(clientset)
+
+			if tc.expectedError != "" {
+				require.EqualError(t, err, tc.expectedError)
+				require.Nil(t, metadata)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedMetadata, metadata)
+			}
+		})
+	}
+}
+
+func TestGetInstanceID(t *testing.T) {
+	metadata := &Metadata{
+		InstanceID: "i-1234567890abcdef0",
+	}
+	assert.Equal(t, "i-1234567890abcdef0", metadata.GetInstanceID())
+}
+
+func TestGetInstanceType(t *testing.T) {
+	metadata := &Metadata{
+		InstanceType: "c5.xlarge",
+	}
+	assert.Equal(t, "c5.xlarge", metadata.GetInstanceType())
+}
+
+func TestGetRegion(t *testing.T) {
+	metadata := &Metadata{
+		Region: "us-west-2",
+	}
+	assert.Equal(t, "us-west-2", metadata.GetRegion())
+}
+
+func TestGetAvailabilityZone(t *testing.T) {
+	metadata := &Metadata{
+		AvailabilityZone: "us-west-2a",
+	}
+	assert.Equal(t, "us-west-2a", metadata.GetAvailabilityZone())
+}
+
+func TestGetNumAttachedENIs(t *testing.T) {
+	metadata := &Metadata{
+		NumAttachedENIs: 2,
+	}
+	assert.Equal(t, 2, metadata.GetNumAttachedENIs())
+}
+
+func TestGetNumBlockDeviceMappings(t *testing.T) {
+	metadata := &Metadata{
+		NumBlockDeviceMappings: 3,
+	}
+	assert.Equal(t, 3, metadata.GetNumBlockDeviceMappings())
+}
+
+func TestGetOutpostArn(t *testing.T) {
+	outpostArn := arn.ARN{
+		Partition: "aws",
+		Service:   "outposts",
+		Region:    "us-west-2",
+		AccountID: "123456789012",
+		Resource:  "outpost/op-1234567890abcdef0",
+	}
+	metadata := &Metadata{
+		OutpostArn: outpostArn,
+	}
+	assert.Equal(t, outpostArn, metadata.GetOutpostArn())
+}
+
+type errReader struct{}
+
+func (e errReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("failed to read")
 }

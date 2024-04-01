@@ -33,7 +33,7 @@ const (
 
 	DefaultIopsIoVolumes = "100"
 
-	DefaultSizeIncreaseGi = 1
+	DefaultSizeIncreaseGi = int32(1)
 
 	DefaultModificationTimeout   = 3 * time.Minute
 	DefaultResizeTimout          = 1 * time.Minute
@@ -65,7 +65,7 @@ func PodCmdGrepVolumeData(volumeMountPath string) string {
 }
 
 // IncreasePvcObjectStorage increases `storage` of a K8s PVC object by specified Gigabytes
-func IncreasePvcObjectStorage(pvc *v1.PersistentVolumeClaim, sizeIncreaseGi int64) resource.Quantity {
+func IncreasePvcObjectStorage(pvc *v1.PersistentVolumeClaim, sizeIncreaseGi int32) resource.Quantity {
 	pvcSize := pvc.Spec.Resources.Requests["storage"]
 	delta := resource.Quantity{}
 	delta.Set(util.GiBToBytes(sizeIncreaseGi))
@@ -89,7 +89,7 @@ func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, d
 }
 
 // ResizeTestPvc increases size of given `TestPersistentVolumeClaim` by specified Gigabytes
-func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc *TestPersistentVolumeClaim, sizeIncreaseGi int64) (updatedSize resource.Quantity) {
+func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc *TestPersistentVolumeClaim, sizeIncreaseGi int32) (updatedSize resource.Quantity) {
 	framework.Logf("getting pvc name: %v", testPvc.persistentVolumeClaim.Name)
 	pvc, _ := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), testPvc.persistentVolumeClaim.Name, metav1.GetOptions{})
 
