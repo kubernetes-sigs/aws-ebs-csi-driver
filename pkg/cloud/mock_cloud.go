@@ -8,7 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	ec2 "github.com/aws/aws-sdk-go/service/ec2"
+	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -215,7 +216,7 @@ func (mr *MockCloudMockRecorder) GetSnapshotByName(ctx, name interface{}) *gomoc
 }
 
 // ListSnapshots mocks base method.
-func (m *MockCloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (*ListSnapshotsResponse, error) {
+func (m *MockCloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int32, nextToken string) (*ListSnapshotsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListSnapshots", ctx, volumeID, maxResults, nextToken)
 	ret0, _ := ret[0].(*ListSnapshotsResponse)
@@ -230,10 +231,10 @@ func (mr *MockCloudMockRecorder) ListSnapshots(ctx, volumeID, maxResults, nextTo
 }
 
 // ResizeOrModifyDisk mocks base method.
-func (m *MockCloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int64, error) {
+func (m *MockCloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResizeOrModifyDisk", ctx, volumeID, newSizeBytes, options)
-	ret0, _ := ret[0].(int64)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -245,10 +246,10 @@ func (mr *MockCloudMockRecorder) ResizeOrModifyDisk(ctx, volumeID, newSizeBytes,
 }
 
 // WaitForAttachmentState mocks base method.
-func (m *MockCloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState, expectedInstance, expectedDevice string, alreadyAssigned bool) (*ec2.VolumeAttachment, error) {
+func (m *MockCloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState, expectedInstance, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForAttachmentState", ctx, volumeID, expectedState, expectedInstance, expectedDevice, alreadyAssigned)
-	ret0, _ := ret[0].(*ec2.VolumeAttachment)
+	ret0, _ := ret[0].(*types.VolumeAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -27,13 +27,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -185,10 +183,21 @@ var (
 // Set during build time via -ldflags
 var driverVersion string
 
+var invalidParameterErrorCodes = map[string]struct{}{
+	"InvalidParameter":            {},
+	"InvalidParameterCombination": {},
+	"InvalidParameterDependency":  {},
+	"InvalidParameterValue":       {},
+	"UnknownParameter":            {},
+	"UnknownVolumeType":           {},
+	"UnsupportedOperation":        {},
+	"ValidationError":             {},
+}
+
 // Disk represents a EBS volume
 type Disk struct {
 	VolumeID         string
-	CapacityGiB      int64
+	CapacityGiB      int32
 	AvailabilityZone string
 	SnapshotID       string
 	OutpostArn       string
@@ -200,10 +209,10 @@ type DiskOptions struct {
 	CapacityBytes          int64
 	Tags                   map[string]string
 	VolumeType             string
-	IOPSPerGB              int
+	IOPSPerGB              int32
 	AllowIOPSPerGBIncrease bool
-	IOPS                   int
-	Throughput             int
+	IOPS                   int32
+	Throughput             int32
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
@@ -218,15 +227,15 @@ type DiskOptions struct {
 // ModifyDiskOptions represents parameters to modify an EBS volume
 type ModifyDiskOptions struct {
 	VolumeType string
-	IOPS       int
-	Throughput int
+	IOPS       int32
+	Throughput int32
 }
 
 // Snapshot represents an EBS volume snapshot
 type Snapshot struct {
 	SnapshotID     string
 	SourceVolumeID string
-	Size           int64
+	Size           int32
 	CreationTime   time.Time
 	ReadyToUse     bool
 }
@@ -244,7 +253,7 @@ type SnapshotOptions struct {
 
 // ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function
 type ec2ListSnapshotsResponse struct {
-	Snapshots []*ec2.Snapshot
+	Snapshots []types.Snapshot
 	NextToken *string
 }
 
@@ -256,16 +265,16 @@ type snapshotBatcherType int
 
 // batcherManager maintains a collection of batchers for different types of tasks.
 type batcherManager struct {
-	volumeIDBatcher    *batcher.Batcher[string, *ec2.Volume]
-	volumeTagBatcher   *batcher.Batcher[string, *ec2.Volume]
-	instanceIDBatcher  *batcher.Batcher[string, *ec2.Instance]
-	snapshotIDBatcher  *batcher.Batcher[string, *ec2.Snapshot]
-	snapshotTagBatcher *batcher.Batcher[string, *ec2.Snapshot]
+	volumeIDBatcher    *batcher.Batcher[string, *types.Volume]
+	volumeTagBatcher   *batcher.Batcher[string, *types.Volume]
+	instanceIDBatcher  *batcher.Batcher[string, *types.Instance]
+	snapshotIDBatcher  *batcher.Batcher[string, *types.Snapshot]
+	snapshotTagBatcher *batcher.Batcher[string, *types.Snapshot]
 }
 
 type cloud struct {
 	region string
-	ec2    ec2iface.EC2API
+	ec2    EC2API
 	dm     dm.DeviceManager
 	bm     *batcherManager
 }
@@ -280,29 +289,27 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 }
 
 func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool) Cloud {
-	awsConfig := &aws.Config{
-		Region:                        aws.String(region),
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		// Set MaxRetries to a high value. It will be "overwritten" if context deadline comes sooner.
-		MaxRetries: aws.Int(8),
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+	if err != nil {
+		panic(err)
 	}
 
 	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
 	if endpoint != "" {
-		customResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
-			if service == ec2.EndpointsID {
-				return endpoints.ResolvedEndpoint{
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			if service == ec2.ServiceID {
+				return aws.Endpoint{
 					URL:           endpoint,
 					SigningRegion: region,
 				}, nil
 			}
-			return endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
-		}
-		awsConfig.EndpointResolver = endpoints.ResolverFunc(customResolver)
+			return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+		})
+		cfg.EndpointResolverWithOptions = customResolver //nolint:staticcheck
 	}
 
 	if awsSdkDebugLog {
-		awsConfig.WithLogLevel(aws.LogDebugWithRequestErrors)
+		cfg.ClientLogMode = aws.LogRequestWithBody | aws.LogResponseWithBody
 	}
 
 	// Set the env var so that the session appends custom user agent string
@@ -312,14 +319,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
 	}
 
-	svc := ec2.New(session.Must(session.NewSession(awsConfig)))
-	svc.Handlers.AfterRetry.PushFrontNamed(request.NamedHandler{
-		Name: "recordThrottledRequestsHandler",
-		Fn:   RecordThrottledRequestsHandler,
-	})
-	svc.Handlers.Complete.PushFrontNamed(request.NamedHandler{
-		Name: "recordRequestsHandler",
-		Fn:   RecordRequestsHandler,
+	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
+		o.APIOptions = append(o.APIOptions,
+			RecordRequestsMiddleware(),
+			RecordThrottledRequestsMiddleware(),
+		)
 	})
 
 	var bm *batcherManager
@@ -337,43 +341,43 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 }
 
 // newBatcherManager initializes a new instance of batcherManager.
-func newBatcherManager(svc ec2iface.EC2API) *batcherManager {
+func newBatcherManager(svc EC2API) *batcherManager {
 	return &batcherManager{
-		volumeIDBatcher: batcher.New(500, 1*time.Second, func(ids []string) (map[string]*ec2.Volume, error) {
+		volumeIDBatcher: batcher.New(500, 1*time.Second, func(ids []string) (map[string]*types.Volume, error) {
 			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
 		}),
-		volumeTagBatcher: batcher.New(500, 1*time.Second, func(names []string) (map[string]*ec2.Volume, error) {
+		volumeTagBatcher: batcher.New(500, 1*time.Second, func(names []string) (map[string]*types.Volume, error) {
 			return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
 		}),
-		instanceIDBatcher: batcher.New(50, 300*time.Millisecond, func(ids []string) (map[string]*ec2.Instance, error) {
+		instanceIDBatcher: batcher.New(50, 300*time.Millisecond, func(ids []string) (map[string]*types.Instance, error) {
 			return execBatchDescribeInstances(svc, ids)
 		}),
-		snapshotIDBatcher: batcher.New(1000, 300*time.Millisecond, func(ids []string) (map[string]*ec2.Snapshot, error) {
+		snapshotIDBatcher: batcher.New(1000, 300*time.Millisecond, func(ids []string) (map[string]*types.Snapshot, error) {
 			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher)
 		}),
-		snapshotTagBatcher: batcher.New(1000, 300*time.Millisecond, func(names []string) (map[string]*ec2.Snapshot, error) {
+		snapshotTagBatcher: batcher.New(1000, 300*time.Millisecond, func(names []string) (map[string]*types.Snapshot, error) {
 			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher)
 		}),
 	}
 }
 
 // execBatchDescribeVolumes executes a batched DescribeVolumes API call depending on the type of batcher.
-func execBatchDescribeVolumes(svc ec2iface.EC2API, input []string, batcher volumeBatcherType) (map[string]*ec2.Volume, error) {
+func execBatchDescribeVolumes(svc EC2API, input []string, batcher volumeBatcherType) (map[string]*types.Volume, error) {
 	var request *ec2.DescribeVolumesInput
 
 	switch batcher {
 	case volumeIDBatcher:
 		klog.V(7).InfoS("execBatchDescribeVolumes", "volumeIds", input)
 		request = &ec2.DescribeVolumesInput{
-			VolumeIds: aws.StringSlice(input),
+			VolumeIds: input,
 		}
 
 	case volumeTagBatcher:
 		klog.V(7).InfoS("execBatchDescribeVolumes", "names", input)
-		filters := []*ec2.Filter{
+		filters := []types.Filter{
 			{
 				Name:   aws.String("tag:" + VolumeNameTagKey),
-				Values: aws.StringSlice(input),
+				Values: input,
 			},
 		}
 		request = &ec2.DescribeVolumesInput{
@@ -392,15 +396,16 @@ func execBatchDescribeVolumes(svc ec2iface.EC2API, input []string, batcher volum
 		return nil, err
 	}
 
-	result := make(map[string]*ec2.Volume)
+	result := make(map[string]*types.Volume)
 
-	for _, volume := range resp {
-		key, err := extractVolumeKey(volume, batcher)
+	for _, v := range resp {
+		volume := v
+		key, err := extractVolumeKey(&volume, batcher)
 		if err != nil {
 			klog.Warningf("execBatchDescribeVolumes: skipping volume: %v, reason: %v", volume, err)
 			continue
 		}
-		result[key] = volume
+		result[key] = &volume
 	}
 
 	klog.V(7).InfoS("execBatchDescribeVolumes: success", "result", result)
@@ -409,24 +414,24 @@ func execBatchDescribeVolumes(svc ec2iface.EC2API, input []string, batcher volum
 
 // batchDescribeVolumes processes a DescribeVolumes request. Depending on the request,
 // it determines the appropriate batcher to use, queues the task, and waits for the result.
-func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
-	var b *batcher.Batcher[string, *ec2.Volume]
+func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*types.Volume, error) {
+	var b *batcher.Batcher[string, *types.Volume]
 	var task string
 
 	switch {
-	case len(request.VolumeIds) == 1 && request.VolumeIds[0] != nil:
+	case len(request.VolumeIds) == 1 && request.VolumeIds[0] != "":
 		b = c.bm.volumeIDBatcher
-		task = *request.VolumeIds[0]
+		task = request.VolumeIds[0]
 
 	case len(request.Filters) == 1 && *request.Filters[0].Name == "tag:"+VolumeNameTagKey && len(request.Filters[0].Values) == 1:
 		b = c.bm.volumeTagBatcher
-		task = *request.Filters[0].Values[0]
+		task = request.Filters[0].Values[0]
 
 	default:
 		return nil, fmt.Errorf("batchDescribeVolumes: invalid request, request: %v", request)
 	}
 
-	ch := make(chan batcher.BatchResult[*ec2.Volume])
+	ch := make(chan batcher.BatchResult[*types.Volume])
 
 	b.AddTask(task, ch)
 
@@ -444,7 +449,7 @@ func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*ec2.Vo
 // extractVolumeKey retrieves the key associated with a given volume based on the batcher type.
 // For the volumeIDBatcher type, it returns the volume's ID.
 // For other types, it searches for the VolumeNameTagKey within the volume's tags.
-func extractVolumeKey(v *ec2.Volume, batcher volumeBatcherType) (string, error) {
+func extractVolumeKey(v *types.Volume, batcher volumeBatcherType) (string, error) {
 	if batcher == volumeIDBatcher {
 		if v.VolumeId == nil {
 			return "", errors.New("extractVolumeKey: missing volume ID")
@@ -468,13 +473,13 @@ func extractVolumeKey(v *ec2.Volume, batcher volumeBatcherType) (string, error) 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var (
 		createType    string
-		iops          int64
-		throughput    int64
+		iops          int32
+		throughput    int32
 		err           error
-		maxIops       int64
-		minIops       int64
-		maxIopsPerGb  int64
-		requestedIops int64
+		maxIops       int32
+		minIops       int32
+		maxIopsPerGb  int32
+		requestedIops int32
 	)
 
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -507,7 +512,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		maxIops = gp3MaxTotalIOPS
 		minIops = gp3MinTotalIOPS
 		maxIopsPerGb = gp3MaxIOPSPerGB
-		throughput = int64(diskOptions.Throughput)
+		throughput = diskOptions.Throughput
 	default:
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
@@ -518,21 +523,19 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	if maxIops > 0 {
 		if diskOptions.IOPS > 0 {
-			requestedIops = int64(diskOptions.IOPS)
+			requestedIops = diskOptions.IOPS
 		} else if diskOptions.IOPSPerGB > 0 {
-			requestedIops = int64(diskOptions.IOPSPerGB) * capacityGiB
+			requestedIops = diskOptions.IOPSPerGB * capacityGiB
 		}
 		iops = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
-	var tags []*ec2.Tag
+	var tags []types.Tag
 	for key, value := range diskOptions.Tags {
-		copiedKey := key
-		copiedValue := value
-		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
+		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
-	tagSpec := ec2.TagSpecification{
-		ResourceType: aws.String("volume"),
+	tagSpec := types.TagSpecification{
+		ResourceType: types.ResourceTypeVolume,
 		Tags:         tags,
 	}
 
@@ -551,14 +554,14 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	requestInput := &ec2.CreateVolumeInput{
 		AvailabilityZone:   aws.String(zone),
 		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
-		Size:               aws.Int64(capacityGiB),
-		VolumeType:         aws.String(createType),
+		Size:               aws.Int32(capacityGiB),
+		VolumeType:         types.VolumeType(createType),
 		Encrypted:          aws.Bool(diskOptions.Encrypted),
 		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 	}
 
 	if !util.IsSBE(zone) {
-		requestInput.TagSpecifications = []*ec2.TagSpecification{&tagSpec}
+		requestInput.TagSpecifications = []types.TagSpecification{tagSpec}
 	}
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
@@ -571,17 +574,17 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		requestInput.Encrypted = aws.Bool(true)
 	}
 	if iops > 0 {
-		requestInput.Iops = aws.Int64(iops)
+		requestInput.Iops = aws.Int32(iops)
 	}
 	if throughput > 0 {
-		requestInput.Throughput = aws.Int64(throughput)
+		requestInput.Throughput = aws.Int32(throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
 		requestInput.SnapshotId = aws.String(snapshotID)
 	}
 
-	response, err := c.ec2.CreateVolumeWithContext(ctx, requestInput)
+	response, err := c.ec2.CreateVolume(ctx, requestInput)
 	if err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return nil, ErrNotFound
@@ -592,12 +595,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
 
-	volumeID := aws.StringValue(response.VolumeId)
+	volumeID := aws.ToString(response.VolumeId)
 	if len(volumeID) == 0 {
 		return nil, fmt.Errorf("volume ID was not returned by CreateVolume")
 	}
 
-	size := aws.Int64Value(response.Size)
+	size := *response.Size
 	if size == 0 {
 		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
 	}
@@ -613,14 +616,14 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("failed to get an available volume in EC2: %w", err)
 	}
 
-	outpostArn := aws.StringValue(response.OutpostArn)
-	var resources []*string
+	outpostArn := aws.ToString(response.OutpostArn)
+	var resources []string
 	if util.IsSBE(zone) {
 		requestTagsInput := &ec2.CreateTagsInput{
-			Resources: append(resources, &volumeID),
+			Resources: append(resources, volumeID),
 			Tags:      tags,
 		}
-		_, err := c.ec2.CreateTagsWithContext(ctx, requestTagsInput)
+		_, err := c.ec2.CreateTags(ctx, requestTagsInput)
 		if err != nil {
 			// To avoid leaking volume, we should delete the volume just created
 			// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
@@ -639,15 +642,19 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 // volume with the parameters in ModifyDiskOptions.
 // The resizing operation is performed only when newSizeBytes != 0.
 // It returns the volume size after this call or an error if the size couldn't be determined or the volume couldn't be modified.
-func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int64, error) {
+func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (int32, error) {
 	if newSizeBytes != 0 {
 		klog.V(4).InfoS("Received Resize and/or Modify Disk request", "volumeID", volumeID, "newSizeBytes", newSizeBytes, "options", options)
 	} else {
 		klog.V(4).InfoS("Received Modify Disk request", "volumeID", volumeID, "options", options)
 	}
 
-	newSizeGiB := util.RoundUpGiB(newSizeBytes)
+	newSizeGiB, err := util.RoundUpGiB(newSizeBytes)
+	if err != nil {
+		return 0, err
+	}
 	needsModification, volumeSize, err := c.validateModifyVolume(ctx, volumeID, newSizeGiB, options)
+
 	if err != nil || !needsModification {
 		return volumeSize, err
 	}
@@ -656,19 +663,18 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 		VolumeId: aws.String(volumeID),
 	}
 	if newSizeBytes != 0 {
-		req.Size = aws.Int64(newSizeGiB)
+		req.Size = aws.Int32(newSizeGiB)
 	}
 	if options.IOPS != 0 {
-		req.Iops = aws.Int64(int64(options.IOPS))
+		req.Iops = aws.Int32(options.IOPS)
 	}
 	if options.VolumeType != "" {
-		req.VolumeType = aws.String(options.VolumeType)
+		req.VolumeType = types.VolumeType(options.VolumeType)
 	}
 	if options.Throughput != 0 {
-		req.Throughput = aws.Int64(int64(options.Throughput))
+		req.Throughput = aws.Int32(options.Throughput)
 	}
-
-	response, err := c.ec2.ModifyVolumeWithContext(ctx, req)
+	response, err := c.ec2.ModifyVolume(ctx, req)
 	if err != nil {
 		if isAWSErrorInvalidParameter(err) {
 			// Wrap error to preserve original message from AWS as to why this was an invalid argument
@@ -676,23 +682,21 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 		}
 		return 0, err
 	}
-
 	// If the volume modification isn't immediately completed, wait for it to finish
-	state := aws.StringValue(response.VolumeModification.ModificationState)
+	state := string(response.VolumeModification.ModificationState)
 	if !volumeModificationDone(state) {
 		err = c.waitForVolumeModification(ctx, volumeID)
 		if err != nil {
 			return 0, err
 		}
 	}
-
 	// Perform one final check on the volume
-	return c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
+	return c.checkDesiredState(ctx, volumeID, int32(newSizeGiB), options)
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
-	if _, err := c.ec2.DeleteVolumeWithContext(ctx, request); err != nil {
+	if _, err := c.ec2.DeleteVolume(ctx, request); err != nil {
 		if isAWSErrorVolumeNotFound(err) {
 			return false, ErrNotFound
 		}
@@ -702,10 +706,10 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 }
 
 // executes a batched DescribeInstances API call
-func execBatchDescribeInstances(svc ec2iface.EC2API, input []string) (map[string]*ec2.Instance, error) {
+func execBatchDescribeInstances(svc EC2API, input []string) (map[string]*types.Instance, error) {
 	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
 	request := &ec2.DescribeInstancesInput{
-		InstanceIds: aws.StringSlice(input),
+		InstanceIds: input,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
@@ -716,14 +720,15 @@ func execBatchDescribeInstances(svc ec2iface.EC2API, input []string) (map[string
 		return nil, err
 	}
 
-	result := make(map[string]*ec2.Instance)
+	result := make(map[string]*types.Instance)
 
-	for _, instance := range resp {
+	for _, i := range resp {
+		instance := i
 		if instance.InstanceId == nil {
 			klog.Warningf("execBatchDescribeInstances: skipping instance: %v, reason: missing instance ID", instance)
 			continue
 		}
-		result[*instance.InstanceId] = instance
+		result[*instance.InstanceId] = &instance
 	}
 
 	klog.V(7).InfoS("execBatchDescribeInstances: success", "result", result)
@@ -731,16 +736,16 @@ func execBatchDescribeInstances(svc ec2iface.EC2API, input []string) (map[string
 }
 
 // batchDescribeInstances processes a DescribeInstances request by queuing the task and waiting for the result.
-func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ec2.Instance, error) {
+func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*types.Instance, error) {
 	var task string
 
-	if len(request.InstanceIds) == 1 && request.InstanceIds[0] != nil {
-		task = *request.InstanceIds[0]
+	if len(request.InstanceIds) == 1 && request.InstanceIds[0] != "" {
+		task = request.InstanceIds[0]
 	} else {
 		return nil, fmt.Errorf("batchDescribeInstances: invalid request, request: %v", request)
 	}
 
-	ch := make(chan batcher.BatchResult[*ec2.Instance])
+	ch := make(chan batcher.BatchResult[*types.Instance])
 
 	b := c.bm.instanceIDBatcher
 	b.AddTask(task, ch)
@@ -796,7 +801,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			VolumeId:   aws.String(volumeID),
 		}
 
-		resp, attachErr := c.ec2.AttachVolumeWithContext(ctx, request)
+		resp, attachErr := c.ec2.AttachVolume(ctx, request)
 		if attachErr != nil {
 			if isAWSErrorBlockDeviceInUse(attachErr) {
 				cacheMutex.Lock()
@@ -869,7 +874,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err = c.ec2.DetachVolumeWithContext(ctx, request)
+	_, err = c.ec2.DetachVolume(ctx, request)
 	if err != nil {
 		if isAWSErrorIncorrectState(err) ||
 			isAWSErrorInvalidAttachmentNotFound(err) ||
@@ -892,7 +897,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 }
 
 // WaitForAttachmentState polls until the attachment status is the expected value.
-func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*ec2.VolumeAttachment, error) {
+func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	// Most attach/detach operations on AWS finish within 1-4 seconds.
 	// By using 1 second starting interval with a backoff of 1.8,
 	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
@@ -903,13 +908,11 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		Steps:    volumeAttachmentStatePollSteps,
 	}
 
-	var attachment *ec2.VolumeAttachment
+	var attachment *types.VolumeAttachment
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
 		request := &ec2.DescribeVolumesInput{
-			VolumeIds: []*string{
-				aws.String(volumeID),
-			},
+			VolumeIds: []string{volumeID},
 		}
 
 		volume, err := c.getVolume(ctx, request)
@@ -940,10 +943,11 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		attachmentState := ""
 
 		for _, a := range volume.Attachments {
-			if a.State != nil && a.InstanceId != nil {
-				if aws.StringValue(a.InstanceId) == expectedInstance {
-					attachmentState = aws.StringValue(a.State)
-					attachment = a
+			a := a
+			if a.InstanceId != nil {
+				if aws.ToString(a.InstanceId) == expectedInstance {
+					attachmentState = string(a.State)
+					attachment = &a
 				}
 			}
 		}
@@ -953,7 +957,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		}
 
 		if attachment != nil && attachment.Device != nil && expectedState == volumeAttachedState {
-			device := aws.StringValue(attachment.Device)
+			device := aws.ToString(attachment.Device)
 			if device != expectedDevice {
 				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
 				return false, nil
@@ -986,10 +990,10 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
 	request := &ec2.DescribeVolumesInput{
-		Filters: []*ec2.Filter{
+		Filters: []types.Filter{
 			{
 				Name:   aws.String("tag:" + VolumeNameTagKey),
-				Values: []*string{aws.String(name)},
+				Values: []string{name},
 			},
 		},
 	}
@@ -999,59 +1003,61 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 		return nil, err
 	}
 
-	volSizeBytes := aws.Int64Value(volume.Size)
-	if volSizeBytes != util.BytesToGiB(capacityBytes) {
+	volSizeBytes := util.GiBToBytes(*volume.Size)
+	if volSizeBytes != capacityBytes {
 		return nil, ErrDiskExistsDiffSize
 	}
 
 	return &Disk{
-		VolumeID:         aws.StringValue(volume.VolumeId),
-		CapacityGiB:      volSizeBytes,
-		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
-		SnapshotID:       aws.StringValue(volume.SnapshotId),
-		OutpostArn:       aws.StringValue(volume.OutpostArn),
+		VolumeID:         aws.ToString(volume.VolumeId),
+		CapacityGiB:      *volume.Size,
+		AvailabilityZone: aws.ToString(volume.AvailabilityZone),
+		SnapshotID:       aws.ToString(volume.SnapshotId),
+		OutpostArn:       aws.ToString(volume.OutpostArn),
 	}, nil
 }
 
 func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error) {
 	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
+		VolumeIds: []string{volumeID},
 	}
 
 	volume, err := c.getVolume(ctx, request)
-
 	if err != nil {
 		return nil, err
 	}
 
-	return &Disk{
-		VolumeID:         aws.StringValue(volume.VolumeId),
-		CapacityGiB:      aws.Int64Value(volume.Size),
-		AvailabilityZone: aws.StringValue(volume.AvailabilityZone),
-		OutpostArn:       aws.StringValue(volume.OutpostArn),
-		Attachments:      getVolumeAttachmentsList(volume),
-	}, nil
+	disk := &Disk{
+		VolumeID:         aws.ToString(volume.VolumeId),
+		AvailabilityZone: aws.ToString(volume.AvailabilityZone),
+		OutpostArn:       aws.ToString(volume.OutpostArn),
+		Attachments:      getVolumeAttachmentsList(*volume),
+	}
+
+	if volume.Size != nil {
+		disk.CapacityGiB = *volume.Size
+	}
+
+	return disk, nil
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
-func execBatchDescribeSnapshots(svc ec2iface.EC2API, input []string, batcher snapshotBatcherType) (map[string]*ec2.Snapshot, error) {
+func execBatchDescribeSnapshots(svc EC2API, input []string, batcher snapshotBatcherType) (map[string]*types.Snapshot, error) {
 	var request *ec2.DescribeSnapshotsInput
 
 	switch batcher {
 	case snapshotIDBatcher:
 		klog.V(7).InfoS("execBatchDescribeSnapshots", "snapshotIds", input)
 		request = &ec2.DescribeSnapshotsInput{
-			SnapshotIds: aws.StringSlice(input),
+			SnapshotIds: input,
 		}
 
 	case snapshotTagBatcher:
 		klog.V(7).InfoS("execBatchDescribeSnapshots", "names", input)
-		filters := []*ec2.Filter{
+		filters := []types.Filter{
 			{
 				Name:   aws.String("tag:" + SnapshotNameTagKey),
-				Values: aws.StringSlice(input),
+				Values: input,
 			},
 		}
 		request = &ec2.DescribeSnapshotsInput{
@@ -1070,15 +1076,16 @@ func execBatchDescribeSnapshots(svc ec2iface.EC2API, input []string, batcher sna
 		return nil, err
 	}
 
-	result := make(map[string]*ec2.Snapshot)
+	result := make(map[string]*types.Snapshot)
 
 	for _, snapshot := range resp {
-		key, err := extractSnapshotKey(snapshot, batcher)
+		snapshot := snapshot
+		key, err := extractSnapshotKey(&snapshot, batcher)
 		if err != nil {
 			klog.Warningf("execBatchDescribeSnapshots: skipping snapshot: %v, reason: %v", snapshot, err)
 			continue
 		}
-		result[key] = snapshot
+		result[key] = &snapshot
 	}
 
 	klog.V(7).InfoS("execBatchDescribeSnapshots: success", "result", result)
@@ -1087,24 +1094,24 @@ func execBatchDescribeSnapshots(svc ec2iface.EC2API, input []string, batcher sna
 
 // batchDescribeSnapshots processes a DescribeSnapshots request. Depending on the request,
 // it determines the appropriate batcher to use, queues the task, and waits for the result.
-func (c *cloud) batchDescribeSnapshots(request *ec2.DescribeSnapshotsInput) (*ec2.Snapshot, error) {
-	var b *batcher.Batcher[string, *ec2.Snapshot]
+func (c *cloud) batchDescribeSnapshots(request *ec2.DescribeSnapshotsInput) (*types.Snapshot, error) {
+	var b *batcher.Batcher[string, *types.Snapshot]
 	var task string
 
 	switch {
-	case len(request.SnapshotIds) == 1 && request.SnapshotIds[0] != nil:
+	case len(request.SnapshotIds) == 1 && request.SnapshotIds[0] != "":
 		b = c.bm.snapshotIDBatcher
-		task = *request.SnapshotIds[0]
+		task = request.SnapshotIds[0]
 
 	case len(request.Filters) == 1 && *request.Filters[0].Name == "tag:"+SnapshotNameTagKey && len(request.Filters[0].Values) == 1:
 		b = c.bm.snapshotTagBatcher
-		task = *request.Filters[0].Values[0]
+		task = request.Filters[0].Values[0]
 
 	default:
 		return nil, fmt.Errorf("batchDescribeSnapshots: invalid request, request: %v", request)
 	}
 
-	ch := make(chan batcher.BatchResult[*ec2.Snapshot])
+	ch := make(chan batcher.BatchResult[*types.Snapshot])
 
 	b.AddTask(task, ch)
 
@@ -1122,7 +1129,7 @@ func (c *cloud) batchDescribeSnapshots(request *ec2.DescribeSnapshotsInput) (*ec
 // extractSnapshotKey retrieves the key associated with a given snapshot based on the batcher type.
 // For the snapshotIDBatcher type, it returns the snapshot's ID.
 // For other types, it searches for the SnapshotNameTagKey within the snapshot's tags.
-func extractSnapshotKey(s *ec2.Snapshot, batcher snapshotBatcherType) (string, error) {
+func extractSnapshotKey(s *types.Snapshot, batcher snapshotBatcherType) (string, error) {
 	if batcher == snapshotIDBatcher {
 		if s.SnapshotId == nil {
 			return "", errors.New("extractSnapshotKey: missing snapshot ID")
@@ -1146,24 +1153,21 @@ func extractSnapshotKey(s *ec2.Snapshot, batcher snapshotBatcherType) (string, e
 func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
 	descriptions := "Created by AWS EBS CSI driver for volume " + volumeID
 
-	var tags []*ec2.Tag
+	var tags []types.Tag
 	for key, value := range snapshotOptions.Tags {
-		copiedKey := key
-		copiedValue := value
-		tags = append(tags, &ec2.Tag{Key: &copiedKey, Value: &copiedValue})
+		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
-	tagSpec := ec2.TagSpecification{
-		ResourceType: aws.String("snapshot"),
+	tagSpec := types.TagSpecification{
+		ResourceType: types.ResourceTypeSnapshot,
 		Tags:         tags,
 	}
 	request := &ec2.CreateSnapshotInput{
 		VolumeId:          aws.String(volumeID),
-		DryRun:            aws.Bool(false),
-		TagSpecifications: []*ec2.TagSpecification{&tagSpec},
+		TagSpecifications: []types.TagSpecification{tagSpec},
 		Description:       aws.String(descriptions),
 	}
 
-	res, err := c.ec2.CreateSnapshotWithContext(ctx, request)
+	res, err := c.ec2.CreateSnapshot(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
@@ -1171,14 +1175,20 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		return nil, fmt.Errorf("nil CreateSnapshotResponse")
 	}
 
-	return c.ec2SnapshotResponseToStruct(res), nil
+	return &Snapshot{
+		SnapshotID:     aws.ToString(res.SnapshotId),
+		SourceVolumeID: aws.ToString(res.VolumeId),
+		Size:           *res.VolumeSize,
+		CreationTime:   aws.ToTime(res.StartTime),
+		ReadyToUse:     res.State == types.SnapshotStateCompleted,
+	}, nil
 }
 
 func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error) {
 	request := &ec2.DeleteSnapshotInput{}
 	request.SnapshotId = aws.String(snapshotID)
 	request.DryRun = aws.Bool(false)
-	if _, err := c.ec2.DeleteSnapshotWithContext(ctx, request); err != nil {
+	if _, err := c.ec2.DeleteSnapshot(ctx, request); err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return false, ErrNotFound
 		}
@@ -1189,10 +1199,10 @@ func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success 
 
 func (c *cloud) GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error) {
 	request := &ec2.DescribeSnapshotsInput{
-		Filters: []*ec2.Filter{
+		Filters: []types.Filter{
 			{
 				Name:   aws.String("tag:" + SnapshotNameTagKey),
-				Values: []*string{aws.String(name)},
+				Values: []string{name},
 			},
 		},
 	}
@@ -1202,14 +1212,12 @@ func (c *cloud) GetSnapshotByName(ctx context.Context, name string) (snapshot *S
 		return nil, err
 	}
 
-	return c.ec2SnapshotResponseToStruct(ec2snapshot), nil
+	return c.ec2SnapshotResponseToStruct(*ec2snapshot), nil
 }
 
 func (c *cloud) GetSnapshotByID(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error) {
 	request := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{
-			aws.String(snapshotID),
-		},
+		SnapshotIds: []string{snapshotID},
 	}
 
 	ec2snapshot, err := c.getSnapshot(ctx, request)
@@ -1217,29 +1225,29 @@ func (c *cloud) GetSnapshotByID(ctx context.Context, snapshotID string) (snapsho
 		return nil, err
 	}
 
-	return c.ec2SnapshotResponseToStruct(ec2snapshot), nil
+	return c.ec2SnapshotResponseToStruct(*ec2snapshot), nil
 }
 
 // ListSnapshots retrieves AWS EBS snapshots for an optionally specified volume ID.  If maxResults is set, it will return up to maxResults snapshots.  If there are more snapshots than maxResults,
 // a next token value will be returned to the client as well.  They can use this token with subsequent calls to retrieve the next page of results.  If maxResults is not set (0),
 // there will be no restriction up to 1000 results (https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#DescribeSnapshotsInput).
-func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error) {
+func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int32, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error) {
 	if maxResults > 0 && maxResults < 5 {
 		return nil, ErrInvalidMaxResults
 	}
 
 	describeSnapshotsInput := &ec2.DescribeSnapshotsInput{
-		MaxResults: aws.Int64(maxResults),
+		MaxResults: aws.Int32(maxResults),
 	}
 
 	if len(nextToken) != 0 {
 		describeSnapshotsInput.NextToken = aws.String(nextToken)
 	}
 	if len(volumeID) != 0 {
-		describeSnapshotsInput.Filters = []*ec2.Filter{
+		describeSnapshotsInput.Filters = []types.Filter{
 			{
 				Name:   aws.String("volume-id"),
-				Values: []*string{aws.String(volumeID)},
+				Values: []string{volumeID},
 			},
 		}
 	}
@@ -1259,23 +1267,20 @@ func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults i
 
 	return &ListSnapshotsResponse{
 		Snapshots: snapshots,
-		NextToken: aws.StringValue(ec2SnapshotsResponse.NextToken),
+		NextToken: aws.ToString(ec2SnapshotsResponse.NextToken),
 	}, nil
 }
 
 // Helper method converting EC2 snapshot type to the internal struct
-func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot {
-	if ec2Snapshot == nil {
-		return nil
-	}
-	snapshotSize := util.GiBToBytes(aws.Int64Value(ec2Snapshot.VolumeSize))
+func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot types.Snapshot) *Snapshot {
+	snapshotSize := *ec2Snapshot.VolumeSize
 	snapshot := &Snapshot{
-		SnapshotID:     aws.StringValue(ec2Snapshot.SnapshotId),
-		SourceVolumeID: aws.StringValue(ec2Snapshot.VolumeId),
+		SnapshotID:     aws.ToString(ec2Snapshot.SnapshotId),
+		SourceVolumeID: aws.ToString(ec2Snapshot.VolumeId),
 		Size:           snapshotSize,
-		CreationTime:   aws.TimeValue(ec2Snapshot.StartTime),
+		CreationTime:   *ec2Snapshot.StartTime,
 	}
-	if aws.StringValue(ec2Snapshot.State) == "completed" {
+	if ec2Snapshot.State == types.SnapshotStateCompleted {
 		snapshot.ReadyToUse = true
 	} else {
 		snapshot.ReadyToUse = false
@@ -1286,13 +1291,11 @@ func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot *ec2.Snapshot) *Snapshot
 
 func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
 	request := &ec2.EnableFastSnapshotRestoresInput{
-		AvailabilityZones: aws.StringSlice(availabilityZones),
-		SourceSnapshotIds: []*string{
-			aws.String(snapshotID),
-		},
+		AvailabilityZones: availabilityZones,
+		SourceSnapshotIds: []string{snapshotID},
 	}
 	klog.V(4).InfoS("Creating Fast Snapshot Restores", "snapshotID", snapshotID, "availabilityZones", availabilityZones)
-	response, err := c.ec2.EnableFastSnapshotRestoresWithContext(ctx, request)
+	response, err := c.ec2.EnableFastSnapshotRestores(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,17 +1305,17 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 	return response, nil
 }
 
-func describeVolumes(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeVolumesInput) ([]*ec2.Volume, error) {
-	var volumes []*ec2.Volume
+func describeVolumes(ctx context.Context, svc EC2API, request *ec2.DescribeVolumesInput) ([]types.Volume, error) {
+	var volumes []types.Volume
 	var nextToken *string
 	for {
-		response, err := svc.DescribeVolumesWithContext(ctx, request)
+		response, err := svc.DescribeVolumes(ctx, request)
 		if err != nil {
 			return nil, err
 		}
 		volumes = append(volumes, response.Volumes...)
 		nextToken = response.NextToken
-		if aws.StringValue(nextToken) == "" {
+		if aws.ToString(nextToken) == "" {
 			break
 		}
 		request.NextToken = nextToken
@@ -1320,29 +1323,28 @@ func describeVolumes(ctx context.Context, svc ec2iface.EC2API, request *ec2.Desc
 	return volumes, nil
 }
 
-func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*ec2.Volume, error) {
+func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput) (*types.Volume, error) {
 	if c.bm == nil {
 		volumes, err := describeVolumes(ctx, c.ec2, request)
 		if err != nil {
 			return nil, err
 		}
-
 		if l := len(volumes); l > 1 {
 			return nil, ErrMultiDisks
 		} else if l < 1 {
 			return nil, ErrNotFound
 		}
-		return volumes[0], nil
+		return &volumes[0], nil
 	} else {
 		return c.batchDescribeVolumes(request)
 	}
 }
 
-func describeInstances(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeInstancesInput) ([]*ec2.Instance, error) {
-	instances := []*ec2.Instance{}
+func describeInstances(ctx context.Context, svc EC2API, request *ec2.DescribeInstancesInput) ([]types.Instance, error) {
+	instances := []types.Instance{}
 	var nextToken *string
 	for {
-		response, err := svc.DescribeInstancesWithContext(ctx, request)
+		response, err := svc.DescribeInstances(ctx, request)
 		if err != nil {
 			if isAWSErrorInstanceNotFound(err) {
 				return nil, ErrNotFound
@@ -1355,7 +1357,7 @@ func describeInstances(ctx context.Context, svc ec2iface.EC2API, request *ec2.De
 		}
 
 		nextToken = response.NextToken
-		if aws.StringValue(nextToken) == "" {
+		if aws.ToString(nextToken) == "" {
 			break
 		}
 		request.NextToken = nextToken
@@ -1363,9 +1365,9 @@ func describeInstances(ctx context.Context, svc ec2iface.EC2API, request *ec2.De
 	return instances, nil
 }
 
-func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, error) {
+func (c *cloud) getInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
 	request := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&nodeID},
+		InstanceIds: []string{nodeID},
 	}
 
 	if c.bm == nil {
@@ -1380,23 +1382,23 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*ec2.Instance, 
 			return nil, ErrNotFound
 		}
 
-		return instances[0], nil
+		return &instances[0], nil
 	} else {
 		return c.batchDescribeInstances(request)
 	}
 }
 
-func describeSnapshots(ctx context.Context, svc ec2iface.EC2API, request *ec2.DescribeSnapshotsInput) ([]*ec2.Snapshot, error) {
-	var snapshots []*ec2.Snapshot
+func describeSnapshots(ctx context.Context, svc EC2API, request *ec2.DescribeSnapshotsInput) ([]types.Snapshot, error) {
+	var snapshots []types.Snapshot
 	var nextToken *string
 	for {
-		response, err := svc.DescribeSnapshotsWithContext(ctx, request)
+		response, err := svc.DescribeSnapshots(ctx, request)
 		if err != nil {
 			return nil, err
 		}
 		snapshots = append(snapshots, response.Snapshots...)
 		nextToken = response.NextToken
-		if aws.StringValue(nextToken) == "" {
+		if aws.ToString(nextToken) == "" {
 			break
 		}
 		request.NextToken = nextToken
@@ -1405,7 +1407,7 @@ func describeSnapshots(ctx context.Context, svc ec2iface.EC2API, request *ec2.De
 	return snapshots, nil
 }
 
-func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2.Snapshot, error) {
+func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*types.Snapshot, error) {
 	if c.bm == nil {
 		snapshots, err := describeSnapshots(ctx, c.ec2, request)
 		if err != nil {
@@ -1417,7 +1419,7 @@ func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsI
 		} else if l < 1 {
 			return nil, ErrNotFound
 		}
-		return snapshots[0], nil
+		return &snapshots[0], nil
 	} else {
 		return c.batchDescribeSnapshots(request)
 	}
@@ -1425,10 +1427,10 @@ func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsI
 
 // listSnapshots returns all snapshots based from a request
 func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2ListSnapshotsResponse, error) {
-	var snapshots []*ec2.Snapshot
+	var snapshots []types.Snapshot
 	var nextToken *string
 
-	response, err := c.ec2.DescribeSnapshotsWithContext(ctx, request)
+	response, err := c.ec2.DescribeSnapshots(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -1456,9 +1458,7 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	)
 
 	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
+		VolumeIds: []string{volumeID},
 	}
 
 	err := wait.PollUntilContextTimeout(ctx, checkInterval, checkTimeout, false, func(ctx context.Context) (done bool, err error) {
@@ -1466,8 +1466,8 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 		if err != nil {
 			return true, err
 		}
-		if vol.State != nil {
-			return *vol.State == "available", nil
+		if vol.State != "" {
+			return vol.State == types.VolumeStateAvailable, nil
 		}
 		return false, nil
 	})
@@ -1479,9 +1479,9 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 // and has the given code. More information on AWS error codes at:
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
 func isAWSError(err error, code string) bool {
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
-		if awsErr.Code() == code {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == code {
 			return true
 		}
 	}
@@ -1539,9 +1539,9 @@ func isAWSErrorIdempotentParameterMismatch(err error) bool {
 // isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
 // given error appears to be a block device name already in use error.
 func isAWSErrorBlockDeviceInUse(err error) bool {
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
-		if awsErr.Code() == "InvalidParameterValue" && strings.Contains(awsErr.Message(), "already in use") {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == "InvalidParameterValue" && strings.Contains(apiErr.ErrorMessage(), "already in use") {
 			return true
 		}
 	}
@@ -1551,28 +1551,10 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 // isAWSErrorInvalidParameter returns a boolean indicating whether the
 // given error is caused by invalid parameters in a EC2 API request.
 func isAWSErrorInvalidParameter(err error) bool {
-	var awsErr awserr.Error
-	if errors.As(err, &awsErr) {
-		switch awsErr.Code() {
-		case "InvalidParameter":
-			return true
-		case "InvalidParameterCombination":
-			return true
-		case "InvalidParameterDependency":
-			return true
-		case "InvalidParameterValue":
-			return true
-		case "UnknownParameter":
-			return true
-		case "UnknownVolumeType":
-			return true
-		case "UnsupportedOperation":
-			return true
-		case "ValidationError":
-			return true
-		default:
-			return false
-		}
+	var apiError smithy.APIError
+	if errors.As(err, &apiError) {
+		_, found := invalidParameterErrorCodes[apiError.ErrorCode()]
+		return found
 	}
 	return false
 }
@@ -1580,11 +1562,9 @@ func isAWSErrorInvalidParameter(err error) bool {
 // Checks for desired size on volume by also verifying volume size by describing volume.
 // This is to get around potential eventual consistency problems with describing volume modifications
 // objects and ensuring that we read two different objects to verify volume state.
-func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredSizeGiB int64, options *ModifyDiskOptions) (int64, error) {
+func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredSizeGiB int32, options *ModifyDiskOptions) (int32, error) {
 	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
+		VolumeIds: []string{volumeID},
 	}
 	volume, err := c.getVolume(ctx, request)
 	if err != nil {
@@ -1592,17 +1572,17 @@ func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredS
 	}
 
 	// AWS resizes in chunks of GiB (not GB)
-	realSizeGiB := aws.Int64Value(volume.Size)
+	realSizeGiB := *volume.Size
 
 	// Check if there is a mismatch between the requested modification and the current volume
 	// If there is, the volume is still modifying and we should not return a success
 	if realSizeGiB < desiredSizeGiB {
 		return realSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, desiredSizeGiB)
-	} else if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+	} else if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != options.IOPS) {
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to iops %d", volumeID, options.IOPS)
-	} else if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+	} else if options.VolumeType != "" && !strings.EqualFold(string(volume.VolumeType), options.VolumeType) {
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to type %q", volumeID, options.VolumeType)
-	} else if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+	} else if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != options.Throughput) {
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to throughput %d", volumeID, options.Throughput)
 	}
 
@@ -1626,7 +1606,7 @@ func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) 
 			return false, err
 		}
 
-		state := aws.StringValue(m.ModificationState)
+		state := string(m.ModificationState)
 		if volumeModificationDone(state) {
 			return true, nil
 		}
@@ -1642,13 +1622,11 @@ func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) 
 }
 
 // getLatestVolumeModification returns the last modification of the volume.
-func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string) (*ec2.VolumeModification, error) {
+func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string) (*types.VolumeModification, error) {
 	request := &ec2.DescribeVolumesModificationsInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
+		VolumeIds: []string{volumeID},
 	}
-	mod, err := c.ec2.DescribeVolumesModificationsWithContext(ctx, request)
+	mod, err := c.ec2.DescribeVolumesModifications(ctx, request)
 	if err != nil {
 		if isAWSErrorModificationNotFound(err) {
 			return nil, VolumeNotBeingModified
@@ -1661,14 +1639,14 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 		return nil, VolumeNotBeingModified
 	}
 
-	return volumeMods[len(volumeMods)-1], nil
+	return &volumeMods[len(volumeMods)-1], nil
 }
 
 // randomAvailabilityZone returns a random zone from the given region
 // the randomness relies on the response of DescribeAvailabilityZones
 func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
-	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, request)
+	response, err := c.ec2.DescribeAvailabilityZones(ctx, request)
 	if err != nil {
 		return "", err
 	}
@@ -1683,7 +1661,7 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 
 // AvailabilityZones returns availability zones from the given region
 func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
-	response, err := c.ec2.DescribeAvailabilityZonesWithContext(ctx, &ec2.DescribeAvailabilityZonesInput{})
+	response, err := c.ec2.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
 	if err != nil {
 		return nil, fmt.Errorf("error describing availability zones: %w", err)
 	}
@@ -1694,38 +1672,43 @@ func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, err
 	return zones, nil
 }
 
-func needsVolumeModification(volume *ec2.Volume, newSizeGiB int64, options *ModifyDiskOptions) bool {
-	oldSizeGiB := aws.Int64Value(volume.Size)
+func needsVolumeModification(volume types.Volume, newSizeGiB int32, options *ModifyDiskOptions) bool {
+	oldSizeGiB := *volume.Size
 	needsModification := false
 
 	if oldSizeGiB < newSizeGiB {
 		needsModification = true
 	}
-	if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != int64(options.IOPS)) {
+
+	if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != options.IOPS) {
 		needsModification = true
 	}
-	if options.VolumeType != "" && !strings.EqualFold(*volume.VolumeType, options.VolumeType) {
+
+	if options.VolumeType != "" && !strings.EqualFold(string(volume.VolumeType), options.VolumeType) {
 		needsModification = true
 	}
-	if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != int64(options.Throughput)) {
+
+	if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != options.Throughput) {
 		needsModification = true
 	}
 
 	return needsModification
 }
 
-func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int64, options *ModifyDiskOptions) (bool, int64, error) {
+func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int32, options *ModifyDiskOptions) (bool, int32, error) {
 	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []*string{
-			aws.String(volumeID),
-		},
+		VolumeIds: []string{volumeID},
 	}
+
 	volume, err := c.getVolume(ctx, request)
 	if err != nil {
 		return true, 0, err
 	}
 
-	oldSizeGiB := aws.Int64Value(volume.Size)
+	if volume.Size == nil {
+		return true, 0, fmt.Errorf("volume %q has no size", volumeID)
+	}
+	oldSizeGiB := *volume.Size
 
 	latestMod, err := c.getLatestVolumeModification(ctx, volumeID)
 	if err != nil && !errors.Is(err, VolumeNotBeingModified) {
@@ -1735,8 +1718,8 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 	state := ""
 	// latestMod can be nil if the volume has never been modified
 	if latestMod != nil {
-		state = aws.StringValue(latestMod.ModificationState)
-		if state == ec2.VolumeModificationStateModifying {
+		state = string(latestMod.ModificationState)
+		if state == string(types.VolumeModificationStateModifying) {
 			// If volume is already modifying, detour to waiting for it to modify
 			klog.V(5).InfoS("[Debug] Watching ongoing modification", "volumeID", volumeID)
 			err = c.waitForVolumeModification(ctx, volumeID)
@@ -1750,7 +1733,7 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 
 	// At this point, we know we are starting a new volume modification
 	// If we're asked to modify a volume to its current state, ignore the request and immediately return a success
-	if !needsVolumeModification(volume, newSizeGiB, options) {
+	if !needsVolumeModification(*volume, newSizeGiB, options) {
 		klog.V(5).InfoS("[Debug] Skipping modification for volume due to matching stats", "volumeID", volumeID)
 		// Wait for any existing modifications to prevent race conditions where DescribeVolume(s) returns the new
 		// state before the volume is actually finished modifying
@@ -1762,7 +1745,7 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 		return false, returnGiB, returnErr
 	}
 
-	if state == ec2.VolumeModificationStateOptimizing {
+	if state == string(types.VolumeModificationStateOptimizing) {
 		return true, 0, fmt.Errorf("volume %q in OPTIMIZING state, cannot currently modify", volumeID)
 	}
 
@@ -1770,17 +1753,14 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 }
 
 func volumeModificationDone(state string) bool {
-	if state == ec2.VolumeModificationStateCompleted || state == ec2.VolumeModificationStateOptimizing {
-		return true
-	}
-	return false
+	return state == string(types.VolumeModificationStateCompleted) || state == string(types.VolumeModificationStateOptimizing)
 }
 
-func getVolumeAttachmentsList(volume *ec2.Volume) []string {
+func getVolumeAttachmentsList(volume types.Volume) []string {
 	var volumeAttachmentList []string
 	for _, attachment := range volume.Attachments {
-		if attachment.State != nil && strings.ToLower(aws.StringValue(attachment.State)) == volumeAttachedState {
-			volumeAttachmentList = append(volumeAttachmentList, aws.StringValue(attachment.InstanceId))
+		if attachment.State == volumeAttachedState {
+			volumeAttachmentList = append(volumeAttachmentList, aws.ToString(attachment.InstanceId))
 		}
 	}
 
@@ -1788,7 +1768,7 @@ func getVolumeAttachmentsList(volume *ec2.Volume) []string {
 }
 
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
-func capIOPS(volumeType string, requestedCapacityGiB int64, requestedIops int64, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int64, allowIncrease bool) int64 {
+func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int32, allowIncrease bool) int32 {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
 	if requestedIops == 0 {
 		return 0

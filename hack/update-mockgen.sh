@@ -23,9 +23,9 @@ BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
 "${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_metadata.go -source pkg/cloud/metadata_interface.go
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_mount.go -source pkg/driver/mount.go
 "${BIN}/mockgen" -package mounter -destination=./pkg/mounter/mock_mount_windows.go -source pkg/mounter/safe_mounter_windows.go
+"${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_ec2.go -source pkg/cloud/ec2_interface.go EC2API
 
 # Reflection-based mocking for external dependencies
-"${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_ec2.go github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_client.go -mock_names='Interface=MockKubernetesClient' k8s.io/client-go/kubernetes Interface
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_corev1.go k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface,NodeInterface
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_storagev1.go k8s.io/client-go/kubernetes/typed/storage/v1 VolumeAttachmentInterface,StorageV1Interface

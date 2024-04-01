@@ -1,31 +1,47 @@
 package cloud
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog/v2"
+)
+
+const (
+	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
+	OutpostArnEndpoint string = "outpost-arn"
+
+	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs
+	EnisEndpoint string = "network/interfaces/macs"
+
+	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices
+	BlockDevicesEndpoint string = "block-device-mapping"
 )
 
 type EC2MetadataClient func() (EC2Metadata, error)
 
 var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
-	sess := session.Must(session.NewSession(&aws.Config{}))
-	svc := ec2metadata.New(sess)
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	svc := imds.NewFromConfig(cfg)
 	return svc, nil
 }
 
 func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
-	doc, err := svc.GetInstanceIdentityDocument()
+	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
 	klog.InfoS("Retrieving EC2 instance identity metadata", "regionFromSession", regionFromSession)
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
 	}
+	doc := docOutput.InstanceIdentityDocument
 
 	if len(doc.InstanceID) == 0 {
 		return nil, fmt.Errorf("could not get valid EC2 instance ID")
@@ -51,24 +67,27 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		}
 	}
 
-	enis, err := svc.GetMetadata(enisEndpoint)
+	enisOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: EnisEndpoint})
 	if err != nil {
-		return nil, fmt.Errorf("could not get number of attached ENIs: %w", err)
+		return nil, fmt.Errorf("could not get metadata for ENIs: %w", err)
 	}
-	// the ENIs should not be empty; if (somehow) it is empty, return an error
-	if enis == "" {
-		return nil, fmt.Errorf("the ENIs should not be empty")
+	enis, err := io.ReadAll(enisOutput.Content)
+	if err != nil {
+		return nil, fmt.Errorf("could not read ENIs metadata content: %w", err)
 	}
+	attachedENIs := strings.Count(string(enis), "\n")
 
-	attachedENIs := strings.Count(enis, "\n") + 1
 	blockDevMappings := 0
-
 	if !util.IsSBE(doc.Region) {
-		mappings, mapErr := svc.GetMetadata(blockDevicesEndpoint)
-		if mapErr != nil {
-			return nil, fmt.Errorf("could not get number of block device mappings: %w", err)
+		mappingsOutput, mappingsOutputErr := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint})
+		if mappingsOutputErr != nil {
+			return nil, fmt.Errorf("could not get metadata for block device mappings: %w", mappingsOutputErr)
 		}
-		blockDevMappings = strings.Count(mappings, "ebs")
+		mappings, mappingsErr := io.ReadAll(mappingsOutput.Content)
+		if mappingsErr != nil {
+			return nil, fmt.Errorf("could not read block device mappings metadata content: %w", mappingsErr)
+		}
+		blockDevMappings = strings.Count(string(mappings), "ebs")
 	}
 
 	instanceInfo := Metadata{
@@ -80,21 +99,27 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		NumBlockDeviceMappings: blockDevMappings,
 	}
 
-	outpostArn, err := svc.GetMetadata(outpostArnEndpoint)
+	outpostArnOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: OutpostArnEndpoint})
 	// "outpust-arn" returns 404 for non-outpost instances. note that the request is made to a link-local address.
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
-	if err != nil && !strings.Contains(err.Error(), "404") {
-		return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn: %w", err)
-	} else if err == nil {
-		klog.InfoS("Running in an outpost environment with arn", "outpostArn", outpostArn)
-		outpostArn = strings.ReplaceAll(outpostArn, "outpost/", "")
-		parsedArn, err := arn.Parse(outpostArn)
-		if err != nil {
-			klog.InfoS("Failed to parse the outpost arn", "outpostArn", outpostArn)
-		} else {
-			klog.InfoS("Using outpost arn", "parsedArn", parsedArn)
-			instanceInfo.OutpostArn = parsedArn
+	if err != nil {
+		if !strings.Contains(err.Error(), "404") {
+			return nil, fmt.Errorf("something went wrong while getting EC2 outpost arn: %w", err)
+		}
+	} else {
+		outpostArnData, err := io.ReadAll(outpostArnOutput.Content)
+		if err == nil {
+			outpostArn := string(outpostArnData)
+			klog.InfoS("Running in an outpost environment with arn", "outpostArn", outpostArn)
+			outpostArn = strings.ReplaceAll(outpostArn, "outpost/", "")
+			parsedArn, err := arn.Parse(outpostArn)
+			if err != nil {
+				klog.InfoS("Failed to parse the outpost arn", "outpostArn", outpostArn)
+			} else {
+				klog.InfoS("Using outpost arn", "parsedArn", parsedArn)
+				instanceInfo.OutpostArn = parsedArn
+			}
 		}
 	}
 
