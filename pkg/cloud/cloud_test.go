@@ -149,7 +149,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			expErr: fmt.Errorf("volume not found"),
 		},
 		{
-			name: "TestBatchDescribeVolumes: invalid tag",
+			name: "fail: invalid tag",
 			volumes: []types.Volume{
 				{
 					Tags: []types.Tag{
@@ -158,11 +158,18 @@ func TestBatchDescribeVolumes(t *testing.T) {
 				},
 			},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
-
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(0)
 			},
 			expErr: fmt.Errorf("invalid tag"),
+		},
+		{
+			name:    "fail: invalid request",
+			volumes: []types.Volume{{VolumeId: aws.String("")}},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
+			},
+			expErr: ErrInvalidRequest,
 		},
 	}
 
@@ -272,6 +279,14 @@ func TestBatchDescribeInstances(t *testing.T) {
 				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
 			expErr: fmt.Errorf("generic EC2 API error"),
+		},
+		{
+			name:        "fail: invalid request",
+			instanceIds: []string{""},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
+				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
+			},
+			expErr: ErrInvalidRequest,
 		},
 	}
 
@@ -440,6 +455,14 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			},
 			expErr: ErrNotFound,
 		},
+		{
+			name:      "fail: invalid request",
+			snapshots: []types.Snapshot{{SnapshotId: aws.String("")}},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
+				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
+			},
+			expErr: ErrInvalidRequest,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -550,6 +573,14 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
 			expErr: fmt.Errorf("generic EC2 API error"),
+		},
+		{
+			name:      "fail: invalid request",
+			volumeIds: []string{""},
+			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
+				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(0)
+			},
+			expErr: ErrInvalidRequest,
 		},
 	}
 

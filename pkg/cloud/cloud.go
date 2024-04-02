@@ -178,6 +178,9 @@ var (
 
 	// ErrInvalidArgument is returned if parameters were rejected by cloud provider
 	ErrInvalidArgument = errors.New("invalid argument")
+
+	// ErrInvalidRequest is returned if parameters were rejected by driver
+	ErrInvalidRequest = errors.New("invalid request")
 )
 
 // Set during build time via -ldflags
@@ -432,7 +435,7 @@ func (c *cloud) batchDescribeVolumes(request *ec2.DescribeVolumesInput) (*types.
 		task = request.Filters[0].Values[0]
 
 	default:
-		return nil, fmt.Errorf("batchDescribeVolumes: invalid request, request: %v", request)
+		return nil, fmt.Errorf("%w: batchDescribeVolumes: request: %v", ErrInvalidRequest, request)
 	}
 
 	ch := make(chan batcher.BatchResult[*types.Volume])
@@ -675,7 +678,7 @@ func (c *cloud) batchDescribeVolumesModifications(request *ec2.DescribeVolumesMo
 	if len(request.VolumeIds) == 1 && request.VolumeIds[0] != "" {
 		task = request.VolumeIds[0]
 	} else {
-		return nil, fmt.Errorf("batchDescribeVolumesModifications: invalid request, request: %v", request)
+		return nil, fmt.Errorf("%w: batchDescribeVolumesModifications: invalid request, request: %v", ErrInvalidRequest, request)
 	}
 
 	ch := make(chan batcher.BatchResult[*types.VolumeModification])
@@ -691,7 +694,7 @@ func (c *cloud) batchDescribeVolumesModifications(request *ec2.DescribeVolumesMo
 	return r.Result, nil
 }
 
-// ResizeOrModifyDisk resizes an EBS volume in GiB increments, rouding up to the next possible allocatable unit, and/or modifies an EBS
+// ResizeOrModifyDisk resizes an EBS volume in GiB increments, rounding up to the next possible allocatable unit, and/or modifies an EBS
 // volume with the parameters in ModifyDiskOptions.
 // The resizing operation is performed only when newSizeBytes != 0.
 // It returns the volume size after this call or an error if the size couldn't be determined or the volume couldn't be modified.
@@ -795,7 +798,7 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 	if len(request.InstanceIds) == 1 && request.InstanceIds[0] != "" {
 		task = request.InstanceIds[0]
 	} else {
-		return nil, fmt.Errorf("batchDescribeInstances: invalid request, request: %v", request)
+		return nil, fmt.Errorf("%w: batchDescribeInstances: request: %v", ErrInvalidRequest, request)
 	}
 
 	ch := make(chan batcher.BatchResult[*types.Instance])
@@ -1161,7 +1164,7 @@ func (c *cloud) batchDescribeSnapshots(request *ec2.DescribeSnapshotsInput) (*ty
 		task = request.Filters[0].Values[0]
 
 	default:
-		return nil, fmt.Errorf("batchDescribeSnapshots: invalid request, request: %v", request)
+		return nil, fmt.Errorf("%w: batchDescribeSnapshots: request: %v", ErrInvalidRequest, request)
 	}
 
 	ch := make(chan batcher.BatchResult[*types.Snapshot])
