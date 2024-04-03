@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -62,70 +61,46 @@ type Driver struct {
 	nodeService
 
 	srv     *grpc.Server
-	options *DriverOptions
+	options *Options
 }
 
-type DriverOptions struct {
-	endpoint                          string
-	extraTags                         map[string]string
-	mode                              Mode
-	volumeAttachLimit                 int64
-	reservedVolumeAttachments         int
-	kubernetesClusterID               string
-	awsSdkDebugLog                    bool
-	batching                          bool
-	warnOnInvalidTag                  bool
-	userAgentExtra                    string
-	otelTracing                       bool
-	modifyVolumeRequestHandlerTimeout time.Duration
-}
-
-func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
+func NewDriver(o *Options) (*Driver, error) {
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
-	driverOptions := DriverOptions{
-		endpoint:                          DefaultCSIEndpoint,
-		mode:                              AllMode,
-		modifyVolumeRequestHandlerTimeout: DefaultModifyVolumeRequestHandlerTimeout,
-	}
-	for _, option := range options {
-		option(&driverOptions)
-	}
-
-	if err := ValidateDriverOptions(&driverOptions); err != nil {
-		return nil, fmt.Errorf("Invalid driver options: %w", err)
+	if err := ValidateDriverOptions(o); err != nil {
+		return nil, fmt.Errorf("invalid driver options: %w", err)
 	}
 
 	driver := Driver{
-		options: &driverOptions,
+		options: o,
 	}
 
-	switch driverOptions.mode {
+	switch o.Mode {
 	case ControllerMode:
-		driver.controllerService = newControllerService(&driverOptions)
+		driver.controllerService = newControllerService(o)
 	case NodeMode:
-		driver.nodeService = newNodeService(&driverOptions)
+		driver.nodeService = newNodeService(o)
 	case AllMode:
-		driver.controllerService = newControllerService(&driverOptions)
-		driver.nodeService = newNodeService(&driverOptions)
+		driver.controllerService = newControllerService(o)
+		driver.nodeService = newNodeService(o)
 	default:
-		return nil, fmt.Errorf("unknown mode: %s", driverOptions.mode)
+		return nil, fmt.Errorf("unknown mode: %s", o.Mode)
 	}
 
 	return &driver, nil
 }
 
 func NewFakeDriver(e string, c cloud.Cloud, md *cloud.Metadata, m Mounter) (*Driver, error) {
-	driverOptions := &DriverOptions{
-		endpoint: e,
-		mode:     AllMode,
+	o := &Options{
+		Endpoint: e,
+		Mode:     AllMode,
 	}
 	driver := Driver{
-		options: driverOptions,
+		options: o,
 		controllerService: controllerService{
 			cloud:               c,
 			inFlight:            internal.NewInFlight(),
-			driverOptions:       driverOptions,
+			options:             o,
 			modifyVolumeManager: newModifyVolumeManager(),
 		},
 		nodeService: nodeService{
@@ -133,14 +108,14 @@ func NewFakeDriver(e string, c cloud.Cloud, md *cloud.Metadata, m Mounter) (*Dri
 			deviceIdentifier: newNodeDeviceIdentifier(),
 			inFlight:         internal.NewInFlight(),
 			mounter:          m,
-			driverOptions:    driverOptions,
+			options:          o,
 		},
 	}
 	return &driver, nil
 }
 
 func (d *Driver) Run() error {
-	scheme, addr, err := util.ParseEndpoint(d.options.endpoint)
+	scheme, addr, err := util.ParseEndpoint(d.options.Endpoint)
 	if err != nil {
 		return err
 	}
@@ -161,14 +136,14 @@ func (d *Driver) Run() error {
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(logErr),
 	}
-	if d.options.otelTracing {
+	if d.options.EnableOtelTracing {
 		opts = append(opts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	}
 	d.srv = grpc.NewServer(opts...)
 
 	csi.RegisterIdentityServer(d.srv, d)
 
-	switch d.options.mode {
+	switch d.options.Mode {
 	case ControllerMode:
 		csi.RegisterControllerServer(d.srv, d)
 		rpc.RegisterModifyServer(d.srv, d)
@@ -179,7 +154,7 @@ func (d *Driver) Run() error {
 		csi.RegisterNodeServer(d.srv, d)
 		rpc.RegisterModifyServer(d.srv, d)
 	default:
-		return fmt.Errorf("unknown mode: %s", d.options.mode)
+		return fmt.Errorf("unknown mode: %s", d.options.Mode)
 	}
 
 	klog.V(4).InfoS("Listening for connections", "address", listener.Addr())
@@ -188,88 +163,4 @@ func (d *Driver) Run() error {
 
 func (d *Driver) Stop() {
 	d.srv.Stop()
-}
-
-func WithEndpoint(endpoint string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.endpoint = endpoint
-	}
-}
-
-func WithExtraTags(extraTags map[string]string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.extraTags = extraTags
-	}
-}
-
-func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		if o.extraTags == nil && extraVolumeTags != nil {
-			klog.InfoS("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
-			o.extraTags = extraVolumeTags
-		}
-	}
-}
-
-func WithMode(mode Mode) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.mode = mode
-	}
-}
-
-func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.volumeAttachLimit = volumeAttachLimit
-	}
-}
-
-func WithReservedVolumeAttachments(reservedVolumeAttachments int) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.reservedVolumeAttachments = reservedVolumeAttachments
-	}
-}
-
-func WithBatching(enableBatching bool) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.batching = enableBatching
-	}
-}
-
-func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.kubernetesClusterID = clusterID
-	}
-}
-
-func WithAwsSdkDebugLog(enableSdkDebugLog bool) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.awsSdkDebugLog = enableSdkDebugLog
-	}
-}
-
-func WithWarnOnInvalidTag(warnOnInvalidTag bool) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.warnOnInvalidTag = warnOnInvalidTag
-	}
-}
-
-func WithUserAgentExtra(userAgentExtra string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.userAgentExtra = userAgentExtra
-	}
-}
-
-func WithOtelTracing(enableOtelTracing bool) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		o.otelTracing = enableOtelTracing
-	}
-}
-
-func WithModifyVolumeRequestHandlerTimeout(timeout time.Duration) func(*DriverOptions) {
-	return func(o *DriverOptions) {
-		if timeout == 0 {
-			return
-		}
-		o.modifyVolumeRequestHandlerTimeout = timeout
-	}
 }

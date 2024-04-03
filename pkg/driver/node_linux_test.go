@@ -164,7 +164,7 @@ func TestFindDevicePath(t *testing.T) {
 				mounter:          mockMounter,
 				deviceIdentifier: mockDeviceIdentifier,
 				inFlight:         internal.NewInFlight(),
-				driverOptions:    &DriverOptions{},
+				options:          &Options{},
 			}
 
 			if tc.expectDevicePath == snowDevicePath+tc.partition {
@@ -173,7 +173,7 @@ func TestFindDevicePath(t *testing.T) {
 					mounter:          mockMounter,
 					deviceIdentifier: mockDeviceIdentifier,
 					inFlight:         internal.NewInFlight(),
-					driverOptions:    &DriverOptions{},
+					options:          &Options{},
 				}
 			}
 

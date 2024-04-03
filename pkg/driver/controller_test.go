@@ -97,8 +97,8 @@ func TestNewControllerService(t *testing.T) {
 		},
 	}
 
-	driverOptions := &DriverOptions{
-		endpoint: "test",
+	Options := &Options{
+		Endpoint: "test",
 	}
 
 	for _, tc := range testCases {
@@ -137,13 +137,13 @@ func TestNewControllerService(t *testing.T) {
 				}()
 			}
 
-			controllerSvc := newControllerService(driverOptions)
+			controllerSvc := newControllerService(Options)
 
 			if controllerSvc.cloud != cloudObj {
 				t.Fatalf("expected cloud attribute to be equal to instantiated cloud object")
 			}
-			if !reflect.DeepEqual(controllerSvc.driverOptions, driverOptions) {
-				t.Fatalf("expected driverOptions attribute to be equal to input")
+			if !reflect.DeepEqual(controllerSvc.options, Options) {
+				t.Fatalf("expected Options attribute to be equal to input")
 			}
 		})
 	}
@@ -222,9 +222,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -292,9 +292,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
@@ -359,9 +359,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				rsp, err := awsDriver.CreateVolume(ctx, req)
@@ -415,9 +415,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				rsp, err := awsDriver.CreateVolume(ctx, req)
@@ -464,9 +464,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -491,9 +491,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -545,9 +545,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -631,9 +631,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err = awsDriver.CreateVolume(ctx, req)
@@ -689,9 +689,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
@@ -750,9 +750,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.CreateVolume(ctx, req)
@@ -806,9 +806,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -848,9 +848,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -890,9 +890,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -932,9 +932,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -974,9 +974,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1015,9 +1015,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1056,9 +1056,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1097,9 +1097,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1139,9 +1139,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1188,9 +1188,9 @@ func TestCreateVolume(t *testing.T) {
 					return mockDisk, nil
 				})
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1224,9 +1224,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1264,9 +1264,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1304,9 +1304,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1378,9 +1378,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1461,8 +1461,8 @@ func TestCreateVolume(t *testing.T) {
 				awsDriver := controllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					driverOptions: &DriverOptions{
-						extraTags: map[string]string{
+					options: &Options{
+						ExtraTags: map[string]string{
 							extraVolumeTagKey: extraVolumeTagValue,
 						},
 					},
@@ -1526,8 +1526,8 @@ func TestCreateVolume(t *testing.T) {
 				awsDriver := controllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					driverOptions: &DriverOptions{
-						kubernetesClusterID: clusterID,
+					options: &Options{
+						KubernetesClusterID: clusterID,
 					},
 				}
 
@@ -1590,9 +1590,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1627,9 +1627,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1668,9 +1668,9 @@ func TestCreateVolume(t *testing.T) {
 				defer inFlight.Delete(req.GetName())
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      inFlight,
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: inFlight,
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1696,9 +1696,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrIdempotentParameterMismatch)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1730,9 +1730,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
@@ -1761,9 +1761,9 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateVolume(ctx, req)
@@ -1922,9 +1922,9 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			}
 
 			awsDriver := controllerService{
-				cloud:         mockCloud,
-				inFlight:      internal.NewInFlight(),
-				driverOptions: &DriverOptions{},
+				cloud:    mockCloud,
+				inFlight: internal.NewInFlight(),
+				options:  &Options{},
 			}
 
 			response, err := awsDriver.CreateVolume(ctx, req)
@@ -1970,9 +1970,9 @@ func TestDeleteVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(true, nil)
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
@@ -2002,9 +2002,9 @@ func TestDeleteVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, cloud.ErrNotFound)
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
@@ -2033,9 +2033,9 @@ func TestDeleteVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.DeleteVolume(ctx, req)
 				if err != nil {
@@ -2071,9 +2071,9 @@ func TestDeleteVolume(t *testing.T) {
 				inFlight.Insert(req.GetVolumeId())
 				defer inFlight.Delete(req.GetVolumeId())
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      inFlight,
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: inFlight,
+					options:  &Options{},
 				}
 				_, err := awsDriver.DeleteVolume(ctx, req)
 
@@ -2345,9 +2345,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2404,8 +2404,8 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := controllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					driverOptions: &DriverOptions{
-						kubernetesClusterID: clusterID,
+					options: &Options{
+						KubernetesClusterID: clusterID,
 					},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -2459,8 +2459,8 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := controllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					driverOptions: &DriverOptions{
-						extraTags: map[string]string{
+					options: &Options{
+						ExtraTags: map[string]string{
 							extraVolumeTagKey: extraVolumeTagValue,
 						},
 					},
@@ -2489,9 +2489,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				if _, err := awsDriver.CreateSnapshot(context.Background(), req); err != nil {
 					srvErr, ok := status.FromError(err)
@@ -2538,9 +2538,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2605,9 +2605,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2644,9 +2644,9 @@ func TestCreateSnapshot(t *testing.T) {
 				defer inFlight.Delete(req.GetName())
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      inFlight,
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: inFlight,
+					options:  &Options{},
 				}
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
 
@@ -2696,9 +2696,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2754,9 +2754,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{kubernetesClusterID: clusterId},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{KubernetesClusterID: clusterId},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2818,9 +2818,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).Return(expOutput, nil).AnyTimes()
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -2882,9 +2882,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).Return(expOutput, nil).AnyTimes()
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -2951,9 +2951,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -2987,9 +2987,9 @@ func TestCreateSnapshot(t *testing.T) {
 					"us-east-1a": {}, "us-east-1b": {}}, nil).AnyTimes()
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -3040,9 +3040,9 @@ func TestCreateSnapshot(t *testing.T) {
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
@@ -3073,9 +3073,9 @@ func TestDeleteSnapshot(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				req := &csi.DeleteSnapshotRequest{
@@ -3098,9 +3098,9 @@ func TestDeleteSnapshot(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				req := &csi.DeleteSnapshotRequest{
@@ -3131,9 +3131,9 @@ func TestDeleteSnapshot(t *testing.T) {
 				defer inFlight.Delete(req.GetSnapshotId())
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      inFlight,
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: inFlight,
+					options:  &Options{},
 				}
 
 				_, err := awsDriver.DeleteSnapshot(ctx, req)
@@ -3183,9 +3183,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(0)), gomock.Eq("")).Return(mockCloudSnapshotsResponse, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -3210,9 +3210,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(0)), gomock.Eq("")).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -3246,9 +3246,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(mockCloudSnapshotsResponse, nil)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -3276,9 +3276,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrNotFound)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				resp, err := awsDriver.ListSnapshots(context.Background(), req)
@@ -3306,9 +3306,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().GetSnapshotByID(gomock.Eq(ctx), gomock.Eq("snapshot-1")).Return(nil, cloud.ErrMultiSnapshots)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
@@ -3338,9 +3338,9 @@ func TestListSnapshots(t *testing.T) {
 				mockCloud.EXPECT().ListSnapshots(gomock.Eq(ctx), gomock.Eq(""), gomock.Eq(int32(4)), gomock.Eq("")).Return(nil, cloud.ErrInvalidMaxResults)
 
 				awsDriver := controllerService{
-					cloud:         mockCloud,
-					inFlight:      internal.NewInFlight(),
-					driverOptions: &DriverOptions{},
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
 				}
 
 				if _, err := awsDriver.ListSnapshots(context.Background(), req); err != nil {
@@ -3671,7 +3671,7 @@ func TestControllerExpandVolume(t *testing.T) {
 			awsDriver := controllerService{
 				cloud:               mockCloud,
 				inFlight:            internal.NewInFlight(),
-				driverOptions:       &DriverOptions{},
+				options:             &Options{},
 				modifyVolumeManager: newModifyVolumeManager(),
 			}
 
@@ -3718,9 +3718,9 @@ func createControllerService(t *testing.T) (controllerService, *gomock.Controlle
 	mockCtl := gomock.NewController(t)
 	mockCloud := cloud.NewMockCloud(mockCtl)
 	awsDriver := controllerService{
-		cloud:         mockCloud,
-		inFlight:      internal.NewInFlight(),
-		driverOptions: &DriverOptions{},
+		cloud:    mockCloud,
+		inFlight: internal.NewInFlight(),
+		options:  &Options{},
 	}
 	return awsDriver, mockCtl, mockCloud
 }

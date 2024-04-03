@@ -86,12 +86,12 @@ type nodeService struct {
 	mounter          Mounter
 	deviceIdentifier DeviceIdentifier
 	inFlight         *internal.InFlight
-	driverOptions    *DriverOptions
+	options          *Options
 }
 
 // newNodeService creates a new node service
 // it panics if failed to create the service
-func newNodeService(driverOptions *DriverOptions) nodeService {
+func newNodeService(o *Options) nodeService {
 	klog.V(5).InfoS("[Debug] Retrieving node info from metadata service")
 	region := os.Getenv("AWS_REGION")
 	klog.InfoS("regionFromSession Node service", "region", region)
@@ -122,7 +122,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 		mounter:          nodeMounter,
 		deviceIdentifier: newNodeDeviceIdentifier(),
 		inFlight:         internal.NewInFlight(),
-		driverOptions:    driverOptions,
+		options:          o,
 	}
 }
 
@@ -786,8 +786,8 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 
 // getVolumesLimit returns the limit of volumes that the node supports
 func (d *nodeService) getVolumesLimit() int64 {
-	if d.driverOptions.volumeAttachLimit >= 0 {
-		return d.driverOptions.volumeAttachLimit
+	if d.options.VolumeAttachLimit >= 0 {
+		return d.options.VolumeAttachLimit
 	}
 
 	if util.IsSBE(d.metadata.GetRegion()) {
@@ -799,7 +799,7 @@ func (d *nodeService) getVolumesLimit() int64 {
 	isNitro := cloud.IsNitroInstanceType(instanceType)
 	availableAttachments := cloud.GetMaxAttachments(isNitro)
 
-	reservedVolumeAttachments := d.driverOptions.reservedVolumeAttachments
+	reservedVolumeAttachments := d.options.ReservedVolumeAttachments
 	if reservedVolumeAttachments == -1 {
 		reservedVolumeAttachments = d.metadata.GetNumBlockDeviceMappings() + 1 // +1 for the root device
 	}

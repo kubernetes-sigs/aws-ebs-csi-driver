@@ -135,7 +135,7 @@ func (d *controllerService) processModifyVolumeRequests(h *modifyVolumeRequestHa
 		select {
 		case req := <-h.requestChan:
 			process(req)
-		case <-time.After(d.driverOptions.modifyVolumeRequestHandlerTimeout):
+		case <-time.After(d.options.ModifyVolumeRequestHandlerTimeout):
 			d.modifyVolumeManager.requestHandlerMap.Delete(h.volumeID)
 			// At this point, no new requests can come in on the request channel because it has been removed from the map
 			// However, the request channel may still have requests waiting on it

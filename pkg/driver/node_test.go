@@ -2285,9 +2285,9 @@ func TestNodeGetInfo(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			driverOptions := &DriverOptions{
-				volumeAttachLimit:         tc.volumeAttachLimit,
-				reservedVolumeAttachments: tc.reservedVolumeAttachments,
+			options := &Options{
+				VolumeAttachLimit:         tc.volumeAttachLimit,
+				ReservedVolumeAttachments: tc.reservedVolumeAttachments,
 			}
 
 			mockMounter := NewMockMounter(mockCtl)
@@ -2314,7 +2314,7 @@ func TestNodeGetInfo(t *testing.T) {
 				mounter:          mockMounter,
 				deviceIdentifier: mockDeviceIdentifier,
 				inFlight:         internal.NewInFlight(),
-				driverOptions:    driverOptions,
+				options:          options,
 			}
 
 			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
