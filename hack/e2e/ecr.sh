@@ -23,6 +23,12 @@ function ecr_build_and_push() {
   IMAGE_TAG=${4}
   IMAGE_ARCH=${5}
 
+  REPO_LIST=$(aws ecr describe-repositories --region "${REGION}")
+  if [ $(jq ".repositories | map(.repositoryName) | index(\"${IMAGE_NAME}\")" <<<"${REPO_CHECK}") == "null" ]; then
+    loudecho "Creating missing ECR repository ${IMAGE_NAME}"
+    aws ecr create-repository --region "${REGION}" --repository-name "${IMAGE_NAME}"
+  fi
+
   loudecho "Building and pushing test driver image to ${IMAGE_NAME}:${IMAGE_TAG}"
   aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
