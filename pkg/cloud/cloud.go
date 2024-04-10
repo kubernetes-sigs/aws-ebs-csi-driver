@@ -1248,7 +1248,7 @@ func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success 
 		if isAWSErrorSnapshotNotFound(err) {
 			return false, ErrNotFound
 		}
-		return false, fmt.Errorf("DeleteSnapshot could not delete volume: %w", err)
+		return false, fmt.Errorf("DeleteSnapshot could not delete snapshot: %w", err)
 	}
 	return true, nil
 }
