@@ -3029,8 +3029,11 @@ func TestWaitForAttachmentState(t *testing.T) {
 			defer cancel()
 
 			switch tc.name {
-			case "success: detached", "failure: already assigned but wrong state":
+			case "success: detached":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil).AnyTimes()
+			case "failure: already assigned but wrong state":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil)
+				mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Any()).Return(nil, nil)
 			case "success: disk not found, assumed detached", "failure: disk not found, expected attached":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{
 					Code:    "InvalidVolume.NotFound",

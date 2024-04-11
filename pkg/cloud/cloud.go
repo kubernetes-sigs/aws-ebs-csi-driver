@@ -1024,6 +1024,15 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		// but DescribeVolume told us volume is detached, we will short-circuit this long wait loop and return error
 		// so as AttachDisk can be retried without waiting for 20 minutes.
 		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState != expectedState) {
+			request := &ec2.AttachVolumeInput{
+				Device:     aws.String(expectedDevice),
+				InstanceId: aws.String(expectedInstance),
+				VolumeId:   aws.String(volumeID),
+			}
+			_, err := c.ec2.AttachVolume(ctx, request)
+			if err != nil {
+				return false, fmt.Errorf("WaitForAttachmentState AttachVolume error, expected device but be attached but was %s, volumeID=%q, instanceID=%q, Device=%q, err=%w", attachmentState, volumeID, expectedInstance, expectedDevice, err)
+			}
 			return false, fmt.Errorf("attachment of disk %q failed, expected device to be attached but was %s", volumeID, attachmentState)
 		}
 
