@@ -23,6 +23,14 @@ function ecr_build_and_push() {
   IMAGE_TAG=${4}
   IMAGE_ARCH=${5}
 
+  # https://docs.aws.amazon.com/AmazonECR/latest/userguide/service-quotas.html
+  MAX_IMAGES=10000
+  IMAGE_COUNT=$(aws ecr list-images --repository-name ${IMAGE_NAME} --region ${REGION} --query 'length(imageIds[])')
+
+  if [ $IMAGE_COUNT -ge $MAX_IMAGES ]; then
+    loudecho "Repository image limit reached. Unable to push new images."
+  fi
+
   loudecho "Building and pushing test driver image to ${IMAGE_NAME}:${IMAGE_TAG}"
   aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
