@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -57,59 +56,26 @@ var (
 
 const isManagedByDriver = "true"
 
-// controllerService represents the controller service of CSI driver
-type controllerService struct {
+// ControllerService represents the controller service of CSI driver
+type ControllerService struct {
 	cloud               cloud.Cloud
 	inFlight            *internal.InFlight
-	driverOptions       *DriverOptions
+	options             *Options
 	modifyVolumeManager *modifyVolumeManager
-
 	rpc.UnimplementedModifyServer
 }
 
-var (
-	// NewMetadataFunc is a variable for the cloud.NewMetadata function that can
-	// be overwritten in unit tests.
-	NewMetadataFunc = cloud.NewMetadataService
-	// NewCloudFunc is a variable for the cloud.NewCloud function that can
-	// be overwritten in unit tests.
-	NewCloudFunc = cloud.NewCloud
-)
-
-// newControllerService creates a new controller service
-// it panics if failed to create the service
-func newControllerService(driverOptions *DriverOptions) controllerService {
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		klog.V(5).InfoS("[Debug] Retrieving region from metadata service")
-
-		cfg := cloud.MetadataServiceConfig{
-			EC2MetadataClient: cloud.DefaultEC2MetadataClient,
-			K8sAPIClient:      cloud.DefaultKubernetesAPIClient,
-		}
-		metadata, err := NewMetadataFunc(cfg, region)
-		if err != nil {
-			klog.ErrorS(err, "Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
-			panic(err)
-		}
-		region = metadata.GetRegion()
-	}
-
-	klog.InfoS("batching", "status", driverOptions.batching)
-	cloudSrv, err := NewCloudFunc(region, driverOptions.awsSdkDebugLog, driverOptions.userAgentExtra, driverOptions.batching)
-	if err != nil {
-		panic(err)
-	}
-
-	return controllerService{
-		cloud:               cloudSrv,
+// NewControllerService creates a new controller service
+func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
+	return &ControllerService{
+		cloud:               c,
+		options:             o,
 		inFlight:            internal.NewInFlight(),
-		driverOptions:       driverOptions,
 		modifyVolumeManager: newModifyVolumeManager(),
 	}
 }
 
-func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	klog.V(4).InfoS("CreateVolume: called", "args", *req)
 	if err := validateCreateVolumeRequest(req); err != nil {
 		return nil, err
@@ -325,22 +291,22 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
 
 	// fill volume tags
-	if d.driverOptions.kubernetesClusterID != "" {
-		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+	if d.options.KubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.options.KubernetesClusterID
 		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
-		volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
-		volumeTags[KubernetesClusterTag] = d.driverOptions.kubernetesClusterID
+		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
+		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
 	}
-	for k, v := range d.driverOptions.extraTags {
+	for k, v := range d.options.ExtraTags {
 		volumeTags[k] = v
 	}
 
-	addTags, err := template.Evaluate(scTags, tProps, d.driverOptions.warnOnInvalidTag)
+	addTags, err := template.Evaluate(scTags, tProps, d.options.WarnOnInvalidTag)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
 	}
 
-	if err = validateExtraTags(addTags, d.driverOptions.warnOnInvalidTag); err != nil {
+	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
 
@@ -398,7 +364,7 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 	return nil
 }
 
-func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (d *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	klog.V(4).InfoS("DeleteVolume: called", "args", *req)
 	if err := validateDeleteVolumeRequest(req); err != nil {
 		return nil, err
@@ -430,7 +396,7 @@ func validateDeleteVolumeRequest(req *csi.DeleteVolumeRequest) error {
 	return nil
 }
 
-func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerPublishVolume: called", "args", *req)
 	if err := validateControllerPublishVolumeRequest(req); err != nil {
 		return nil, err
@@ -479,7 +445,7 @@ func validateControllerPublishVolumeRequest(req *csi.ControllerPublishVolumeRequ
 	return nil
 }
 
-func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+func (d *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", *req)
 
 	if err := validateControllerUnpublishVolumeRequest(req); err != nil {
@@ -519,7 +485,7 @@ func validateControllerUnpublishVolumeRequest(req *csi.ControllerUnpublishVolume
 	return nil
 }
 
-func (d *controllerService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
+func (d *ControllerService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
 	klog.V(4).InfoS("ControllerGetCapabilities: called", "args", *req)
 	var caps []*csi.ControllerServiceCapability
 	for _, cap := range controllerCaps {
@@ -535,17 +501,17 @@ func (d *controllerService) ControllerGetCapabilities(ctx context.Context, req *
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
-func (d *controllerService) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
+func (d *ControllerService) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
 	klog.V(4).InfoS("GetCapacity: called", "args", *req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (d *controllerService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
+func (d *ControllerService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
 	klog.V(4).InfoS("ListVolumes: called", "args", *req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (d *controllerService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+func (d *ControllerService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 	klog.V(4).InfoS("ValidateVolumeCapabilities: called", "args", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -573,7 +539,7 @@ func (d *controllerService) ValidateVolumeCapabilities(ctx context.Context, req 
 	}, nil
 }
 
-func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerExpandVolume: called", "args", *req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -626,7 +592,7 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	}, nil
 }
 
-func (d *controllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerModifyVolume: called", "args", *req)
 
 	volumeID := req.GetVolumeId()
@@ -647,7 +613,7 @@ func (d *controllerService) ControllerModifyVolume(ctx context.Context, req *csi
 	return &csi.ControllerModifyVolumeResponse{}, nil
 }
 
-func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+func (d *ControllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerGetVolume: called", "args", *req)
 	return nil, status.Error(codes.Unimplemented, "")
 }
@@ -705,7 +671,7 @@ func isValidVolumeContext(volContext map[string]string) bool {
 	return true
 }
 
-func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.V(4).InfoS("CreateSnapshot: called", "args", req)
 	if err := validateCreateSnapshotRequest(req); err != nil {
 		return nil, err
@@ -762,21 +728,21 @@ func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		}
 	}
 
-	addTags, err := template.Evaluate(vscTags, vsProps, d.driverOptions.warnOnInvalidTag)
+	addTags, err := template.Evaluate(vscTags, vsProps, d.options.WarnOnInvalidTag)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
 	}
 
-	if err = validateExtraTags(addTags, d.driverOptions.warnOnInvalidTag); err != nil {
+	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
 
-	if d.driverOptions.kubernetesClusterID != "" {
-		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
+	if d.options.KubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.options.KubernetesClusterID
 		snapshotTags[resourceLifecycleTag] = ResourceLifecycleOwned
-		snapshotTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + snapshotName
+		snapshotTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + snapshotName
 	}
-	for k, v := range d.driverOptions.extraTags {
+	for k, v := range d.options.ExtraTags {
 		snapshotTags[k] = v
 	}
 
@@ -834,7 +800,7 @@ func validateCreateSnapshotRequest(req *csi.CreateSnapshotRequest) error {
 	return nil
 }
 
-func (d *controllerService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+func (d *ControllerService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	klog.V(4).InfoS("DeleteSnapshot: called", "args", req)
 	if err := validateDeleteSnapshotRequest(req); err != nil {
 		return nil, err
@@ -867,7 +833,7 @@ func validateDeleteSnapshotRequest(req *csi.DeleteSnapshotRequest) error {
 	return nil
 }
 
-func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+func (d *ControllerService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	klog.V(4).InfoS("ListSnapshots: called", "args", req)
 	var snapshots []*cloud.Snapshot
 

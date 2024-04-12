@@ -195,10 +195,10 @@ func TestValidateDriverOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateDriverOptions(&DriverOptions{
-				extraTags:                         tc.extraVolumeTags,
-				mode:                              tc.mode,
-				modifyVolumeRequestHandlerTimeout: tc.modifyVolumeTimeout,
+			err := ValidateDriverOptions(&Options{
+				ExtraTags:                         tc.extraVolumeTags,
+				Mode:                              tc.mode,
+				ModifyVolumeRequestHandlerTimeout: tc.modifyVolumeTimeout,
 			})
 			if !reflect.DeepEqual(err, tc.expErr) {
 				t.Fatalf("error not equal\ngot:\n%s\nexpected:\n%s", err, tc.expErr)
