@@ -667,7 +667,6 @@ func TestCreateDisk(t *testing.T) {
 		volState             string
 		diskOptions          *DiskOptions
 		expDisk              *Disk
-		cleanUpFailedVolume  bool
 		expErr               error
 		expCreateVolumeErr   error
 		expDescVolumeErr     error
@@ -919,9 +918,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("failed to get an available volume in EC2: DescribeVolumes generic error"),
+			expErr:               fmt.Errorf("timed out waiting for volume to create: DescribeVolumes generic error"),
 			expDescVolumeErr:     fmt.Errorf("DescribeVolumes generic error"),
-			cleanUpFailedVolume:  true,
 		},
 		{
 			name:       "fail: Volume is not ready to use, volume stuck in creating status and controller context deadline exceeded",
@@ -932,9 +930,8 @@ func TestCreateDisk(t *testing.T) {
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: "",
 			},
-			cleanUpFailedVolume:  true,
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("failed to get an available volume in EC2: context deadline exceeded"),
+			expErr:               fmt.Errorf("timed out waiting for volume to create: context deadline exceeded"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -1241,9 +1238,6 @@ func TestCreateDisk(t *testing.T) {
 				}
 				if len(tc.diskOptions.SnapshotID) > 0 {
 					mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
-				}
-				if tc.cleanUpFailedVolume == true {
-					mockEC2.EXPECT().DeleteVolume(gomock.Any(), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil)
 				}
 				if len(tc.diskOptions.AvailabilityZone) == 0 {
 					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
