@@ -172,6 +172,12 @@ Containers:
       --timeout=61s
 ```
 
+## IMDSv2 Support
+
+The driver supports the use of [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) (Instance Metadata Service Version 2).
+
+To use IMDSv2 with the driver in a containerized environment like Amazon EKS, please ensure that the hop limit for IMDSv2 responses is set to 2 or greater. This is because the default hop limit of 1 is incompatible with containerized applications on Kubernetes that run in a separate network namespace from the instance.
+
 ## CreateVolume (`StorageClass`) Parameters
 
 ### `ext4BigAlloc` and `ext4ClusterSize`
