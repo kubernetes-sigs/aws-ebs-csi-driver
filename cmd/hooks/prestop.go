@@ -7,6 +7,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -28,6 +29,8 @@ No unnecessary delay is added to the termination workflow, as the PreStop hook l
 If the PreStop hook hangs during its execution, the driver node pod will be forcefully terminated after terminationGracePeriodSeconds, defined in the pod spec.
 */
 
+const clusterAutoscalerTaint = "ToBeDeletedByClusterAutoscaler"
+
 func PreStop(clientset kubernetes.Interface) error {
 	klog.InfoS("PreStop: executing PreStop lifecycle hook")
 
@@ -37,17 +40,18 @@ func PreStop(clientset kubernetes.Interface) error {
 	}
 
 	node, err := fetchNode(clientset, nodeName)
-	if err != nil {
+	if k8serrors.IsNotFound(err) {
+		klog.InfoS("PreStop: node does not exist - assuming this is a termination event, checking for remaining VolumeAttachments", "node", nodeName)
+	} else if err != nil {
 		return err
-	}
-
-	if isNodeBeingDrained(node) {
+	} else if !isNodeBeingDrained(node) {
+		klog.InfoS("PreStop: node is not being drained, skipping VolumeAttachments check", "node", nodeName)
+		return nil
+	} else {
 		klog.InfoS("PreStop: node is being drained, checking for remaining VolumeAttachments", "node", nodeName)
-		return waitForVolumeAttachments(clientset, nodeName)
 	}
 
-	klog.InfoS("PreStop: node is not being drained, skipping VolumeAttachments check", "node", nodeName)
-	return nil
+	return waitForVolumeAttachments(clientset, nodeName)
 }
 
 func fetchNode(clientset kubernetes.Interface, nodeName string) (*v1.Node, error) {
@@ -60,11 +64,18 @@ func fetchNode(clientset kubernetes.Interface, nodeName string) (*v1.Node, error
 
 func isNodeBeingDrained(node *v1.Node) bool {
 	for _, taint := range node.Spec.Taints {
+		// Kubernetes common eviction taint (kubectl drain)
 		if taint.Key == v1.TaintNodeUnschedulable && taint.Effect == v1.TaintEffectNoSchedule {
 			return true
 		}
 
+		// Karpenter eviction taint
 		if corev1beta1.IsDisruptingTaint(taint) {
+			return true
+		}
+
+		// cluster-autoscaler eviction taint
+		if taint.Key == clusterAutoscalerTaint {
 			return true
 		}
 	}
