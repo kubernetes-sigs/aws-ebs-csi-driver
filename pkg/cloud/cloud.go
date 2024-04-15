@@ -613,14 +613,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	if err := c.waitForVolume(ctx, volumeID); err != nil {
-		// To avoid leaking volume, we should delete the volume just created
-		// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
-		if _, error := c.DeleteDisk(ctx, volumeID); error != nil {
-			klog.ErrorS(error, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
-		} else {
-			klog.V(5).InfoS("[Debug] volume is deleted because it is not in desired state within retry limit", "volumeID", volumeID)
-		}
-		return nil, fmt.Errorf("failed to get an available volume in EC2: %w", err)
+		return nil, fmt.Errorf("timed out waiting for volume to create: %w", err)
 	}
 
 	outpostArn := aws.ToString(response.OutpostArn)
