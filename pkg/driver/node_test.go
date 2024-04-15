@@ -34,6 +34,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
@@ -469,7 +470,7 @@ func TestNodeStageVolume(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			mockMetadata := cloud.NewMockMetadataService(mockCtl)
+			mockMetadata := metadata.NewMockMetadataService(mockCtl)
 			mockMounter := NewMockMounter(mockCtl)
 			mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -513,7 +514,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -544,7 +545,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -573,7 +574,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -604,7 +605,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -629,7 +630,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -653,7 +654,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -681,7 +682,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -734,7 +735,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -769,7 +770,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -803,7 +804,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -838,7 +839,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -877,7 +878,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -921,7 +922,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -957,7 +958,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1005,7 +1006,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1053,7 +1054,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1100,7 +1101,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1147,7 +1148,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1200,7 +1201,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1249,7 +1250,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1298,7 +1299,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1335,7 +1336,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1371,7 +1372,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1410,7 +1411,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1439,7 +1440,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1468,7 +1469,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1497,7 +1498,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1525,7 +1526,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1559,7 +1560,7 @@ func TestNodePublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1601,7 +1602,7 @@ func TestNodeExpandVolume(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := cloud.NewMockMetadataService(mockCtl)
+	mockMetadata := metadata.NewMockMetadataService(mockCtl)
 	mockMounter := NewMockMounter(mockCtl)
 	mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1699,7 +1700,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1728,7 +1729,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1753,7 +1754,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1778,7 +1779,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1805,7 +1806,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -1844,7 +1845,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "./test"
@@ -1879,7 +1880,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
@@ -1907,7 +1908,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
@@ -1935,7 +1936,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
-				mockMetadata := cloud.NewMockMetadataService(mockCtl)
+				mockMetadata := metadata.NewMockMetadataService(mockCtl)
 				mockMounter := NewMockMounter(mockCtl)
 				mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 				VolumePath := "/test"
@@ -1969,7 +1970,7 @@ func TestNodeGetCapabilities(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	mockMetadata := cloud.NewMockMetadataService(mockCtl)
+	mockMetadata := metadata.NewMockMetadataService(mockCtl)
 	mockMounter := NewMockMounter(mockCtl)
 	mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
@@ -2285,15 +2286,15 @@ func TestNodeGetInfo(t *testing.T) {
 			mockCtl := gomock.NewController(t)
 			defer mockCtl.Finish()
 
-			driverOptions := &DriverOptions{
-				volumeAttachLimit:         tc.volumeAttachLimit,
-				reservedVolumeAttachments: tc.reservedVolumeAttachments,
+			options := &Options{
+				VolumeAttachLimit:         tc.volumeAttachLimit,
+				ReservedVolumeAttachments: tc.reservedVolumeAttachments,
 			}
 
 			mockMounter := NewMockMounter(mockCtl)
 			mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
-			mockMetadata := cloud.NewMockMetadataService(mockCtl)
+			mockMetadata := metadata.NewMockMetadataService(mockCtl)
 			mockMetadata.EXPECT().GetInstanceID().Return(tc.instanceID)
 			mockMetadata.EXPECT().GetAvailabilityZone().Return(tc.availabilityZone)
 			mockMetadata.EXPECT().GetOutpostArn().Return(tc.outpostArn)
@@ -2314,7 +2315,7 @@ func TestNodeGetInfo(t *testing.T) {
 				mounter:          mockMounter,
 				deviceIdentifier: mockDeviceIdentifier,
 				inFlight:         internal.NewInFlight(),
-				driverOptions:    driverOptions,
+				options:          options,
 			}
 
 			resp, err := awsDriver.NodeGetInfo(context.TODO(), &csi.NodeGetInfoRequest{})
@@ -2709,7 +2710,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 func TestRemoveTaintInBackground(t *testing.T) {
 	mockRemovalCount := 0
-	mockRemovalFunc := func(_ cloud.KubernetesAPIClient) error {
+	mockRemovalFunc := func(_ metadata.KubernetesAPIClient) error {
 		mockRemovalCount += 1
 		if mockRemovalCount == 3 {
 			return nil

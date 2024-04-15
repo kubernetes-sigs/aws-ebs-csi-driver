@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -160,20 +160,20 @@ func TestFindDevicePath(t *testing.T) {
 			mockDeviceIdentifier := NewMockDeviceIdentifier(mockCtl)
 
 			nodeDriver := nodeService{
-				metadata:         &cloud.Metadata{},
+				metadata:         &metadata.Metadata{},
 				mounter:          mockMounter,
 				deviceIdentifier: mockDeviceIdentifier,
 				inFlight:         internal.NewInFlight(),
-				driverOptions:    &DriverOptions{},
+				options:          &Options{},
 			}
 
 			if tc.expectDevicePath == snowDevicePath+tc.partition {
 				nodeDriver = nodeService{
-					metadata:         &cloud.Metadata{Region: "snow"},
+					metadata:         &metadata.Metadata{Region: "snow"},
 					mounter:          mockMounter,
 					deviceIdentifier: mockDeviceIdentifier,
 					inFlight:         internal.NewInFlight(),
-					driverOptions:    &DriverOptions{},
+					options:          &Options{},
 				}
 			}
 
