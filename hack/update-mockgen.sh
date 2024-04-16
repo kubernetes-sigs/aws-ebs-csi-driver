@@ -21,7 +21,7 @@ BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
 # Source-based mocking for internal interfaces
 "${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_cloud.go -source pkg/cloud/interface.go
 "${BIN}/mockgen" -package metadata -destination=./pkg/cloud/metadata/mock_metadata.go -source pkg/cloud/metadata/interface.go
-"${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_mount.go -source pkg/driver/mount.go
+"${BIN}/mockgen" -package mounter -destination=./pkg/mounter/mock_mount.go -source pkg/mounter/mount.go
 "${BIN}/mockgen" -package mounter -destination=./pkg/mounter/mock_mount_windows.go -source pkg/mounter/safe_mounter_windows.go
 "${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_ec2.go -source pkg/cloud/ec2_interface.go EC2API
 
@@ -30,8 +30,3 @@ BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_corev1.go k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface,NodeInterface
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_storagev1.go k8s.io/client-go/kubernetes/typed/storage/v1 VolumeAttachmentInterface,StorageV1Interface
 "${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_storagev1_csinode.go k8s.io/client-go/kubernetes/typed/storage/v1 CSINodeInterface
-
-# Fixes "Mounter Type cannot implement 'Mounter' as it has a non-exported method and is defined in a different package"
-# See https://github.com/kubernetes/mount-utils/commit/a20fcfb15a701977d086330b47b7efad51eb608e for context.
-sed -i '/type MockMounter struct {/a \\tmount_utils.Interface' pkg/driver/mock_mount.go
-sed -i '/type MockProxyMounter struct {/a \\tmount.Interface' pkg/mounter/mock_mount_windows.go

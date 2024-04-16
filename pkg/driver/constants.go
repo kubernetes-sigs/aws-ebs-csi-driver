@@ -32,12 +32,6 @@ const (
 	VolumeAttributePartition = "partition"
 )
 
-// constants of disk partition suffix
-const (
-	diskPartitionSuffix     = ""
-	nvmeDiskPartitionSuffix = "p"
-)
-
 // constants of keys in volume parameters
 const (
 	// VolumeTypeKey represents key for volume type
@@ -160,12 +154,6 @@ const (
 const (
 	DefaultCSIEndpoint                       = "unix://tmp/csi.sock"
 	DefaultModifyVolumeRequestHandlerTimeout = 2 * time.Second
-)
-
-// constants for disk block size
-const (
-	//DefaultBlockSize represents the default block size (4KB)
-	DefaultBlockSize = 4096
 )
 
 // constants for fstypes

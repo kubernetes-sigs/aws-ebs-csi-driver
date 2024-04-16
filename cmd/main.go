@@ -28,6 +28,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	flag "github.com/spf13/pflag"
 	"k8s.io/component-base/featuregate"
 	logsapi "k8s.io/component-base/logs/api/v1"
@@ -132,19 +133,33 @@ func main() {
 		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics")
 	}
 
+	cfg := metadata.MetadataServiceConfig{
+		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
+		K8sAPIClient:      metadata.DefaultKubernetesAPIClient,
+	}
+
 	region := os.Getenv("AWS_REGION")
+	var md metadata.MetadataService
+	var metadataErr error
+
 	if region == "" {
 		klog.V(5).InfoS("[Debug] Retrieving region from metadata service")
-		cfg := metadata.MetadataServiceConfig{
-			EC2MetadataClient: metadata.DefaultEC2MetadataClient,
-			K8sAPIClient:      metadata.DefaultKubernetesAPIClient,
-		}
-		metadata, metadataErr := metadata.NewMetadataService(cfg, region)
+		md, metadataErr = metadata.NewMetadataService(cfg, region)
 		if metadataErr != nil {
 			klog.ErrorS(metadataErr, "Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
-			panic(err)
+			panic(metadataErr)
 		}
-		region = metadata.GetRegion()
+		region = md.GetRegion()
+	}
+
+	if md == nil {
+		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
+			md, metadataErr = metadata.NewMetadataService(cfg, region)
+			if metadataErr != nil {
+				klog.ErrorS(metadataErr, "failed to initialize metadata service")
+				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+			}
+		}
 	}
 
 	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching)
@@ -153,7 +168,17 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	drv, err := driver.NewDriver(cloud, &options)
+	m, err := mounter.NewNodeMounter()
+	if err != nil {
+		panic(err)
+	}
+
+	k8sClient, err := cfg.K8sAPIClient()
+	if err != nil {
+		klog.V(2).InfoS("Failed to setup k8s client")
+	}
+
+	drv, err := driver.NewDriver(cloud, &options, m, md, k8sClient)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
