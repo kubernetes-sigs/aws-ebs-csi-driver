@@ -24,9 +24,12 @@ import (
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
@@ -56,12 +59,12 @@ const (
 
 type Driver struct {
 	controller *ControllerService
-	nodeService
-	srv     *grpc.Server
-	options *Options
+	node       *NodeService
+	srv        *grpc.Server
+	options    *Options
 }
 
-func NewDriver(c cloud.Cloud, o *Options) (*Driver, error) {
+func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
 	if err := ValidateDriverOptions(o); err != nil {
@@ -76,10 +79,10 @@ func NewDriver(c cloud.Cloud, o *Options) (*Driver, error) {
 	case ControllerMode:
 		driver.controller = NewControllerService(c, o)
 	case NodeMode:
-		driver.nodeService = newNodeService(o)
+		driver.node = NewNodeService(o, md, m, k)
 	case AllMode:
 		driver.controller = NewControllerService(c, o)
-		driver.nodeService = newNodeService(o)
+		driver.node = NewNodeService(o, md, m, k)
 	default:
 		return nil, fmt.Errorf("unknown mode: %s", o.Mode)
 	}
@@ -122,10 +125,10 @@ func (d *Driver) Run() error {
 		csi.RegisterControllerServer(d.srv, d.controller)
 		rpc.RegisterModifyServer(d.srv, d.controller)
 	case NodeMode:
-		csi.RegisterNodeServer(d.srv, d)
+		csi.RegisterNodeServer(d.srv, d.node)
 	case AllMode:
 		csi.RegisterControllerServer(d.srv, d.controller)
-		csi.RegisterNodeServer(d.srv, d)
+		csi.RegisterNodeServer(d.srv, d.node)
 		rpc.RegisterModifyServer(d.srv, d.controller)
 	default:
 		return fmt.Errorf("unknown mode: %s", d.options.Mode)
