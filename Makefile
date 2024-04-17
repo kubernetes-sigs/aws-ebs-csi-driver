@@ -54,6 +54,7 @@ ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
 CLUSTER_NAME?=ebs-csi-e2e.k8s.local
 CLUSTER_TYPE?=kops
 WINDOWS?=false
+WINDOWS_HOSTPROCESS?=false
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
@@ -143,6 +144,15 @@ e2e/external-arm64: bin/helm bin/kubetest2
 
 .PHONY: e2e/external-windows
 e2e/external-windows: bin/helm bin/kubetest2
+	WINDOWS=true \
+	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
+	GINKGO_PARALLEL=15 \
+	EBS_INSTALL_SNAPSHOT="false" \
+	./hack/e2e/run.sh
+
+.PHONY: e2e/external-windows-hostprocess
+e2e/external-windows-hostprocess: bin/helm bin/kubetest2
+	WINDOWS_HOSTPROCESS=true \
 	WINDOWS=true \
 	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
 	GINKGO_PARALLEL=15 \

@@ -83,6 +83,7 @@ if [[ "${HELM_CT_TEST}" != true ]]; then
       --set image.repository="${IMAGE_NAME}"
       --set image.tag="${IMAGE_TAG}"
       --set node.enableWindows="${WINDOWS}"
+      --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
       --set=controller.k8sTagClusterId="${CLUSTER_NAME}"
       --timeout 10m0s
       --wait
