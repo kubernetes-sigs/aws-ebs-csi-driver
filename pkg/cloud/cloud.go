@@ -281,6 +281,7 @@ type cloud struct {
 	ec2    EC2API
 	dm     dm.DeviceManager
 	bm     *batcherManager
+	rm     *retryManager
 }
 
 var _ Cloud = &cloud{}
@@ -328,6 +329,8 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 			RecordRequestsMiddleware(),
 			RecordThrottledRequestsMiddleware(),
 		)
+
+		o.RetryMaxAttempts = retryMaxAttempt //  Retry EC2 API calls at sdk level until request contexts are cancelled
 	})
 
 	var bm *batcherManager
@@ -336,11 +339,14 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		bm = newBatcherManager(svc)
 	}
 
+	rm := newRetryManager()
+
 	return &cloud{
 		region: region,
 		dm:     dm.NewDeviceManager(),
 		ec2:    svc,
 		bm:     bm,
+		rm:     rm,
 	}
 }
 
@@ -591,7 +597,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		requestInput.SnapshotId = aws.String(snapshotID)
 	}
 
-	response, err := c.ec2.CreateVolume(ctx, requestInput)
+	response, err := c.ec2.CreateVolume(ctx, requestInput, func(o *ec2.Options) {
+		o.Retryer = c.rm.createVolumeRetryer
+	})
 	if err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return nil, ErrNotFound
@@ -723,7 +731,9 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 	if options.Throughput != 0 {
 		req.Throughput = aws.Int32(options.Throughput)
 	}
-	response, err := c.ec2.ModifyVolume(ctx, req)
+	response, err := c.ec2.ModifyVolume(ctx, req, func(o *ec2.Options) {
+		o.Retryer = c.rm.modifyVolumeRetryer
+	})
 	if err != nil {
 		if isAWSErrorInvalidParameter(err) {
 			// Wrap error to preserve original message from AWS as to why this was an invalid argument
@@ -745,7 +755,9 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	request := &ec2.DeleteVolumeInput{VolumeId: &volumeID}
-	if _, err := c.ec2.DeleteVolume(ctx, request); err != nil {
+	if _, err := c.ec2.DeleteVolume(ctx, request, func(o *ec2.Options) {
+		o.Retryer = c.rm.deleteVolumeRetryer
+	}); err != nil {
 		if isAWSErrorVolumeNotFound(err) {
 			return false, ErrNotFound
 		}
@@ -850,7 +862,9 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 			VolumeId:   aws.String(volumeID),
 		}
 
-		resp, attachErr := c.ec2.AttachVolume(ctx, request)
+		resp, attachErr := c.ec2.AttachVolume(ctx, request, func(o *ec2.Options) {
+			o.Retryer = c.rm.attachVolumeRetryer
+		})
 		if attachErr != nil {
 			if isAWSErrorBlockDeviceInUse(attachErr) {
 				cacheMutex.Lock()
@@ -923,7 +937,9 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err = c.ec2.DetachVolume(ctx, request)
+	_, err = c.ec2.DetachVolume(ctx, request, func(o *ec2.Options) {
+		o.Retryer = c.rm.detachVolumeRetryer
+	})
 	if err != nil {
 		if isAWSErrorIncorrectState(err) ||
 			isAWSErrorInvalidAttachmentNotFound(err) ||
@@ -1225,7 +1241,9 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		Description:       aws.String(descriptions),
 	}
 
-	res, err := c.ec2.CreateSnapshot(ctx, request)
+	res, err := c.ec2.CreateSnapshot(ctx, request, func(o *ec2.Options) {
+		o.Retryer = c.rm.createSnapshotRetryer
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
@@ -1246,7 +1264,9 @@ func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success 
 	request := &ec2.DeleteSnapshotInput{}
 	request.SnapshotId = aws.String(snapshotID)
 	request.DryRun = aws.Bool(false)
-	if _, err := c.ec2.DeleteSnapshot(ctx, request); err != nil {
+	if _, err := c.ec2.DeleteSnapshot(ctx, request, func(o *ec2.Options) {
+		o.Retryer = c.rm.deleteSnapshotRetryer
+	}); err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return false, ErrNotFound
 		}
@@ -1353,7 +1373,9 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 		SourceSnapshotIds: []string{snapshotID},
 	}
 	klog.V(4).InfoS("Creating Fast Snapshot Restores", "snapshotID", snapshotID, "availabilityZones", availabilityZones)
-	response, err := c.ec2.EnableFastSnapshotRestores(ctx, request)
+	response, err := c.ec2.EnableFastSnapshotRestores(ctx, request, func(o *ec2.Options) {
+		o.Retryer = c.rm.enableFastSnapshotRestoresRetryer
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -1709,7 +1731,9 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 	}
 
 	if c.bm == nil || !isBatchable {
-		mod, err := c.ec2.DescribeVolumesModifications(ctx, request)
+		mod, err := c.ec2.DescribeVolumesModifications(ctx, request, func(o *ec2.Options) {
+			o.Retryer = c.rm.unbatchableDescribeVolumesModificationsRetryer
+		})
 		if err != nil {
 			if isAWSErrorModificationNotFound(err) {
 				return nil, VolumeNotBeingModified
