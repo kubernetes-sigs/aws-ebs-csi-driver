@@ -34,6 +34,10 @@ type Options struct {
 	Endpoint string
 	// HttpEndpoint is the TCP network address where the HTTP server for metrics will listen
 	HttpEndpoint string
+	// MetricsCertFile is the location of the certificate for serving the metrics server over HTTPS
+	MetricsCertFile string
+	// MetricsKeyFile is the location of the key for serving the metrics server over HTTPS
+	MetricsKeyFile string
 	// EnableOtelTracing is a flag to enable opentelemetry tracing for the driver
 	EnableOtelTracing bool
 
@@ -83,6 +87,8 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 	// Server options
 	f.StringVar(&o.Endpoint, "endpoint", DefaultCSIEndpoint, "Endpoint for the CSI driver server")
 	f.StringVar(&o.HttpEndpoint, "http-endpoint", "", "The TCP network address where the HTTP server for metrics will listen (example: `:8080`). The default is empty string, which means the server is disabled.")
+	f.StringVar(&o.MetricsCertFile, "metrics-cert-file", "", "The path to a certificate to use for serving the metrics server over HTTPS. If the certificate is signed by a certificate authority, this file should be the concatenation of the server's certificate, any intermediates, and the CA's certificate. If this is non-empty, --http-endpoint and --metrics-key-file MUST also be non-empty.")
+	f.StringVar(&o.MetricsKeyFile, "metrics-key-file", "", "The path to a key to use for serving the metrics server over HTTPS. If this is non-empty, --http-endpoint and --metrics-cert-file MUST also be non-empty.")
 	f.BoolVar(&o.EnableOtelTracing, "enable-otel-tracing", false, "To enable opentelemetry tracing for the driver. The tracing is disabled by default. Configure the exporter endpoint with OTEL_EXPORTER_OTLP_ENDPOINT and other env variables, see https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration.")
 
 	// Controller options
@@ -104,8 +110,21 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 }
 
 func (o *Options) Validate() error {
-	if o.VolumeAttachLimit != -1 && o.ReservedVolumeAttachments != -1 {
-		return fmt.Errorf("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
+	if o.Mode == AllMode || o.Mode == NodeMode {
+		if o.VolumeAttachLimit != -1 && o.ReservedVolumeAttachments != -1 {
+			return fmt.Errorf("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
+		}
 	}
+
+	if o.MetricsCertFile != "" || o.MetricsKeyFile != "" {
+		if o.HttpEndpoint == "" {
+			return fmt.Errorf("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
+		} else if o.MetricsCertFile == "" {
+			return fmt.Errorf("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
+		} else if o.MetricsKeyFile == "" {
+			return fmt.Errorf("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
+		}
+	}
+
 	return nil
 }

@@ -20,6 +20,12 @@ func TestAddFlags(t *testing.T) {
 	if err := f.Set("http-endpoint", ":8080"); err != nil {
 		t.Errorf("error setting http-endpoint: %v", err)
 	}
+	if err := f.Set("metrics-cert-file", "/https.crt"); err != nil {
+		t.Errorf("error setting metrics-cert-file: %v", err)
+	}
+	if err := f.Set("metrics-key-file", "/https.key"); err != nil {
+		t.Errorf("error setting metrics-key-file: %v", err)
+	}
 	if err := f.Set("enable-otel-tracing", "true"); err != nil {
 		t.Errorf("error setting enable-otel-tracing: %v", err)
 	}
@@ -89,7 +95,7 @@ func TestAddFlags(t *testing.T) {
 	}
 }
 
-func TestValidate(t *testing.T) {
+func TestValidateAttachmentLimits(t *testing.T) {
 	tests := []struct {
 		name                string
 		volumeAttachLimit   int64
@@ -127,6 +133,7 @@ func TestValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &Options{
+				Mode:                      NodeMode,
 				VolumeAttachLimit:         tt.volumeAttachLimit,
 				ReservedVolumeAttachments: tt.reservedAttachments,
 			}
@@ -138,6 +145,64 @@ func TestValidate(t *testing.T) {
 
 			if err != nil && err.Error() != tt.errMsg {
 				t.Errorf("Options.Validate() error message = %v, wantErrMsg %v", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestValidateMetricsHTTPS(t *testing.T) {
+	tests := []struct {
+		name            string
+		httpEndpoint    string
+		metricsCertFile string
+		metricsKeyFile  string
+		expectError     bool
+	}{
+		{
+			name: "disabled",
+		},
+		{
+			name:         "only http",
+			httpEndpoint: ":8080",
+		},
+		{
+			name:            "https with all",
+			httpEndpoint:    ":443",
+			metricsCertFile: "/https.crt",
+			metricsKeyFile:  "/https.key",
+		},
+		{
+			name:            "https with endpoint missing",
+			metricsCertFile: "/https.crt",
+			metricsKeyFile:  "/https.key",
+			expectError:     true,
+		},
+		{
+			name:           "https with cert missing",
+			httpEndpoint:   ":443",
+			metricsKeyFile: "/https.key",
+			expectError:    true,
+		},
+		{
+			name:            "https with key missing",
+			httpEndpoint:    ":443",
+			metricsCertFile: "/https.crt",
+			expectError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := &Options{
+				Mode:            ControllerMode,
+				HttpEndpoint:    tt.httpEndpoint,
+				MetricsCertFile: tt.metricsCertFile,
+				MetricsKeyFile:  tt.metricsKeyFile,
+			}
+
+			err := o.Validate()
+			if (err != nil) != tt.expectError {
+				t.Errorf("Options.Validate() error = %v, wantErr %v", err, tt.expectError)
 			}
 		})
 	}

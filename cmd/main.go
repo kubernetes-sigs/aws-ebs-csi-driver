@@ -89,7 +89,12 @@ func main() {
 	options.AddFlags(fs)
 
 	if err = fs.Parse(args); err != nil {
-		panic(err)
+		klog.ErrorS(err, "Failed to parse options")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+	if err = options.Validate(); err != nil {
+		klog.ErrorS(err, "Invalid options")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 
 	err = logsapi.ValidateAndApply(c, featureGate)
@@ -130,7 +135,7 @@ func main() {
 
 	if options.HttpEndpoint != "" {
 		r := metrics.InitializeRecorder()
-		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics")
+		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 	}
 
 	cfg := metadata.MetadataServiceConfig{
