@@ -72,7 +72,7 @@ func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map
 }
 
 // InitializeMetricsHandler starts a new HTTP server to expose the metrics.
-func (m *metricRecorder) InitializeMetricsHandler(address, path string) {
+func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFile string) {
 	if m == nil {
 		klog.InfoS("InitializeMetricsHandler: metric recorder is not initialized")
 		return
@@ -92,9 +92,16 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path string) {
 	}
 
 	go func() {
+		var err error
 		klog.InfoS("Metric server listening", "address", address, "path", path)
 
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if certFile != "" {
+			err = server.ListenAndServeTLS(certFile, keyFile)
+		} else {
+			err = server.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
 			klog.ErrorS(err, "Failed to start metric server", "address", address, "path", path)
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
