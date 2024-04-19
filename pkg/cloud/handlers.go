@@ -38,34 +38,25 @@ func RecordRequestsMiddleware() func(*middleware.Stack) error {
 			output, metadata, err = next.HandleFinalize(ctx, input)
 			labels := createLabels(ctx)
 			if err != nil {
-				metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+				var apiErr smithy.APIError
+				if errors.As(err, &apiErr) {
+					if apiErr.ErrorCode() == requestLimitExceededErrorCode {
+						operationName := awsmiddleware.GetOperationName(ctx)
+						labels = map[string]string{
+							"operation_name": operationName,
+						}
+						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+						klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", operationName)
+					} else {
+						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+					}
+				}
 			} else {
 				duration := time.Since(start).Seconds()
 				metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
 			}
 			return output, metadata, err
-		}), middleware.Before)
-	}
-}
-
-// RecordThrottledRequestsHandler is added to the AfterRetry chain; called after any error
-func RecordThrottledRequestsMiddleware() func(*middleware.Stack) error {
-	return func(stack *middleware.Stack) error {
-		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("RecordThrottledRequestsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
-			output, metadata, err = next.HandleFinalize(ctx, input)
-			if err != nil {
-				var apiErr smithy.APIError
-				if errors.As(err, &apiErr) && apiErr.ErrorCode() == requestLimitExceededErrorCode {
-					operationName := awsmiddleware.GetOperationName(ctx)
-					labels := map[string]string{
-						"operation_name": operationName,
-					}
-					metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
-					klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", operationName)
-				}
-			}
-			return output, metadata, err
-		}), middleware.Before)
+		}), middleware.After)
 	}
 }
 
