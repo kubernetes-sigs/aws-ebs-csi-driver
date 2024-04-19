@@ -327,7 +327,6 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
 			RecordRequestsMiddleware(),
-			RecordThrottledRequestsMiddleware(),
 		)
 
 		o.RetryMaxAttempts = retryMaxAttempt //  Retry EC2 API calls at sdk level until request contexts are cancelled
