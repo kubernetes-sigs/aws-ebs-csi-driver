@@ -1,7 +1,12 @@
 # Helm chart
+## v2.30.0
+* Bump driver version to `v1.30.0`
+* Update voluemessnapshotcontents/status RBAC ([#1991](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1991), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Upgrade dependencies ([#2016](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2016), [@torredil](https://github.com/torredil))
+
 ## v2.29.1
 * Bump driver version to `v1.29.1`
-* Remove `--reuse-values` deprecation warning 
+* Remove `--reuse-values` deprecation warning
 
 ## v2.29.0
 ### Urgent Upgrade Notes
