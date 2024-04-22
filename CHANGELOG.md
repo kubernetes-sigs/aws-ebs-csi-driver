@@ -1,3 +1,23 @@
+# v1.30.0
+### Notable Changes
+* Add retry manager to reduce RateLimitExceeded errors ([#2010](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2010), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add options to run metrics endpoint over HTTPS ([#2014](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2014), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug Fixes
+* Remove DeleteDisk call in CreateDisk path ([#2009](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2009), [@ConnorJC3](https://github.com/ConnorJC3))
+* Consolidate request handling in RecordRequestsMiddleware ([#2013](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2013), [@torredil](https://github.com/torredil))
+* Run taint removal only if Kubernetes API is available ([#2015](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2015), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Migrate to AWS SDKv2 ([#1963](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1963), [@torredil](https://github.com/torredil))
+* Batch EC2 DescribeVolumesModifications API calls ([#1965](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1965), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Improve configuration management; Improve the relationship between driver, controller, & cloud ([#1995](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1995), [@torredil](https://github.com/torredil))
+* Fix CVE G0-2024-2687 by bumping go and /x/net dependencies ([#1996](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1996), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Fix relationship between node service and mounter interface ([#1997](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1997), [@torredil](https://github.com/torredil))
+* Fix DeleteSnapshot error message ([#2000](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2000), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add explicit AttachVolume call in WaitForAttachmentState ([#2005](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2005), [@torredil](https://github.com/torredil))
+* Handle deleted Node case in hook; Add support for CAS taint ([#2007](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2007), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.29.1
 ### Bug Fixes
 * Correctly forward os.version for Windows images in multi-arch manifests ([#1985](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1985), [@ConnorJC3](https://github.com/ConnorJC3))
