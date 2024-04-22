@@ -60,6 +60,7 @@ import (
 	v116 "k8s.io/client-go/kubernetes/typed/storage/v1"
 	v1alpha17 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	v1beta115 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
+	v1alpha18 "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
 )
 
 // MockKubernetesClient is a mock of Interface interface.
@@ -811,4 +812,18 @@ func (m *MockKubernetesClient) StorageV1beta1() v1beta115.StorageV1beta1Interfac
 func (mr *MockKubernetesClientMockRecorder) StorageV1beta1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StorageV1beta1", reflect.TypeOf((*MockKubernetesClient)(nil).StorageV1beta1))
+}
+
+// StoragemigrationV1alpha1 mocks base method.
+func (m *MockKubernetesClient) StoragemigrationV1alpha1() v1alpha18.StoragemigrationV1alpha1Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoragemigrationV1alpha1")
+	ret0, _ := ret[0].(v1alpha18.StoragemigrationV1alpha1Interface)
+	return ret0
+}
+
+// StoragemigrationV1alpha1 indicates an expected call of StoragemigrationV1alpha1.
+func (mr *MockKubernetesClientMockRecorder) StoragemigrationV1alpha1() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoragemigrationV1alpha1", reflect.TypeOf((*MockKubernetesClient)(nil).StoragemigrationV1alpha1))
 }

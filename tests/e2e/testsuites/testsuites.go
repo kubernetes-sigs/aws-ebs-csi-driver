@@ -658,7 +658,7 @@ func (t *TestPod) Create() {
 }
 
 func (t *TestPod) WaitForSuccess() {
-	err := e2epod.WaitForPodSuccessInNamespaceSlow(context.Background(), t.client, t.pod.Name, t.namespace.Name)
+	err := e2epod.WaitForPodSuccessInNamespace(context.Background(), t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 }
 
@@ -668,7 +668,7 @@ func (t *TestPod) WaitForRunning() {
 }
 
 // Ideally this would be in "k8s.io/kubernetes/test/e2e/framework"
-// Similar to framework.WaitForPodSuccessInNamespaceSlow
+// Similar to framework.WaitForPodSuccessInNamespace
 var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 	switch pod.Status.Phase {
 	case v1.PodFailed:
