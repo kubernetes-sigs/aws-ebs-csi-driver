@@ -96,11 +96,13 @@ func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, 
 	region := os.Getenv("AWS_REGION")
 	klog.InfoS("regionFromSession Node service", "region", region)
 
-	// Remove taint from node to indicate driver startup success
-	// This is done at the last possible moment to prevent race conditions or false positive removals
-	time.AfterFunc(taintRemovalInitialDelay, func() {
-		removeTaintInBackground(k, taintRemovalBackoff, removeNotReadyTaint)
-	})
+	if k != nil {
+		// Remove taint from node to indicate driver startup success
+		// This is done at the last possible moment to prevent race conditions or false positive removals
+		time.AfterFunc(taintRemovalInitialDelay, func() {
+			removeTaintInBackground(k, taintRemovalBackoff, removeNotReadyTaint)
+		})
+	}
 
 	return &NodeService{
 		metadata: md,
