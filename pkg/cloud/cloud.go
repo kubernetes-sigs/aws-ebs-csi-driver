@@ -87,17 +87,22 @@ var (
 		VolumeTypeStandard,
 	}
 
+	volumeCreationPollInitialDelay    = 1250 * time.Millisecond
+	volumeCreationPollBackoffDuration = 500 * time.Millisecond
+	volumeCreationPollBackoffFactor   = 1.5
+	volumeCreationPollBackoffSteps    = 25
+	volumeCreationPollBackoffCap      = 3 * time.Second
+
 	volumeModificationDuration   = 1 * time.Second
 	volumeModificationWaitFactor = 1.7
 	volumeModificationWaitSteps  = 10
 
-	volumeAttachmentStatePollSteps = 13
+	volumeAttachmentStatePollSteps  = 13
+	volumeAttachmentStatePollDelay  = 1 * time.Second
+	volumeAttachmentStatePollFactor = 1.8
 )
 
 const (
-	volumeAttachmentStatePollDelay  = 1 * time.Second
-	volumeAttachmentStatePollFactor = 1.8
-
 	volumeDetachedState = "detached"
 	volumeAttachedState = "attached"
 )
@@ -1527,20 +1532,27 @@ func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshot
 }
 
 // waitForVolume waits for volume to be in the "available" state.
-// On a random AWS account (shared among several developers) it took 4s on average.
 func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
+	// Based on our testing in us-west-2 and ap-south-1, the median/p99 time until volume creation is ~1.5/~4 seconds.
+	// We have found that the following parameters are optimal for minimizing provisioning time and DescribeVolumes calls
+	// we queue DescribeVolume calls after [1.25, 0.5, 0.75, 1.125, 1.7, 2.5, 3] seconds.
+	// In total, we wait for ~60 seconds.
 	var (
-		checkInterval = 3 * time.Second
-		// This timeout can be "ovewritten" if the value returned by ctx.Deadline()
-		// comes sooner. That value comes from the external provisioner controller.
-		checkTimeout = 1 * time.Minute
+		backoff = wait.Backoff{
+			Duration: volumeCreationPollBackoffDuration,
+			Factor:   volumeCreationPollBackoffFactor,
+			Steps:    volumeCreationPollBackoffSteps,
+			Cap:      volumeCreationPollBackoffCap,
+		}
 	)
+
+	time.Sleep(volumeCreationPollInitialDelay)
 
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []string{volumeID},
 	}
 
-	err := wait.PollUntilContextTimeout(ctx, checkInterval, checkTimeout, false, func(ctx context.Context) (done bool, err error) {
+	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (done bool, err error) {
 		vol, err := c.getVolume(ctx, request)
 		if err != nil {
 			return true, err
