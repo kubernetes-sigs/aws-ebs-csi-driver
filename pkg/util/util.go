@@ -23,13 +23,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (
-	GiB = int64(1024 * 1024 * 1024)
+	GiB              = int64(1024 * 1024 * 1024)
+	DefaultBlockSize = 4096
 )
 
 var (
@@ -66,7 +68,26 @@ func GiBToBytes(volumeSizeGiB int32) int64 {
 	return int64(volumeSizeGiB) * GiB
 }
 
-func ParseEndpoint(endpoint string) (string, string, error) {
+func ParseEndpoint(endpoint string, hostprocess bool) (string, string, error) {
+	if runtime.GOOS == "windows" && hostprocess {
+		parts := strings.SplitN(endpoint, "://", 2)
+		if len(parts) != 2 {
+			return "", "", fmt.Errorf("invalid endpoint format: %s", endpoint)
+		}
+		scheme := strings.ToLower(parts[0])
+		addr := parts[1]
+
+		// Remove the socket file if it already exists
+		if scheme == "unix" {
+			if _, err := os.Stat(addr); err == nil {
+				if err := os.Remove(addr); err != nil {
+					return "", "", fmt.Errorf("failed to remove existing socket file: %w", err)
+				}
+			}
+		}
+		return scheme, addr, nil
+	}
+
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", "", fmt.Errorf("could not parse endpoint: %w", err)
@@ -113,4 +134,13 @@ func IsSBE(region string) bool {
 // StringIsAlphanumeric returns true if a given string contains only English letters or numbers
 func StringIsAlphanumeric(s string) bool {
 	return isAlphanumericRegex(s)
+}
+
+// NormalizeWindowsPath normalizes a Windows path
+func NormalizeWindowsPath(path string) string {
+	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	if strings.HasPrefix(normalizedPath, "\\") {
+		normalizedPath = "c:" + normalizedPath
+	}
+	return normalizedPath
 }

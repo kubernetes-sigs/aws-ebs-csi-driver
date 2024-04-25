@@ -168,14 +168,15 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	m, err := mounter.NewNodeMounter()
+	m, err := mounter.NewNodeMounter(options.WindowsHostProcess)
 	if err != nil {
-		panic(err)
+		klog.ErrorS(err, "failed to create node mounter")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	k8sClient, err := cfg.K8sAPIClient()
 	if err != nil {
-		klog.V(2).InfoS("Failed to setup k8s client")
+		klog.V(2).InfoS("Failed to setup k8s client", "err", err)
 	}
 
 	drv, err := driver.NewDriver(cloud, &options, m, md, k8sClient)

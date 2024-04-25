@@ -42,6 +42,12 @@ test-e2e-external-eks-windows)
   export CLUSTER_TYPE="eksctl"
   export WINDOWS="true"
   ;;
+test-e2e-external-windows-hostprocess)
+  TEST="external-windows-hostprocess"
+  export CLUSTER_TYPE="eksctl"
+  export WINDOWS="true"
+  export WINDOWS_HOSTPROCESS="true"
+  ;;
 test-e2e-external-kustomize)
   TEST="external-kustomize"
   ;;
