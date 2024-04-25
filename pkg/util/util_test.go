@@ -113,7 +113,7 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			scheme, addr, err := ParseEndpoint(tc.endpoint)
+			scheme, addr, err := ParseEndpoint(tc.endpoint, false)
 
 			if tc.expErr != nil {
 				if err.Error() != tc.expErr.Error() {

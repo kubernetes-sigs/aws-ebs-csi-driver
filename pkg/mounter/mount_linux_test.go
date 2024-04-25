@@ -94,7 +94,7 @@ func TestMakeDir(t *testing.T) {
 
 	targetPath := filepath.Join(dir, "targetdir")
 
-	mountObj, err := NewNodeMounter()
+	mountObj, err := NewNodeMounter(false)
 	if err != nil {
 		t.Fatalf("error creating mounter %v", err)
 	}
@@ -122,7 +122,7 @@ func TestMakeFile(t *testing.T) {
 
 	targetPath := filepath.Join(dir, "targetfile")
 
-	mountObj, err := NewNodeMounter()
+	mountObj, err := NewNodeMounter(false)
 	if err != nil {
 		t.Fatalf("error creating mounter %v", err)
 	}
@@ -151,7 +151,7 @@ func TestPathExists(t *testing.T) {
 
 	targetPath := filepath.Join(dir, "notafile")
 
-	mountObj, err := NewNodeMounter()
+	mountObj, err := NewNodeMounter(false)
 	if err != nil {
 		t.Fatalf("error creating mounter %v", err)
 	}
@@ -178,7 +178,7 @@ func TestGetDeviceName(t *testing.T) {
 
 	targetPath := filepath.Join(dir, "notafile")
 
-	mountObj, err := NewNodeMounter()
+	mountObj, err := NewNodeMounter(false)
 	if err != nil {
 		t.Fatalf("error creating mounter %v", err)
 	}

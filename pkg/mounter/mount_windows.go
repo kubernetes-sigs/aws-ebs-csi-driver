@@ -20,51 +20,29 @@ limitations under the License.
 package mounter
 
 import (
-	"context"
 	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
 
-	diskapi "github.com/kubernetes-csi/csi-proxy/client/api/disk/v1"
-	diskclient "github.com/kubernetes-csi/csi-proxy/client/groups/disk/v1"
+	"regexp"
+
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
 )
 
-const (
-	DefaultBlockSize = 4096
+var (
+	ErrUnsupportedMounter = fmt.Errorf("unsupported mounter type")
 )
 
 func (m NodeMounter) FindDevicePath(devicePath, volumeID, _, _ string) (string, error) {
-	diskClient, err := diskclient.NewClient()
-	if err != nil {
-		return "", fmt.Errorf("error creating csi-proxy disk client: %q", err)
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.FindDevicePath(devicePath, volumeID, "", "")
+	case *CSIProxyMounter:
+		return proxyMounter.FindDevicePath(devicePath, volumeID, "", "")
+	default:
+		return "", ErrUnsupportedMounter
 	}
-	defer diskClient.Close()
-
-	response, err := diskClient.ListDiskIDs(context.TODO(), &diskapi.ListDiskIDsRequest{})
-	if err != nil {
-		return "", fmt.Errorf("error listing disk ids: %q", err)
-	}
-
-	diskIDs := response.GetDiskIDs()
-
-	foundDiskNumber := ""
-	for diskNumber, diskID := range diskIDs {
-		serialNumber := diskID.GetSerialNumber()
-		cleanVolumeID := strings.ReplaceAll(volumeID, "-", "")
-		if strings.Contains(serialNumber, cleanVolumeID) {
-			foundDiskNumber = strconv.Itoa(int(diskNumber))
-			break
-		}
-	}
-
-	if foundDiskNumber == "" {
-		return "", fmt.Errorf("disk number for device path %q volume id %q not found", devicePath, volumeID)
-	}
-
-	return foundDiskNumber, nil
 }
 
 func (m NodeMounter) PreparePublishTarget(target string) error {
@@ -78,16 +56,24 @@ func (m NodeMounter) PreparePublishTarget(target string) error {
 		return fmt.Errorf("error checking path %q exists: %v", target, err)
 	}
 
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	if !exists {
+		return nil // If the target does not exist, no action is necessary
 	}
 
-	if exists {
+	// Handle different mounter implementations
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
 		if err := proxyMounter.Rmdir(target); err != nil {
 			return fmt.Errorf("error Rmdir target %q: %v", target, err)
 		}
+	case *CSIProxyMounter:
+		if err := proxyMounter.Rmdir(target); err != nil {
+			return fmt.Errorf("error Rmdir target %q: %v", target, err)
+		}
+	default:
+		return ErrUnsupportedMounter
 	}
+
 	return nil
 }
 
@@ -98,25 +84,33 @@ func (m NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
 
 // getBlockSizeBytes gets the size of the disk in bytes
 func (m NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return -1, fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		sizeInBytes, err := proxyMounter.GetDeviceSize(devicePath)
+		if err != nil {
+			return -1, err
+		}
+		return sizeInBytes, nil
+	case *CSIProxyMounter:
+		sizeInBytes, err := proxyMounter.GetDeviceSize(devicePath)
+		if err != nil {
+			return -1, err
+		}
+		return sizeInBytes, nil
+	default:
+		return -1, ErrUnsupportedMounter
 	}
-
-	sizeInBytes, err := proxyMounter.GetDeviceSize(devicePath)
-	if err != nil {
-		return -1, err
-	}
-
-	return sizeInBytes, nil
 }
 
 func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
+	case *CSIProxyMounter:
+		return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
+	default:
+		return ErrUnsupportedMounter
 	}
-	return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
 }
 
 // GetDeviceNameFromMount returns the volume ID for a mount path.
@@ -128,30 +122,42 @@ func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, tar
 // Command to determine ref count would be something like:
 // Get-Volume -UniqueId "\\?\Volume{7c3da0c1-0000-0000-0000-010000000000}\" | Get-Partition | Select AccessPaths
 func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return "", 0, fmt.Errorf("failed to cast mounter to csi proxy mounter")
-	}
-	deviceName, err := proxyMounter.GetDeviceNameFromMount(mountPath, "")
-	if err != nil {
-		// HACK change csi-proxy behavior instead of relying on fragile internal
-		// implementation details!
-		// if err contains '"(Get-Item...).Target, output: , error: <nil>' then the
-		// internal Get-Item cmdlet didn't fail but no item/device was found at the
-		// path so we should return empty string and nil error just like the Linux
-		// implementation would.
-		pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist`
-		matched, matchErr := regexp.MatchString(pattern, err.Error())
-		if matched {
-			return "", 0, nil
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	// HACK change csi-proxy behavior instead of relying on fragile internal
+	// implementation details!
+	// if err contains '"(Get-Item...).Target, output: , error: <nil>' then the
+	// internal Get-Item cmdlet didn't fail but no item/device was found at the
+	// path so we should return empty string and nil error just like the Linux
+	// implementation would.
+	case *CSIProxyMounterV2:
+		deviceName, err := proxyMounter.GetDeviceNameFromMount(mountPath, "")
+		if err != nil {
+			return handleGetDeviceNameFromMountError(err)
 		}
-		err = fmt.Errorf("error getting device name from mount: %v", err)
-		if matchErr != nil {
-			err = fmt.Errorf("%v, and error matching pattern %q: %v", err, pattern, matchErr)
+		return deviceName, 1, nil
+	case *CSIProxyMounter:
+		deviceName, err := proxyMounter.GetDeviceNameFromMount(mountPath, "")
+		if err != nil {
+			return handleGetDeviceNameFromMountError(err)
 		}
-		return "", 0, err
+		return deviceName, 1, nil
+	default:
+		return "", 0, ErrUnsupportedMounter
 	}
-	return deviceName, 1, nil
+}
+
+// handleGetDeviceNameFromMountError processes common error patterns for GetDeviceNameFromMount
+func handleGetDeviceNameFromMountError(err error) (string, int, error) {
+	// Handling common error pattern as seen in previous implementations
+	pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist`
+	matched, matchErr := regexp.MatchString(pattern, err.Error())
+	if matched {
+		return "", 0, nil // No device found, but not an error condition
+	}
+	if matchErr != nil {
+		return "", 0, fmt.Errorf("error processing error message: %v, matching pattern %q: %v", err, pattern, matchErr)
+	}
+	return "", 0, fmt.Errorf("error getting device name from mount: %v", err)
 }
 
 // IsCorruptedMnt return true if err is about corrupted mount point
@@ -160,55 +166,79 @@ func (m NodeMounter) IsCorruptedMnt(err error) bool {
 }
 
 func (m *NodeMounter) MakeFile(path string) error {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.MakeFile(path)
+	case *CSIProxyMounter:
+		return proxyMounter.MakeFile(path)
+	default:
+		return ErrUnsupportedMounter
 	}
-	return proxyMounter.MakeFile(path)
 }
 
 func (m *NodeMounter) MakeDir(path string) error {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.MakeDir(path)
+	case *CSIProxyMounter:
+		return proxyMounter.MakeDir(path)
+	default:
+		return ErrUnsupportedMounter
 	}
-	return proxyMounter.MakeDir(path)
 }
 
 func (m *NodeMounter) PathExists(path string) (bool, error) {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return false, fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.ExistsPath(path)
+	case *CSIProxyMounter:
+		return proxyMounter.ExistsPath(path)
+	default:
+		return false, ErrUnsupportedMounter
 	}
-	return proxyMounter.ExistsPath(path)
 }
 
 func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return false, fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		return proxyMounter.ResizeVolume(deviceMountPath)
+	case *CSIProxyMounter:
+		return proxyMounter.ResizeVolume(deviceMountPath)
+	default:
+		return false, ErrUnsupportedMounter
 	}
-	return proxyMounter.ResizeVolume(deviceMountPath)
 }
 
 // NeedResize called at NodeStage to ensure file system is the correct size
 func (m *NodeMounter) NeedResize(devicePath, deviceMountPath string) (bool, error) {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return false, fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	var err error
+	var deviceSize, fsSize int64
+
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		deviceSize, err = proxyMounter.GetDeviceSize(devicePath)
+		if err != nil {
+			return false, fmt.Errorf("failed to get device size: %w", err)
+		}
+		fsSize, err = proxyMounter.GetVolumeSizeInBytes(deviceMountPath)
+		if err != nil {
+			return false, fmt.Errorf("failed to get filesystem size: %w", err)
+		}
+	case *CSIProxyMounter:
+		deviceSize, err = proxyMounter.GetDeviceSize(devicePath)
+		if err != nil {
+			return false, fmt.Errorf("failed to get device size: %w", err)
+		}
+		fsSize, err = proxyMounter.GetVolumeSizeInBytes(deviceMountPath)
+		if err != nil {
+			return false, fmt.Errorf("failed to get filesystem size: %w", err)
+		}
+	default:
+		return false, ErrUnsupportedMounter
 	}
 
-	deviceSize, err := proxyMounter.GetDeviceSize(devicePath)
-	if err != nil {
-		return false, err
-	}
-
-	fsSize, err := proxyMounter.GetVolumeSizeInBytes(deviceMountPath)
-	if err != nil {
-		return false, err
-	}
 	// Tolerate one block difference (4096 bytes)
-	if deviceSize <= DefaultBlockSize+fsSize {
+	if deviceSize <= util.DefaultBlockSize+fsSize {
 		return true, nil
 	}
 	return false, nil
@@ -216,29 +246,39 @@ func (m *NodeMounter) NeedResize(devicePath, deviceMountPath string) (bool, erro
 
 // Unmount volume from target path
 func (m *NodeMounter) Unpublish(target string) error {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	var err error
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		err = proxyMounter.Rmdir(target)
+	case *CSIProxyMounter:
+		err = proxyMounter.Rmdir(target)
+	default:
+		return ErrUnsupportedMounter
 	}
-	// Remove symlink
-	err := proxyMounter.Rmdir(target)
+
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to remove directory: %w", err)
 	}
+
 	return nil
 }
 
 // Unmount volume from staging path
 // usually this staging path is a global directory on the node
 func (m *NodeMounter) Unstage(target string) error {
-	proxyMounter, ok := m.SafeFormatAndMount.Interface.(*CSIProxyMounter)
-	if !ok {
-		return fmt.Errorf("failed to cast mounter to csi proxy mounter")
+	var err error
+	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
+	case *CSIProxyMounterV2:
+		err = proxyMounter.Unmount(target)
+	case *CSIProxyMounter:
+		err = proxyMounter.Unmount(target)
+	default:
+		return ErrUnsupportedMounter
 	}
-	// Unmounts and offlines the disk via the CSI Proxy API
-	err := proxyMounter.Unmount(target)
+
 	if err != nil {
-		return err
+		return fmt.Errorf("unmount failed: %w", err)
 	}
+
 	return nil
 }

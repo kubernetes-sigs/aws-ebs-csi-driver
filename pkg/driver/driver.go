@@ -91,7 +91,7 @@ func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.Metadat
 }
 
 func (d *Driver) Run() error {
-	scheme, addr, err := util.ParseEndpoint(d.options.Endpoint)
+	scheme, addr, err := util.ParseEndpoint(d.options.Endpoint, d.options.WindowsHostProcess)
 	if err != nil {
 		return err
 	}

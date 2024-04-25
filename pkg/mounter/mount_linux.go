@@ -32,12 +32,24 @@ import (
 	"golang.org/x/sys/unix"
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
+	utilexec "k8s.io/utils/exec"
 )
 
 const (
 	nvmeDiskPartitionSuffix = "p"
 	diskPartitionSuffix     = ""
 )
+
+func NewSafeMounter() (*mountutils.SafeFormatAndMount, error) {
+	return &mountutils.SafeFormatAndMount{
+		Interface: mountutils.New(""),
+		Exec:      utilexec.New(),
+	}, nil
+}
+
+func NewSafeMounterV2() (*mountutils.SafeFormatAndMount, error) {
+	return nil, fmt.Errorf("NewSafeMounterV2 is not supported on this platform")
+}
 
 // FindDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
