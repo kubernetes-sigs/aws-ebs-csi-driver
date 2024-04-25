@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"reflect"
 	"strings"
 	"sync"
@@ -931,7 +932,7 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("timed out waiting for volume to create: context deadline exceeded"),
+			expErr:               fmt.Errorf("timed out waiting for volume to create: timed out waiting for the condition"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -2387,8 +2388,6 @@ func TestResizeOrModifyDisk(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := NewMockEC2API(mockCtrl)
-			// reduce number of steps to reduce test time
-			volumeModificationWaitSteps = 3
 			c := newCloud(mockEC2)
 
 			ctx := context.Background()
@@ -2990,8 +2989,6 @@ func TestWaitForAttachmentState(t *testing.T) {
 		},
 	}
 
-	volumeAttachmentStatePollSteps = 1
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
@@ -3072,12 +3069,28 @@ func TestWaitForAttachmentState(t *testing.T) {
 	}
 }
 
+func testVolumeWaitParameters() volumeWaitParameters {
+	testBackoff := wait.Backoff{
+		Duration: 100 * time.Millisecond,
+		Factor:   1,
+		Steps:    3,
+	}
+
+	return volumeWaitParameters{
+		creationInitialDelay: 0,
+		creationBackoff:      testBackoff,
+		attachmentBackoff:    testBackoff,
+		modificationBackoff:  testBackoff,
+	}
+}
+
 func newCloud(mockEC2 EC2API) Cloud {
 	c := &cloud{
 		region: "test-region",
 		dm:     dm.NewDeviceManager(),
 		ec2:    mockEC2,
 		rm:     newRetryManager(),
+		vwp:    testVolumeWaitParameters(),
 	}
 	return c
 }
