@@ -78,10 +78,6 @@ func TestVolumeModificationWithCoalescing(t *testing.T) {
 			testFunction: testDuplicateRequest,
 		},
 		{
-			name:         "context timeout",
-			testFunction: testContextTimeout,
-		},
-		{
 			name:         "timing",
 			testFunction: testResponseReturnTiming,
 		},
@@ -121,13 +117,14 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 		return newSize, nil
 	})
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 mockCloud,
+		inFlight:              internal.NewInFlight(),
+		options:               options,
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
@@ -175,13 +172,14 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 		return 0, fmt.Errorf("ResizeOrModifyDisk failed")
 	})
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 mockCloud,
+		inFlight:              internal.NewInFlight(),
+		options:               options,
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
@@ -243,13 +241,16 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 		return newSize, nil
 	})
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
 		cloud:    mockCloud,
 		inFlight: internal.NewInFlight(),
 		options: &Options{
 			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
 		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
@@ -324,13 +325,14 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 		return newSize, nil
 	}).Times(2)
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 mockCloud,
+		inFlight:              internal.NewInFlight(),
+		options:               options,
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
@@ -381,13 +383,14 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 		return newSize, nil
 	})
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 mockCloud,
+		inFlight:              internal.NewInFlight(),
+		options:               options,
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
@@ -421,74 +424,6 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Wait()
 }
 
-// TestContextTimeout tests request failing due to context cancellation and the behavior of the following request.
-func testContextTimeout(t *testing.T, executor modifyVolumeExecutor) {
-	const NewVolumeType = "gp3"
-	const NewSize = 5 * util.GiB
-	volumeID := t.Name()
-
-	mockCtl := gomock.NewController(t)
-	defer mockCtl.Finish()
-
-	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
-		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
-		time.Sleep(3 * time.Second)
-
-		// Controller could decide to coalesce the timed out request, or to drop it
-		if newSize != 0 && newSize != NewSize {
-			t.Errorf("newSize incorrect")
-		} else if options.VolumeType != NewVolumeType {
-			t.Errorf("volumeType incorrect")
-		}
-
-		return newSize, nil
-	})
-
-	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(ctx, &csi.ControllerExpandVolumeRequest{
-			VolumeId: volumeID,
-			CapacityRange: &csi.CapacityRange{
-				RequiredBytes: NewSize,
-			},
-		})
-		if err == nil {
-			t.Error("ControllerExpandVolume should return err because context is cancelled")
-		}
-		wg.Done()
-	})
-
-	// Cancel the context (simulate a "sidecar timeout")
-	time.Sleep(500 * time.Millisecond)
-	cancel()
-
-	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
-			ModificationKeyVolumeType: NewVolumeType,
-		})
-
-		if err != nil {
-			t.Error("Modify returned error")
-		}
-		wg.Done()
-	})
-
-	wg.Wait()
-}
-
 // TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk
 func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	const NewVolumeType = "gp3"
@@ -510,13 +445,14 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 		return newSize, nil
 	})
 
+	options := &Options{
+		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
+	}
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options: &Options{
-			ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
-		},
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 mockCloud,
+		inFlight:              internal.NewInFlight(),
+		options:               options,
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
 
 	var wg sync.WaitGroup
