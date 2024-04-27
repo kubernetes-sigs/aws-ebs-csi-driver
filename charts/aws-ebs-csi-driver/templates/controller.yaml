@@ -68,6 +68,14 @@ spec:
       initContainers:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.controller.dnsConfig }}
+      dnsConfig:
+        options:
+          {{- range .Values.controller.dnsConfig.options }}
+          - name: {{ .name }} 
+            value: "{{ .value }}"
+          {{- end }}
+      {{- end }}      
       containers:
         - name: ebs-plugin
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
