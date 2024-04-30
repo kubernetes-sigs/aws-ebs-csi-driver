@@ -108,6 +108,10 @@ all-push: all-image-registry push-manifest
 cluster/create: bin/kops bin/eksctl bin/aws
 	./hack/e2e/create-cluster.sh
 
+.PHONY: cluster/kubeconfig
+cluster/kubeconfig:
+	@./hack/e2e/kubeconfig.sh
+
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
 	./hack/e2e/delete-cluster.sh

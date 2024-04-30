@@ -153,6 +153,23 @@ export CLUSTER_TYPE="eksctl"
 make cluster/create
 ```
 
+### `make cluster/kubeconfig`
+
+Prints the `KUBECONFIG` environment variable for a cluster. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster. This command must be `eval`ed to import the environment variables into your shell.
+
+#### Example: Export the `KUBECONFIG` for a default cluster
+
+```bash
+eval "$(make cluster/kubeconfig)"
+```
+
+#### Example: Export the `KUBECONFIG` for an `eksctl` cluster
+
+```bash
+export CLUSTER_TYPE="eksctl"
+eval "$(make cluster/kubeconfig)"
+```
+
 ### `make cluster/delete`
 
 Deletes a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster.
