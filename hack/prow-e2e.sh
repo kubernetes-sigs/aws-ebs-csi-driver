@@ -61,7 +61,7 @@ test-helm-chart)
   ;;
 esac
 
-export CLUSTER_NAME="ebs-csi-e2e-${RANDOM}.k8s.local"
+export CLUSTER_NAME="e2e-${BUILD_ID:-${RANDOM}}.k8s.local"
 # Use S3 bucket created for CI
 export KOPS_BUCKET=${KOPS_BUCKET:-"k8s-kops-csi-shared-e2e"}
 # Always use us-west-2 in CI, no matter where the local client is
