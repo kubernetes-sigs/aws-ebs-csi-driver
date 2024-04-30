@@ -28,6 +28,7 @@ FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 WINDOWS=${WINDOWS:-"false"}
+WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
