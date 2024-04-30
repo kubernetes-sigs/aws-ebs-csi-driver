@@ -112,6 +112,10 @@ cluster/create: bin/kops bin/eksctl bin/aws
 cluster/kubeconfig:
 	@./hack/e2e/kubeconfig.sh
 
+.PHONY: cluster/image
+cluster/image: bin/aws
+	@./hack/e2e/build-image.sh
+
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
 	./hack/e2e/delete-cluster.sh

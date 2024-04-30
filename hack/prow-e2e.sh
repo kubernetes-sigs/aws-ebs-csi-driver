@@ -17,6 +17,10 @@
 # This script runs tests in CI by creating a cluster, running the tests,
 # cleaning up (regardless of test success/failure), and passing out the result
 
+# Prevent race conditions by frontloading tool download
+# TODO: Find a way to lock pip installs to prevent pip concurrency bugs from hurting us
+make bin/aws
+
 case ${1} in
 test-e2e-single-az)
   TEST="single-az"
@@ -67,11 +71,18 @@ export KOPS_BUCKET=${KOPS_BUCKET:-"k8s-kops-csi-shared-e2e"}
 # Always use us-west-2 in CI, no matter where the local client is
 export AWS_REGION=us-west-2
 
-if make cluster/create; then
+make cluster/create &
+PIDS[1]=$!
+make cluster/image &
+PIDS[2]=$!
+
+for PID in "${PIDS[@]}"; do
+  wait $PID || E2E_PASSED=1
+done
+
+if [[ $E2E_PASSED -eq 0 ]]; then
   make e2e/${TEST}
   E2E_PASSED=$?
-else
-  E2E_PASSED=1
 fi
 make cluster/delete
 

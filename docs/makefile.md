@@ -153,6 +153,10 @@ export CLUSTER_TYPE="eksctl"
 make cluster/create
 ```
 
+### `make cluster/image`
+
+Builds an image for use in the E2E tests. This will automatically build the most appropriate image (for example, skipping Windows builds unless `WINDOWS` is set to `true`).
+
 ### `make cluster/kubeconfig`
 
 Prints the `KUBECONFIG` environment variable for a cluster. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster. This command must be `eval`ed to import the environment variables into your shell.
@@ -176,7 +180,7 @@ Deletes a cluster created by `make cluster/create`. You must pass the same `CLUS
 
 ## E2E Tests
 
-Run E2E tests against a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster.
+Run E2E tests against a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster. You must have already run `make cluster/image` to build the image for the cluster, or provide an image of your own.
 
 Alternatively, you may run on an externally created cluster by passing `CLUSTER_TYPE` (required to determine which `values.yaml` to deploy) and `KUBECONFIG`. For `kops` clusters, the node IAM role should include the appropriate IAM policies to use the driver (see [the installation docs](./install.md#set-up-driver-permissions)). For `eksctl` clusters, the `ebs-csi-controller-sa` service account should be pre-created and setup to supply an IRSA role with the appropriate policies.
 
