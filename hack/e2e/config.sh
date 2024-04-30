@@ -58,6 +58,3 @@ TEST_PATH=${TEST_PATH:-"./tests/e2e-kubernetes/..."}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"External.Storage"}
 GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]|\[Serial\]"}
 GINKGO_PARALLEL=${GINKGO_PARALLEL:-25}
-
-# TODO: Left in for now, but look into if this is still necessary and remove if not
-EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-"Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV"}

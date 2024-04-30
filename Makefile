@@ -91,7 +91,7 @@ test/coverage:
 #	go test -v -race ./tests/sanity/...
 
 .PHONY: tools
-tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
+tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
 
 .PHONY: update
 update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt
@@ -105,7 +105,7 @@ verify: verify/govet verify/golangci-lint verify/update
 all-push: all-image-registry push-manifest
 
 .PHONY: cluster/create
-cluster/create: bin/kops bin/eksctl bin/aws
+cluster/create: bin/kops bin/eksctl bin/aws bin/gomplate
 	./hack/e2e/create-cluster.sh
 
 .PHONY: cluster/kubeconfig

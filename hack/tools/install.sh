@@ -26,6 +26,8 @@ EKSCTL_VERSION="v0.175.0"
 GINKGO_VERSION="v2.17.1"
 # https://github.com/golangci/golangci-lint
 GOLANGCI_LINT_VERSION="v1.57.2"
+# https://github.com/hairyhenderson/gomplate
+GOMPLATE_VERSION="v3.11.7"
 # https://github.com/helm/helm
 HELM_VERSION="v3.14.4"
 # https://github.com/kubernetes/kops
@@ -122,6 +124,14 @@ function install_golangci-lint() {
 
   # golangci-lint recommends against installing with `go install`: https://golangci-lint.run/usage/install/#install-from-source
   install_tar_binary "${INSTALL_PATH}" "https://github.com/golangci/golangci-lint/releases/download/${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION:1}-${OS}-${ARCH}.tar.gz" "golangci-lint-${GOLANGCI_LINT_VERSION:1}-${OS}-${ARCH}/golangci-lint"
+}
+
+function install_gomplate() {
+  INSTALL_PATH="${1}"
+
+  # gomplate includes library from no longer existing domain inet.af, and thus cannot be installed via go install
+  # install the released binary from GitHub releases instead
+  install_binary "${INSTALL_PATH}" "https://github.com/hairyhenderson/gomplate/releases/download/${GOMPLATE_VERSION}/gomplate_${OS}-${ARCH}" "gomplate"
 }
 
 function install_helm() {

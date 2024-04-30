@@ -22,68 +22,39 @@ set -euo pipefail
 function eksctl_create_cluster() {
   CLUSTER_NAME=${1}
   EKSCTL_BIN=${2}
-  ZONES=${3}
-  INSTANCE_TYPE=${4}
-  K8S_VERSION=${5}
-  CLUSTER_FILE=${6}
-  KUBECONFIG=${7}
-  EKSCTL_PATCH_FILE=${8}
-  EKSCTL_ADMIN_ROLE=${9}
+  GOMPLATE_BIN=${3}
+  REGION=${4}
+  ZONES=${5}
+  INSTANCE_TYPE=${6}
+  K8S_VERSION=${7}
+  CLUSTER_FILE=${8}
+  KUBECONFIG=${9}
   WINDOWS=${10}
   VPC_CONFIGMAP_FILE=${11}
+  TEMPLATE_FILE=${12}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
+
+  loudecho "Templating $CLUSTER_NAME to $CLUSTER_FILE"
+  CLUSTER_NAME="${CLUSTER_NAME}" \
+  REGION="${REGION}" \
+  K8S_VERSION="${K8S_VERSION}" \
+  ZONES="${ZONES}" \
+  INSTANCE_TYPE="${INSTANCE_TYPE}" \
+  ${GOMPLATE_BIN} -f "${TEMPLATE_FILE}" -o "${CLUSTER_FILE}"
 
   if eksctl_cluster_exists "${CLUSTER_NAME}" "${EKSCTL_BIN}"; then
     loudecho "Upgrading cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${EKSCTL_BIN} upgrade cluster -f "${CLUSTER_FILE}"
   else
-    loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE (dry run)"
-    ${EKSCTL_BIN} create cluster \
-      --managed \
-      --ssh-access=false \
-      --zones "${ZONES}" \
-      --nodes=3 \
-      --instance-types="${INSTANCE_TYPE}" \
-      --version="${K8S_VERSION}" \
-      --disable-pod-imds \
-      --dry-run \
-      "${CLUSTER_NAME}" >"${CLUSTER_FILE}"
-
-    if test -f "$EKSCTL_PATCH_FILE"; then
-      eksctl_patch_cluster_file "$CLUSTER_FILE" "$EKSCTL_PATCH_FILE"
-    fi
-
     loudecho "Creating cluster $CLUSTER_NAME with $CLUSTER_FILE"
     ${EKSCTL_BIN} create cluster -f "${CLUSTER_FILE}" --kubeconfig "${KUBECONFIG}"
   fi
 
-  loudecho "Cluster ${CLUSTER_NAME} kubecfg written to ${KUBECONFIG}"
-  loudecho "Getting cluster ${CLUSTER_NAME}"
-  ${EKSCTL_BIN} get cluster "${CLUSTER_NAME}"
-
-  if [[ -n "$EKSCTL_ADMIN_ROLE" ]]; then
-    AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    ADMIN_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${EKSCTL_ADMIN_ROLE}"
-    loudecho "Granting ${ADMIN_ARN} admin access to the cluster"
-    ${EKSCTL_BIN} create iamidentitymapping --cluster "${CLUSTER_NAME}" --arn "${ADMIN_ARN}" --group system:masters --username admin
-  fi
-
   if [[ "$WINDOWS" == true ]]; then
-    ${EKSCTL_BIN} create nodegroup \
-      --managed=true \
-      --ssh-access=false \
-      --cluster="${CLUSTER_NAME}" \
-      --node-ami-family=WindowsServer2022CoreContainer \
-      --instance-types=m5.2xlarge \
-      -n ng-windows \
-      -m 3 \
-      -M 3
-
-    kubectl apply --kubeconfig "${KUBECONFIG}" -f "$VPC_CONFIGMAP_FILE"
+    loudecho "Applying VPC ConfigMap (Windows only)"
+    kubectl apply --kubeconfig "${KUBECONFIG}" -f "${VPC_CONFIGMAP_FILE}"
   fi
-
-  return $?
 }
 
 function eksctl_cluster_exists() {
@@ -107,24 +78,4 @@ function eksctl_delete_cluster() {
 
   loudecho "Deleting cluster ${CLUSTER_NAME}"
   ${EKSCTL_BIN} delete cluster "${CLUSTER_NAME}"
-}
-
-function eksctl_patch_cluster_file() {
-  CLUSTER_FILE=${1}      # input must be yaml
-  EKSCTL_PATCH_FILE=${2} # input must be yaml
-
-  loudecho "Patching cluster $CLUSTER_NAME with $EKSCTL_PATCH_FILE"
-
-  # Temporary intermediate files for patching
-  CLUSTER_FILE_0=$CLUSTER_FILE.0
-  CLUSTER_FILE_1=$CLUSTER_FILE.1
-
-  cp "$CLUSTER_FILE" "$CLUSTER_FILE_0"
-
-  # Patch only the Cluster
-  kubectl patch --kubeconfig "/dev/null" -f "$CLUSTER_FILE_0" --local --type merge --patch "$(cat "$EKSCTL_PATCH_FILE")" -o yaml >"$CLUSTER_FILE_1"
-  mv "$CLUSTER_FILE_1" "$CLUSTER_FILE_0"
-
-  # Done patching, overwrite original CLUSTER_FILE
-  mv "$CLUSTER_FILE_0" "$CLUSTER_FILE" # output is yaml
 }
