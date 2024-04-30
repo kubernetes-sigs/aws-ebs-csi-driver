@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script builds and deploys the EBS CSI Driver and runs e2e tests
+# This script deploys the EBS CSI Driver and runs e2e tests
 # CLUSTER_NAME and CLUSTER_TYPE are expected to be specified by the caller
 # All other environment variables have default values (see config.sh) but
 # many can be overridden on demand if needed
@@ -26,7 +26,6 @@ BIN="${BASE_DIR}/../../bin"
 
 source "${BASE_DIR}/config.sh"
 source "${BASE_DIR}/util.sh"
-source "${BASE_DIR}/ecr.sh"
 source "${BASE_DIR}/metrics/metrics.sh"
 
 ## Setup
@@ -47,21 +46,6 @@ if [[ "$WINDOWS" == true ]]; then
 else
   NODE_OS_DISTRO="linux"
 fi
-
-## Build image
-
-if [[ "${CREATE_MISSING_ECR_REPO}" == true ]]; then
-  REPO_CHECK=$(aws ecr describe-repositories --region "${AWS_REGION}")
-  if [ $(jq '.repositories | map(.repositoryName) | index("aws-ebs-csi-driver")' <<<"${REPO_CHECK}") == "null" ]; then
-    aws ecr create-repository --region "${AWS_REGION}" --repository-name aws-ebs-csi-driver >/dev/null
-  fi
-fi
-
-ecr_build_and_push "${AWS_REGION}" \
-  "${AWS_ACCOUNT_ID}" \
-  "${IMAGE_NAME}" \
-  "${IMAGE_TAG}" \
-  "${IMAGE_ARCH}"
 
 ## Deploy
 

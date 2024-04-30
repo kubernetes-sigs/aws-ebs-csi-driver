@@ -111,6 +111,10 @@ cluster/create: bin/kops bin/eksctl bin/aws
 cluster/kubeconfig:
 	@./hack/e2e/kubeconfig.sh
 
+.PHONY: cluster/image
+cluster/image: bin/aws
+	./hack/e2e/build-image.sh
+
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
 	./hack/e2e/delete-cluster.sh
@@ -137,11 +141,6 @@ e2e/multi-az: bin/helm bin/ginkgo
 .PHONY: e2e/external
 e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
-	./hack/e2e/run.sh
-
-.PHONY: e2e/external-arm64
-e2e/external-arm64: bin/helm bin/kubetest2
-	IMAGE_ARCH="arm64" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows
