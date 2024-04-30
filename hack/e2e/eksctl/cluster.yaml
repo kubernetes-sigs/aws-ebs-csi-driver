@@ -1,0 +1,33 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: {{ .Env.CLUSTER_NAME }}
+  region: {{ .Env.REGION }}
+  version: "{{ .Env.K8S_VERSION }}"
+availabilityZones: [{{ .Env.ZONES }}]
+iam:
+  vpcResourceControllerPolicy: true
+  withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: ebs-csi-controller-sa
+        namespace: kube-system
+      wellKnownPolicies:
+        ebsCSIController: true
+managedNodeGroups:
+  - name: ng-linux
+    amiFamily: AmazonLinux2
+    desiredCapacity: 3
+    disablePodIMDS: true
+    instanceTypes: [{{ .Env.INSTANCE_TYPE }}]
+    ssh:
+      allow: false
+{{- if eq .Env.WINDOWS "true" }}
+  - name: ng-windows
+    amiFamily: WindowsServer2022CoreContainer
+    desiredCapacity: 3
+    disablePodIMDS: true
+    instanceTypes: [m5.2xlarge]
+    ssh:
+      allow: false
+{{- end }}
