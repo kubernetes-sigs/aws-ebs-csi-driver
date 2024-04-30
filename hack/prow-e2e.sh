@@ -76,6 +76,10 @@ make cluster/create &
 PIDS[1]=$!
 make cluster/image &
 PIDS[2]=$!
+# Installing kubetest2 takes surprisingly long and blocks make e2e/${TEST}
+# Thus, to speed up CI, preinstall it while creating the cluster/image
+make bin/kubetest2 &
+PIDS[3]=$!
 
 for PID in "${PIDS[@]}"; do
   wait $PID || E2E_PASSED=1
