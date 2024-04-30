@@ -114,7 +114,7 @@ cluster/kubeconfig:
 
 .PHONY: cluster/image
 cluster/image: bin/aws
-	@./hack/e2e/build-image.sh
+	./hack/e2e/build-image.sh
 
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
