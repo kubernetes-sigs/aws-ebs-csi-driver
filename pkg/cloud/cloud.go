@@ -86,20 +86,6 @@ var (
 		VolumeTypeST1,
 		VolumeTypeStandard,
 	}
-
-	volumeCreationPollInitialDelay    = 1250 * time.Millisecond
-	volumeCreationPollBackoffDuration = 500 * time.Millisecond
-	volumeCreationPollBackoffFactor   = 1.5
-	volumeCreationPollBackoffSteps    = 25
-	volumeCreationPollBackoffCap      = 3 * time.Second
-
-	volumeModificationDuration   = 1 * time.Second
-	volumeModificationWaitFactor = 1.7
-	volumeModificationWaitSteps  = 10
-
-	volumeAttachmentStatePollSteps  = 13
-	volumeAttachmentStatePollDelay  = 1 * time.Second
-	volumeAttachmentStatePollFactor = 1.8
 )
 
 const (
@@ -265,6 +251,47 @@ type ec2ListSnapshotsResponse struct {
 	NextToken *string
 }
 
+// volumeWaitParameters dictates how to poll for volume events.
+// E.g. how often to check if volume is created after an EC2 CreateVolume call.
+type volumeWaitParameters struct {
+	creationInitialDelay time.Duration
+	creationBackoff      wait.Backoff
+	modificationBackoff  wait.Backoff
+	attachmentBackoff    wait.Backoff
+}
+
+var (
+	vwp = volumeWaitParameters{
+		// Based on our testing in us-west-2 and ap-south-1, the median/p99 time until volume creation is ~1.5/~4 seconds.
+		// We have found that the following parameters are optimal for minimizing provisioning time and DescribeVolumes calls
+		// we queue DescribeVolume calls after [1.25, 0.5, 0.75, 1.125, 1.7, 2.5, 3] seconds.
+		// In total, we wait for ~60 seconds.
+		creationInitialDelay: 1250 * time.Millisecond,
+		creationBackoff: wait.Backoff{
+			Duration: 500 * time.Millisecond,
+			Factor:   1.5,
+			Steps:    25,
+			Cap:      3 * time.Second,
+		},
+
+		// Most attach/detach operations on AWS finish within 1-4 seconds.
+		// By using 1 second starting interval with a backoff of 1.8,
+		// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
+		// In total, we wait for 2601 seconds.
+		attachmentBackoff: wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   1.8,
+			Steps:    13,
+		},
+
+		modificationBackoff: wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   1.7,
+			Steps:    10,
+		},
+	}
+)
+
 // volumeBatcherType is an enum representing the types of volume batchers available.
 type volumeBatcherType int
 
@@ -287,6 +314,7 @@ type cloud struct {
 	dm     dm.DeviceManager
 	bm     *batcherManager
 	rm     *retryManager
+	vwp    volumeWaitParameters
 }
 
 var _ Cloud = &cloud{}
@@ -343,14 +371,13 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		bm = newBatcherManager(svc)
 	}
 
-	rm := newRetryManager()
-
 	return &cloud{
 		region: region,
 		dm:     dm.NewDeviceManager(),
 		ec2:    svc,
 		bm:     bm,
-		rm:     rm,
+		rm:     newRetryManager(),
+		vwp:    vwp,
 	}
 }
 
@@ -967,16 +994,6 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
-	// Most attach/detach operations on AWS finish within 1-4 seconds.
-	// By using 1 second starting interval with a backoff of 1.8,
-	// we get [1, 1.8, 3.24, 5.832000000000001, 10.4976].
-	// In total we wait for 2601 seconds.
-	backoff := wait.Backoff{
-		Duration: volumeAttachmentStatePollDelay,
-		Factor:   volumeAttachmentStatePollFactor,
-		Steps:    volumeAttachmentStatePollSteps,
-	}
-
 	var attachment *types.VolumeAttachment
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
@@ -1063,7 +1080,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		return false, nil
 	}
 
-	return attachment, wait.ExponentialBackoffWithContext(ctx, backoff, verifyVolumeFunc)
+	return attachment, wait.ExponentialBackoffWithContext(ctx, c.vwp.attachmentBackoff, verifyVolumeFunc)
 }
 
 func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*Disk, error) {
@@ -1533,26 +1550,13 @@ func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshot
 
 // waitForVolume waits for volume to be in the "available" state.
 func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
-	// Based on our testing in us-west-2 and ap-south-1, the median/p99 time until volume creation is ~1.5/~4 seconds.
-	// We have found that the following parameters are optimal for minimizing provisioning time and DescribeVolumes calls
-	// we queue DescribeVolume calls after [1.25, 0.5, 0.75, 1.125, 1.7, 2.5, 3] seconds.
-	// In total, we wait for ~60 seconds.
-	var (
-		backoff = wait.Backoff{
-			Duration: volumeCreationPollBackoffDuration,
-			Factor:   volumeCreationPollBackoffFactor,
-			Steps:    volumeCreationPollBackoffSteps,
-			Cap:      volumeCreationPollBackoffCap,
-		}
-	)
-
-	time.Sleep(volumeCreationPollInitialDelay)
+	time.Sleep(c.vwp.creationInitialDelay)
 
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []string{volumeID},
 	}
 
-	err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (done bool, err error) {
+	err := wait.ExponentialBackoffWithContext(ctx, c.vwp.creationBackoff, func(ctx context.Context) (done bool, err error) {
 		vol, err := c.getVolume(ctx, request)
 		if err != nil {
 			return true, err
@@ -1682,13 +1686,7 @@ func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredS
 
 // waitForVolumeModification waits for a volume modification to finish.
 func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) error {
-	backoff := wait.Backoff{
-		Duration: volumeModificationDuration,
-		Factor:   volumeModificationWaitFactor,
-		Steps:    volumeModificationWaitSteps,
-	}
-
-	waitErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
+	waitErr := wait.ExponentialBackoff(c.vwp.modificationBackoff, func() (bool, error) {
 		m, err := c.getLatestVolumeModification(ctx, volumeID, true)
 		// Consider volumes that have never been modified as done
 		if err != nil && errors.Is(err, VolumeNotBeingModified) {
