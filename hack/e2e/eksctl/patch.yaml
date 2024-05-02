@@ -1,9 +1,0 @@
-iam:
-  vpcResourceControllerPolicy: true
-  withOIDC: true
-  serviceAccounts:
-    - metadata:
-        name: ebs-csi-controller-sa
-        namespace: kube-system
-      wellKnownPolicies:
-        ebsCSIController: true

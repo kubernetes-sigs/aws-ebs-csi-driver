@@ -59,16 +59,21 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_create_cluster \
     "$CLUSTER_NAME" \
     "${BIN}/eksctl" \
+    "${BIN}/gomplate" \
+    "$AWS_REGION" \
     "$ZONES" \
     "$INSTANCE_TYPE" \
     "$K8S_VERSION_EKSCTL" \
     "$CLUSTER_FILE" \
     "$KUBECONFIG" \
-    "${BASE_DIR}/eksctl/patch.yaml" \
-    "$EKSCTL_ADMIN_ROLE" \
     "$WINDOWS" \
-    "${BASE_DIR}/eksctl/vpc-resource-controller-configmap.yaml"
+    "${BASE_DIR}/eksctl/vpc-resource-controller-configmap.yaml" \
+    "${BASE_DIR}/eksctl/cluster.yaml"
 else
   echo "Cluster type ${CLUSTER_TYPE} is invalid, must be kops or eksctl" >&2
   exit 1
+fi
+
+if [[ "$WINDOWS" == true ]]; then
+  kubectl apply --kubeconfig "${KUBECONFIG}" -f "${BASE_DIR}/eksctl/vpc-resource-controller-configmap.yaml"
 fi

@@ -28,6 +28,7 @@ FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 WINDOWS=${WINDOWS:-"false"}
+WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
@@ -57,6 +58,3 @@ TEST_PATH=${TEST_PATH:-"./tests/e2e-kubernetes/..."}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"External.Storage"}
 GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]|\[Serial\]"}
 GINKGO_PARALLEL=${GINKGO_PARALLEL:-25}
-
-# TODO: Left in for now, but look into if this is still necessary and remove if not
-EKSCTL_ADMIN_ROLE=${EKSCTL_ADMIN_ROLE:-"Infra-prod-KopsDeleteAllLambdaServiceRoleF1578477-1ELDFIB4KCMXV"}

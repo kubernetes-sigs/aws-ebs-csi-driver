@@ -53,8 +53,6 @@ ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
 
 CLUSTER_NAME?=ebs-csi-e2e.k8s.local
 CLUSTER_TYPE?=kops
-WINDOWS?=false
-WINDOWS_HOSTPROCESS?=false
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
@@ -92,7 +90,7 @@ test/coverage:
 #	go test -v -race ./tests/sanity/...
 
 .PHONY: tools
-tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
+tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
 
 .PHONY: update
 update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt
@@ -106,8 +104,16 @@ verify: verify/govet verify/golangci-lint verify/update
 all-push: all-image-registry push-manifest
 
 .PHONY: cluster/create
-cluster/create: bin/kops bin/eksctl bin/aws
+cluster/create: bin/kops bin/eksctl bin/aws bin/gomplate
 	./hack/e2e/create-cluster.sh
+
+.PHONY: cluster/kubeconfig
+cluster/kubeconfig:
+	@./hack/e2e/kubeconfig.sh
+
+.PHONY: cluster/image
+cluster/image: bin/aws
+	./hack/e2e/build-image.sh
 
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
@@ -135,11 +141,6 @@ e2e/multi-az: bin/helm bin/ginkgo
 .PHONY: e2e/external
 e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
-	./hack/e2e/run.sh
-
-.PHONY: e2e/external-arm64
-e2e/external-arm64: bin/helm bin/kubetest2
-	IMAGE_ARCH="arm64" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows
