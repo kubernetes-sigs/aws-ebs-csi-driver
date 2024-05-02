@@ -27,6 +27,7 @@ import (
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/coalescer"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
@@ -58,20 +59,20 @@ const isManagedByDriver = "true"
 
 // ControllerService represents the controller service of CSI driver
 type ControllerService struct {
-	cloud               cloud.Cloud
-	inFlight            *internal.InFlight
-	options             *Options
-	modifyVolumeManager *modifyVolumeManager
+	cloud                 cloud.Cloud
+	inFlight              *internal.InFlight
+	options               *Options
+	modifyVolumeCoalescer coalescer.Coalescer[modifyVolumeRequest, int32]
 	rpc.UnimplementedModifyServer
 }
 
 // NewControllerService creates a new controller service
 func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
 	return &ControllerService{
-		cloud:               c,
-		options:             o,
-		inFlight:            internal.NewInFlight(),
-		modifyVolumeManager: newModifyVolumeManager(),
+		cloud:                 c,
+		options:               o,
+		inFlight:              internal.NewInFlight(),
+		modifyVolumeCoalescer: newModifyVolumeCoalescer(c, o),
 	}
 }
 
@@ -557,26 +558,11 @@ func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 	}
 
-	responseChan := make(chan modifyVolumeResponse)
-	modifyVolumeRequest := modifyVolumeRequest{
-		newSize:      newSize,
-		responseChan: responseChan,
-	}
-
-	// Intentionally not pass in context as we deal with context locally in this method
-	d.addModifyVolumeRequest(volumeID, &modifyVolumeRequest) //nolint:contextcheck
-
-	var actualSizeGiB int32
-
-	select {
-	case response := <-responseChan:
-		if response.err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, response.err)
-		} else {
-			actualSizeGiB = response.volumeSize
-		}
-	case <-ctx.Done():
-		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: context cancelled", volumeID)
+	actualSizeGiB, err := d.modifyVolumeCoalescer.Coalesce(volumeID, modifyVolumeRequest{
+		newSize: newSize,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, err)
 	}
 
 	nodeExpansionRequired := true
@@ -605,7 +591,9 @@ func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi
 		return nil, err
 	}
 
-	err = d.modifyVolumeWithCoalescing(ctx, volumeID, options)
+	_, err = d.modifyVolumeCoalescer.Coalesce(volumeID, modifyVolumeRequest{
+		modifyDiskOptions: *options,
+	})
 	if err != nil {
 		return nil, err
 	}
