@@ -137,6 +137,7 @@ const (
 	snapshotTagBatcher
 
 	batchDescribeTimeout = 30 * time.Second
+	batchMaxDelay        = 500 * time.Millisecond // Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
 )
 
 var (
@@ -382,24 +383,26 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 }
 
 // newBatcherManager initializes a new instance of batcherManager.
+// Each batcher's `entries` set to maximum results returned by relevant EC2 API call without pagination.
+// Each batcher's `delay` minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
 func newBatcherManager(svc EC2API) *batcherManager {
 	return &batcherManager{
-		volumeIDBatcher: batcher.New(500, 1*time.Second, func(ids []string) (map[string]*types.Volume, error) {
+		volumeIDBatcher: batcher.New(500, batchMaxDelay, func(ids []string) (map[string]*types.Volume, error) {
 			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
 		}),
-		volumeTagBatcher: batcher.New(500, 1*time.Second, func(names []string) (map[string]*types.Volume, error) {
+		volumeTagBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.Volume, error) {
 			return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
 		}),
-		instanceIDBatcher: batcher.New(50, 300*time.Millisecond, func(ids []string) (map[string]*types.Instance, error) {
+		instanceIDBatcher: batcher.New(50, batchMaxDelay, func(ids []string) (map[string]*types.Instance, error) {
 			return execBatchDescribeInstances(svc, ids)
 		}),
-		snapshotIDBatcher: batcher.New(1000, 300*time.Millisecond, func(ids []string) (map[string]*types.Snapshot, error) {
+		snapshotIDBatcher: batcher.New(1000, batchMaxDelay, func(ids []string) (map[string]*types.Snapshot, error) {
 			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher)
 		}),
-		snapshotTagBatcher: batcher.New(1000, 300*time.Millisecond, func(names []string) (map[string]*types.Snapshot, error) {
+		snapshotTagBatcher: batcher.New(1000, batchMaxDelay, func(names []string) (map[string]*types.Snapshot, error) {
 			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher)
 		}),
-		volumeModificationIDBatcher: batcher.New(500, 300*time.Millisecond, func(names []string) (map[string]*types.VolumeModification, error) {
+		volumeModificationIDBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.VolumeModification, error) {
 			return execBatchDescribeVolumesModifications(svc, names)
 		}),
 	}
