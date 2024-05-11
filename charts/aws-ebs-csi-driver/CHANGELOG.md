@@ -3,6 +3,7 @@
 * Bump driver version to `v1.30.0`
 * Update voluemessnapshotcontents/status RBAC ([#1991](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1991), [@AndrewSirenko](https://github.com/AndrewSirenko))
 * Upgrade dependencies ([#2016](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2016), [@torredil](https://github.com/torredil))
+* Add `dnsConfig` for the controller and node pods ([#2034](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2034), [@omerap12](https://github.com/omerap12))
 
 ## v2.29.1
 * Bump driver version to `v1.29.1`
