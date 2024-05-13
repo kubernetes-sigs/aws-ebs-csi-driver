@@ -229,6 +229,7 @@ controller:
     # Additional labels for ServiceMonitor object
     labels:
       release: prometheus
+    interval: "15s"
   # If set to true, AWS API call metrics will be exported to the following
   # TCP endpoint: "0.0.0.0:3301"
   # ---
