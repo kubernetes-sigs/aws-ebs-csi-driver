@@ -327,8 +327,6 @@ controller:
   
   # Enable dnsConfig for the controller and node pods
   dnsConfig: {}
-   
-
 
 node:
   env: []
