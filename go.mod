@@ -187,4 +187,4 @@ replace (
 	vbom.ml/util => github.com/fvbommel/util v0.0.2 // Mitigate https://github.com/fvbommel/util/issues/6
 )
 
-go 1.22.2
+go 1.22.3
