@@ -16,6 +16,8 @@
 
 set -euo pipefail
 
+readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
+
 # https://pypi.org/project/awscli/
 AWSCLI_VERSION="1.32.88"
 # https://github.com/helm/chart-testing
@@ -69,7 +71,7 @@ function install_pip() {
   COMMAND="${3}"
 
   source "${INSTALL_PATH}/venv/bin/activate"
-  python3 -m pip install "${PACKAGE}"
+  python3 -m pip install --require-hashes -r ${PACKAGE}
   cp "$(dirname "${0}")/python-runner.sh" "${INSTALL_PATH}/${COMMAND}"
 }
 
@@ -96,15 +98,15 @@ function install_tar_binary() {
 function install_aws() {
   INSTALL_PATH="${1}"
 
-  install_pip "${INSTALL_PATH}" "awscli==${AWSCLI_VERSION}" "aws"
+  install_pip "${INSTALL_PATH}" "${PKG_ROOT}/hack/tools/aws-requirements.in" "aws"
 }
 
 function install_ct() {
   INSTALL_PATH="${1}"
 
   install_tar_binary "${INSTALL_PATH}" "https://github.com/helm/chart-testing/releases/download/${CT_VERSION}/chart-testing_${CT_VERSION:1}_${OS}_${ARCH}.tar.gz" "ct"
-  install_pip "${INSTALL_PATH}" "yamale==${YAMALE_VERSION}" "yamale"
-  install_pip "${INSTALL_PATH}" "yamllint==${YAMLLINT_VERSION}" "yamllint"
+  install_pip "${INSTALL_PATH}" "${PKG_ROOT}/hack/tools/yamale-requirements.in" "yamale"
+  install_pip "${INSTALL_PATH}" "${PKG_ROOT}/hack/tools/yamllint-requirements.in" "yamllint"
 }
 
 function install_eksctl() {
