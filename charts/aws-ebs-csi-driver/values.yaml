@@ -447,6 +447,9 @@ storageClasses: []
 #   parameters:
 #     encrypted: "true"
 
+defaultStorageClass:
+  enabled: false
+
 volumeSnapshotClasses: []
 # Add VolumeSnapshotClass resources like:
 # - name: ebs-vsc
