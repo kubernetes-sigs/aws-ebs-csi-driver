@@ -325,6 +325,9 @@ controller:
   otelTracing: {}
   #  otelServiceName: ebs-csi-controller
   #  otelExporterEndpoint: "http://localhost:4317"
+  
+  # Enable dnsConfig for the controller and node pods
+  dnsConfig: {}
 
 node:
   env: []
