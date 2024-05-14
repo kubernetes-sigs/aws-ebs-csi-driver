@@ -77,7 +77,7 @@ func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
 }
 
 func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	klog.V(4).InfoS("CreateVolume: called", "args", *req)
+	klog.V(4).InfoS("CreateVolume: called", "args", util.SanitizeRequest(req))
 	if err := validateCreateVolumeRequest(req); err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 }
 
 func (d *ControllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	klog.V(4).InfoS("DeleteVolume: called", "args", *req)
+	klog.V(4).InfoS("DeleteVolume: called", "args", util.SanitizeRequest(req))
 	if err := validateDeleteVolumeRequest(req); err != nil {
 		return nil, err
 	}
@@ -398,7 +398,7 @@ func validateDeleteVolumeRequest(req *csi.DeleteVolumeRequest) error {
 }
 
 func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	klog.V(4).InfoS("ControllerPublishVolume: called", "args", *req)
+	klog.V(4).InfoS("ControllerPublishVolume: called", "args", util.SanitizeRequest(req))
 	if err := validateControllerPublishVolumeRequest(req); err != nil {
 		return nil, err
 	}
@@ -447,7 +447,7 @@ func validateControllerPublishVolumeRequest(req *csi.ControllerPublishVolumeRequ
 }
 
 func (d *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", *req)
+	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", util.SanitizeRequest(req))
 
 	if err := validateControllerUnpublishVolumeRequest(req); err != nil {
 		return nil, err
@@ -541,7 +541,7 @@ func (d *ControllerService) ValidateVolumeCapabilities(ctx context.Context, req 
 }
 
 func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	klog.V(4).InfoS("ControllerExpandVolume: called", "args", *req)
+	klog.V(4).InfoS("ControllerExpandVolume: called", "args", util.SanitizeRequest(req))
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -579,7 +579,7 @@ func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 }
 
 func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
-	klog.V(4).InfoS("ControllerModifyVolume: called", "args", *req)
+	klog.V(4).InfoS("ControllerModifyVolume: called", "args", util.SanitizeRequest(req))
 
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -660,7 +660,7 @@ func isValidVolumeContext(volContext map[string]string) bool {
 }
 
 func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	klog.V(4).InfoS("CreateSnapshot: called", "args", req)
+	klog.V(4).InfoS("CreateSnapshot: called", "args", util.SanitizeRequest(req))
 	if err := validateCreateSnapshotRequest(req); err != nil {
 		return nil, err
 	}
@@ -789,7 +789,7 @@ func validateCreateSnapshotRequest(req *csi.CreateSnapshotRequest) error {
 }
 
 func (d *ControllerService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	klog.V(4).InfoS("DeleteSnapshot: called", "args", req)
+	klog.V(4).InfoS("DeleteSnapshot: called", "args", util.SanitizeRequest(req))
 	if err := validateDeleteSnapshotRequest(req); err != nil {
 		return nil, err
 	}
@@ -822,7 +822,7 @@ func validateDeleteSnapshotRequest(req *csi.DeleteSnapshotRequest) error {
 }
 
 func (d *ControllerService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	klog.V(4).InfoS("ListSnapshots: called", "args", req)
+	klog.V(4).InfoS("ListSnapshots: called", "args", util.SanitizeRequest(req))
 	var snapshots []*cloud.Snapshot
 
 	snapshotID := req.GetSnapshotId()
