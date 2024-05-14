@@ -184,3 +184,40 @@ func TestIsAlphanumeric(t *testing.T) {
 		})
 	}
 }
+
+type TestRequest struct {
+	Name    string
+	Secrets map[string]string
+}
+
+func TestSanitizeRequest(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      interface{}
+		expected interface{}
+	}{
+		{
+			name: "Request with Secrets",
+			req: &TestRequest{
+				Name: "Test",
+				Secrets: map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				},
+			},
+			expected: &TestRequest{
+				Name:    "Test",
+				Secrets: map[string]string{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SanitizeRequest(tt.req)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("SanitizeRequest() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}

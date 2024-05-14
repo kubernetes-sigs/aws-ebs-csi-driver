@@ -113,7 +113,7 @@ func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, 
 }
 
 func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	klog.V(4).InfoS("NodeStageVolume: called", "args", *req)
+	klog.V(4).InfoS("NodeStageVolume: called", "args", util.SanitizeRequest(req))
 
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -349,7 +349,7 @@ func (d *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 }
 
 func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	klog.V(4).InfoS("NodeExpandVolume: called", "args", *req)
+	klog.V(4).InfoS("NodeExpandVolume: called", "args", util.SanitizeRequest(req))
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -413,7 +413,7 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 }
 
 func (d *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	klog.V(4).InfoS("NodePublishVolume: called", "args", *req)
+	klog.V(4).InfoS("NodePublishVolume: called", "args", util.SanitizeRequest(req))
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -466,7 +466,7 @@ func (d *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (d *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	klog.V(4).InfoS("NodeUnpublishVolume: called", "args", *req)
+	klog.V(4).InfoS("NodeUnpublishVolume: called", "args", util.SanitizeRequest(req))
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
