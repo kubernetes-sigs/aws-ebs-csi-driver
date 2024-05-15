@@ -1,4 +1,11 @@
 # Helm chart
+## v2.31.0
+* Bump driver version to `v1.31.0`
+* Expose dnsConfig in Helm Chart for Custom DNS Configuration ([#2034](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2045), [@omerap12](https://github.com/omerap12))
+* Make scrape interval configurable ([#2035](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2035), [@omerap12](https://github.com/omerap12))
+* Add defaultStorageClass parameter ([#2039](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2039), [@torredil](https://github.com/torredil))
+* Upgrade sidecar containers ([#2041](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2041), [@torredil](https://github.com/torredil))
+
 ## v2.30.0
 * Bump driver version to `v1.30.0`
 * Update voluemessnapshotcontents/status RBAC ([#1991](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1991), [@AndrewSirenko](https://github.com/AndrewSirenko))
