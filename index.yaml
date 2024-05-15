@@ -2,6 +2,26 @@ apiVersion: v1
 entries:
   aws-ebs-csi-driver:
   - apiVersion: v2
+    appVersion: 1.31.0
+    created: "2024-05-15T19:44:20.634151199Z"
+    description: A Helm chart for AWS EBS CSI Driver
+    digest: a72a6dd1233a729ce01db7519cd7301482a43ecc34364ce430f5b1b95935be01
+    home: https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    keywords:
+    - aws
+    - ebs
+    - csi
+    kubeVersion: '>=1.17.0-0'
+    maintainers:
+    - name: Kubernetes Authors
+      url: https://github.com/kubernetes-sigs/aws-ebs-csi-driver/
+    name: aws-ebs-csi-driver
+    sources:
+    - https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    urls:
+    - https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/helm-chart-aws-ebs-csi-driver-2.31.0/aws-ebs-csi-driver-2.31.0.tgz
+    version: 2.31.0
+  - apiVersion: v2
     appVersion: 1.30.0
     created: "2024-04-22T22:30:09.532195933Z"
     description: A Helm chart for AWS EBS CSI Driver
@@ -2453,4 +2473,4 @@ entries:
     urls:
     - https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/v0.4.0/helm-chart.tgz
     version: 0.1.0
-generated: "2024-04-22T22:30:09.532602774Z"
+generated: "2024-05-15T19:44:20.634563535Z"
