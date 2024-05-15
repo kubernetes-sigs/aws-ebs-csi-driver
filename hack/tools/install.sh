@@ -19,15 +19,15 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://pypi.org/project/awscli/
-AWSCLI_VERSION="1.32.88"
+AWSCLI_VERSION="1.32.105"
 # https://github.com/helm/chart-testing
-CT_VERSION="v3.10.1"
+CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.175.0"
+EKSCTL_VERSION="v0.176.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.17.1"
+GINKGO_VERSION="v2.17.3"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.57.2"
+GOLANGCI_LINT_VERSION="v1.58.1"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v3.11.7"
 # https://github.com/helm/helm
