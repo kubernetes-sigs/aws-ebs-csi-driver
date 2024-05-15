@@ -34,6 +34,8 @@ GOMPLATE_VERSION="v3.11.7"
 HELM_VERSION="v3.14.4"
 # https://github.com/kubernetes/kops
 KOPS_VERSION="v1.29.0-beta.1"
+# https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
+KUBETEST2_VERSION="v0.0.0-20240309080311-0d7ca9ccb41e"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
@@ -152,7 +154,7 @@ function install_kops() {
 function install_kubetest2() {
   INSTALL_PATH="${1}"
 
-  install_go "${INSTALL_PATH}" "sigs.k8s.io/kubetest2/...@latest"
+  install_go "${INSTALL_PATH}" "sigs.k8s.io/kubetest2/...@${KUBETEST2_VERSION}"
 }
 
 function install_mockgen() {
