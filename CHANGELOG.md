@@ -1,3 +1,19 @@
+# v1.31.0
+### Notable Changes
+* Add Alpha Support for Windows HostProcess Containers ([#2011](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2011), [@torredil](https://github.com/torredil))
+* Decrease median dynamic provisioning time by 1.5 seconds ([#2021](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2021), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug Fixes
+* Sanitize CSI RPC request logs ([#2037](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2037), [@torredil](https://github.com/torredil))
+
+### Improvements
+* Inject volumeWaitParameters dependency ([#2022](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2022), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Implement separate coalescer package and unit tests ([#2024](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2024), [@ConnorJC3](https://github.com/ConnorJC3))
+* Replace coalescer implementation with new coalescer package ([#2025](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2025), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add make cluster/image command; Build image and cluster in parallel for CI ([#2028](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2028), [@ConnorJC3](https://github.com/ConnorJC3))
+* Tune batched EC2 Describe* maxDelay ([#2029](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2029), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+
 # v1.30.0
 ### Notable Changes
 * Add retry manager to reduce RateLimitExceeded errors ([#2010](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2010), [@AndrewSirenko](https://github.com/AndrewSirenko))
