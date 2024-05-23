@@ -18,8 +18,8 @@ set -euo pipefail
 
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
-# https://pypi.org/project/awscli/
-AWSCLI_VERSION="1.32.105"
+# https://github.com/aws/aws-cli/tags
+AWSCLI_VERSION="2.15.56"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
@@ -99,8 +99,14 @@ function install_tar_binary() {
 
 function install_aws() {
   INSTALL_PATH="${1}"
+  TEMP_PATH="$(mktemp -d)"
 
-  install_pip "${INSTALL_PATH}" "${PKG_ROOT}/hack/tools/aws-requirements.in" "aws"
+  curl --location "https://awscli.amazonaws.com/awscli-exe-${OS}-x86_64-${AWSCLI_VERSION}.zip" --output "${TEMP_PATH}/awscli.zip"
+  unzip -q "${TEMP_PATH}/awscli.zip" -d "${TEMP_PATH}"
+  # Must cleanup (if it exists) or else installer will error with "Found preexisting AWS CLI installation"
+  rm -rf "${INSTALL_PATH}/aws-cli" "${INSTALL_PATH}/aws"
+  "${TEMP_PATH}/aws/install" --install-dir "${INSTALL_PATH}/aws-cli" --bin-dir "${INSTALL_PATH}"
+  rm -rf "${TEMP_PATH}"
 }
 
 function install_ct() {
