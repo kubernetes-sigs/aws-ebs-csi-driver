@@ -45,18 +45,19 @@ var _ MetadataService = &Metadata{}
 func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataService, error) {
 	metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
 	if err == nil {
-		klog.InfoS("ec2 metadata is available")
-		return metadata, nil
+		klog.InfoS("Retrieved metadata from IMDS")
+		return metadata.overrideRegion(region), nil
 	}
+	klog.ErrorS(err, "Retrieving IMDS metadata failed, falling back to Kubernetes metadata")
 
-	klog.InfoS("failed to retrieve instance data from ec2 metadata; retrieving instance data from kubernetes api", "err", err)
 	metadata, err = retrieveK8sMetadata(cfg.K8sAPIClient)
 	if err == nil {
-		klog.InfoS("kubernetes api is available")
-		return metadata, nil
+		klog.InfoS("Retrieved metadata from Kubernetes")
+		return metadata.overrideRegion(region), nil
 	}
+	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
 
-	return nil, fmt.Errorf("error getting instance data from ec2 metadata or kubernetes api")
+	return nil, fmt.Errorf("IMDS metadata and Kubernetes metadata are both unavailable")
 }
 
 func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
@@ -67,7 +68,7 @@ func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*M
 
 	svc, err := ec2MetadataClient()
 	if err != nil {
-		klog.ErrorS(err, "Failed to initialize EC2 Metadata client")
+		klog.ErrorS(err, "failed to initialize EC2 Metadata client")
 		return nil, err
 	}
 	return EC2MetadataInstanceInfo(svc, region)
@@ -76,11 +77,18 @@ func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*M
 func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
 	clientset, err := k8sAPIClient()
 	if err != nil {
-		klog.InfoS("error creating kubernetes api client", "err", err)
 		return nil, err
 	}
 
 	return KubernetesAPIInstanceInfo(clientset)
+}
+
+// Override the region on a Metadata object if it is non-empty
+func (m *Metadata) overrideRegion(region string) *Metadata {
+	if region != "" {
+		m.Region = region
+	}
+	return m
 }
 
 // GetInstanceID returns the instance identification.

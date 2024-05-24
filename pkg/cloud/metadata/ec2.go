@@ -51,7 +51,6 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 
 func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
 	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
-	klog.InfoS("Retrieving EC2 instance identity metadata", "regionFromSession", regionFromSession)
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
 	}
