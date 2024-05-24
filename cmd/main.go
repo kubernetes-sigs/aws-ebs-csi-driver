@@ -147,24 +147,25 @@ func main() {
 	var md metadata.MetadataService
 	var metadataErr error
 
-	if region == "" {
-		klog.V(5).InfoS("[Debug] Retrieving region from metadata service")
-		md, metadataErr = metadata.NewMetadataService(cfg, region)
-		if metadataErr != nil {
-			klog.ErrorS(metadataErr, "Could not determine region from any metadata service. The region can be manually supplied via the AWS_REGION environment variable.")
-			panic(metadataErr)
+	if region != "" {
+		klog.InfoS("Region provided via AWS_REGION environment variable", "region", region)
+		if options.Mode != driver.ControllerMode {
+			klog.InfoS("Node service requires metadata even if AWS_REGION provided, initializing metadata")
+			md, metadataErr = metadata.NewMetadataService(cfg, region)
 		}
-		region = md.GetRegion()
+	} else {
+		klog.InfoS("Initializing metadata")
+		md, metadataErr = metadata.NewMetadataService(cfg, region)
 	}
 
-	if md == nil {
-		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
-			md, metadataErr = metadata.NewMetadataService(cfg, region)
-			if metadataErr != nil {
-				klog.ErrorS(metadataErr, "failed to initialize metadata service")
-				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-			}
+	if metadataErr != nil {
+		klog.ErrorS(metadataErr, "Failed to initialize metadata when it is required")
+		if options.Mode == driver.ControllerMode {
+			klog.InfoS("The region can be manually supplied via the AWS_REGION environment variable")
 		}
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	} else if region == "" {
+		region = md.GetRegion()
 	}
 
 	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching)

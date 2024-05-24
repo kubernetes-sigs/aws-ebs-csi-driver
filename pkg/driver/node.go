@@ -92,10 +92,6 @@ type NodeService struct {
 
 // NewNodeService creates a new node service
 func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, k kubernetes.Interface) *NodeService {
-	klog.V(5).InfoS("[Debug] Retrieving node info from metadata service")
-	region := os.Getenv("AWS_REGION")
-	klog.InfoS("regionFromSession Node service", "region", region)
-
 	if k != nil {
 		// Remove taint from node to indicate driver startup success
 		// This is done at the last possible moment to prevent race conditions or false positive removals

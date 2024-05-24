@@ -76,7 +76,7 @@ func TestNewMetadataService(t *testing.T) {
 			region:           "us-west-2",
 			ec2MetadataError: errors.New("EC2 metadata error"),
 			k8sAPIError:      errors.New("K8s API error"),
-			expectedError:    errors.New("error getting instance data from ec2 metadata or kubernetes api"),
+			expectedError:    errors.New("IMDS metadata and Kubernetes metadata are both unavailable"),
 		},
 	}
 
