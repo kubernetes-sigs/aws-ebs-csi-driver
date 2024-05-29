@@ -330,6 +330,10 @@ controller:
   dnsConfig: {}
 
 node:
+
+  # allows you to deploy aws-ebs-csi-node daemonset to separate namespace (make sure namespace exists before deloy) 
+  # namespaceOverride: "aws-ebs-csi-node"
+
   env: []
   envFrom: []
   kubeletPath: /var/lib/kubelet
