@@ -5,7 +5,7 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: {{ printf "%s-windows" .NodeName }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.node.namespaceOverride | default .Release.Namespace }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
