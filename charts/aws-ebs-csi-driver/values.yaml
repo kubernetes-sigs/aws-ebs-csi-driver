@@ -401,10 +401,8 @@ node:
     runAsUser: 0
     runAsGroup: 0
     fsGroup: 0
-
   # allows you to deploy aws-ebs-csi-node daemonset to separate namespace (make sure namespace exists before deloy) 
   namespaceOverride: ""
-
   # Add additional volume mounts on the node pods with node.volumes and node.volumeMounts
   volumes: []
   # Add additional volumes to be mounted onto the node pods:
