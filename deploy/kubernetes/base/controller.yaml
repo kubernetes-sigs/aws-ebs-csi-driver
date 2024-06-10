@@ -142,6 +142,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -168,6 +169,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=5m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -193,6 +195,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -220,6 +223,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --workers=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
