@@ -136,7 +136,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-driver-test
-    namespace: kube-system
+    namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: ebs-csi-driver-test
