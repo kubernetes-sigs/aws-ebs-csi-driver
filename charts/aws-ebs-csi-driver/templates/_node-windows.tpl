@@ -40,6 +40,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ .Values.node.serviceAccount.name }}
+      terminationGracePeriodSeconds: {{ .Values.node.terminationGracePeriodSeconds }}
       priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
