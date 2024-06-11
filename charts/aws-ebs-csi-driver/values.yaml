@@ -358,6 +358,7 @@ node:
   daemonSetAnnotations: {}
   podAnnotations: {}
   podLabels: {}
+  terminationGracePeriodSeconds: 30
   tolerateAllTaints: true
   tolerations:
   - operator: Exists
