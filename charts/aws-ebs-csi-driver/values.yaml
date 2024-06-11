@@ -359,6 +359,7 @@ node:
   podAnnotations: {}
   podLabels: {}
   tolerateAllTaints: true
+  terminationGracePeriodSeconds: 30
   tolerations:
   - operator: Exists
     effect: NoExecute
