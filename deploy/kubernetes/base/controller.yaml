@@ -128,6 +128,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-provisioner
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v4.0.1-eks-1-30-4
           imagePullPolicy: IfNotPresent
@@ -158,6 +160,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-attacher
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.5.1-eks-1-30-4
           imagePullPolicy: IfNotPresent
@@ -185,6 +189,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-snapshotter
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v7.0.2-eks-1-30-4
           imagePullPolicy: IfNotPresent
@@ -211,6 +217,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-resizer
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.10.1-eks-1-30-4
           imagePullPolicy: IfNotPresent
@@ -239,6 +247,8 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: liveness-probe
           image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.12.0-eks-1-30-4
           imagePullPolicy: IfNotPresent

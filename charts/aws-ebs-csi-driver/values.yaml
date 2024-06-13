@@ -37,6 +37,8 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     securityContext:
+      seccompProfile:
+        type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   attacher:
@@ -62,6 +64,8 @@ sidecars:
     additionalClusterRoleRules: []
     resources: {}
     securityContext:
+      seccompProfile:
+        type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   snapshotter:
@@ -79,6 +83,8 @@ sidecars:
     additionalClusterRoleRules: []
     resources: {}
     securityContext:
+      seccompProfile:
+        type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   livenessProbe:
@@ -115,6 +121,8 @@ sidecars:
     additionalClusterRoleRules: []
     resources: {}
     securityContext:
+      seccompProfile:
+        type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   nodeDriverRegistrar:
@@ -158,6 +166,8 @@ sidecars:
     additionalArgs: []
     resources: {}
     securityContext:
+      seccompProfile:
+        type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
 
@@ -311,6 +321,8 @@ controller:
   # ---
   # securityContext on the controller container (see sidecars for securityContext on sidecar containers)
   containerSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
   initContainers: []
@@ -417,6 +429,7 @@ node:
   #   mountPath: /mount/path
   # ---
   # securityContext on the node container (see sidecars for securityContext on sidecar containers)
+  # Privileged containers always run as `Unconfined`, which means that they are not restricted by a seccomp profile.
   containerSecurityContext:
     readOnlyRootFilesystem: true
     privileged: true
