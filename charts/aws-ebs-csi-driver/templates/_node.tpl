@@ -63,7 +63,7 @@ spec:
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (toString .Values.image.tag)) }}
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.30.0
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - node
