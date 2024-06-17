@@ -185,6 +185,46 @@ func TestIsAlphanumeric(t *testing.T) {
 	}
 }
 
+func TestCountMACAddresses(t *testing.T) {
+	testCases := []struct {
+		name       string
+		testString string
+		expResult  int
+	}{
+		{
+			name:       "success with newline at end",
+			testString: "0e:1c:7d:81:2b:19/\n0e:8c:22:a2:16:ef/\n",
+			expResult:  2,
+		},
+		{
+			name:       "success with no newline",
+			testString: "0e:1c:7d:81:2b:19/\n0e:8c:22:a2:16:ef/sh-4.2$",
+			expResult:  2,
+		},
+		{
+			name:       "success with no addresses",
+			testString: "00:::00/sh-4.2$",
+			expResult:  0,
+		},
+		{
+			name:       "success with hard case",
+			testString: "Zé:1c:7d:81:2b:19/\n23:123:22:a2:16:ef/ff\n:/:sh-4.2$",
+			expResult:  0,
+		},
+		{
+			name:       "success with carriage returns and beginning newline",
+			testString: "\r\n0e:1c:7d:81:2b:19/\r\n0e:8c:22:a2:16:ef/\r\n0e:8c:22:a2:16:ef/sh-4.2$",
+			expResult:  3,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := CountMACAddresses(tc.testString)
+			assert.Equalf(t, tc.expResult, res, "Wrong value returned for CountMACAddresses. Expected %d for string %s, got %d", tc.expResult, tc.testString, res)
+		})
+	}
+}
+
 type TestRequest struct {
 	Name    string
 	Secrets map[string]string
