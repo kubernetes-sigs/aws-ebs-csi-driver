@@ -150,7 +150,7 @@ else
       -- \
       --skip-regex="${GINKGO_SKIP}" \
       --focus-regex="${GINKGO_FOCUS}" \
-      --test-package-version=$(curl -L https://dl.k8s.io/release/stable-${packageVersion}.txt) \
+      --test-package-version=v1.29.5 \
       --parallel=${GINKGO_PARALLEL} \
       --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=${KUBECONFIG} -node-os-distro=${NODE_OS_DISTRO}"
     TEST_PASSED=$?
