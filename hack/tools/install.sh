@@ -23,7 +23,7 @@ AWSCLI_VERSION="2.15.56"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.176.0"
+EKSCTL_VERSION="v0.183.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.17.3"
 # https://github.com/golangci/golangci-lint
