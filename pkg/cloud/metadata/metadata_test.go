@@ -115,7 +115,7 @@ func TestNewMetadataService(t *testing.T) {
 					},
 				}, nil)
 				mockEC2Metadata.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n")),
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab")),
 				}, nil)
 				mockEC2Metadata.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
@@ -257,7 +257,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+					Content: io.NopCloser(strings.NewReader("eni-1\neni-2")),
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(nil, errors.New("failed to get block device mappings metadata"))
 			},
@@ -275,7 +275,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(errReader{}),
@@ -295,7 +295,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
@@ -332,7 +332,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
@@ -362,7 +362,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 					},
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("eni-1\neni-2\n")),
+					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
 				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
 			},

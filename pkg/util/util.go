@@ -37,6 +37,8 @@ const (
 
 var (
 	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
+	// MAC Address Regex Source: https://stackoverflow.com/a/4260512
+	isMACAddressRegex = regexp.MustCompile(`([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})`)
 )
 
 // RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB
@@ -135,6 +137,12 @@ func IsSBE(region string) bool {
 // StringIsAlphanumeric returns true if a given string contains only English letters or numbers
 func StringIsAlphanumeric(s string) bool {
 	return isAlphanumericRegex(s)
+}
+
+// CountMACAddresses returns the amount of MAC addresses within a string
+func CountMACAddresses(s string) int {
+	matches := isMACAddressRegex.FindAllStringIndex(s, -1)
+	return len(matches)
 }
 
 // NormalizeWindowsPath normalizes a Windows path
