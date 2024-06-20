@@ -7,11 +7,9 @@ image:
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
   tag: ""
   pullPolicy: IfNotPresent
-
 # -- Custom labels to add into metadata
-customLabels:
-  {}
-  # k8s-app: aws-ebs-csi-driver
+customLabels: {}
+# k8s-app: aws-ebs-csi-driver
 
 sidecars:
   provisioner:
@@ -19,7 +17,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v4.0.1-eks-1-30-4"
+      tag: "v5.0.1-eks-1-30-8"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -46,7 +44,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.5.1-eks-1-30-4"
+      tag: "v4.6.1-eks-1-30-8"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -75,7 +73,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v7.0.2-eks-1-30-4"
+      tag: "v8.0.1-eks-1-30-8"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -91,7 +89,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.12.0-eks-1-30-4"
+      tag: "v2.13.0-eks-1-30-8"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -103,7 +101,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.10.1-eks-1-30-4"
+      tag: "v1.11.1-eks-1-30-8"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -130,7 +128,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.10.1-eks-1-30-4"
+      tag: "v2.11.0-eks-1-30-8"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -141,9 +139,9 @@ sidecars:
     livenessProbe:
       exec:
         command:
-        - /csi-node-driver-registrar
-        - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-        - --mode=kubelet-registration-probe
+          - /csi-node-driver-registrar
+          - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+          - --mode=kubelet-registration-probe
       initialDelaySeconds: 30
       periodSeconds: 90
       timeoutSeconds: 15
@@ -170,20 +168,16 @@ sidecars:
         type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
-
 proxy:
   http_proxy:
   no_proxy:
-
 imagePullSecrets: []
 nameOverride:
 fullnameOverride:
-
 awsAccessSecret:
   name: aws-secret
   keyId: key_id
   accessKey: access_key
-
 controller:
   batching: true
   volumeModificationFeature:
@@ -195,24 +189,24 @@ controller:
   affinity:
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 1
-        preference:
-          matchExpressions:
-          - key: eks.amazonaws.com/compute-type
-            operator: NotIn
-            values:
-            - fargate
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                  - fargate
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
-      - podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-            - key: app
-              operator: In
-              values:
-              - ebs-csi-controller
-          topologyKey: kubernetes.io/hostname
-        weight: 100
+        - podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - ebs-csi-controller
+            topologyKey: kubernetes.io/hostname
+          weight: 100
   # The default filesystem type of the volume to provision when fstype is unspecified in the StorageClass.
   # If the default is not set and fstype is unset in the StorageClass, then no fstype will be set
   defaultFsType: ext4
@@ -276,7 +270,7 @@ controller:
     limits:
       memory: 256Mi
   serviceAccount:
-  # A service account will be created for you if set to true. Set to false if you want to use your own.
+    # A service account will be created for you if set to true. Set to false if you want to use your own.
     create: true
     name: ebs-csi-controller-sa
     annotations: {}
@@ -337,10 +331,9 @@ controller:
   otelTracing: {}
   #  otelServiceName: ebs-csi-controller
   #  otelExporterEndpoint: "http://localhost:4317"
-  
+
   # Enable dnsConfig for the controller and node pods
   dnsConfig: {}
-
 node:
   env: []
   envFrom: []
@@ -353,19 +346,19 @@ node:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: eks.amazonaws.com/compute-type
-            operator: NotIn
-            values:
-            - fargate
-          - key: node.kubernetes.io/instance-type
-            operator: NotIn
-            values:
-            - a1.medium
-            - a1.large
-            - a1.xlarge
-            - a1.2xlarge
-            - a1.4xlarge
+          - matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                  - fargate
+              - key: node.kubernetes.io/instance-type
+                operator: NotIn
+                values:
+                  - a1.medium
+                  - a1.large
+                  - a1.xlarge
+                  - a1.2xlarge
+                  - a1.4xlarge
   nodeSelector: {}
   daemonSetAnnotations: {}
   podAnnotations: {}
@@ -373,9 +366,9 @@ node:
   terminationGracePeriodSeconds: 30
   tolerateAllTaints: true
   tolerations:
-  - operator: Exists
-    effect: NoExecute
-    tolerationSeconds: 300
+    - operator: Exists
+      effect: NoExecute
+      tolerationSeconds: 300
   resources:
     requests:
       cpu: 10m
@@ -437,19 +430,17 @@ node:
   otelTracing: {}
   #  otelServiceName: ebs-csi-node
   #  otelExporterEndpoint: "http://localhost:4317"
-
 additionalDaemonSets:
-  # Additional node DaemonSets, using the node config structure
-  # See docs/additional-daemonsets.md for more information
-  #
-  # example:
-  #   nodeSelector:
-  #     node.kubernetes.io/instance-type: c5.large
-  #   volumeAttachLimit: 15
+# Additional node DaemonSets, using the node config structure
+# See docs/additional-daemonsets.md for more information
+#
+# example:
+#   nodeSelector:
+#     node.kubernetes.io/instance-type: c5.large
+#   volumeAttachLimit: 15
 
 # Enable compatibility for the A1 instance family via use of an AL2-based image in a separate DaemonSet
 # a1CompatibilityDaemonSet: true
-
 storageClasses: []
 # Add StorageClass resources like:
 # - name: ebs-sc
@@ -468,7 +459,6 @@ storageClasses: []
 
 defaultStorageClass:
   enabled: false
-
 volumeSnapshotClasses: []
 # Add VolumeSnapshotClass resources like:
 # - name: ebs-vsc
@@ -486,8 +476,7 @@ volumeSnapshotClasses: []
 # Intended for use with older clusters that cannot easily replace the CSIDriver object
 # This parameter should always be false for new installations
 useOldCSIDriver: false
-
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20240311-b09cdeb92c-master"
+  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20240611-597c402033-master"
