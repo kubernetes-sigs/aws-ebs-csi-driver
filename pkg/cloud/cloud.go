@@ -333,20 +333,6 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		panic(err)
 	}
 
-	endpoint := os.Getenv("AWS_EC2_ENDPOINT")
-	if endpoint != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			if service == ec2.ServiceID {
-				return aws.Endpoint{
-					URL:           endpoint,
-					SigningRegion: region,
-				}, nil
-			}
-			return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-		})
-		cfg.EndpointResolverWithOptions = customResolver //nolint:staticcheck
-	}
-
 	if awsSdkDebugLog {
 		cfg.ClientLogMode = aws.LogRequestWithBody | aws.LogResponseWithBody
 	}
@@ -363,7 +349,12 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 			RecordRequestsMiddleware(),
 		)
 
-		o.RetryMaxAttempts = retryMaxAttempt //  Retry EC2 API calls at sdk level until request contexts are cancelled
+		endpoint := os.Getenv("AWS_EC2_ENDPOINT")
+		if endpoint != "" {
+			o.BaseEndpoint = &endpoint
+		}
+
+		o.RetryMaxAttempts = retryMaxAttempt
 	})
 
 	var bm *batcherManager
