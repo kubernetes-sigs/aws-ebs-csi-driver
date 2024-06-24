@@ -1,4 +1,14 @@
 # Helm chart
+## v2.32.0
+* Bump driver version to `v1.32.0`
+* Bump CSI sidecar container versions
+* Add `patch` permission to `PV` to `external-provisioner` role (required by v5 and later)
+* Add terminationGracePeriodSeconds as a helm parameter ([#2060](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2060), [@ElijahQuinones](https://github.com/ElijahQuinones))
+* Use release namespace in ClusterRoleBinding subject namespace ([#2059](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2059), [@etutuit](https://github.com/etutuit))
+* Add parameter to override node DaemonSet namespace ([#2052](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2052), [@RuStyC0der](https://github.com/RuStyC0der))
+* Set RuntimeDefault as default seccompProfile in securityContext ([#2061](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2061), [@torredil](https://github.com/torredil))
+* Increase default provisioner, resizer, snapshotter `retry-interval-max` ([#2057](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2057), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 ## v2.31.0
 * Bump driver version to `v1.31.0`
 * Expose dnsConfig in Helm Chart for Custom DNS Configuration ([#2034](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2045), [@omerap12](https://github.com/omerap12))
