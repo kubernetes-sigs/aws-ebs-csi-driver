@@ -33,7 +33,7 @@ GOMPLATE_VERSION="v3.11.7"
 # https://github.com/helm/helm
 HELM_VERSION="v3.14.4"
 # https://github.com/kubernetes/kops
-KOPS_VERSION="v1.29.0-beta.1"
+KOPS_VERSION="v1.30.0-alpha.1"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20240309080311-0d7ca9ccb41e"
 # https://github.com/golang/mock
