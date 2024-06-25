@@ -52,7 +52,7 @@ type DeviceManager interface {
 	// NewDevice retrieves the device if the device is already assigned.
 	// Otherwise it creates a new device with next available device name
 	// and mark it as unassigned device.
-	NewDevice(instance *types.Instance, volumeID string, likelyBadNames map[string]struct{}) (device *Device, err error)
+	NewDevice(instance *types.Instance, volumeID string, likelyBadNames *sync.Map) (device *Device, err error)
 
 	// GetDevice returns the device already assigned to the volume.
 	GetDevice(instance *types.Instance, volumeID string) (device *Device, err error)
@@ -103,7 +103,7 @@ func NewDeviceManager() DeviceManager {
 	}
 }
 
-func (d *deviceManager) NewDevice(instance *types.Instance, volumeID string, likelyBadNames map[string]struct{}) (*Device, error) {
+func (d *deviceManager) NewDevice(instance *types.Instance, volumeID string, likelyBadNames *sync.Map) (*Device, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 

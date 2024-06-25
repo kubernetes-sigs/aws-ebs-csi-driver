@@ -18,6 +18,7 @@ package devicemanager
 
 import (
 	"fmt"
+	"sync"
 )
 
 // ExistingNames is a map of assigned device names. Presence of a key with a device
@@ -34,7 +35,7 @@ type ExistingNames map[string]string
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
 type NameAllocator interface {
-	GetNext(existingNames ExistingNames, likelyBadNames map[string]struct{}) (name string, err error)
+	GetNext(existingNames ExistingNames, likelyBadNames *sync.Map) (name string, err error)
 }
 
 type nameAllocator struct{}
@@ -46,18 +47,28 @@ var _ NameAllocator = &nameAllocator{}
 //
 // likelyBadNames is a map of names that have previously returned an "in use" error when attempting to mount to them
 // These names are unlikely to result in a successful mount, and may be permanently unavailable, so use them last
-func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames map[string]struct{}) (string, error) {
+func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames *sync.Map) (string, error) {
 	for _, name := range deviceNames {
 		_, existing := existingNames[name]
-		_, likelyBad := likelyBadNames[name]
+		_, likelyBad := likelyBadNames.Load(name)
 		if !existing && !likelyBad {
 			return name, nil
 		}
 	}
-	for name := range likelyBadNames {
-		if _, existing := existingNames[name]; !existing {
-			return name, nil
+
+	finalResortName := ""
+	likelyBadNames.Range(func(name, _ interface{}) bool {
+		if name, ok := name.(string); ok {
+			fmt.Println(name)
+			if _, existing := existingNames[name]; !existing {
+				finalResortName = name
+				return false
+			}
 		}
+		return true
+	})
+	if finalResortName != "" {
+		return finalResortName, nil
 	}
 
 	return "", fmt.Errorf("there are no names available")

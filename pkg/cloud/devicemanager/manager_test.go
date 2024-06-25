@@ -17,6 +17,7 @@ limitations under the License.
 package devicemanager
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -59,7 +60,7 @@ func TestNewDevice(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Should fail if instance is nil
-			dev1, err := dm.NewDevice(nil, tc.volumeID, map[string]struct{}{})
+			dev1, err := dm.NewDevice(nil, tc.volumeID, new(sync.Map))
 			if err == nil {
 				t.Fatalf("Expected error when nil instance is passed in, got nothing")
 			}
@@ -70,11 +71,11 @@ func TestNewDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should create valid Device with valid path
-			dev1, err = dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev1, err = dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev1, false, err)
 
 			// Devices with same instance and volume should have same paths
-			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
 			if dev1.Path != dev2.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev2.Path)
@@ -82,7 +83,7 @@ func TestNewDevice(t *testing.T) {
 
 			// Should create new Device with the same path after releasing
 			dev2.Release(false)
-			dev3, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev3, err := dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev3, false, err)
 			if dev3.Path != dev1.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev3.Path)
@@ -136,7 +137,7 @@ func TestNewDeviceWithExistingDevice(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeInstance := newFakeInstance("fake-instance", tc.existingID, tc.existingPath)
 
-			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev, tc.existingID == tc.volumeID, err)
 
 			if dev.Path != tc.expectedPath {
@@ -169,7 +170,7 @@ func TestGetDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should create valid Device with valid path
-			dev1, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev1, err := dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev1, false /*IsAlreadyAssigned*/, err)
 
 			// Devices with same instance and volume should have same paths
@@ -205,7 +206,7 @@ func TestReleaseDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should get assigned Device after releasing tainted device
-			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, new(sync.Map))
 			assertDevice(t, dev, false /*IsAlreadyAssigned*/, err)
 			dev.Taint()
 			dev.Release(false)
