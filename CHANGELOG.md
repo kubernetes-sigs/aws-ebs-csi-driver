@@ -1,3 +1,12 @@
+# v1.32.0
+### Bug Fixes
+* Fix off-by-one error in ENI calculation when using IMDS metadata ([#2065](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2065), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Improvements
+* Greatly clarify misleading metadata logging ([#2049](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2049), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add missing Kubernetes license headers ([#2023](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2023), [@torredil](https://github.com/torredil))
+* Bump dependencies for release v1.32.0 ([#2069](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2069), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.31.0
 ### Notable Changes
 * Add Alpha Support for Windows HostProcess Containers ([#2011](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2011), [@torredil](https://github.com/torredil))
