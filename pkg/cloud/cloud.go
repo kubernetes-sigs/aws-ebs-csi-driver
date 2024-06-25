@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -319,6 +320,7 @@ type cloud struct {
 	rm                   *retryManager
 	vwp                  volumeWaitParameters
 	likelyBadDeviceNames expiringcache.ExpiringCache[string, sync.Map]
+	latestClientTokens   expiringcache.ExpiringCache[string, int]
 }
 
 var _ Cloud = &cloud{}
@@ -374,6 +376,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		rm:                   newRetryManager(),
 		vwp:                  vwp,
 		likelyBadDeviceNames: expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:   expiringcache.New[string, int](cacheForgetDelay),
 	}
 }
 
@@ -590,8 +593,22 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 	}
 
-	// We hash the volume name to generate a unique token that is less than or equal to 64 characters
-	clientToken := sha256.Sum256([]byte(volumeName))
+	// The first client token used for any volume is the volume name as provided via CSI
+	// However, if a volume fails to create asyncronously (that is, the CreateVolume call
+	// succeeds but the volume ultimately fails to create), the client token is burned until
+	// EC2 forgets about its use (measured as 12 hours under normal conditions)
+	//
+	// To prevent becoming stuck for 12 hours when this occurs, we sequentially append "-2",
+	// "-3", "-4", etc to the volume name before hashing on the subsequent attempt after a
+	// volume fails to create because of an IdempotentParameterMismatch AWS error
+	// The most recent appended value is stored in an expiring cache to prevent memory leaks
+	tokenBase := volumeName
+	if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
+		tokenBase += "-" + strconv.Itoa(*tokenNumber)
+	}
+
+	// We use a sha256 hash to guarantee the token that is less than or equal to 64 characters
+	clientToken := sha256.Sum256([]byte(tokenBase))
 
 	requestInput := &ec2.CreateVolumeInput{
 		AvailabilityZone:   aws.String(zone),
@@ -634,6 +651,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			return nil, ErrNotFound
 		}
 		if isAWSErrorIdempotentParameterMismatch(err) {
+			nextTokenNumber := 2
+			if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
+				nextTokenNumber = *tokenNumber + 1
+			}
+			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
 		}
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)

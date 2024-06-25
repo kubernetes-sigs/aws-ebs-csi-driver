@@ -1282,6 +1282,72 @@ func TestCreateDisk(t *testing.T) {
 	}
 }
 
+// Test client error IdempotentParameterMismatch by forcing it to progress twice
+func TestCreateDiskClientToken(t *testing.T) {
+	t.Parallel()
+
+	const volumeName = "test-vol-client-token"
+	const volumeId = "vol-abcd1234"
+	diskOptions := &DiskOptions{
+		CapacityBytes:    util.GiBToBytes(1),
+		Tags:             map[string]string{VolumeNameTagKey: volumeName, AwsEbsDriverTagKey: "true"},
+		AvailabilityZone: defaultZone,
+	}
+
+	// Hash of "test-vol-client-token"
+	const expectedClientToken1 = "6a1b29bd7c5c5541d9d6baa2938e954fc5739dc77e97facf23590bd13f8582c2"
+	// Hash of "test-vol-client-token-2"
+	const expectedClientToken2 = "21465f5586388bb8804d0cec2df13c00f9a975c8cddec4bc35e964cdce59015b"
+	// Hash of "test-vol-client-token-3"
+	const expectedClientToken3 = "1bee5a79d83981c0041df2c414bb02e0c10aeb49343b63f50f71470edbaa736b"
+
+	mockCtrl := gomock.NewController(t)
+	mockEC2 := NewMockEC2API(mockCtrl)
+	c := newCloud(mockEC2)
+
+	gomock.InOrder(
+		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+				assert.Equal(t, expectedClientToken1, *input.ClientToken)
+				return nil, &smithy.GenericAPIError{Code: "IdempotentParameterMismatch"}
+			}),
+		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+				assert.Equal(t, expectedClientToken2, *input.ClientToken)
+				return nil, &smithy.GenericAPIError{Code: "IdempotentParameterMismatch"}
+			}),
+		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+				assert.Equal(t, expectedClientToken3, *input.ClientToken)
+				return &ec2.CreateVolumeOutput{
+					VolumeId: aws.String(volumeId),
+					Size:     aws.Int32(util.BytesToGiB(diskOptions.CapacityBytes)),
+				}, nil
+			}),
+		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+			Volumes: []types.Volume{
+				{
+					VolumeId:         aws.String(volumeId),
+					Size:             aws.Int32(util.BytesToGiB(diskOptions.CapacityBytes)),
+					State:            types.VolumeState("available"),
+					AvailabilityZone: aws.String(diskOptions.AvailabilityZone),
+				},
+			},
+		}, nil).AnyTimes(),
+	)
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+	defer cancel()
+	for i := range 3 {
+		_, err := c.CreateDisk(ctx, volumeName, diskOptions)
+		if i < 2 {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
+
 func TestDeleteDisk(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -3076,6 +3142,7 @@ func newCloud(mockEC2 EC2API) Cloud {
 		rm:                   newRetryManager(),
 		vwp:                  testVolumeWaitParameters(),
 		likelyBadDeviceNames: expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:   expiringcache.New[string, int](cacheForgetDelay),
 	}
 	return c
 }

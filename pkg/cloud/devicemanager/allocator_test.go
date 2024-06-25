@@ -68,6 +68,13 @@ func TestNameAllocatorLikelyBadName(t *testing.T) {
 		})
 	}
 
+	onlyExisting := new(sync.Map)
+	onlyExisting.Store(skippedNameExisting, struct{}{})
+	_, err := allocator.GetNext(existingNames, onlyExisting)
+	if err != nil {
+		t.Errorf("got nil when error expected (likelyBadNames with only existing names)")
+	}
+
 	lastName, _ := allocator.GetNext(existingNames, likelyBadNames)
 	if lastName != skippedNameNew {
 		t.Errorf("test %q: expected %q, got %q (likelyBadNames fallback)", skippedNameNew, skippedNameNew, lastName)
