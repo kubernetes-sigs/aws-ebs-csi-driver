@@ -310,12 +310,13 @@ type batcherManager struct {
 }
 
 type cloud struct {
-	region string
-	ec2    EC2API
-	dm     dm.DeviceManager
-	bm     *batcherManager
-	rm     *retryManager
-	vwp    volumeWaitParameters
+	region         string
+	ec2            EC2API
+	dm             dm.DeviceManager
+	bm             *batcherManager
+	rm             *retryManager
+	vwp            volumeWaitParameters
+	likelyBadNames util.ExpiringCache[string, map[string]struct{}]
 }
 
 var _ Cloud = &cloud{}
@@ -364,12 +365,13 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	}
 
 	return &cloud{
-		region: region,
-		dm:     dm.NewDeviceManager(),
-		ec2:    svc,
-		bm:     bm,
-		rm:     newRetryManager(),
-		vwp:    vwp,
+		region:         region,
+		dm:             dm.NewDeviceManager(),
+		ec2:            svc,
+		bm:             bm,
+		rm:             newRetryManager(),
+		vwp:            vwp,
+		likelyBadNames: util.NewExpiringCache[string, map[string]struct{}](cacheForgetDelay),
 	}
 }
 
@@ -847,32 +849,13 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 	return r.Result, nil
 }
 
-// Node likely bad device names cache
-// Remember device names that are already in use on an instance and use them last when attaching volumes
-// This works around device names that are used but do not appear in the mapping from DescribeInstanceStatus
-const cacheForgetDelay = 1 * time.Hour
-
-type cachedNode struct {
-	timer          *time.Timer
-	likelyBadNames map[string]struct{}
-}
-
-var cacheMutex sync.Mutex
-var nodeDeviceCache map[string]cachedNode = map[string]cachedNode{}
-
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
 
-	likelyBadNames := map[string]struct{}{}
-	cacheMutex.Lock()
-	if node, ok := nodeDeviceCache[nodeID]; ok {
-		likelyBadNames = node.likelyBadNames
-		node.timer.Reset(cacheForgetDelay)
-	}
-	cacheMutex.Unlock()
+	likelyBadNames, _ := c.likelyBadNames[nodeID]
 
 	device, err := c.dm.NewDevice(instance, volumeID, likelyBadNames)
 	if err != nil {
