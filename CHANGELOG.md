@@ -1,4 +1,7 @@
 # v1.32.0
+### Announcements
+* The next minor version (`v1.33.0`) of the EBS CSI Driver will migrate the AZ topology label `CreateVolume` returns from `topology.ebs.csi.aws.com/zone` to `topology.kubernetes.io/zone`. Volumes created on this or any future version will be incompatible with EBS CSI Driver versions before `v1.28.0`, preventing a downgrade of more than 5 releases in the past. No other customer-facing impact is expected unless you directly depend on the topology label. For more information and the reasoning behind this change, see [issue #729](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/729#issuecomment-1942026577).
+
 ### Bug Fixes
 * Fix off-by-one error in ENI calculation when using IMDS metadata ([#2065](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2065), [@AndrewSirenko](https://github.com/AndrewSirenko))
 
