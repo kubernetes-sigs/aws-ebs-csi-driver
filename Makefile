@@ -96,8 +96,6 @@ update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt u
 verify: verify/govet verify/golangci-lint verify/update
 	@echo "All verifications passed!"
 
-
-
 .PHONY: cluster/create
 cluster/create: bin/kops bin/eksctl bin/aws bin/gomplate
 	./hack/e2e/create-cluster.sh
@@ -113,6 +111,14 @@ cluster/image: bin/aws
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
 	./hack/e2e/delete-cluster.sh
+
+.PHONY: cluster/install
+cluster/install: bin/helm bin/aws
+	./hack/e2e/install.sh
+
+.PHONY: cluster/uninstall
+cluster/uninstall: bin/helm bin/aws
+	./hack/e2e/uninstall.sh
 
 ## E2E targets
 # Targets to run e2e tests

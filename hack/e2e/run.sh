@@ -60,37 +60,9 @@ fi
 
 if [[ "${HELM_CT_TEST}" != true ]]; then
   startSec=$(date +'%s')
-
-  if [[ ${DEPLOY_METHOD} == "helm" ]]; then
-    HELM_ARGS=(upgrade --install "aws-ebs-csi-driver"
-      --namespace kube-system
-      --set image.repository="${IMAGE_NAME}"
-      --set image.tag="${IMAGE_TAG}"
-      --set node.enableWindows="${WINDOWS}"
-      --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
-      --set=controller.k8sTagClusterId="${CLUSTER_NAME}"
-      --timeout 10m0s
-      --wait
-      --kubeconfig "${KUBECONFIG}"
-      ./charts/aws-ebs-csi-driver)
-    if [[ -f "$HELM_VALUES_FILE" ]]; then
-      HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
-    fi
-    eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
-    if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
-      HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
-    fi
-    set -x
-    "${BIN}/helm" "${HELM_ARGS[@]}"
-    set +x
-  elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
-    set -x
-    kubectl --kubeconfig "${KUBECONFIG}" apply -k "./deploy/kubernetes/overlays/stable"
-    kubectl --kubeconfig "${KUBECONFIG}" --namespace kube-system wait --timeout 10m0s --for "condition=ready" pod -l "app.kubernetes.io/name=aws-ebs-csi-driver"
-    set +x
-  fi
-
+  install_driver
   endSec=$(date +'%s')
+
   deployTimeSeconds=$(((endSec - startSec) / 1))
   loudecho "Driver deployment complete, time used: $deployTimeSeconds seconds"
 fi
@@ -199,14 +171,7 @@ fi
 ## Cleanup
 
 if [[ "${HELM_CT_TEST}" != true ]]; then
-  loudecho "Removing driver via ${DEPLOY_METHOD}"
-  if [[ ${DEPLOY_METHOD} == "helm" ]]; then
-    ${BIN}/helm del "aws-ebs-csi-driver" \
-      --namespace kube-system \
-      --kubeconfig "${KUBECONFIG}"
-  elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
-    kubectl --kubeconfig "${KUBECONFIG}" delete -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
-  fi
+  uninstall_driver
 fi
 
 if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
