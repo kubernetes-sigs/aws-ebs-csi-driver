@@ -16,57 +16,13 @@ The `Makefile` has the following dependencies:
 
 All other tools are downloaded for you at runtime.
 
-## Quickstart Guide
-
-This guide demonstrates the basic workflow for developing for the EBS CSI Driver. More detailed documentation of the available `make` targets is available below.
-
-### 1. Local development for the EBS CSI Driver
-
-If your changes are Helm-only, skip to section 2 (Run E2E tests) below after making your changes.
-
-During development, use `make` at any time to build a driver binary, and thus discover compiler errors. When your change is ready to be tested, run `make test` to execute the unit test suite for the driver. If you are making a significant change to the driver (such as a bugfix or new feature), please add new unit tests or update existing tests where applicable.
-
-### 2. Run E2E tests
-
-To create a `kops` cluster to test the driver against:
-```bash
-make cluster/create
-```
-
-If your change affects the Windows implementation of the driver, instead create an `eksctl` cluster with Windows nodes:
-```bash
-export WINDOWS="true"
-# Note: CLUSTER_TYPE must be set for all e2e tests and cluster deletion
-# Re-export it if necessary (for example, if running tests in a separate terminal tab)
-export CLUSTER_TYPE="eksctl"
-make cluster/create
-```
-
-If you are making a change to the driver, the recommended test suite to run is the external tests:
-```bash
-# Normal external tests (excluding Windows tests)
-make e2e/external
-# Instead, if testing Windows
-make e2e/external-windows
-```
-
-If you are making a change to the Helm chart, the recommended test suite to run is the Helm `ct` tests:
-```bash
-make e2e/helm-ct
-```
-
-To cleanup your cluster after finishing testing:
-```bash
-make cluster/delete
-```
-
-### 3. Before submitting a PR
-
-Run `make update` to automatically format go source files and re-generate automatically generated files. If `make update` produces any changes, commit them before submitting a PR.
-
-Run `make verify` to run linters and other similar code checking tools. Fix any issues `make verify` discovers before submitting a PR.
-
 ## Building
+
+### `make cluster/image`
+
+Build and push a single image of the driver based on the local platform (the same overrides as `make` apply, as well as `OSVERSION` to override container OS version). In most cases, `make all-push` is more suitable. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`.
+
+## Local Development
 
 ### `make` or `make bin/aws-ebs-csi-driver` or `make bin/aws-ebs-csi-driver.exe`
 
@@ -74,27 +30,9 @@ Build a binary copy of the EBS CSI Driver for the local platform. This is the de
 
 The target OS and/or architecture can be overridden via the `OS` and `ARCH` environment variables (for example, `OS=linux ARCH=arm64 make`)
 
-### `make image`
-
-Build and push a single image of the driver based on the local platform (the same overrides as `make` apply, as well as `OSVERSION` to override container OS version). In most cases, `make all-push` is more suitable. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`.
-
-### `make all-push`
-
-Build and push a multi-arch image of the driver based on the OSes in `ALL_OS`, architectures in `ALL_ARCH_linux`/`ALL_ARCH_windows`, and OS versions in `ALL_OSVERSION_linux`/`ALL_OSVERSION_windows`. Also supports `REGISTRY`, `IMAGE`, and `TAG`.
-
-## Local Development
-
 ### `make test`
 
 Run all unit tests with race condition checking enabled.
-
-### `make test/coverage`
-
-Outputs a filtered version of the each package's unit test coverage profiling via go's coverage tool to a local `coverage.html` file.
-
-### `make test-sanity`
-
-Run the official [CSI sanity tests](https://github.com/kubernetes-csi/csi-test). _Warning: Currently, 3 of the tests are known to fail incorrectly._
 
 ### `make verify`
 
@@ -197,6 +135,26 @@ eval "$(make cluster/kubeconfig)"
 ### `make cluster/delete`
 
 Deletes a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster.
+
+### `make cluster/install`
+
+Install the EBS CSI Driver to the cluster via Helm. You must have already run `make cluster/image` to build the image for the cluster, or provide an image of your own.
+
+#### Example: Install the EBS CSI Driver to a cluster for testing
+
+```bash
+make cluster/install
+```
+
+### `make cluster/uninstall`
+
+Uninstall an installation of the EBS CSI Driver previously installed by `make cluster/install`.
+
+#### Example: Uninstall the EBS CSI Driver
+
+```bash
+make cluster/uninstall
+```
 
 ## E2E Tests
 
