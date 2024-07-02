@@ -15,11 +15,8 @@
 timeout: 5400s
 steps:
   - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20240523-a15ad90fc9
-    entrypoint: ./hack/prow.sh
+    entrypoint: ./hack/cloudbuild.sh
     env:
       - GIT_TAG=${_GIT_TAG}
       - PULL_BASE_REF=${_PULL_BASE_REF}
-      - REGISTRY_NAME=gcr.io/${_STAGING_PROJECT}
       - HOME=/root
-substitutions:
-  _STAGING_PROJECT: "k8s-staging-provider-aws"
