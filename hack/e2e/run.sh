@@ -129,15 +129,13 @@ else
     set -e
     set +x
     popd
-  fi
-
-  if [[ $TEST_PATH == "./tests/e2e/..." ]]; then
+  else
     set -x
     set +e
     "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
       --focus="${GINKGO_FOCUS}" \
       --skip="${GINKGO_SKIP}" \
-      "${BASE_DIR}/../../tests/e2e/..." \
+      "${TEST_PATH}" \
       -- \
       -kubeconfig="${KUBECONFIG}" \
       -report-dir="${TEST_DIR}/artifacts" \
