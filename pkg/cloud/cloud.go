@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -91,6 +92,7 @@ var (
 const (
 	volumeDetachedState = "detached"
 	volumeAttachedState = "attached"
+	cacheForgetDelay    = 1 * time.Hour
 )
 
 // AWS provisioning limits.
@@ -310,12 +312,14 @@ type batcherManager struct {
 }
 
 type cloud struct {
-	region string
-	ec2    EC2API
-	dm     dm.DeviceManager
-	bm     *batcherManager
-	rm     *retryManager
-	vwp    volumeWaitParameters
+	region             string
+	ec2                EC2API
+	dm                 dm.DeviceManager
+	bm                 *batcherManager
+	rm                 *retryManager
+	vwp                volumeWaitParameters
+	likelyBadNames     util.ExpiringCache[string, sync.Map]
+	latestClientTokens util.ExpiringCache[string, int]
 }
 
 var _ Cloud = &cloud{}
@@ -364,12 +368,14 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	}
 
 	return &cloud{
-		region: region,
-		dm:     dm.NewDeviceManager(),
-		ec2:    svc,
-		bm:     bm,
-		rm:     newRetryManager(),
-		vwp:    vwp,
+		region:             region,
+		dm:                 dm.NewDeviceManager(),
+		ec2:                svc,
+		bm:                 bm,
+		rm:                 newRetryManager(),
+		vwp:                vwp,
+		likelyBadNames:     util.NewExpiringCache[string, sync.Map](cacheForgetDelay),
+		latestClientTokens: util.NewExpiringCache[string, int](cacheForgetDelay),
 	}
 }
 
@@ -586,8 +592,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 	}
 
+	tokenBase := volumeName
+	if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
+		tokenBase += "-" + strconv.Itoa(*tokenNumber)
+	}
+
 	// We hash the volume name to generate a unique token that is less than or equal to 64 characters
-	clientToken := sha256.Sum256([]byte(volumeName))
+	clientToken := sha256.Sum256([]byte(tokenBase))
 
 	requestInput := &ec2.CreateVolumeInput{
 		AvailabilityZone:   aws.String(zone),
@@ -630,6 +641,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			return nil, ErrNotFound
 		}
 		if isAWSErrorIdempotentParameterMismatch(err) {
+			nextTokenNumber := 2
+			if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
+				nextTokenNumber = *tokenNumber + 1
+			}
+			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
 		}
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
@@ -847,32 +863,17 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 	return r.Result, nil
 }
 
-// Node likely bad device names cache
-// Remember device names that are already in use on an instance and use them last when attaching volumes
-// This works around device names that are used but do not appear in the mapping from DescribeInstanceStatus
-const cacheForgetDelay = 1 * time.Hour
-
-type cachedNode struct {
-	timer          *time.Timer
-	likelyBadNames map[string]struct{}
-}
-
-var cacheMutex sync.Mutex
-var nodeDeviceCache map[string]cachedNode = map[string]cachedNode{}
-
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
 
-	likelyBadNames := map[string]struct{}{}
-	cacheMutex.Lock()
-	if node, ok := nodeDeviceCache[nodeID]; ok {
-		likelyBadNames = node.likelyBadNames
-		node.timer.Reset(cacheForgetDelay)
+	likelyBadNames, ok := c.likelyBadNames.Get(nodeID)
+	if !ok {
+		likelyBadNames = new(sync.Map)
+		c.likelyBadNames.Set(nodeID, likelyBadNames)
 	}
-	cacheMutex.Unlock()
 
 	device, err := c.dm.NewDevice(instance, volumeID, likelyBadNames)
 	if err != nil {
@@ -892,37 +893,16 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 		})
 		if attachErr != nil {
 			if isAWSErrorBlockDeviceInUse(attachErr) {
-				cacheMutex.Lock()
-				if node, ok := nodeDeviceCache[nodeID]; ok {
-					// Node already had existing cached bad names, add on to the list
-					node.likelyBadNames[device.Path] = struct{}{}
-					node.timer.Reset(cacheForgetDelay)
-				} else {
-					// Node has no existing cached bad device names, setup a new struct instance
-					nodeDeviceCache[nodeID] = cachedNode{
-						timer: time.AfterFunc(cacheForgetDelay, func() {
-							// If this ever fires, the node has not had a volume attached for an hour
-							// In order to prevent a semi-permanent memory leak, delete it from the map
-							cacheMutex.Lock()
-							delete(nodeDeviceCache, nodeID)
-							cacheMutex.Unlock()
-						}),
-						likelyBadNames: map[string]struct{}{
-							device.Path: {},
-						},
-					}
-				}
-				cacheMutex.Unlock()
+				// If block device is "in use", that likely indicates a bad name that is in use by a block
+				// device that we do not know about (example: block devices attached in the AMI, which are
+				// not reported in DescribeInstance's block device map)
+				//
+				// Store such bad names in the "likely bad" map to be considered last in future attempts
+				likelyBadNames.Store(device.Path, struct{}{})
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
-		cacheMutex.Lock()
-		if node, ok := nodeDeviceCache[nodeID]; ok {
-			// Remove succesfully attached devices from the "likely bad" list
-			delete(node.likelyBadNames, device.Path)
-			node.timer.Reset(cacheForgetDelay)
-		}
-		cacheMutex.Unlock()
+		likelyBadNames.Delete(device.Path)
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
