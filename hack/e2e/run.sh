@@ -185,7 +185,8 @@ else
   done <<<"${PODS}"
 fi
 
-if [[ "${COLLECT_METRICS}" == true ]]; then
+# Collect periodic performance metrics - this should only run in Prow
+if [[ "${COLLECT_METRICS}" == true ]] && [ -n "${PROW_JOB_ID:-}" ]; then
   metrics_collector "$KUBECONFIG" \
     "$AWS_ACCOUNT_ID" \
     "$AWS_REGION" \
