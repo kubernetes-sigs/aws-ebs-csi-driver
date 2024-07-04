@@ -68,7 +68,7 @@ func main() {
 
 	switch cmd {
 	case "pre-stop-hook":
-		clientset, clientErr := metadata.DefaultKubernetesAPIClient()
+		clientset, clientErr := metadata.DefaultKubernetesAPIClient(options.Kubeconfig)()
 		if clientErr != nil {
 			klog.ErrorS(err, "unable to communicate with k8s API")
 		} else {
@@ -140,7 +140,7 @@ func main() {
 
 	cfg := metadata.MetadataServiceConfig{
 		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
-		K8sAPIClient:      metadata.DefaultKubernetesAPIClient,
+		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
 	}
 
 	region := os.Getenv("AWS_REGION")
