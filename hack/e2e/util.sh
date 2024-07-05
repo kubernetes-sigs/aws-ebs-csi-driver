@@ -22,12 +22,41 @@ function loudecho() {
   echo "#"
 }
 
-function generate_ssh_key() {
-  SSH_KEY_PATH=${1}
-  if [[ ! -e ${SSH_KEY_PATH} ]]; then
-    loudecho "Generating SSH key $SSH_KEY_PATH"
-    ssh-keygen -P csi-e2e -f "${SSH_KEY_PATH}"
-  else
-    loudecho "Reusing SSH key $SSH_KEY_PATH"
+function install_driver() {
+  if [[ ${DEPLOY_METHOD} == "helm" ]]; then
+    HELM_ARGS=(upgrade --install aws-ebs-csi-driver
+      "${BASE_DIR}/../../charts/aws-ebs-csi-driver"
+      --namespace kube-system
+      --set image.repository="${IMAGE_NAME}"
+      --set image.tag="${IMAGE_TAG}"
+      --set node.enableWindows="${WINDOWS}"
+      --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
+      --set=controller.k8sTagClusterId="${CLUSTER_NAME}"
+      --timeout 10m0s
+      --wait
+      --kubeconfig "${KUBECONFIG}")
+    if [ -n "${HELM_VALUES_FILE:-}" ]; then
+      HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+    fi
+    eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
+    if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
+      HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+    fi
+    set -x
+    "${BIN}/helm" "${HELM_ARGS[@]}"
+    set +x
+  elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
+    set -x
+    kubectl --kubeconfig "${KUBECONFIG}" apply -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
+    kubectl --kubeconfig "${KUBECONFIG}" --namespace kube-system wait --timeout 10m0s --for "condition=ready" pod -l "app.kubernetes.io/name=aws-ebs-csi-driver"
+    set +x
+  fi
+}
+
+function uninstall_driver() {
+  if [[ ${DEPLOY_METHOD} == "helm" ]]; then
+    ${BIN}/helm uninstall "aws-ebs-csi-driver" --namespace kube-system --kubeconfig "${KUBECONFIG}"
+  elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
+    kubectl --kubeconfig "${KUBECONFIG}" delete -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
   fi
 }

@@ -17,14 +17,15 @@
 # for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
 FROM --platform=$BUILDPLATFORM golang:1.22 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+RUN go env -w GOCACHE=/gocache GOMODCACHE=/gomodcache
 COPY go.* .
 ARG GOPROXY
-RUN go mod download
+RUN --mount=type=cache,target=/gomodcache go mod download
 COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
-RUN OS=$TARGETOS ARCH=$TARGETARCH make
+RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH make
 
 FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23 AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver

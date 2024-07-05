@@ -65,6 +65,8 @@ function build_and_push() {
     export ALL_ARCH_linux="${IMAGE_ARCH}"
   fi
   make -j $(nproc) all-push
+
+  loudecho "Image pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
 }
 
 if [[ "${CREATE_MISSING_ECR_REPO}" == true ]]; then

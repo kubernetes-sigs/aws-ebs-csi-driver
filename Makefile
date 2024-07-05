@@ -37,10 +37,6 @@ endif
 
 GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
-REGISTRY?=gcr.io/k8s-staging-provider-aws
-IMAGE?=$(REGISTRY)/aws-ebs-csi-driver
-TAG?=$(GIT_COMMIT)
-
 ALL_OS?=linux windows
 ALL_ARCH_linux?=amd64 arm64
 ALL_OSVERSION_linux?=al2023
@@ -100,9 +96,6 @@ update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt u
 verify: verify/govet verify/golangci-lint verify/update
 	@echo "All verifications passed!"
 
-.PHONY: all-push
-all-push: all-image-registry push-manifest
-
 .PHONY: cluster/create
 cluster/create: bin/kops bin/eksctl bin/aws bin/gomplate
 	./hack/e2e/create-cluster.sh
@@ -118,6 +111,14 @@ cluster/image: bin/aws
 .PHONY: cluster/delete
 cluster/delete: bin/kops bin/eksctl
 	./hack/e2e/delete-cluster.sh
+
+.PHONY: cluster/install
+cluster/install: bin/helm bin/aws
+	./hack/e2e/install.sh
+
+.PHONY: cluster/uninstall
+cluster/uninstall: bin/helm bin/aws
+	./hack/e2e/uninstall.sh
 
 ## E2E targets
 # Targets to run e2e tests
@@ -186,6 +187,9 @@ update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/
 
 ## CI aliases
 # Targets intended to be executed mostly or only by CI jobs
+
+.PHONY: all-push
+all-push: all-image-registry push-manifest
 
 .PHONY: all-push-with-a1compat
 all-push-with-a1compat: sub-image-linux-arm64-al2 all-image-registry push-manifest
