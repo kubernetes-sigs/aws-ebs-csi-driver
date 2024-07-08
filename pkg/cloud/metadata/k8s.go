@@ -27,56 +27,70 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/klog/v2"
 )
 
 type KubernetesAPIClient func() (kubernetes.Interface, error)
 
-var DefaultKubernetesAPIClient = func() (kubernetes.Interface, error) {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			klog.InfoS("InClusterConfig failed to read token file, retrieving file from sandbox mount point")
-			// CONTAINER_SANDBOX_MOUNT_POINT env is set upon container creation in containerd v1.6+
-			// it provides the absolute host path to the container volume.
-			sandboxMountPoint := os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT")
-			if sandboxMountPoint == "" {
-				return nil, fmt.Errorf("CONTAINER_SANDBOX_MOUNT_POINT environment variable is not set")
-			}
-
-			tokenFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "token")
-			rootCAFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "ca.crt")
-
-			token, tokenErr := os.ReadFile(tokenFile)
+func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
+	return func() (clientset kubernetes.Interface, err error) {
+		var config *rest.Config
+		if kubeconfig != "" {
+			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
+				&clientcmd.ConfigOverrides{},
+			).ClientConfig()
 			if err != nil {
-				return nil, tokenErr
-			}
-
-			tlsClientConfig := rest.TLSClientConfig{}
-			if _, certErr := cert.NewPool(rootCAFile); err != nil {
-				return nil, fmt.Errorf("expected to load root CA config from %s, but got err: %w", rootCAFile, certErr)
-			} else {
-				tlsClientConfig.CAFile = rootCAFile
-			}
-
-			config = &rest.Config{
-				Host:            "https://" + net.JoinHostPort(os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")),
-				TLSClientConfig: tlsClientConfig,
-				BearerToken:     string(token),
-				BearerTokenFile: tokenFile,
+				return nil, err
 			}
 		} else {
+			// creates the in-cluster config
+			config, err = rest.InClusterConfig()
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					klog.InfoS("InClusterConfig failed to read token file, retrieving file from sandbox mount point")
+					// CONTAINER_SANDBOX_MOUNT_POINT env is set upon container creation in containerd v1.6+
+					// it provides the absolute host path to the container volume.
+					sandboxMountPoint := os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT")
+					if sandboxMountPoint == "" {
+						return nil, fmt.Errorf("CONTAINER_SANDBOX_MOUNT_POINT environment variable is not set")
+					}
+
+					tokenFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "token")
+					rootCAFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "ca.crt")
+
+					token, tokenErr := os.ReadFile(tokenFile)
+					if err != nil {
+						return nil, tokenErr
+					}
+
+					tlsClientConfig := rest.TLSClientConfig{}
+					if _, certErr := cert.NewPool(rootCAFile); err != nil {
+						return nil, fmt.Errorf("expected to load root CA config from %s, but got err: %w", rootCAFile, certErr)
+					} else {
+						tlsClientConfig.CAFile = rootCAFile
+					}
+
+					config = &rest.Config{
+						Host:            "https://" + net.JoinHostPort(os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")),
+						TLSClientConfig: tlsClientConfig,
+						BearerToken:     string(token),
+						BearerTokenFile: tokenFile,
+					}
+				} else {
+					return nil, err
+				}
+			}
+		}
+		// creates the clientset
+		clientset, err = kubernetes.NewForConfig(config)
+		if err != nil {
 			return nil, err
 		}
+		return clientset, nil
 	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
 }
 
 func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error) {

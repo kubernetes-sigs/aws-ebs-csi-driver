@@ -28,6 +28,10 @@ import (
 type Options struct {
 	Mode Mode
 
+	// Kubeconfig is an absolute path to a kubeconfig file.
+	// If empty, the in-cluster config will be loaded.
+	Kubeconfig string
+
 	// #### Server options ####
 
 	//Endpoint is the endpoint for the CSI driver server
@@ -86,6 +90,8 @@ type Options struct {
 }
 
 func (o *Options) AddFlags(f *flag.FlagSet) {
+	f.StringVar(&o.Kubeconfig, "kubeconfig", "", "Absolute path to a kubeconfig file. The default is the emtpy string, which causes the in-cluster config to be used")
+
 	// Server options
 	f.StringVar(&o.Endpoint, "endpoint", DefaultCSIEndpoint, "Endpoint for the CSI driver server")
 	f.StringVar(&o.HttpEndpoint, "http-endpoint", "", "The TCP network address where the HTTP server for metrics will listen (example: `:8080`). The default is empty string, which means the server is disabled.")
