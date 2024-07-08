@@ -17,6 +17,7 @@ limitations under the License.
 package devicemanager
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -26,7 +27,7 @@ func TestNameAllocator(t *testing.T) {
 
 	for _, name := range deviceNames {
 		t.Run(name, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames, map[string]struct{}{})
+			actual, err := allocator.GetNext(existingNames, new(sync.Map))
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", name, err)
 			}
@@ -39,18 +40,24 @@ func TestNameAllocator(t *testing.T) {
 }
 
 func TestNameAllocatorLikelyBadName(t *testing.T) {
-	skippedName := deviceNames[32]
-	existingNames := map[string]string{}
+	skippedNameExisting := deviceNames[11]
+	skippedNameNew := deviceNames[32]
+	likelyBadNames := new(sync.Map)
+	likelyBadNames.Store(skippedNameExisting, struct{}{})
+	likelyBadNames.Store(skippedNameNew, struct{}{})
+	existingNames := map[string]string{
+		skippedNameExisting: "",
+	}
 	allocator := nameAllocator{}
 
 	for _, name := range deviceNames {
-		if name == skippedName {
-			// Name in likelyBadNames should be skipped until it is the last available name
+		if name == skippedNameExisting || name == skippedNameNew {
+			// Names in likelyBadNames should be skipped until it is the last available name
 			continue
 		}
 
 		t.Run(name, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames, map[string]struct{}{skippedName: {}})
+			actual, err := allocator.GetNext(existingNames, likelyBadNames)
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", name, err)
 			}
@@ -61,9 +68,16 @@ func TestNameAllocatorLikelyBadName(t *testing.T) {
 		})
 	}
 
-	lastName, _ := allocator.GetNext(existingNames, map[string]struct{}{skippedName: {}})
-	if lastName != skippedName {
-		t.Errorf("test %q: expected %q, got %q (likelyBadNames fallback)", skippedName, skippedName, lastName)
+	onlyExisting := new(sync.Map)
+	onlyExisting.Store(skippedNameExisting, struct{}{})
+	_, err := allocator.GetNext(existingNames, onlyExisting)
+	if err != nil {
+		t.Errorf("got nil when error expected (likelyBadNames with only existing names)")
+	}
+
+	lastName, _ := allocator.GetNext(existingNames, likelyBadNames)
+	if lastName != skippedNameNew {
+		t.Errorf("test %q: expected %q, got %q (likelyBadNames fallback)", skippedNameNew, skippedNameNew, lastName)
 	}
 }
 
@@ -72,10 +86,10 @@ func TestNameAllocatorError(t *testing.T) {
 	existingNames := map[string]string{}
 
 	for i := 0; i < len(deviceNames); i++ {
-		name, _ := allocator.GetNext(existingNames, map[string]struct{}{})
+		name, _ := allocator.GetNext(existingNames, new(sync.Map))
 		existingNames[name] = ""
 	}
-	name, err := allocator.GetNext(existingNames, map[string]struct{}{})
+	name, err := allocator.GetNext(existingNames, new(sync.Map))
 	if err == nil {
 		t.Errorf("expected error, got device  %q", name)
 	}
