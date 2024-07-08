@@ -31,7 +31,7 @@ import (
 // When the delay on the request expires (determined by the time the first request comes in), the merged
 // input is passed to the execution function, and the result to all waiting callers (those that were
 // not rejected during the merge step)
-type Coalescer[InputType comparable, ResultType any] interface {
+type Coalescer[InputType any, ResultType any] interface {
 	// Coalesce is a function to coalesce a given input
 	// key = only requests with this same key will be coalesced (such as volume ID)
 	// input = input to merge with other inputs
@@ -46,7 +46,7 @@ type Coalescer[InputType comparable, ResultType any] interface {
 // (should return an error if the new input cannot be combined with the existing inputs,
 // otherwise return the new merged input)
 // executeFunction = the function to call when the delay expires
-func New[InputType comparable, ResultType any](delay time.Duration,
+func New[InputType any, ResultType any](delay time.Duration,
 	mergeFunction func(input InputType, existing InputType) (InputType, error),
 	executeFunction func(key string, input InputType) (ResultType, error),
 ) Coalescer[InputType, ResultType] {
@@ -71,19 +71,19 @@ type result[ResultType any] struct {
 
 // Type to send inputs from Coalesce() to coalescerThread() via channel
 // Includes a return channel for the result
-type newInput[InputType comparable, ResultType any] struct {
+type newInput[InputType any, ResultType any] struct {
 	key           string
 	input         InputType
 	resultChannel chan result[ResultType]
 }
 
 // Type to store pending inputs in the input map
-type pendingInput[InputType comparable, ResultType any] struct {
+type pendingInput[InputType any, ResultType any] struct {
 	input          InputType
 	resultChannels []chan result[ResultType]
 }
 
-type coalescer[InputType comparable, ResultType any] struct {
+type coalescer[InputType any, ResultType any] struct {
 	delay           time.Duration
 	mergeFunction   func(input InputType, existing InputType) (InputType, error)
 	executeFunction func(key string, input InputType) (ResultType, error)
