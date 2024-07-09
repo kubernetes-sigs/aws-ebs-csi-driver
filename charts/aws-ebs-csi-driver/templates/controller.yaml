@@ -513,7 +513,7 @@ spec:
         {{- with .Values.controller.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-  {{- if .Values.controller.dnsConfig }}
-  dnsConfig:
-    {{- toYaml .Values.controller.dnsConfig | nindent 4 }}
-  {{- end }}
+      {{- if .Values.controller.dnsConfig }}
+      dnsConfig:
+        {{- toYaml .Values.controller.dnsConfig | nindent 8 }}
+      {{- end }}
