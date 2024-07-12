@@ -217,14 +217,14 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// "Values specified in mutable_parameters MUST take precedence over the values from parameters."
 	// https://github.com/container-storage-interface/spec/blob/master/spec.md#createvolume
-	if modifyOptions.VolumeType != "" {
-		volumeType = modifyOptions.VolumeType
+	if modifyOptions.modifyDiskOptions.VolumeType != "" {
+		volumeType = modifyOptions.modifyDiskOptions.VolumeType
 	}
-	if modifyOptions.IOPS != 0 {
-		iops = modifyOptions.IOPS
+	if modifyOptions.modifyDiskOptions.IOPS != 0 {
+		iops = modifyOptions.modifyDiskOptions.IOPS
 	}
-	if modifyOptions.Throughput != 0 {
-		throughput = modifyOptions.Throughput
+	if modifyOptions.modifyDiskOptions.Throughput != 0 {
+		throughput = modifyOptions.modifyDiskOptions.Throughput
 	}
 
 	responseCtx := map[string]string{}
@@ -592,7 +592,8 @@ func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi
 	}
 
 	_, err = d.modifyVolumeCoalescer.Coalesce(volumeID, modifyVolumeRequest{
-		modifyDiskOptions: *options,
+		modifyDiskOptions: options.modifyDiskOptions,
+		modifyTagsOptions: options.modifyTagsOptions,
 	})
 	if err != nil {
 		return nil, err

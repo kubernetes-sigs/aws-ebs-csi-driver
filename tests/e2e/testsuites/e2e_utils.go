@@ -42,6 +42,8 @@ const (
 	AnnotationIops       = "ebs.csi.aws.com/iops"
 	AnnotationThroughput = "ebs.csi.aws.com/throughput"
 	AnnotationVolumeType = "ebs.csi.aws.com/volumeType"
+	AnnotationsTagSpec   = "ebs.csi.aws.com/tagSpecification"
+	AnnotationTagDel     = "ebs.csi.aws.com/tagDeletion"
 )
 
 var DefaultGeneratedVolumeMount = VolumeMountDetails{

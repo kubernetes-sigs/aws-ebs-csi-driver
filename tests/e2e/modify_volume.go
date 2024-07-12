@@ -60,7 +60,16 @@ var (
 			ShouldResizeVolume:                    false,
 			ShouldTestInvalidModificationRecovery: false,
 		},
-		"with new throughput and iops annotations": {
+		"with a new tag annotation": {
+			CreateVolumeParameters: defaultModifyVolumeTestGp3CreateVolumeParameters,
+			ModifyVolumeAnnotations: map[string]string{
+				testsuites.AnnotationsTagSpec: "key1=test1",
+			},
+			ShouldResizeVolume:                    false,
+			ShouldTestInvalidModificationRecovery: false,
+			ExternalResizerOnly:                   true,
+		},
+		"with new throughput, and iops annotations": {
 			CreateVolumeParameters: defaultModifyVolumeTestGp3CreateVolumeParameters,
 			ModifyVolumeAnnotations: map[string]string{
 				testsuites.AnnotationIops:       "4000",
@@ -68,6 +77,17 @@ var (
 			},
 			ShouldResizeVolume:                    false,
 			ShouldTestInvalidModificationRecovery: false,
+		},
+		"with new throughput, iops, and tag annotations": {
+			CreateVolumeParameters: defaultModifyVolumeTestGp3CreateVolumeParameters,
+			ModifyVolumeAnnotations: map[string]string{
+				testsuites.AnnotationIops:       "4000",
+				testsuites.AnnotationThroughput: "150",
+				testsuites.AnnotationsTagSpec:   "key2=test2",
+			},
+			ShouldResizeVolume:                    false,
+			ShouldTestInvalidModificationRecovery: false,
+			ExternalResizerOnly:                   true,
 		},
 		"with a larger size and new throughput and iops annotations": {
 			CreateVolumeParameters: defaultModifyVolumeTestGp3CreateVolumeParameters,
@@ -124,6 +144,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", fu
 		modifyVolumeTest := modifyVolumeTest
 		Context(testName, func() {
 			It("will modify associated PV and EBS Volume via volume-modifier-for-k8s", func() {
+				if modifyVolumeTest.ExternalResizerOnly {
+					Skip("Functionality being tested is not supported for Modification via volume-modifier-for-k8s, skipping test")
+				}
 				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.VolumeModifierForK8s)
 			})
 			It("will modify associated PV and EBS Volume via external-resizer", func() {

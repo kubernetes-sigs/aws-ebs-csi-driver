@@ -96,6 +96,36 @@ backup=true
 billingID=ABCDEF
 ```
 
+# Adding, Modifying, and Deleting Tags Of Existing Volumes
+The AWS EBS CSI Driver supports the modifying of tags of existing volumes through `VolumeAttributesClass.parameters` the examples below show the syntax for addition, modification, and deletion of tags within the `VolumeAttributesClass.parameters`. For a walkthrough on how to apply these modifications to a volume follow the [walkthrough for Volume Modification via VolumeAttributeClass](../examples/kubernetes/modify-volume)
+
+**Syntax for Adding or Modifying a Tag**
+
+If a key has the prefix `tagSpecification`, the CSI driver will treat the value as a key-value pair to be added to the existing volume. If there is already an existing tag with the specified key, the CSI driver will overwrite the value of that tag with the new value specified. 
+```
+apiVersion: storage.k8s.io/v1alpha1
+kind: VolumeAttributesClass
+metadata:
+  name: io2-class
+driverName: ebs.csi.aws.com
+parameters:
+  tagSpecification_1: "location=Seattle"
+  tagSpecification_2: "cost-center=" // If the value is left blank, tag is created with an empty value
+```
+**Syntax for Deleting a Tag**
+
+If a key has the prefix `tagDeletion`, the CSI driver will treat the value as a tag key, and the existing tag with that key will be removed from the volume.
+```
+apiVersion: storage.k8s.io/v1alpha1
+kind: VolumeAttributesClass
+metadata:
+  name: io2-class
+driverName: ebs.csi.aws.com
+parameters:
+  tagDeletion_1: "location" // Deletes tag with key "location"
+  tagDeletion_2: "cost-center"
+```
+
 # Snapshot Tagging
 The AWS EBS CSI Driver supports tagging snapshots through `VolumeSnapshotClass.parameters`, similarly to StorageClass tagging.
 

@@ -26,6 +26,7 @@ type Cloud interface {
 	DeleteDisk(ctx context.Context, volumeID string) (success bool, err error)
 	AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error)
 	DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error)
+	ModifyTags(ctx context.Context, volumeID string, tagOptions ModifyTagsOptions) (err error)
 	ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (newSize int32, err error)
 	WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error)
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)

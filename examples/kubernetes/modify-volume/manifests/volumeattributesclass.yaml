@@ -21,3 +21,5 @@ driverName: ebs.csi.aws.com
 parameters:
   type: io2
   iops: "10000"
+  tagSpecification_1: "location=Seattle"
+  tagSpecification_2: "cost-center="

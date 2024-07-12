@@ -149,6 +149,26 @@ func (mr *MockEC2APIMockRecorder) DeleteSnapshot(ctx, params interface{}, optFns
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSnapshot", reflect.TypeOf((*MockEC2API)(nil).DeleteSnapshot), varargs...)
 }
 
+// DeleteTags mocks base method.
+func (m *MockEC2API) DeleteTags(ctx context.Context, params *ec2.DeleteTagsInput, optFns ...func(*ec2.Options)) (*ec2.DeleteTagsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteTags", varargs...)
+	ret0, _ := ret[0].(*ec2.DeleteTagsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTags indicates an expected call of DeleteTags.
+func (mr *MockEC2APIMockRecorder) DeleteTags(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTags", reflect.TypeOf((*MockEC2API)(nil).DeleteTags), varargs...)
+}
+
 // DeleteVolume mocks base method.
 func (m *MockEC2API) DeleteVolume(ctx context.Context, params *ec2.DeleteVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DeleteVolumeOutput, error) {
 	m.ctrl.T.Helper()

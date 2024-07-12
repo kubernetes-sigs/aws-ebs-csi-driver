@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
@@ -39,11 +41,16 @@ const (
 	ModificationKeyIOPS = "iops"
 
 	ModificationKeyThroughput = "throughput"
+
+	ModificationAddTag = "tagSpecification"
+
+	ModificationDeleteTag = "tagDeletion"
 )
 
 type modifyVolumeRequest struct {
 	newSize           int64
 	modifyDiskOptions cloud.ModifyDiskOptions
+	modifyTagsOptions cloud.ModifyTagsOptions
 }
 
 func (d *ControllerService) GetCSIDriverModificationCapability(
@@ -68,9 +75,7 @@ func (d *ControllerService) ModifyVolumeProperties(
 		return nil, err
 	}
 
-	_, err = d.modifyVolumeCoalescer.Coalesce(name, modifyVolumeRequest{
-		modifyDiskOptions: *options,
-	})
+	_, err = d.modifyVolumeCoalescer.Coalesce(name, *options)
 	if err != nil {
 		return nil, err
 	}
@@ -107,30 +112,62 @@ func mergeModifyVolumeRequest(input modifyVolumeRequest, existing modifyVolumeRe
 		}
 		existing.modifyDiskOptions.VolumeType = input.modifyDiskOptions.VolumeType
 	}
-
+	if len(input.modifyTagsOptions.TagsToAdd) > 0 || len(input.modifyTagsOptions.TagsToDelete) > 0 {
+		if (len(existing.modifyTagsOptions.TagsToAdd) > 0 || len(existing.modifyTagsOptions.TagsToDelete) > 0) && !(reflect.DeepEqual(input.modifyTagsOptions, existing.modifyTagsOptions)) {
+			return existing, fmt.Errorf("Different tags were requested by a previous request. Current: %v, Requested: %v", existing.modifyTagsOptions, input.modifyTagsOptions)
+		}
+		existing.modifyTagsOptions = cloud.ModifyTagsOptions{
+			TagsToAdd:    input.modifyTagsOptions.TagsToAdd,
+			TagsToDelete: input.modifyTagsOptions.TagsToDelete,
+		}
+	}
 	return existing, nil
+}
+
+func executeModifyTagsRequest(volumeID string, options modifyVolumeRequest, c cloud.Cloud, ctx context.Context) error {
+	if len(options.modifyTagsOptions.TagsToAdd) > 0 || len(options.modifyTagsOptions.TagsToDelete) > 0 {
+		err := c.ModifyTags(ctx, volumeID, options.modifyTagsOptions)
+		if err != nil {
+			if errors.Is(err, cloud.ErrInvalidArgument) {
+				return status.Errorf(codes.InvalidArgument, "Could not modify volume tags (invalid argument) %q: %v", volumeID, err)
+			}
+			return status.Errorf(codes.Internal, "Could not modify volume tags %q: %v", volumeID, err)
+		}
+	}
+	return nil
 }
 
 func executeModifyVolumeRequest(c cloud.Cloud) func(string, modifyVolumeRequest) (int32, error) {
 	return func(volumeID string, req modifyVolumeRequest) (int32, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		actualSizeGiB, err := c.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
+		err := executeModifyTagsRequest(volumeID, req, c, ctx)
 		if err != nil {
-			// Kubernetes sidecars treats "Invalid Argument" errors as infeasible and retries less aggressively
-			if errors.Is(err, cloud.ErrInvalidArgument) {
-				return 0, status.Errorf(codes.InvalidArgument, "Could not modify volume (invalid argument) %q: %v", volumeID, err)
-			}
-			return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
-		} else {
-			return actualSizeGiB, nil
+			return 0, err
 		}
+		if (req.modifyDiskOptions.IOPS != 0) || (req.modifyDiskOptions.Throughput != 0) || (req.modifyDiskOptions.VolumeType != "") || (req.newSize != 0) {
+			actualSizeGiB, err := c.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
+			if err != nil {
+				if errors.Is(err, cloud.ErrInvalidArgument) {
+					return 0, status.Errorf(codes.InvalidArgument, "Could not modify volume (invalid argument) %q: %v", volumeID, err)
+				}
+				return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
+			} else {
+				return actualSizeGiB, nil
+			}
+		}
+		// No change to the volume was requested, so return an empty result with no error
+		return 0, nil
 	}
 }
 
-func parseModifyVolumeParameters(params map[string]string) (*cloud.ModifyDiskOptions, error) {
-	options := cloud.ModifyDiskOptions{}
-
+func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest, error) {
+	options := modifyVolumeRequest{
+		modifyTagsOptions: cloud.ModifyTagsOptions{
+			TagsToAdd:    make(map[string]string),
+			TagsToDelete: make([]string, 0),
+		},
+	}
 	for key, value := range params {
 		switch key {
 		case ModificationKeyIOPS:
@@ -138,24 +175,36 @@ func parseModifyVolumeParameters(params map[string]string) (*cloud.ModifyDiskOpt
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
 			}
-			options.IOPS = int32(iops)
+			options.modifyDiskOptions.IOPS = int32(iops)
 		case ModificationKeyThroughput:
 			throughput, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
 			}
-			options.Throughput = int32(throughput)
+			options.modifyDiskOptions.Throughput = int32(throughput)
 		case DeprecatedModificationKeyVolumeType:
 			if _, ok := params[ModificationKeyVolumeType]; ok {
 				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")
 				continue
 			}
 			klog.InfoS("Key `volumeType` is deprecated, please use `type` instead")
-			options.VolumeType = value
+			options.modifyDiskOptions.VolumeType = value
 		case ModificationKeyVolumeType:
-			options.VolumeType = value
+			options.modifyDiskOptions.VolumeType = value
+		default:
+			if strings.HasPrefix(key, ModificationAddTag) {
+				st := strings.SplitN(value, "=", 2)
+				if len(st) < 2 {
+					return nil, status.Errorf(codes.InvalidArgument, "Invalid tag specification: %v", st)
+				}
+				options.modifyTagsOptions.TagsToAdd[st[0]] = st[1]
+			} else if strings.HasPrefix(key, ModificationDeleteTag) {
+				options.modifyTagsOptions.TagsToDelete = append(options.modifyTagsOptions.TagsToDelete, value)
+			}
 		}
 	}
-
+	if err := validateExtraTags(options.modifyTagsOptions.TagsToAdd, false); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
 	return &options, nil
 }
