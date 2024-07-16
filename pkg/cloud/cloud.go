@@ -1615,7 +1615,7 @@ func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
 }
 
-// isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
+// isAWSErrorBlockDeviceInUse returns a boolean indicating whether the
 // given error appears to be a block device name already in use error.
 func isAWSErrorBlockDeviceInUse(err error) bool {
 	var apiErr smithy.APIError
