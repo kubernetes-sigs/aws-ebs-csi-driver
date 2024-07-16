@@ -34,6 +34,7 @@ type ModifyVolumeTest struct {
 	ModifyVolumeAnnotations               map[string]string
 	ShouldResizeVolume                    bool
 	ShouldTestInvalidModificationRecovery bool
+	ExternalResizerOnly                   bool
 }
 
 var (

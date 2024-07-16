@@ -240,7 +240,6 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 		volumeTypeChosen = options.VolumeType
 		return newSize, nil
 	})
-
 	options := &Options{
 		ModifyVolumeRequestHandlerTimeout: 2 * time.Second,
 	}
@@ -334,7 +333,6 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 		options:               options,
 		modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, options),
 	}
-
 	var wg sync.WaitGroup
 	wg.Add(2)
 

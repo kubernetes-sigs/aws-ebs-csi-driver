@@ -2509,6 +2509,118 @@ func TestResizeOrModifyDisk(t *testing.T) {
 	}
 }
 
+func TestModifyTags(t *testing.T) {
+	validTagsToAddInput := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": "",
+	}
+
+	validTagsToDeleteInput := []string{
+		"key1",
+		"key2",
+	}
+
+	emptyTagsToAddInput := map[string]string{}
+	emptyTagsToDeleteInput := []string{}
+
+	testCases := []struct {
+		name              string
+		volumeID          string
+		negativeCase      bool
+		modifyTagsOptions ModifyTagsOptions
+		expErr            error
+	}{
+		{
+			name:     "success normal tag addition",
+			volumeID: "mod-tag-test-name",
+			modifyTagsOptions: ModifyTagsOptions{
+				TagsToAdd: validTagsToAddInput,
+			},
+			expErr: nil,
+		},
+		{
+			name:     "success normal tag deletion",
+			volumeID: "mod-tag-test-name",
+			modifyTagsOptions: ModifyTagsOptions{
+				TagsToDelete: validTagsToDeleteInput,
+			},
+			expErr: nil,
+		},
+		{
+			name:     "success normal tag addition and tag deletion",
+			volumeID: "mod-tag-test-name",
+			modifyTagsOptions: ModifyTagsOptions{
+				TagsToAdd:    validTagsToAddInput,
+				TagsToDelete: validTagsToDeleteInput,
+			},
+			expErr: nil,
+		},
+		{
+			name:         "fail: EC2 API generic error TagsToAdd",
+			volumeID:     "mod-tag-test-name",
+			negativeCase: true,
+			expErr:       fmt.Errorf("Generic EC2 API error"),
+			modifyTagsOptions: ModifyTagsOptions{
+				TagsToAdd:    validTagsToAddInput,
+				TagsToDelete: emptyTagsToDeleteInput,
+			},
+		},
+		{
+			name:         "fail: EC2 API generic error TagsToDelete",
+			volumeID:     "mod-tag-test-name",
+			negativeCase: true,
+			expErr:       fmt.Errorf("Generic EC2 API error"),
+			modifyTagsOptions: ModifyTagsOptions{
+				TagsToAdd:    emptyTagsToAddInput,
+				TagsToDelete: validTagsToDeleteInput,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+
+			if len(tc.modifyTagsOptions.TagsToAdd) > 0 {
+				if tc.negativeCase {
+					mockEC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).Return(nil, tc.expErr).Times(1)
+				} else {
+					mockEC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).Return(&ec2.CreateTagsOutput{}, tc.expErr).Times(1)
+				}
+			}
+			if len(tc.modifyTagsOptions.TagsToDelete) > 0 {
+				if tc.negativeCase {
+					mockEC2.EXPECT().DeleteTags(gomock.Any(), gomock.Any()).Return(nil, tc.expErr).Times(1)
+				} else {
+					mockEC2.EXPECT().DeleteTags(gomock.Any(), gomock.Any()).Return(&ec2.DeleteTagsOutput{}, tc.expErr).Times(1)
+				}
+			}
+
+			err := c.ModifyTags(ctx, tc.volumeID, tc.modifyTagsOptions)
+			if err != nil {
+				if tc.expErr == nil {
+					t.Fatalf("ModifyTags() failed: expected no error, got: %v", err)
+				} else {
+					if !strings.Contains(err.Error(), tc.expErr.Error()) {
+						t.Fatalf("ModifyTags() failed: expected error %v, got: %v", tc.expErr, err)
+					}
+				}
+			} else {
+				if tc.expErr != nil {
+					t.Fatal("ModifyTags() failed: expected error, got nothing")
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestGetSnapshotByName(t *testing.T) {
 	testCases := []struct {
 		name            string

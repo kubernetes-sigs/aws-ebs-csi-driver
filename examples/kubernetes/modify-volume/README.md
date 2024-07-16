@@ -35,21 +35,25 @@ This example will only work on a cluster with the `VolumeAttributesClass` featur
     Mon Feb 26 22:28:39 UTC 2024
     ...
     ```
+4. Deploy the `VolumeAttributesClass`
+    ```sh
+    $ kubectl apply -f manifests/volumeattributesclass.yaml
+    ```
 
-4. Simultaneously, deploy the `VolumeAttributesClass` and edit the `PersistentVolumeClaim` to point to this class
+5. Edit the `PersistentVolumeClaim` to point to this class
     ```sh
     $ kubectl patch pvc ebs-claim --patch '{"spec": {"volumeAttributesClassName": "io2-class"}}'
     persistentvolumeclaim/ebs-claim patched
     ```
 
-5. Wait for the `VolumeAttributesClass` to apply to the volume
+6. Wait for the `VolumeAttributesClass` to apply to the volume
     ```sh
     $ kubectl get pvc ebs-claim
     NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
     ebs-claim   Bound    pvc-076b2d14-b643-47d4-a2ce-fbf9cd36572b   100Gi      RWO            ebs-sc         io2-class               5m54s
     ```
 
-6. (Optional) Delete example resources
+7. (Optional) Delete example resources
     ```sh
     $ kubectl delete -f manifests 
     storageclass.storage.k8s.io "ebs-sc" deleted

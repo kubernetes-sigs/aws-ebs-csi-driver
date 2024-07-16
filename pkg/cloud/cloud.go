@@ -229,6 +229,12 @@ type ModifyDiskOptions struct {
 	Throughput int32
 }
 
+// ModifyTagsOptions represents parameter to modify the tags of an existing EBS volume
+type ModifyTagsOptions struct {
+	TagsToAdd    map[string]string
+	TagsToDelete []string
+}
+
 // Snapshot represents an EBS volume snapshot
 type Snapshot struct {
 	SnapshotID     string
@@ -744,6 +750,42 @@ func (c *cloud) batchDescribeVolumesModifications(request *ec2.DescribeVolumesMo
 		return nil, r.Err
 	}
 	return r.Result, nil
+}
+
+// ModifyTags adds, updates, and deletes tags for the specified EBS volume.
+func (c *cloud) ModifyTags(ctx context.Context, volumeID string, tagOptions ModifyTagsOptions) error {
+	if len(tagOptions.TagsToDelete) > 0 {
+		deleteTagsInput := &ec2.DeleteTagsInput{
+			Resources: []string{volumeID},
+			Tags:      make([]types.Tag, 0, len(tagOptions.TagsToDelete)),
+		}
+		for _, tagKey := range tagOptions.TagsToDelete {
+			deleteTagsInput.Tags = append(deleteTagsInput.Tags, types.Tag{Key: aws.String(tagKey)})
+		}
+		_, deleteErr := c.ec2.DeleteTags(ctx, deleteTagsInput)
+		if deleteErr != nil {
+			klog.ErrorS(deleteErr, "failed to delete tags", "volumeID", volumeID)
+			return deleteErr
+		}
+	}
+	if len(tagOptions.TagsToAdd) > 0 {
+		createTagsInput := &ec2.CreateTagsInput{
+			Resources: []string{volumeID},
+			Tags:      make([]types.Tag, 0, len(tagOptions.TagsToAdd)),
+		}
+		for k, v := range tagOptions.TagsToAdd {
+			createTagsInput.Tags = append(createTagsInput.Tags, types.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
+		}
+		_, addErr := c.ec2.CreateTags(ctx, createTagsInput)
+		if addErr != nil {
+			klog.ErrorS(addErr, "failed to create tags", "volumeID", volumeID)
+			return addErr
+		}
+	}
+	return nil
 }
 
 // ResizeOrModifyDisk resizes an EBS volume in GiB increments, rounding up to the next possible allocatable unit, and/or modifies an EBS

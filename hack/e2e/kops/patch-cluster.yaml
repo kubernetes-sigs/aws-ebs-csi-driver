@@ -49,15 +49,7 @@ spec:
           "Resource": [
             "arn:aws:ec2:*:*:volume/*",
             "arn:aws:ec2:*:*:snapshot/*"
-          ],
-          "Condition": {
-            "StringEquals": {
-              "ec2:CreateAction": [
-                "CreateVolume",
-                "CreateSnapshot"
-              ]
-            }
-          }
+          ]
         },
         {
           "Effect": "Allow",
