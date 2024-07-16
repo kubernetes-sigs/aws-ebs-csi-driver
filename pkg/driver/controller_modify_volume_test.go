@@ -154,8 +154,14 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 				ModificationKeyVolumeType: validType,
 				ModificationKeyIOPS:       validIops,
 				ModificationKeyThroughput: validThroughput,
-				ModificationAddTag:        validTagSpecificationInput,
+				ModificationAddTag + "_1": validTagSpecificationInput,
+				ModificationAddTag + "_2": "key2={{ .PVCName }}",
+				ModificationAddTag + "_3": "key3={{ .PVCNamespace }}",
+				ModificationAddTag + "_4": "key4={{ .PVName }}",
 				ModificationDeleteTag:     validTagDeletion,
+				PVCNameKey:                "ebs-claim",
+				PVCNamespaceKey:           "test-namespace",
+				PVNameKey:                 "testPV-Name",
 			},
 			expectedOptions: &modifyVolumeRequest{
 				modifyDiskOptions: cloud.ModifyDiskOptions{
@@ -166,6 +172,9 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 				modifyTagsOptions: cloud.ModifyTagsOptions{
 					TagsToAdd: map[string]string{
 						"key1": "tag1",
+						"key2": "ebs-claim",
+						"key3": "test-namespace",
+						"key4": "testPV-Name",
 					},
 					TagsToDelete: []string{
 						"key2",
