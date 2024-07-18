@@ -39,6 +39,97 @@ const (
 	invalidTagSpecification     = "aws:test=TEST"
 )
 
+func TestMergeModifyVolumeRequest(t *testing.T) {
+	testCases := []struct {
+		name                        string
+		input                       modifyVolumeRequest
+		existing                    modifyVolumeRequest
+		expectedModifyVolumeRequest modifyVolumeRequest
+		expectError                 bool
+	}{
+		{
+			name: "Valid merge of size and iops",
+			input: modifyVolumeRequest{
+				newSize: 5,
+			},
+			existing: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					IOPS: validIopsInt,
+				},
+			},
+			expectedModifyVolumeRequest: modifyVolumeRequest{
+				newSize: 5,
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					IOPS: validIopsInt,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Different size requested by a previous request",
+			input: modifyVolumeRequest{
+				newSize: 4,
+			},
+			existing: modifyVolumeRequest{
+				newSize: 5,
+			},
+			expectedModifyVolumeRequest: modifyVolumeRequest{
+				newSize: 5,
+			},
+			expectError: true,
+		},
+		{
+			name: "Different IOPS requested by previous request",
+			input: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					IOPS: validIopsInt,
+				},
+			},
+			existing: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					IOPS: validIopsInt - 1,
+				},
+			},
+			expectedModifyVolumeRequest: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					IOPS: validIopsInt - 1,
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "Different Throughput requested by previous request",
+			input: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					Throughput: validThroughputInt,
+				},
+			},
+			existing: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					Throughput: validThroughputInt - 1,
+				},
+			},
+			expectedModifyVolumeRequest: modifyVolumeRequest{
+				modifyDiskOptions: cloud.ModifyDiskOptions{
+					Throughput: validThroughputInt - 1,
+				},
+			},
+			expectError: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := mergeModifyVolumeRequest(tc.input, tc.existing)
+			assert.Equal(t, tc.expectedModifyVolumeRequest, result)
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestParseModifyVolumeParameters(t *testing.T) {
 	testCases := []struct {
 		name            string
@@ -89,7 +180,7 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "deprecated type",
+			name: "deprecated type but has validType",
 			params: map[string]string{
 				ModificationKeyVolumeType:           validType,
 				DeprecatedModificationKeyVolumeType: "deprecated" + validType,

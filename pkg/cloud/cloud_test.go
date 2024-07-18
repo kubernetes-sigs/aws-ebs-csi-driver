@@ -82,7 +82,47 @@ func extractVolumeIdentifiers(volumes []types.Volume) (volumeIDs []string, volum
 	}
 	return volumeIDs, volumeNames
 }
+func TestNewCloud(t *testing.T) {
 
+	testCases := []struct {
+		name            string
+		region          string
+		awsSdkDebugLog  bool
+		userAgentExtra  string
+		batchingEnabled bool
+	}{
+		{
+			name:            "success: with awsSdkDebugLog, userAgentExtra, and batchingEnabled",
+			region:          "us-east-1",
+			awsSdkDebugLog:  true,
+			userAgentExtra:  "example_user_agent_extra",
+			batchingEnabled: true,
+		},
+		{
+			name:           "success: with only awsSdkDebugLog, and userAgentExtra",
+			region:         "us-east-1",
+			awsSdkDebugLog: true,
+			userAgentExtra: "example_user_agent_extra",
+		},
+		{
+			name:   "success: with only region",
+			region: "us-east-1",
+		},
+	}
+	for _, tc := range testCases {
+		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled)
+		if err != nil {
+			t.Fatalf("error %v", err)
+		}
+		ec2CloudAscloud := ec2Cloud.(*cloud)
+		assert.Equal(t, ec2CloudAscloud.region, tc.region)
+		if tc.batchingEnabled {
+			assert.NotNil(t, ec2CloudAscloud.bm)
+		} else {
+			assert.Nil(t, ec2CloudAscloud.bm)
+		}
+	}
+}
 func TestBatchDescribeVolumes(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -549,6 +589,101 @@ func executeDescribeSnapshotsTest(t *testing.T, c *cloud, snapshotIDs, snapshotN
 			}
 		default:
 			t.Errorf("Did not receive a result or an error for a request")
+		}
+	}
+}
+
+func TestCheckDesiredState(t *testing.T) {
+	testCases := []struct {
+		name           string
+		volumeId       string
+		desiredSizeGiB int32
+		options        *ModifyDiskOptions
+		expErr         error
+	}{
+		{
+			name:           "sucess: normal path",
+			volumeId:       "vol-001",
+			desiredSizeGiB: 5,
+			options: &ModifyDiskOptions{
+				VolumeType: VolumeTypeGP2,
+				IOPS:       3000,
+				Throughput: 1000,
+			},
+		},
+		{
+			name:           "failure: volume is still being expanded",
+			volumeId:       "vol-001",
+			desiredSizeGiB: 500,
+			options: &ModifyDiskOptions{
+				VolumeType: VolumeTypeGP2,
+				IOPS:       3000,
+				Throughput: 1000,
+			},
+			expErr: fmt.Errorf("volume \"vol-001\" is still being expanded to 500 size"),
+		},
+		{
+			name:           "failure: volume is still being modified to iops",
+			volumeId:       "vol-001",
+			desiredSizeGiB: 50,
+			options: &ModifyDiskOptions{
+				VolumeType: VolumeTypeGP2,
+				IOPS:       4000,
+				Throughput: 1000,
+			},
+			expErr: fmt.Errorf("volume \"vol-001\" is still being modified to iops 4000"),
+		},
+		{
+			name:           "failure: volume is still being modifed to type",
+			volumeId:       "vol-001",
+			desiredSizeGiB: 50,
+			options: &ModifyDiskOptions{
+				VolumeType: VolumeTypeGP3,
+				IOPS:       3000,
+				Throughput: 1000,
+			},
+			expErr: fmt.Errorf("volume \"vol-001\" is still being modified to type %q", VolumeTypeGP3),
+		},
+		{
+			name:           "failure: volume is still being modified to throughput",
+			volumeId:       "vol-001",
+			desiredSizeGiB: 5,
+			options: &ModifyDiskOptions{
+				VolumeType: VolumeTypeGP2,
+				IOPS:       3000,
+				Throughput: 2000,
+			},
+			expErr: fmt.Errorf("volume \"vol-001\" is still being modified to throughput 2000"),
+		},
+	}
+	for _, tc := range testCases {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		c := newCloud(mockEC2)
+		cloudInstance := c.(*cloud)
+		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+			Volumes: []types.Volume{
+				{
+					VolumeId:   aws.String("vol-001"),
+					Size:       aws.Int32(50),
+					VolumeType: types.VolumeTypeGp2,
+					Iops:       aws.Int32(3000),
+					Throughput: aws.Int32(1000),
+				},
+			},
+		}, nil)
+		_, err := cloudInstance.checkDesiredState(context.Background(), tc.volumeId, tc.desiredSizeGiB, tc.options)
+		if err != nil {
+			if tc.expErr == nil {
+				t.Fatalf("Did not expect to get an error but got %q", err)
+			} else if tc.expErr.Error() != err.Error() {
+				t.Fatalf("checkDesiredState() failed: expected error %q, got: %q", tc.expErr, err)
+			}
+		} else {
+			if tc.expErr != nil {
+				t.Fatalf("checkDesiredState() failed: expected error got nothing")
+			}
 		}
 	}
 }
@@ -1196,6 +1331,21 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expErr: fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes"),
+		},
+		{
+			name:       "failure: invalid VolumeType",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:    "invalidVolumeType",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
 		},
 	}
 	for _, tc := range testCases {

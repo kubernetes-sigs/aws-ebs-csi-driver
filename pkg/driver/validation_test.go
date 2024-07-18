@@ -46,7 +46,7 @@ func randomStringMap(n int) map[string]string {
 	return result
 }
 
-func TestValidateExtraVolumeTags(t *testing.T) {
+func TestValidateExtraTags(t *testing.T) {
 	testCases := []struct {
 		name   string
 		tags   map[string]string
@@ -65,6 +65,13 @@ func TestValidateExtraVolumeTags(t *testing.T) {
 				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
 			},
 			expErr: fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength),
+		},
+		{
+			name: "invaid tag: key is empty",
+			tags: map[string]string{
+				"": "extra-tag-value",
+			},
+			expErr: fmt.Errorf("Tag key cannot be empty (min: 1)"),
 		},
 		{
 			name: "invalid tag: value too long",
@@ -86,6 +93,13 @@ func TestValidateExtraVolumeTags(t *testing.T) {
 				cloud.AwsEbsDriverTagKey: "false",
 			},
 			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey),
+		},
+		{
+			name: "invaid tag: reserved snapshot key",
+			tags: map[string]string{
+				cloud.SnapshotNameTagKey: "false",
+			},
+			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey),
 		},
 		{
 			name: "invalid tag: reserved Kubernetes key prefix",

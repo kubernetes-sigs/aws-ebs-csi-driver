@@ -1746,6 +1746,13 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			errExpected: false,
 		},
 		{
+			name: "failure with IOPSPerGBKey",
+			formattingOptionParameters: map[string]string{
+				IopsPerGBKey: "wrong_value",
+			},
+			errExpected: true,
+		},
+		{
 			name: "failure with block size",
 			formattingOptionParameters: map[string]string{
 				BlockSizeKey: "wrong_value",
@@ -1786,6 +1793,13 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			formattingOptionParameters: map[string]string{
 				Ext4BigAllocKey:    "false",
 				Ext4ClusterSizeKey: "16384",
+			},
+			errExpected: true,
+		},
+		{
+			name: "failure with Block Express on io1 volume",
+			formattingOptionParameters: map[string]string{
+				BlockExpressKey: "true",
 			},
 			errExpected: true,
 		},

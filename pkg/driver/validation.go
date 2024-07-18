@@ -76,6 +76,7 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
 			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
 		}
+		//TODO possibly remove these lines below as failure condition is impossible to encounter
 		if !awsTagValidRegex.MatchString(k) {
 			return fmt.Errorf("Tag key '%s' is not a valid AWS tag key", k)
 		}
