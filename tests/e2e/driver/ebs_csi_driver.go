@@ -51,8 +51,7 @@ func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]str
 			{
 				MatchLabelExpressions: []v1.TopologySelectorLabelRequirement{
 					{
-						// TODO we should use the new topology key eventually
-						Key:    ebscsidriver.ZoneTopologyKey,
+						Key:    ebscsidriver.WellKnownZoneTopologyKey,
 						Values: allowedTopologyValues,
 					},
 				},
