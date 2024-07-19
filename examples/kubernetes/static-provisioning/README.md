@@ -34,7 +34,7 @@ This example shows you how to create and consume a `PersistentVolume` from an ex
         required:
           nodeSelectorTerms:
             - matchExpressions:
-                - key: topology.ebs.csi.aws.com/zone
+                - key: topology.kubernetes.io/zone
                   operator: In
                   values:
                     - {availability zone}
