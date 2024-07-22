@@ -147,11 +147,11 @@ func TestCreateVolume(t *testing.T) {
 						Requisite: []*csi.Topology{
 							{
 								Segments: map[string]string{
-									ZoneTopologyKey: expZone,
-									AwsAccountIDKey: outpostArn.AccountID,
-									AwsOutpostIDKey: outpostArn.Resource,
-									AwsRegionKey:    outpostArn.Region,
-									AwsPartitionKey: outpostArn.Partition,
+									WellKnownZoneTopologyKey: expZone,
+									AwsAccountIDKey:          outpostArn.AccountID,
+									AwsOutpostIDKey:          outpostArn.Resource,
+									AwsRegionKey:             outpostArn.Region,
+									AwsPartitionKey:          outpostArn.Partition,
 								},
 							},
 						},
@@ -164,11 +164,11 @@ func TestCreateVolume(t *testing.T) {
 					AccessibleTopology: []*csi.Topology{
 						{
 							Segments: map[string]string{
-								ZoneTopologyKey: expZone,
-								AwsAccountIDKey: outpostArn.AccountID,
-								AwsOutpostIDKey: outpostArn.Resource,
-								AwsRegionKey:    outpostArn.Region,
-								AwsPartitionKey: outpostArn.Partition,
+								WellKnownZoneTopologyKey: expZone,
+								AwsAccountIDKey:          outpostArn.AccountID,
+								AwsOutpostIDKey:          outpostArn.Resource,
+								AwsRegionKey:             outpostArn.Region,
+								AwsPartitionKey:          outpostArn.Partition,
 							},
 						},
 					},
@@ -1232,7 +1232,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{ZoneTopologyKey: expZone},
+								Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1245,7 +1245,7 @@ func TestCreateVolume(t *testing.T) {
 					AccessibilityRequirements: &csi.TopologyRequirement{
 						Requisite: []*csi.Topology{
 							{
-								Segments: map[string]string{ZoneTopologyKey: expZone},
+								Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
 							},
 						},
 					},
@@ -1256,7 +1256,7 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{ZoneTopologyKey: expZone},
+							Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
 						},
 					},
 				}
@@ -2084,17 +2084,17 @@ func TestGetOutpostArn(t *testing.T) {
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{ZoneTopologyKey: expZone},
+						Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
 					},
 				},
 				Preferred: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							ZoneTopologyKey: expZone,
-							AwsAccountIDKey: outpostArn.AccountID,
-							AwsOutpostIDKey: outpostArn.Resource,
-							AwsRegionKey:    outpostArn.Region,
-							AwsPartitionKey: outpostArn.Partition,
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          outpostArn.AccountID,
+							AwsOutpostIDKey:          outpostArn.Resource,
+							AwsRegionKey:             outpostArn.Region,
+							AwsPartitionKey:          outpostArn.Partition,
 						},
 					},
 				},
@@ -2108,11 +2108,11 @@ func TestGetOutpostArn(t *testing.T) {
 				Requisite: []*csi.Topology{
 					{
 						Segments: map[string]string{
-							ZoneTopologyKey: expZone,
-							AwsAccountIDKey: outpostArn.AccountID,
-							AwsOutpostIDKey: outpostArn.Resource,
-							AwsRegionKey:    outpostArn.Region,
-							AwsPartitionKey: outpostArn.Partition,
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          outpostArn.AccountID,
+							AwsOutpostIDKey:          outpostArn.Resource,
+							AwsRegionKey:             outpostArn.Region,
+							AwsPartitionKey:          outpostArn.Partition,
 						},
 					},
 				},

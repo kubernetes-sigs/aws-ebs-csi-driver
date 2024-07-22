@@ -25,6 +25,6 @@ parameters:
   encrypted: "true"
 allowedTopologies:
 - matchLabelExpressions:
-  - key: topology.ebs.csi.aws.com/zone
+  - key: topology.kubernetes.io/zone
     values:
     - us-east-2c
