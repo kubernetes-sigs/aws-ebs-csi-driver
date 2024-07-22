@@ -88,6 +88,7 @@ type NodeService struct {
 	mounter  mounter.Mounter
 	inFlight *internal.InFlight
 	options  *Options
+	csi.UnimplementedNodeServer
 }
 
 // NewNodeService creates a new node service

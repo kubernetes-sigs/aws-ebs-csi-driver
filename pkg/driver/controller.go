@@ -64,6 +64,7 @@ type ControllerService struct {
 	options               *Options
 	modifyVolumeCoalescer coalescer.Coalescer[modifyVolumeRequest, int32]
 	rpc.UnimplementedModifyServer
+	csi.UnimplementedControllerServer
 }
 
 // NewControllerService creates a new controller service
