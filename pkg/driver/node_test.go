@@ -2003,7 +2003,7 @@ func TestNodeExpandVolume(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: status.Error(codes.InvalidArgument, "VolumeCapability is invalid: block:{}  access_mode:{}"),
+			expectedErr: status.Error(codes.InvalidArgument, "VolumeCapability is invalid"),
 		},
 		{
 			name: "block_device",

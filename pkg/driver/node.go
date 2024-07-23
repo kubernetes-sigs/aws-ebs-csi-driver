@@ -361,7 +361,7 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	if volumeCapability != nil {
 		caps := []*csi.VolumeCapability{volumeCapability}
 		if !isValidVolumeCapabilities(caps) {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("VolumeCapability is invalid: %v", volumeCapability))
+			return nil, status.Error(codes.InvalidArgument, ("VolumeCapability is invalid"))
 		}
 
 		if blk := volumeCapability.GetBlock(); blk != nil {
