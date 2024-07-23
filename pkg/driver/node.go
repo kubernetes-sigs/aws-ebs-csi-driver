@@ -88,6 +88,7 @@ type NodeService struct {
 	mounter  mounter.Mounter
 	inFlight *internal.InFlight
 	options  *Options
+	csi.UnimplementedNodeServer
 }
 
 // NewNodeService creates a new node service
@@ -295,7 +296,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func (d *NodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	klog.V(4).InfoS("NodeUnstageVolume: called", "args", *req)
+	klog.V(4).InfoS("NodeUnstageVolume: called", "args", req)
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -360,7 +361,7 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	if volumeCapability != nil {
 		caps := []*csi.VolumeCapability{volumeCapability}
 		if !isValidVolumeCapabilities(caps) {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("VolumeCapability is invalid: %v", volumeCapability))
+			return nil, status.Error(codes.InvalidArgument, ("VolumeCapability is invalid"))
 		}
 
 		if blk := volumeCapability.GetBlock(); blk != nil {
@@ -492,7 +493,7 @@ func (d *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 }
 
 func (d *NodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	klog.V(4).InfoS("NodeGetVolumeStats: called", "args", *req)
+	klog.V(4).InfoS("NodeGetVolumeStats: called", "args", req)
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume ID was empty")
 	}
@@ -555,7 +556,7 @@ func (d *NodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 }
 
 func (d *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	klog.V(4).InfoS("NodeGetCapabilities: called", "args", *req)
+	klog.V(4).InfoS("NodeGetCapabilities: called", "args", req)
 	var caps []*csi.NodeServiceCapability
 	for _, cap := range nodeCaps {
 		c := &csi.NodeServiceCapability{
@@ -571,7 +572,7 @@ func (d *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 }
 
 func (d *NodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	klog.V(4).InfoS("NodeGetInfo: called", "args", *req)
+	klog.V(4).InfoS("NodeGetInfo: called", "args", req)
 
 	zone := d.metadata.GetAvailabilityZone()
 	osType := runtime.GOOS
