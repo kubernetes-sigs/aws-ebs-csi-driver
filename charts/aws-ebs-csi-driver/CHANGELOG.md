@@ -1,6 +1,6 @@
 # Helm chart
 ## v2.33.0
-* Bump driver version to `v1.32.0`
+* Bump driver version to `v1.33.0`
 * Bump CSI sidecar container versions
 * Add fix for enableLinux node parameter ([#2078](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2078), [@ElijahQuinones](https://github.com/ElijahQuinones))
 * Fix dnsConfig indentation in controller template file ([#2084](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2084), [@cHiv0rz](https://github.com/cHiv0rz))
