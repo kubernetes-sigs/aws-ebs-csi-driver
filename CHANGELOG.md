@@ -1,19 +1,24 @@
 # v1.33.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+* The AZ topology key `CreateVolume` returns has changed from `topology.ebs.csi.aws.com/zone` to `topology.kubernetes.io/zone`. Volumes created on `v1.33.0` or any future version will be incompatible with versions before `v1.28.0`. No other customer-facing impact is expected unless you directly depend on the topology label. For more information and the reasoning behind this change, see [issue #729](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/729#issuecomment-1942026577).
+
 ### Notable Changes
 * Migrate CreateVolume response topology to standard label topology.kubernetes.io/zone ([#2086](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2086), [@ConnorJC3](https://github.com/ConnorJC3))
-* Modifying Tags On Existing Volume ([#2082](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2082), [@mdzraf](https://github.com/mdzraf))
+* Add ability to modify EBS volume tags via VolumeAttributesClass ([#2082](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2082), [@mdzraf](https://github.com/mdzraf))
 * Add --kubeconfig flag for out-of-cluster auth ([#2081](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2081), [@cartermckinnon](https://github.com/cartermckinnon))
 
 ### Bug Fixes
 * Bump GCR sidecars that reference broken tags ([#2091](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2091), [@ConnorJC3](https://github.com/ConnorJC3))
-* govulncheck: Bump google.golang.org/grpc to v1.64.1 ([#2085](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2085), [@ConnorJC3](https://github.com/ConnorJC3))
-* Change coalescer InputType from comparable to any ([#2083](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2083), [@ConnorJC3](https://github.com/ConnorJC3))
 * Bump go version to fix govulncheck failure ([#2080](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2080), [@ConnorJC3](https://github.com/ConnorJC3))
 * Use new client token when CreateVolume returns IdempotentParameterMismatch ([#2075](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2075), [@ConnorJC3](https://github.com/ConnorJC3))
 
 ### Improvements
-* fix function name in comment #2088 ([#2088](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2088), [@augustkang](https://github.com/augustkang))
+* Change coalescer InputType from comparable to any ([#2083](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2083), [@ConnorJC3](https://github.com/ConnorJC3))
+* Fix function name in comment #2088 ([#2088](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2088), [@augustkang](https://github.com/augustkang))
 * Developer Experience Improvements ([#2079](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2079), [@ConnorJC3](https://github.com/ConnorJC3))
+* Bump dependencies for driver release v1.33.0 ([#2094](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2094), [@ElijahQuinones](https://github.com/ElijahQuinones))
 
 # v1.32.0
 ### Announcements
