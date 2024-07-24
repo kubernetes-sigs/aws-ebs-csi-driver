@@ -62,7 +62,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.32.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.33.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
