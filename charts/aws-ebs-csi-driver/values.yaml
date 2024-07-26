@@ -17,7 +17,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v5.0.1-eks-1-30-8"
+      tag: "v5.0.1-eks-1-30-10"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -44,7 +44,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.6.1-eks-1-30-8"
+      tag: "v4.6.1-eks-1-30-10"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -73,7 +73,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.0.1-eks-1-30-8"
+      tag: "v8.0.1-eks-1-30-10"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -89,7 +89,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.13.0-eks-1-30-8"
+      tag: "v2.13.0-eks-1-30-10"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -101,7 +101,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.11.1-eks-1-30-8"
+      tag: "v1.11.1-eks-1-30-10"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -128,7 +128,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.11.0-eks-1-30-8"
+      tag: "v2.11.0-eks-1-30-10"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -479,4 +479,4 @@ useOldCSIDriver: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20240611-597c402033-master"
+  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20240705-131cd74733-master"

@@ -62,6 +62,7 @@ type Driver struct {
 	node       *NodeService
 	srv        *grpc.Server
 	options    *Options
+	csi.UnimplementedIdentityServer
 }
 
 func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
