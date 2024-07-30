@@ -1,0 +1,100 @@
+#!/bin/bash
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---
+
+set -euo pipefail # Exit on any error
+
+# --- Environment Variables
+export MIN_VOLUME_GUESS=${MIN_VOLUME_GUESS:=0}
+export MAX_VOLUME_GUESS=${MAX_VOLUME_GUESS:=130}
+export POD_TIMEOUT_SECONDS=${POD_TIMEOUT_SECONDS:=120}
+export TEST_POD_NAME=${TEST_POD_NAME:="attachment-limit-test-pod"}
+
+export SCRIPT_DIR ROOT_DIRECTORY FIND_ATTACHMENT_LIMIT_FILEPATH
+SCRIPT_DIR=$(dirname $(realpath "$0"))
+FIND_ATTACHMENT_LIMIT_FILEPATH="$SCRIPT_DIR/find-attachment-limit"
+
+# --- Script Tools
+# Color codes for different text colors
+RED='\033[0;31m'    # Red color for errors
+YELLOW='\033[0;33m' # Yellow color for warnings
+NC='\033[0m'        # No color (to reset the text color)
+
+log_warning() {
+  printf "${YELLOW}%s [WARNING] - %s\n${NC}" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+log_error() {
+  printf "${RED}%s [ERROR] - %s\n${NC}" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+log() {
+  printf "%s [INFO] - %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "${*}" >&2
+}
+
+check_dependencies() {
+  local readonly dependencies=("kubectl" "go" "aws")
+
+  for cmd in "${dependencies[@]}"; do
+    if ! command -v "${cmd}" &>/dev/null; then
+      log "${cmd} could not be found, please install it."
+      exit 1
+    fi
+  done
+}
+
+# --- Script
+usage() {
+  echo "Usage: $0 [INSTANCE_TYPE]"
+  echo "Ex: $0 'test-instance-type'"
+  echo "You can also override the following environment variable defaults: MIN_VOLUME_GUESS=0 MAX_VOLUME_GUESS=130 POD_TIMEOUT_SECONDS=90 EXTRA_LOGS_FILEPATH='/dev/null'"
+  echo "MIN_VOLUME_GUESS=12 MAX_VOLUME_GUESS=30 POD_TIMEOUT_SECONDS=60 EXTRA_LOGS_FILEPATH:='/dev/null' $0 'test-instance-type'"
+  exit 1
+}
+
+parse_args() {
+  # Confirm 1 parameter
+  [[ $# -ne 1 ]] && usage
+
+  export INSTANCE_TYPE=$1
+}
+
+main() {
+  check_dependencies
+
+  parse_args "$@"
+
+  num_nodes_with_same_INSTANCE_TYPE=$(aws ec2 describe-instances --filters Name=tag:Name,Values="*$INSTANCE_TYPE*" --query 'length(Reservations[*].Instances[*])')
+  [[ $num_nodes_with_same_INSTANCE_TYPE -ne 1 ]] && log_warning "There are $num_nodes_with_same_INSTANCE_TYPE instances with the same instance type. This script may provide inaccurate numbers."
+
+  log "Currently the instance associated with instance type $INSTANCE_TYPE has the following attachments:"
+  block_device_mappings=$(aws ec2 describe-instances --filters Name=tag:Name,Values="*$INSTANCE_TYPE*" --query 'length(Reservations[0].Instances[0].BlockDeviceMappings)')
+  log "$block_device_mappings volumes from Block Device Mappings are attached to the instance. (Including the instance's root volume)"
+
+  enis=$(aws ec2 describe-instances --filters Name=tag:Name,Values="*$INSTANCE_TYPE*" --query 'length(Reservations[0].Instances[0].NetworkInterfaces)')
+  log "$enis Elastic Network Interfaces (ENIs) are attached to the instance. (NOTE: These ENIs may not count towards volume limit for certain Nitro System instance types. See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html)"
+
+  log "Checking how many additional EBS volumes are able to be attached via the aws-ebs-csi-driver. This may take a while..."
+  set +e
+  $FIND_ATTACHMENT_LIMIT_FILEPATH "node.kubernetes.io/instance-type:$INSTANCE_TYPE"
+  max_additional_volumes="$?"
+  set -e
+  log "$max_additional_volumes volumes are able to be attached to the instance."
+
+  echo "Attachments for $INSTANCE_TYPE"
+  printf "BlockDeviceMappings ENIs Available-Attachment-Slots(Validated-by-aws-ebs-csi-driver)\n%s %s %s" "$block_device_mappings" "$enis" "$max_additional_volumes" | column --table
+}
+
+main "$@"

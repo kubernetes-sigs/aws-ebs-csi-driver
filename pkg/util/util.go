@@ -18,46 +18,79 @@ package util
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (
-	GiB = 1024 * 1024 * 1024
+	GiB              = int64(1024 * 1024 * 1024)
+	DefaultBlockSize = 4096
 )
 
 var (
 	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
+	// MAC Address Regex Source: https://stackoverflow.com/a/4260512
+	isMACAddressRegex = regexp.MustCompile(`([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})`)
 )
 
-// RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB
-// in the unit of Bytes
+// RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB
 func RoundUpBytes(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB) * GiB
 }
 
 // RoundUpGiB rounds up the volume size in bytes upto multiplications of GiB
 // in the unit of GiB
-func RoundUpGiB(volumeSizeBytes int64) int64 {
-	return roundUpSize(volumeSizeBytes, GiB)
+func RoundUpGiB(volumeSizeBytes int64) (int32, error) {
+	result := roundUpSize(volumeSizeBytes, GiB)
+	if result > int64(math.MaxInt32) {
+		return 0, fmt.Errorf("rounded up size exceeds maximum value of int32: %d", result)
+	}
+	return int32(result), nil
 }
 
 // BytesToGiB converts Bytes to GiB
-func BytesToGiB(volumeSizeBytes int64) int64 {
-	return volumeSizeBytes / GiB
+func BytesToGiB(volumeSizeBytes int64) int32 {
+	result := volumeSizeBytes / GiB
+	if result > int64(math.MaxInt32) {
+		// Handle overflow
+		return math.MaxInt32
+	}
+	return int32(result)
 }
 
 // GiBToBytes converts GiB to Bytes
-func GiBToBytes(volumeSizeGiB int64) int64 {
-	return volumeSizeGiB * GiB
+func GiBToBytes(volumeSizeGiB int32) int64 {
+	return int64(volumeSizeGiB) * GiB
 }
 
-func ParseEndpoint(endpoint string) (string, string, error) {
+func ParseEndpoint(endpoint string, hostprocess bool) (string, string, error) {
+	if runtime.GOOS == "windows" && hostprocess {
+		parts := strings.SplitN(endpoint, "://", 2)
+		if len(parts) != 2 {
+			return "", "", fmt.Errorf("invalid endpoint format: %s", endpoint)
+		}
+		scheme := strings.ToLower(parts[0])
+		addr := parts[1]
+
+		// Remove the socket file if it already exists
+		if scheme == "unix" {
+			if _, err := os.Stat(addr); err == nil {
+				if err := os.Remove(addr); err != nil {
+					return "", "", fmt.Errorf("failed to remove existing socket file: %w", err)
+				}
+			}
+		}
+		return scheme, addr, nil
+	}
+
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", "", fmt.Errorf("could not parse endpoint: %w", err)
@@ -80,8 +113,10 @@ func ParseEndpoint(endpoint string) (string, string, error) {
 	return scheme, addr, nil
 }
 
-// TODO: check division by zero and int overflow
 func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
+	if allocationUnitBytes == 0 {
+		return 0 // Avoid division by zero
+	}
 	return (volumeSizeBytes + allocationUnitBytes - 1) / allocationUnitBytes
 }
 
@@ -90,7 +125,7 @@ func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 	modes := []string{}
 	for _, c := range caps {
-		modes = append(modes, c.AccessMode.GetMode().String())
+		modes = append(modes, c.GetAccessMode().GetMode().String())
 	}
 	return &modes
 }
@@ -102,4 +137,36 @@ func IsSBE(region string) bool {
 // StringIsAlphanumeric returns true if a given string contains only English letters or numbers
 func StringIsAlphanumeric(s string) bool {
 	return isAlphanumericRegex(s)
+}
+
+// CountMACAddresses returns the amount of MAC addresses within a string
+func CountMACAddresses(s string) int {
+	matches := isMACAddressRegex.FindAllStringIndex(s, -1)
+	return len(matches)
+}
+
+// NormalizeWindowsPath normalizes a Windows path
+func NormalizeWindowsPath(path string) string {
+	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	if strings.HasPrefix(normalizedPath, "\\") {
+		normalizedPath = "c:" + normalizedPath
+	}
+	return normalizedPath
+}
+
+// SanitizeRequest takes a request object and returns a copy of the request with
+// the "Secrets" field cleared.
+func SanitizeRequest(req interface{}) interface{} {
+	v := reflect.ValueOf(&req).Elem()
+	e := reflect.New(v.Elem().Type()).Elem()
+
+	e.Set(v.Elem())
+
+	f := reflect.Indirect(e).FieldByName("Secrets")
+
+	if f.IsValid() && f.CanSet() && f.Kind() == reflect.Map {
+		f.Set(reflect.MakeMap(f.Type()))
+		v.Set(e)
+	}
+	return req
 }

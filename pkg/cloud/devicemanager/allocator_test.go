@@ -26,7 +26,7 @@ func TestNameAllocator(t *testing.T) {
 
 	for _, name := range deviceNames {
 		t.Run(name, func(t *testing.T) {
-			actual, err := allocator.GetNext(existingNames)
+			actual, err := allocator.GetNext(existingNames, map[string]struct{}{})
 			if err != nil {
 				t.Errorf("test %q: unexpected error: %v", name, err)
 			}
@@ -38,15 +38,44 @@ func TestNameAllocator(t *testing.T) {
 	}
 }
 
+func TestNameAllocatorLikelyBadName(t *testing.T) {
+	skippedName := deviceNames[32]
+	existingNames := map[string]string{}
+	allocator := nameAllocator{}
+
+	for _, name := range deviceNames {
+		if name == skippedName {
+			// Name in likelyBadNames should be skipped until it is the last available name
+			continue
+		}
+
+		t.Run(name, func(t *testing.T) {
+			actual, err := allocator.GetNext(existingNames, map[string]struct{}{skippedName: {}})
+			if err != nil {
+				t.Errorf("test %q: unexpected error: %v", name, err)
+			}
+			if actual != name {
+				t.Errorf("test %q: expected %q, got %q", name, name, actual)
+			}
+			existingNames[actual] = ""
+		})
+	}
+
+	lastName, _ := allocator.GetNext(existingNames, map[string]struct{}{skippedName: {}})
+	if lastName != skippedName {
+		t.Errorf("test %q: expected %q, got %q (likelyBadNames fallback)", skippedName, skippedName, lastName)
+	}
+}
+
 func TestNameAllocatorError(t *testing.T) {
 	allocator := nameAllocator{}
 	existingNames := map[string]string{}
 
 	for i := 0; i < len(deviceNames); i++ {
-		name, _ := allocator.GetNext(existingNames)
+		name, _ := allocator.GetNext(existingNames, map[string]struct{}{})
 		existingNames[name] = ""
 	}
-	name, err := allocator.GetNext(existingNames)
+	name, err := allocator.GetNext(existingNames, map[string]struct{}{})
 	if err == nil {
 		t.Errorf("expected error, got device  %q", name)
 	}

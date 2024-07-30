@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
@@ -423,7 +423,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				accessMode,
 			},
-			Resources: v1.ResourceRequirements{
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceName(v1.ResourceStorage): resource.MustParse(claimSize),
 				},
@@ -658,7 +658,7 @@ func (t *TestPod) Create() {
 }
 
 func (t *TestPod) WaitForSuccess() {
-	err := e2epod.WaitForPodSuccessInNamespaceSlow(context.Background(), t.client, t.pod.Name, t.namespace.Name)
+	err := e2epod.WaitForPodSuccessInNamespace(context.Background(), t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 }
 
@@ -668,7 +668,7 @@ func (t *TestPod) WaitForRunning() {
 }
 
 // Ideally this would be in "k8s.io/kubernetes/test/e2e/framework"
-// Similar to framework.WaitForPodSuccessInNamespaceSlow
+// Similar to framework.WaitForPodSuccessInNamespace
 var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 	switch pod.Status.Phase {
 	case v1.PodFailed:

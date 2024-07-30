@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,50 +17,55 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
+	"errors"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/request"
+	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/smithy-go"
+	"github.com/aws/smithy-go/middleware"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	"k8s.io/klog/v2"
 )
 
+const requestLimitExceededErrorCode = "RequestLimitExceeded"
+
 // RecordRequestsHandler is added to the Complete chain; called after any request
-func RecordRequestsHandler(r *request.Request) {
-	labels := map[string]string{
-		"request": operationName(r),
-	}
-
-	if r.Error != nil {
-		metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
-	} else {
-		duration := time.Since(r.Time).Seconds()
-		metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+func RecordRequestsMiddleware() func(*middleware.Stack) error {
+	return func(stack *middleware.Stack) error {
+		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("RecordRequestsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
+			start := time.Now()
+			output, metadata, err = next.HandleFinalize(ctx, input)
+			labels := createLabels(ctx)
+			if err != nil {
+				var apiErr smithy.APIError
+				if errors.As(err, &apiErr) {
+					if apiErr.ErrorCode() == requestLimitExceededErrorCode {
+						operationName := awsmiddleware.GetOperationName(ctx)
+						labels = map[string]string{
+							"operation_name": operationName,
+						}
+						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+						klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", operationName)
+					} else {
+						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+					}
+				}
+			} else {
+				duration := time.Since(start).Seconds()
+				metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+			}
+			return output, metadata, err
+		}), middleware.After)
 	}
 }
 
-// RecordThrottledRequestsHandler is added to the AfterRetry chain; called after any error
-func RecordThrottledRequestsHandler(r *request.Request) {
-	labels := map[string]string{
-		"operation_name": operationName(r),
+func createLabels(ctx context.Context) map[string]string {
+	operationName := awsmiddleware.GetOperationName(ctx)
+	if operationName == "" {
+		operationName = "Unknown"
 	}
-
-	if r.IsErrorThrottle() {
-		metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
-		klog.InfoS("Got RequestLimitExceeded error on AWS request", "request", describeRequest(r))
+	return map[string]string{
+		"request": operationName,
 	}
-}
-
-// Return the operation name, for use in log messages and metrics
-func operationName(r *request.Request) string {
-	name := "N/A"
-	if r.Operation != nil {
-		name = r.Operation.Name
-	}
-	return name
-}
-
-// Return a user-friendly string describing the request, for use in log messages
-func describeRequest(r *request.Request) string {
-	service := r.ClientInfo.ServiceName
-	return service + "::" + operationName(r)
 }

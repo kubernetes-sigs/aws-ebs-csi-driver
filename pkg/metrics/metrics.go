@@ -1,3 +1,17 @@
+// Copyright 2024 The Kubernetes Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the 'License');
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an 'AS IS' BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package metrics
 
 import (
@@ -72,7 +86,7 @@ func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map
 }
 
 // InitializeMetricsHandler starts a new HTTP server to expose the metrics.
-func (m *metricRecorder) InitializeMetricsHandler(address, path string) {
+func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFile string) {
 	if m == nil {
 		klog.InfoS("InitializeMetricsHandler: metric recorder is not initialized")
 		return
@@ -92,9 +106,16 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path string) {
 	}
 
 	go func() {
+		var err error
 		klog.InfoS("Metric server listening", "address", address, "path", path)
 
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if certFile != "" {
+			err = server.ListenAndServeTLS(certFile, keyFile)
+		} else {
+			err = server.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
 			klog.ErrorS(err, "Failed to start metric server", "address", address, "path", path)
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}

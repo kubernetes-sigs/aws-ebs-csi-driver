@@ -21,9 +21,10 @@ package util
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -32,29 +33,32 @@ func TestRoundUpBytes(t *testing.T) {
 	var sizeInBytes int64 = 1024
 	actual := RoundUpBytes(sizeInBytes)
 	if actual != 1*GiB {
-		t.Fatalf("Wrong result for RoundUpBytes. Got: %d", actual)
+		t.Fatalf("Wrong result for RoundUpBytes. Got: %d, want: %d", actual, 1*GiB)
 	}
 }
 
 func TestRoundUpGiB(t *testing.T) {
-	var sizeInBytes int64 = 1
-	actual := RoundUpGiB(sizeInBytes)
+	var size int64 = 1
+	actual, err := RoundUpGiB(size)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if actual != 1 {
-		t.Fatalf("Wrong result for RoundUpGiB. Got: %d", actual)
+		t.Fatalf("Wrong result for RoundUpGiB. Got: %d, want: %d", actual, 1)
 	}
 }
 
 func TestBytesToGiB(t *testing.T) {
-	var sizeInBytes int64 = 5 * GiB
-
+	var sizeInBytes int64 = 2147483643
 	actual := BytesToGiB(sizeInBytes)
-	if actual != 5 {
-		t.Fatalf("Wrong result for BytesToGiB. Got: %d", actual)
+	expected := int32(sizeInBytes / GiB)
+	if actual != expected {
+		t.Fatalf("Wrong result for BytesToGiB. Got: %d, want: %d", actual, expected)
 	}
 }
 
 func TestGiBToBytes(t *testing.T) {
-	var sizeInGiB int64 = 3
+	var sizeInGiB int32 = 3
 
 	actual := GiBToBytes(sizeInGiB)
 	if actual != 3*GiB {
@@ -109,7 +113,7 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			scheme, addr, err := ParseEndpoint(tc.endpoint)
+			scheme, addr, err := ParseEndpoint(tc.endpoint, false)
 
 			if tc.expErr != nil {
 				if err.Error() != tc.expErr.Error() {
@@ -176,7 +180,84 @@ func TestIsAlphanumeric(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			res := StringIsAlphanumeric(tc.testString)
-			assert.Equalf(t, res, tc.expResult, "Wrong value returned for StringIsAlphanumeric. Expected %s for string %s, got %s", tc.expResult, tc.testString, res)
+			assert.Equalf(t, tc.expResult, res, "Wrong value returned for StringIsAlphanumeric. Expected %s for string %s, got %s", tc.expResult, tc.testString, res)
+		})
+	}
+}
+
+func TestCountMACAddresses(t *testing.T) {
+	testCases := []struct {
+		name       string
+		testString string
+		expResult  int
+	}{
+		{
+			name:       "success with newline at end",
+			testString: "0e:1c:7d:81:2b:19/\n0e:8c:22:a2:16:ef/\n",
+			expResult:  2,
+		},
+		{
+			name:       "success with no newline",
+			testString: "0e:1c:7d:81:2b:19/\n0e:8c:22:a2:16:ef/sh-4.2$",
+			expResult:  2,
+		},
+		{
+			name:       "success with no addresses",
+			testString: "00:::00/sh-4.2$",
+			expResult:  0,
+		},
+		{
+			name:       "success with hard case",
+			testString: "Zé:1c:7d:81:2b:19/\n23:123:22:a2:16:ef/ff\n:/:sh-4.2$",
+			expResult:  0,
+		},
+		{
+			name:       "success with carriage returns and beginning newline",
+			testString: "\r\n0e:1c:7d:81:2b:19/\r\n0e:8c:22:a2:16:ef/\r\n0e:8c:22:a2:16:ef/sh-4.2$",
+			expResult:  3,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := CountMACAddresses(tc.testString)
+			assert.Equalf(t, tc.expResult, res, "Wrong value returned for CountMACAddresses. Expected %d for string %s, got %d", tc.expResult, tc.testString, res)
+		})
+	}
+}
+
+type TestRequest struct {
+	Name    string
+	Secrets map[string]string
+}
+
+func TestSanitizeRequest(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      interface{}
+		expected interface{}
+	}{
+		{
+			name: "Request with Secrets",
+			req: &TestRequest{
+				Name: "Test",
+				Secrets: map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				},
+			},
+			expected: &TestRequest{
+				Name:    "Test",
+				Secrets: map[string]string{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SanitizeRequest(tt.req)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("SanitizeRequest() = %v, expected %v", result, tt.expected)
+			}
 		})
 	}
 }

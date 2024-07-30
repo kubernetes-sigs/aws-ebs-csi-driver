@@ -24,7 +24,7 @@ rules:
     verbs: [ "create", "get", "list", "watch", "update", "delete", "patch" ]
   - apiGroups: [ "snapshot.storage.k8s.io" ]
     resources: [ "volumesnapshotcontents/status" ]
-    verbs: [ "update" ]
+    verbs: [ "update", "patch" ]
   {{- with .Values.sidecars.snapshotter.additionalClusterRoleRules }}
     {{- . | toYaml | nindent 2 }}
   {{- end }}

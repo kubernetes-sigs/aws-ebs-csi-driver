@@ -1,0 +1,172 @@
+# Copyright 2024 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an 'AS IS' BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+spec:
+  kubeAPIServer:
+    featureGates:
+      VolumeAttributesClass: "true"
+    runtimeConfig:
+      storage.k8s.io/v1alpha1: "true"
+  kubeControllerManager:
+    featureGates:
+      VolumeAttributesClass: "true"
+  additionalPolicies:
+    node: |
+      [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:CreateSnapshot",
+            "ec2:AttachVolume",
+            "ec2:DetachVolume",
+            "ec2:ModifyVolume",
+            "ec2:DescribeAvailabilityZones",
+            "ec2:DescribeInstances",
+            "ec2:DescribeSnapshots",
+            "ec2:DescribeTags",
+            "ec2:DescribeVolumes",
+            "ec2:DescribeVolumesModifications",
+            "ec2:EnableFastSnapshotRestores"
+          ],
+          "Resource": "*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:CreateTags"
+          ],
+          "Resource": [
+            "arn:aws:ec2:*:*:volume/*",
+            "arn:aws:ec2:*:*:snapshot/*"
+          ],
+          "Condition": {
+            "StringEquals": {
+              "ec2:CreateAction": [
+                "CreateVolume",
+                "CreateSnapshot"
+              ]
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteTags"
+          ],
+          "Resource": [
+            "arn:aws:ec2:*:*:volume/*",
+            "arn:aws:ec2:*:*:snapshot/*"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:CreateVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:CreateVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "aws:RequestTag/CSIVolumeName": "*"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:CreateVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "aws:RequestTag/kubernetes.io/cluster/*": "owned"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "ec2:ResourceTag/ebs.csi.aws.com/cluster": "true"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "ec2:ResourceTag/CSIVolumeName": "*"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteVolume"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "ec2:ResourceTag/kubernetes.io/cluster/*": "owned"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteSnapshot"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "ec2:ResourceTag/CSIVolumeSnapshotName": "*"
+            }
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "ec2:DeleteSnapshot"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringLike": {
+              "ec2:ResourceTag/ebs.csi.aws.com/cluster": "true"
+            }
+          }
+        }
+      ]
+  cloudConfig:
+    awsEBSCSIDriver:
+      enabled: true
+      managed: false

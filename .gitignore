@@ -9,8 +9,9 @@ bin
 # Test binary, build with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage tool
 *.out
+coverage.html
 
 # Vagrant
 .vagrant
@@ -22,7 +23,7 @@ Vagrantfile
 # IntelliJ
 .idea/
 
-#MacOS system files
+# MacOS system files
 *.DS_Store
 
 # Vendor dir
@@ -30,3 +31,10 @@ vendor/
 
 # .image-* files used by Makefile
 .image-*
+
+# Files used by Makefile when upgrading sidecars
+hack/release-scripts/image-digests.yaml
+
+# E2E artifacts
+_rundir/
+_artifacts/

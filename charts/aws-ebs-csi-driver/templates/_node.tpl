@@ -5,10 +5,17 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: {{ .NodeName }}
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Values.node.namespaceOverride | default .Release.Namespace }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+  {{- with .Values.node.daemonSetAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
+  {{- if or (kindIs "float64" .Values.node.revisionHistoryLimit) (kindIs "int64" .Values.node.revisionHistoryLimit) }}
+  revisionHistoryLimit: {{ .Values.node.revisionHistoryLimit }}
+  {{- end }}
   selector:
     matchLabels:
       app: {{ .NodeName }}
@@ -37,6 +44,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ .Values.node.serviceAccount.name }}
+      terminationGracePeriodSeconds: {{ .Values.node.terminationGracePeriodSeconds }}
       priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
@@ -60,6 +68,9 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            {{- with .Values.node.reservedVolumeAttachments }}
+            - --reserved-volume-attachments={{ . }}
+            {{- end }}
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
@@ -70,6 +81,9 @@ spec:
             {{- if .Values.node.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
+            {{- range .Values.node.additionalArgs }}
+            - {{ . }}
+            {{- end }}
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -219,7 +233,11 @@ spec:
             path: /dev
             type: Directory
         - name: probe-dir
+          {{- if .Values.node.probeDirVolume }}
+          {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         {{- with .Values.node.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

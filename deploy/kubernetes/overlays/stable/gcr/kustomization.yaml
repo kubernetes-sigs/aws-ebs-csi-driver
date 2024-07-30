@@ -7,19 +7,19 @@ images:
     newName: registry.k8s.io/provider-aws/aws-ebs-csi-driver
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
     newName: registry.k8s.io/sig-storage/csi-provisioner
-    newTag: v3.6.2
+    newTag: v5.0.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
     newName: registry.k8s.io/sig-storage/csi-attacher
-    newTag: v4.4.2
+    newTag: v4.6.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newName: registry.k8s.io/sig-storage/livenessprobe
-    newTag: v2.11.0
+    newTag: v2.13.0
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
     newName: registry.k8s.io/sig-storage/csi-snapshotter
-    newTag: v6.3.2
+    newTag: v8.0.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newName: registry.k8s.io/sig-storage/csi-resizer
-    newTag: v1.9.2
+    newTag: v1.11.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newName: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    newTag: v2.9.1
+    newTag: v2.11.0

@@ -1,4 +1,71 @@
 # Helm chart
+## v2.31.0
+* Bump driver version to `v1.31.0`
+* Expose dnsConfig in Helm Chart for Custom DNS Configuration ([#2034](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2045), [@omerap12](https://github.com/omerap12))
+* Make scrape interval configurable ([#2035](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2035), [@omerap12](https://github.com/omerap12))
+* Add defaultStorageClass parameter ([#2039](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2039), [@torredil](https://github.com/torredil))
+* Upgrade sidecar containers ([#2041](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2041), [@torredil](https://github.com/torredil))
+
+## v2.30.0
+* Bump driver version to `v1.30.0`
+* Update voluemessnapshotcontents/status RBAC ([#1991](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1991), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Upgrade dependencies ([#2016](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2016), [@torredil](https://github.com/torredil))
+
+## v2.29.1
+* Bump driver version to `v1.29.1`
+* Remove `--reuse-values` deprecation warning
+
+## v2.29.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The EBS CSI Driver Helm chart no longer supports upgrading with `--reuse-values`. This chart will not test for `--reuse-values` compatibility and upgrading with `--reuse-values` will likely fail. Users of `--reuse-values` are strongly encouraged to migrate to `--reset-then-reuse-values`.
+
+For more information see [the deprecation announcement](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864).
+
+### Other Changes
+* Bump driver version to `v1.29.0` and sidecars to latest versions
+* Add helm-tester enabled flag ([#1954](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1954), [@nunodomingues-td](https://github.com/nunodomingues-td))
+
+## v2.28.1
+* Add `reservedVolumeAttachments` that overrides heuristic-determined reserved attachments via  `--reserved-volume-attachments` CLI option from [PR #1919](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1919) through Helm ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko)) 
+* Add `additionalArgs` parameter to node daemonSet ([#1939](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1939), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.28.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This is the last minor version of the EBS CSI Driver Helm chart to support upgrading with `--reuse-values`. Future versions of the chart (starting with `v2.29.0`) will not test for `--reuse-values` compatibility and upgrading with `--reuse-values` will likely fail. Users of `--reuse-values` are strongly encouraged to migrate to `--reset-then-reuse-values`.
+
+For more information see [the deprecation announcement](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1864).
+
+### Other Changes
+* Bump driver version to `v1.28.0` and sidecars to latest versions
+* Add labels to leases role used by EBS CSI controller ([#1914](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1914), [@cHiv0rz](https://github.com/cHiv0rz))
+* Enforce `linux` and `amd64` node affinity for helm tester pod ([#1922](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1922), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add configuration for `DaemonSet` annotations ([#1923](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1923), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Incorporate KubeLinter recommended best practices for chart tester pod ([#1924](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1924), [@torredil](https://github.com/torredil))
+* Add configuration for chart tester pod image ([#1928](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1928), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.27.0
+* Bump driver version to `v1.27.0`
+* Add parameters for tuning revisionHistoryLimit and emptyDir volumes ([#1840](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1840), [@bodgit](https://github.com/bodgit))
+
+## v2.26.1
+* Bump driver version to `v1.26.1`
+* Bump sidecar container versions to fix [restart bug in external attacher, provisioner, resizer, snapshotter, and node-driver-registrar](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1875) ([#1886](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1886), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.26.0
+* Bump driver version to `v1.26.0`
+* Bump sidecar container versions ([#1867](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1867), [@AndrewSirenko](https://github.com/AndrewSirenko)) 
+* Add warning about --reuse-values deprecation to NOTES.txt ([#1865](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1865), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## v2.25.0
+* Bump driver version to `v1.25.0`
+* Update default sidecar timeout values ([#1824](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1824), [@torredil](https://github.com/torredil))
+* Increase default QPS and worker threads of sidecars ([#1834](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1834), [@ConnorJC3](https://github.com/ConnorJC3))
+* Node-driver-registrar sidecar fixes ([#1815](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1815), [@jukie](https://github.com/jukie))
+* Suggest eks.amazonaws.com/role-arn in values.yaml if EKS IAM for SA is used ([#1804](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1804), [@tporeba](https://github.com/tporeba))
 
 ## v2.24.1
 * Bump driver version to `v1.24.1`

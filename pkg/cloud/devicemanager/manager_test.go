@@ -19,8 +19,8 @@ package devicemanager
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 func TestNewDevice(t *testing.T) {
@@ -59,7 +59,7 @@ func TestNewDevice(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Should fail if instance is nil
-			dev1, err := dm.NewDevice(nil, tc.volumeID)
+			dev1, err := dm.NewDevice(nil, tc.volumeID, map[string]struct{}{})
 			if err == nil {
 				t.Fatalf("Expected error when nil instance is passed in, got nothing")
 			}
@@ -70,11 +70,11 @@ func TestNewDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should create valid Device with valid path
-			dev1, err = dm.NewDevice(fakeInstance, tc.volumeID)
+			dev1, err = dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev1, false, err)
 
 			// Devices with same instance and volume should have same paths
-			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			dev2, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev2, true /*IsAlreadyAssigned*/, err)
 			if dev1.Path != dev2.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev2.Path)
@@ -82,7 +82,7 @@ func TestNewDevice(t *testing.T) {
 
 			// Should create new Device with the same path after releasing
 			dev2.Release(false)
-			dev3, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			dev3, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev3, false, err)
 			if dev3.Path != dev1.Path {
 				t.Fatalf("Expected equal paths, got %v and %v", dev1.Path, dev3.Path)
@@ -136,7 +136,7 @@ func TestNewDeviceWithExistingDevice(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeInstance := newFakeInstance("fake-instance", tc.existingID, tc.existingPath)
 
-			dev, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev, tc.existingID == tc.volumeID, err)
 
 			if dev.Path != tc.expectedPath {
@@ -169,7 +169,7 @@ func TestGetDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should create valid Device with valid path
-			dev1, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			dev1, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev1, false /*IsAlreadyAssigned*/, err)
 
 			// Devices with same instance and volume should have same paths
@@ -205,7 +205,7 @@ func TestReleaseDevice(t *testing.T) {
 			fakeInstance := newFakeInstance(tc.instanceID, tc.existingVolumeID, tc.existingDevicePath)
 
 			// Should get assigned Device after releasing tainted device
-			dev, err := dm.NewDevice(fakeInstance, tc.volumeID)
+			dev, err := dm.NewDevice(fakeInstance, tc.volumeID, map[string]struct{}{})
 			assertDevice(t, dev, false /*IsAlreadyAssigned*/, err)
 			dev.Taint()
 			dev.Release(false)
@@ -223,13 +223,15 @@ func TestReleaseDevice(t *testing.T) {
 	}
 }
 
-func newFakeInstance(instanceID, volumeID, devicePath string) *ec2.Instance {
-	return &ec2.Instance{
+func newFakeInstance(instanceID, volumeID, devicePath string) *types.Instance {
+	return &types.Instance{
 		InstanceId: aws.String(instanceID),
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
+		BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
 			{
 				DeviceName: aws.String(devicePath),
-				Ebs:        &ec2.EbsInstanceBlockDevice{VolumeId: aws.String(volumeID)},
+				Ebs: &types.EbsInstanceBlockDevice{
+					VolumeId: aws.String(volumeID),
+				},
 			},
 		},
 	}

@@ -52,7 +52,7 @@ func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]str
 				MatchLabelExpressions: []v1.TopologySelectorLabelRequirement{
 					{
 						// TODO we should use the new topology key eventually
-						Key:    ebscsidriver.TopologyKey,
+						Key:    ebscsidriver.ZoneTopologyKey,
 						Values: allowedTopologyValues,
 					},
 				},
@@ -62,10 +62,10 @@ func (d *ebsCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]str
 	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, volumeExpansion, bindingMode, allowedTopologies)
 }
 
-func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string) *volumesnapshotv1.VolumeSnapshotClass {
+func (d *ebsCSIDriver) GetVolumeSnapshotClass(namespace string, parameters map[string]string) *volumesnapshotv1.VolumeSnapshotClass {
 	provisioner := d.driverName
 	generateName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
-	return getVolumeSnapshotClass(generateName, provisioner)
+	return getVolumeSnapshotClass(generateName, provisioner, parameters)
 }
 
 func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string, accessMode v1.PersistentVolumeAccessMode, volumeMode v1.PersistentVolumeMode) *v1.PersistentVolume {
@@ -108,31 +108,6 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 	}
 }
 
-// GetParameters returns the parameters specific for this driver
-func GetParameters(volumeType string, fsType string, encrypted bool, additionalParameters map[string]string) map[string]string {
-	parameters := map[string]string{
-		"type":                      volumeType,
-		"csi.storage.k8s.io/fstype": fsType,
-	}
-	if iopsPerGB := IOPSPerGBForVolumeType(volumeType); iopsPerGB != "" {
-		parameters[ebscsidriver.IopsPerGBKey] = iopsPerGB
-	}
-	if iops := IOPSForVolumeType(volumeType); iops != "" {
-		parameters[ebscsidriver.IopsKey] = iops
-	}
-	if throughput := ThroughputForVolumeType(volumeType); throughput != "" {
-		parameters[ebscsidriver.ThroughputKey] = throughput
-	}
-	if encrypted {
-		parameters[ebscsidriver.EncryptedKey] = True
-	}
-	for k, v := range additionalParameters {
-		parameters[k] = v
-	}
-
-	return parameters
-}
-
 // MinimumSizeForVolumeType returns the minimum disk size for each volumeType
 func MinimumSizeForVolumeType(volumeType string) string {
 	switch volumeType {
@@ -146,47 +121,5 @@ func MinimumSizeForVolumeType(volumeType string) string {
 		return "10Gi"
 	default:
 		return "1Gi"
-	}
-}
-
-// IOPSPerGBForVolumeType returns the maximum iops per GB for each volumeType
-// Otherwise returns an empty string
-func IOPSPerGBForVolumeType(volumeType string) string {
-	switch volumeType {
-	case "io1":
-		// Maximum IOPS/GB for io1 is 50
-		return "50"
-	case "io2":
-		// Maximum IOPS/GB for io2 is 500
-		return "500"
-	default:
-		return ""
-	}
-}
-
-// IOPSForVolumeType returns the maximum iops for each volumeType
-// Otherwise returns an empty string
-func IOPSForVolumeType(volumeType string) string {
-	switch volumeType {
-	case "gp3":
-		// Maximum IOPS for gp3 is 16000. However, maximum IOPS/GB for gp3 is 500.
-		// Since the tests will run using minimum volume capacity (1GB), set to 3000
-		// because minimum IOPS for gp3 is 3000.
-		return "3000"
-	default:
-		return ""
-	}
-}
-
-// ThroughputPerVolumeType returns the maximum throughput for each volumeType
-// Otherwise returns an empty string
-func ThroughputForVolumeType(volumeType string) string {
-	switch volumeType {
-	case "gp3":
-		// Maximum throughput for gp3 is 1000. However, maximum throughput/iops for gp3 is 0.25
-		// Since the default iops is 3000, set to 750.
-		return "750"
-	default:
-		return ""
 	}
 }

@@ -15,7 +15,7 @@ limitations under the License.
 package testsuites
 
 import (
-	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
@@ -28,13 +28,9 @@ type FormatOptionTest struct {
 	CreateVolumeParameters map[string]string
 }
 
-const (
-	volumeSizeIncreaseAmtGi = 1
-)
-
-func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespace, ebsDriver driver.PVTestDriver, fsType string) {
+func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespace, ebsDriver driver.PVTestDriver) {
 	By("setting up pvc with custom format option")
-	volumeDetails := createFormatOptionVolumeDetails(fsType, t)
+	volumeDetails := CreateVolumeDetails(t.CreateVolumeParameters, driver.MinimumSizeForVolumeType(t.CreateVolumeParameters[ebscsidriver.VolumeTypeKey]))
 	testPvc, _ := volumeDetails.SetupDynamicPersistentVolumeClaim(client, namespace, ebsDriver)
 	defer testPvc.Cleanup()
 
@@ -44,7 +40,7 @@ func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespa
 	formatOptionMountPod.WaitForSuccess()
 
 	By("testing that pvc is able to be resized")
-	ResizeTestPvc(client, namespace, testPvc, volumeSizeIncreaseAmtGi)
+	ResizeTestPvc(client, namespace, testPvc, DefaultSizeIncreaseGi)
 
 	By("validating resized pvc by deploying new pod")
 	resizeTestPod := createPodWithVolume(client, namespace, PodCmdWriteToVolume(DefaultMountPath), testPvc, volumeDetails)
@@ -52,25 +48,6 @@ func (t *FormatOptionTest) Run(client clientset.Interface, namespace *v1.Namespa
 
 	By("confirming new pod can write to resized volume")
 	resizeTestPod.WaitForSuccess()
-}
-
-func createFormatOptionVolumeDetails(fsType string, t *FormatOptionTest) *VolumeDetails {
-	allowVolumeExpansion := true
-
-	volume := VolumeDetails{
-		VolumeType:   awscloud.VolumeTypeGP2,
-		FSType:       fsType,
-		MountOptions: []string{"rw"},
-		ClaimSize:    driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
-		VolumeMount: VolumeMountDetails{
-			NameGenerate:      DefaultVolumeName,
-			MountPathGenerate: DefaultMountPath,
-		},
-		AllowVolumeExpansion: &allowVolumeExpansion,
-		AdditionalParameters: t.CreateVolumeParameters,
-	}
-
-	return &volume
 }
 
 func createPodWithVolume(client clientset.Interface, namespace *v1.Namespace, cmd string, testPvc *TestPersistentVolumeClaim, volumeDetails *VolumeDetails) *TestPod {

@@ -16,6 +16,8 @@ limitations under the License.
 
 package driver
 
+import "time"
+
 // constants of keys in PublishContext
 const (
 	// devicePathKey represents key for device path in PublishContext
@@ -28,12 +30,6 @@ const (
 	// VolumeAttributePartition represents key for partition config in VolumeContext
 	// this represents the partition number on a device used to mount
 	VolumeAttributePartition = "partition"
-)
-
-// constants of disk partition suffix
-const (
-	diskPartitionSuffix     = ""
-	nvmeDiskPartitionSuffix = "p"
 )
 
 // constants of keys in volume parameters
@@ -81,6 +77,9 @@ const (
 
 	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit
 	BlockExpressKey = "blockexpress"
+
+	// FSTypeKey configures the file system type that will be formatted during volume creation.
+	FSTypeKey = "csi.storage.k8s.io/fstype"
 
 	// BlockSizeKey configures the block size when formatting a volume
 	BlockSizeKey = "blocksize"
@@ -153,13 +152,8 @@ const (
 
 // constants for default command line flag values
 const (
-	DefaultCSIEndpoint = "unix://tmp/csi.sock"
-)
-
-// constants for disk block size
-const (
-	//DefaultBlockSize represents the default block size (4KB)
-	DefaultBlockSize = 4096
+	DefaultCSIEndpoint                       = "unix://tmp/csi.sock"
+	DefaultModifyVolumeRequestHandlerTimeout = 2 * time.Second
 )
 
 // constants for fstypes

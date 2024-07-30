@@ -17,11 +17,13 @@ limitations under the License.
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
@@ -156,20 +158,23 @@ func TestValidateMode(t *testing.T) {
 
 func TestValidateDriverOptions(t *testing.T) {
 	testCases := []struct {
-		name            string
-		mode            Mode
-		extraVolumeTags map[string]string
-		expErr          error
+		name                string
+		mode                Mode
+		extraVolumeTags     map[string]string
+		modifyVolumeTimeout time.Duration
+		expErr              error
 	}{
 		{
-			name:   "success",
-			mode:   AllMode,
-			expErr: nil,
+			name:                "success",
+			mode:                AllMode,
+			modifyVolumeTimeout: 5 * time.Second,
+			expErr:              nil,
 		},
 		{
-			name:   "fail because validateMode fails",
-			mode:   Mode("unknown"),
-			expErr: fmt.Errorf("Invalid mode: %w", fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode})),
+			name:                "fail because validateMode fails",
+			mode:                Mode("unknown"),
+			modifyVolumeTimeout: 5 * time.Second,
+			expErr:              fmt.Errorf("Invalid mode: %w", fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode})),
 		},
 		{
 			name: "fail because validateExtraVolumeTags fails",
@@ -177,15 +182,23 @@ func TestValidateDriverOptions(t *testing.T) {
 			extraVolumeTags: map[string]string{
 				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Invalid extra tags: %w", fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
+			modifyVolumeTimeout: 5 * time.Second,
+			expErr:              fmt.Errorf("Invalid extra tags: %w", fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
+		},
+		{
+			name:                "fail because modifyVolumeRequestHandlerTimeout is zero",
+			mode:                AllMode,
+			modifyVolumeTimeout: 0,
+			expErr:              errors.New("Invalid modifyVolumeRequestHandlerTimeout: Timeout cannot be zero"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateDriverOptions(&DriverOptions{
-				extraTags: tc.extraVolumeTags,
-				mode:      tc.mode,
+			err := ValidateDriverOptions(&Options{
+				ExtraTags:                         tc.extraVolumeTags,
+				Mode:                              tc.mode,
+				ModifyVolumeRequestHandlerTimeout: tc.modifyVolumeTimeout,
 			})
 			if !reflect.DeepEqual(err, tc.expErr) {
 				t.Fatalf("error not equal\ngot:\n%s\nexpected:\n%s", err, tc.expErr)

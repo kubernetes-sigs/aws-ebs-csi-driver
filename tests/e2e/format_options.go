@@ -27,41 +27,7 @@ import (
 )
 
 var (
-	testedFsTypes = []string{ebscsidriver.FSTypeExt4}
-
-	formatOptionTests = map[string]testsuites.FormatOptionTest{
-		ebscsidriver.BlockSizeKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.BlockSizeKey: "1024",
-			},
-		},
-		ebscsidriver.InodeSizeKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.InodeSizeKey: "512",
-			},
-		},
-		ebscsidriver.BytesPerInodeKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.BytesPerInodeKey: "8192",
-			},
-		},
-		ebscsidriver.NumberOfInodesKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.NumberOfInodesKey: "200192",
-			},
-		},
-		ebscsidriver.Ext4BigAllocKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.Ext4BigAllocKey: "true",
-			},
-		},
-		ebscsidriver.Ext4ClusterSizeKey: {
-			CreateVolumeParameters: map[string]string{
-				ebscsidriver.Ext4BigAllocKey:    "true",
-				ebscsidriver.Ext4ClusterSizeKey: "16384",
-			},
-		},
-	}
+	testedFsTypes = []string{ebscsidriver.FSTypeExt4, ebscsidriver.FSTypeExt3, ebscsidriver.FSTypeXfs}
 )
 
 var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume", func() {
@@ -81,6 +47,47 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 	})
 
 	for _, fsType := range testedFsTypes {
+
+		formatOptionTests := map[string]testsuites.FormatOptionTest{
+			ebscsidriver.BlockSizeKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.BlockSizeKey: "1024",
+					ebscsidriver.FSTypeKey:    fsType,
+				},
+			},
+			ebscsidriver.InodeSizeKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.InodeSizeKey: "512",
+					ebscsidriver.FSTypeKey:    fsType,
+				},
+			},
+			ebscsidriver.BytesPerInodeKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.BytesPerInodeKey: "8192",
+					ebscsidriver.FSTypeKey:        fsType,
+				},
+			},
+			ebscsidriver.NumberOfInodesKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.NumberOfInodesKey: "200192",
+					ebscsidriver.FSTypeKey:         fsType,
+				},
+			},
+			ebscsidriver.Ext4BigAllocKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.Ext4BigAllocKey: "true",
+					ebscsidriver.FSTypeKey:       fsType,
+				},
+			},
+			ebscsidriver.Ext4ClusterSizeKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.Ext4BigAllocKey:    "true",
+					ebscsidriver.Ext4ClusterSizeKey: "16384",
+					ebscsidriver.FSTypeKey:          fsType,
+				},
+			},
+		}
+
 		Context(fmt.Sprintf("using an %s filesystem", fsType), func() {
 			for testedParameter, formatOptionTestCase := range formatOptionTests {
 				formatOptionTestCase := formatOptionTestCase
@@ -90,7 +97,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 
 				Context(fmt.Sprintf("with a custom %s parameter", testedParameter), func() {
 					It("successfully mounts and is resizable", func() {
-						formatOptionTestCase.Run(cs, ns, ebsDriver, fsType)
+						formatOptionTestCase.Run(cs, ns, ebsDriver)
 					})
 				})
 			}

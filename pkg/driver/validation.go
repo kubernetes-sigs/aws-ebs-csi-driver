@@ -17,6 +17,7 @@ limitations under the License.
 package driver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -25,13 +26,17 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func ValidateDriverOptions(options *DriverOptions) error {
-	if err := validateExtraTags(options.extraTags, false); err != nil {
+func ValidateDriverOptions(options *Options) error {
+	if err := validateExtraTags(options.ExtraTags, false); err != nil {
 		return fmt.Errorf("Invalid extra tags: %w", err)
 	}
 
-	if err := validateMode(options.mode); err != nil {
+	if err := validateMode(options.Mode); err != nil {
 		return fmt.Errorf("Invalid mode: %w", err)
+	}
+
+	if options.ModifyVolumeRequestHandlerTimeout == 0 && (options.Mode == ControllerMode || options.Mode == AllMode) {
+		return errors.New("Invalid modifyVolumeRequestHandlerTimeout: Timeout cannot be zero")
 	}
 
 	return nil

@@ -9,7 +9,7 @@ metadata:
 rules:
   - apiGroups: [ "" ]
     resources: [ "persistentvolumes" ]
-    verbs: [ "get", "list", "watch", "create", "delete" ]
+    verbs: [ "get", "list", "watch", "create", "patch", "delete" ]
   - apiGroups: [ "" ]
     resources: [ "persistentvolumeclaims" ]
     verbs: [ "get", "list", "watch", "update" ]
@@ -34,3 +34,6 @@ rules:
   - apiGroups: [ "storage.k8s.io" ]
     resources: [ "volumeattachments" ]
     verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "storage.k8s.io" ]
+    resources: [ "volumeattributesclasses" ]
+    verbs: [ "get" ]

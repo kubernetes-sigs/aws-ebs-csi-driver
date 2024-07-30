@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: aws-ebs-csi-driver
 spec:
   replicas: 2
+  revisionHistoryLimit: 10
   strategy:
     rollingUpdate:
       maxUnavailable: 1
@@ -61,7 +62,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.24.1
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.31.0
           imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
@@ -127,8 +128,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-provisioner
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v3.6.2-eks-1-28-9
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v5.0.1-eks-1-30-8
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -141,6 +144,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -156,8 +160,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-attacher
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.4.2-eks-1-28-9
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.6.1-eks-1-30-8
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -167,6 +173,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=5m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -182,8 +189,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v6.3.2-eks-1-28-9
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.0.1-eks-1-30-8
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -192,6 +201,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -207,8 +217,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: csi-resizer
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.9.2-eks-1-28-9
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.11.1-eks-1-30-8
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -219,6 +231,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --workers=100
+            - --retry-interval-max=30m
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -234,8 +247,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.11.0-eks-1-28-9
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.13.0-eks-1-30-8
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
