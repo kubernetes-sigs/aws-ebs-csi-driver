@@ -1,0 +1,19 @@
+ARG RELEASE_FROM=public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23
+ARG CSI_REPO=public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
+ARG CSI_VERSION
+ARG NODE_DRIVER_REGISTRAR_REPO=registry.k8s.io/sig-storage/csi-node-driver-registrar
+ARG NODE_DRIVER_REGISTRAR_VERSION
+ARG LIVENESSPROBE_REPO=registry.k8s.io/sig-storage/livenessprobe
+ARG LIVENESSPROBE_VERSION
+
+FROM ${NODE_DRIVER_REGISTRAR_REPO}:v${NODE_DRIVER_REGISTRAR_VERSION} AS registrar
+
+FROM ${LIVENESSPROBE_REPO}:v${LIVENESSPROBE_VERSION} AS livenessprobe
+
+FROM ${CSI_REPO}:v${CSI_VERSION} AS csi
+
+FROM ${RELEASE_FROM} AS release
+COPY --from=livenessprobe /livenessprobe /livenessprobe
+COPY --from=registrar /csi-node-driver-registrar /csi-node-driver-registrar
+COPY --from=csi /bin/aws-ebs-csi-driver /aws-ebs-csi-driver
+CMD ["/aws-ebs-csi-driver"]

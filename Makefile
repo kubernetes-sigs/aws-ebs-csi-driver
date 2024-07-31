@@ -25,8 +25,11 @@ GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u -Iseconds)
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
-OS?=$(shell go env GOHOSTOS)
+#OS?=$(shell go env GOHOSTOS)
+OS?=linux
 ARCH?=$(shell go env GOHOSTARCH)
+#ARCH?=amd64
+
 ifeq ($(OS),windows)
 	BINARY=aws-ebs-csi-driver.exe
 	OSVERSION?=ltsc2022
@@ -37,11 +40,11 @@ endif
 
 GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
-REGISTRY?=gcr.io/k8s-staging-provider-aws
+REGISTRY?=142548018081.dkr.ecr.us-east-1.amazonaws.com
 IMAGE?=$(REGISTRY)/aws-ebs-csi-driver
 TAG?=$(GIT_COMMIT)
 
-ALL_OS?=linux windows
+ALL_OS?=linux
 ALL_ARCH_linux?=amd64 arm64
 ALL_OSVERSION_linux?=al2023
 ALL_OS_ARCH_OSVERSION_linux=$(foreach arch, $(ALL_ARCH_linux), $(foreach osversion, ${ALL_OSVERSION_linux}, linux-$(arch)-${osversion}))
@@ -222,6 +225,48 @@ image:
 		--build-arg=VERSION=$(VERSION) \
 		`./hack/provenance.sh` \
 		.
+
+include versions.mk
+
+.PHONY: login-ecr
+login-ecr: ## login to AWS with docker
+	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$(REGISTRY)"
+
+.PHONY: build-timescale-images
+build-timescale-images: build-timescale-image-amd64 build-timescale-image-arm64
+
+build-timescale-image-%:
+	docker buildx build \
+		--platform=$(OS)/$* \
+		--progress=plain \
+		--target=release \
+		-t=$(IMAGE):$(TAG)-$* \
+		--build-arg=GOPROXY=$(GOPROXY) \
+		--build-arg=CSI_VERSION=$(CSI_VERSION) \
+		--build-arg=LIVENESSPROBE_VERSION=$(LIVENESSPROBE_VERSION) \
+		--build-arg=NODE_DRIVER_REGISTRAR_VERSION=$(NODE_DRIVER_REGISTRAR_VERSION) \
+		--file=Dockerfile.timescale \
+		.
+
+
+.PHONY: push-timescale-images
+push-timescale-images: push-timescale-image-amd64 push-timescale-image-arm64
+push-timescale-image-%:
+	docker push $(IMAGE):$(TAG)-$*
+
+.PHONY: create-timescale-manifest
+create-timescale-manifest: build-timescale-images
+	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_ARCH_linux) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
+
+.PHONY: push-timescale-manifest
+push-timescale-manifest: create-timescale-manifest
+	docker manifest push --purge $(IMAGE):$(TAG)
+
+.PHONY: timescale-images
+timescale-images: login-ecr build-timescale-images push-timescale-images create-timescale-manifest push-timescale-manifest
+
+.PHONY: push-timescale-image
+push-timescale-image:
 
 .PHONY: create-manifest
 create-manifest: all-image-registry
