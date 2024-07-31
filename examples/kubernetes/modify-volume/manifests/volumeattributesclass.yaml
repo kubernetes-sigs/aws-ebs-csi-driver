@@ -19,5 +19,7 @@ metadata:
   name: io2-class
 driverName: ebs.csi.aws.com
 parameters:
-  tagSpecification_1: "Test=12"
-  fakeParam: "20"
+  type: io2
+  iops: "10000"
+  tagSpecification_1: "location=Seattle"
+  tagSpecification_2: "cost-center="
