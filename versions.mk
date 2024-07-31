@@ -8,8 +8,8 @@
 #EXTERNAL_ATTACHER_VERSION := 4.6.1
 
 # https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases
-CSI_VERSION := 1.25.0
+CSI_VERSION := 1.32.0
 # https://github.com/kubernetes-csi/livenessprobe/releases
-LIVENESSPROBE_VERSION := 2.6.0
+LIVENESSPROBE_VERSION := 2.13.1
 # https://github.com/kubernetes-csi/node-driver-registrar/releases
-NODE_DRIVER_REGISTRAR_VERSION := 2.5.1
+NODE_DRIVER_REGISTRAR_VERSION := 2.11.1
