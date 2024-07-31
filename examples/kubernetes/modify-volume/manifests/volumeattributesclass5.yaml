@@ -19,7 +19,5 @@ metadata:
   name: io2-class6
 driverName: ebs.csi.aws.com
 parameters:
-  tagDeletion_1: "backup"
-  tagDeletion_2: "location"
-  tagDeletion_3: "cost-center"
-
+  tagDeletion_1: "Test"
+  fakeParam: "20"

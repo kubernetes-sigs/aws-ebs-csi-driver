@@ -205,6 +205,8 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 				scTags = append(scTags, value)
 			} else if strings.HasPrefix(key, ModificationDeleteTag) {
 				options.modifyTagsOptions.TagsToDelete = append(options.modifyTagsOptions.TagsToDelete, value)
+			} else {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key: %s", key)
 			}
 		}
 	}

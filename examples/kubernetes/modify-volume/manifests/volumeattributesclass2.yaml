@@ -19,6 +19,6 @@ metadata:
   name: io2-class2
 driverName: ebs.csi.aws.com
 parameters:
-  tagDeletion_1: "billing"
-  tagDeletion_2: "pvcnamespaceTEST"
-  tagDeletion_3: "backup"
+  tagDeletion_1: "pvcname"
+  tagDeletion_2: "pvcnamespace"
+  tagDeletion_3: "pvname"

@@ -19,6 +19,6 @@ metadata:
   name: io2-class3
 driverName: ebs.csi.aws.com
 parameters:
-  tagSpecification_1: "pvcnamespaceTEST={{ .PVCNamespace }}"
-  tagSpecification_2: backup={{ .PVCNamespace | contains "prod" }}
-  tagSpecification_3: "location=Seattle"
+  type: io2
+  iops: "10000"
+  fakeParam: "20"

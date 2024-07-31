@@ -19,4 +19,6 @@ metadata:
   name: io2-class5
 driverName: ebs.csi.aws.com
 parameters:
-  tagSpecification_1: billing={{ .PVCNamespace | contains "default" }}
+  tagSpecification_1: pvcnamespace={{ .PVCNamespace }}
+  tagSpecification_2: pvcname={{ .PVCName }}
+  tagSpecification_3: pvname={{ .PVName }}
