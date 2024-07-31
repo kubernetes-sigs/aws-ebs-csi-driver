@@ -13,7 +13,7 @@ images:
     newTag: v4.6.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newName: registry.k8s.io/sig-storage/livenessprobe
-    newTag: v2.13.0
+    newTag: v2.13.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
     newName: registry.k8s.io/sig-storage/csi-snapshotter
     newTag: v8.0.1
@@ -22,4 +22,4 @@ images:
     newTag: v1.11.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newName: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    newTag: v2.11.0
+    newTag: v2.11.1
