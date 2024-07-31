@@ -197,6 +197,7 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
+            - --v=2
             - --extra-create-metadata
             - --kube-api-qps=20
             - --kube-api-burst=100
