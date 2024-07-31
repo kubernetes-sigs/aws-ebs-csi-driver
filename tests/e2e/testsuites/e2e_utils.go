@@ -39,11 +39,11 @@ const (
 	DefaultResizeTimout          = 1 * time.Minute
 	DefaultK8sApiPollingInterval = 5 * time.Second
 
-	AnnotationIops       = "ebs.csi.aws.com/iops"
-	AnnotationThroughput = "ebs.csi.aws.com/throughput"
-	AnnotationVolumeType = "ebs.csi.aws.com/volumeType"
-	AnnotationsTagSpec   = "ebs.csi.aws.com/tagSpecification"
-	AnnotationTagDel     = "ebs.csi.aws.com/tagDeletion"
+	Iops       = "iops"
+	Throughput = "throughput"
+	VolumeType = "type"
+	TagSpec    = "tagSpecification"
+	TagDel     = "tagDeletion"
 )
 
 var DefaultGeneratedVolumeMount = VolumeMountDetails{
@@ -113,7 +113,7 @@ func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc 
 // AnnotatePvc annotates supplied k8s pvc object with supplied annotations
 func AnnotatePvc(pvc *v1.PersistentVolumeClaim, annotations map[string]string) {
 	for annotation, value := range annotations {
-		pvc.Annotations[annotation] = value
+		pvc.Annotations["ebs.csi.aws.com/"+annotation] = value
 	}
 }
 
