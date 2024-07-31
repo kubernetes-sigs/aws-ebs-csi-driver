@@ -37,6 +37,7 @@ const (
 	tagSpecificationWithNoEqual = "key1"
 	validTagDeletion            = "key2"
 	invalidTagSpecification     = "aws:test=TEST"
+	invalidParameter            = "invalid_parameter"
 )
 
 func TestParseModifyVolumeParameters(t *testing.T) {
@@ -122,6 +123,13 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 			name: "invalid tag specification",
 			params: map[string]string{
 				ModificationAddTag: invalidTagSpecification,
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid VAC parameter",
+			params: map[string]string{
+				invalidParameter: "20",
 			},
 			expectError: true,
 		},
