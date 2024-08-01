@@ -140,14 +140,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", fu
 		ebsDriver = driver.InitEbsCSIDriver()
 	})
 
-	parameterWithPrefix := func(prefix string, parameters map[string]string) map[string]string {
-		result := make(map[string]string)
-		for key, value := range parameters {
-			result[prefix+key] = value
-		}
-		return result
-	}
-
 	for testName, modifyVolumeTest := range modifyVolumeTests {
 		modifyVolumeTest := modifyVolumeTest
 		Context(testName, func() {
@@ -155,7 +147,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", fu
 				if modifyVolumeTest.ExternalResizerOnly {
 					Skip("Functionality being tested is not supported for Modification via volume-modifier-for-k8s, skipping test")
 				}
-				modifyVolumeTest.CreateVolumeParameters = parameterWithPrefix("ebs.csi.aws.com/", modifyVolumeTest.CreateVolumeParameters)
 				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.VolumeModifierForK8s)
 			})
 			It("will modify associated PV and EBS Volume via external-resizer", func() {
