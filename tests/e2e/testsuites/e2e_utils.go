@@ -113,7 +113,7 @@ func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc 
 // AnnotatePvc annotates supplied k8s pvc object with supplied annotations
 func AnnotatePvc(pvc *v1.PersistentVolumeClaim, annotations map[string]string) {
 	for annotation, value := range annotations {
-		pvc.Annotations["ebs.csi.aws.com/"+annotation] = value
+		pvc.Annotations[annotation] = value
 	}
 }
 
