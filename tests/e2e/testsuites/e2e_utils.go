@@ -173,3 +173,11 @@ func CreateVolumeDetails(createVolumeParameters map[string]string, volumeSize st
 
 	return &volume
 }
+
+func PrefixAnnotations(prefix string, parameters map[string]string) map[string]string {
+	result := make(map[string]string)
+	for key, value := range parameters {
+		result[prefix+key] = value
+	}
+	return result
+}
