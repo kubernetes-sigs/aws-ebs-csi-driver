@@ -31,7 +31,7 @@ import (
 // ModifyVolumeTest will provision pod with attached volume, and test that modifying its pvc will modify the associated pv.
 type ModifyVolumeTest struct {
 	CreateVolumeParameters                map[string]string
-	ModifyVolumeAnnotations               map[string]string
+	ModifyVolumeParameters                map[string]string
 	ShouldResizeVolume                    bool
 	ShouldTestInvalidModificationRecovery bool
 	ExternalResizerOnly                   bool
@@ -39,7 +39,7 @@ type ModifyVolumeTest struct {
 
 var (
 	invalidAnnotations = map[string]string{
-		AnnotationIops: "1",
+		Iops: "1",
 	}
 	volumeSize = "10Gi" // Different from driver.MinimumSizeForVolumeType to simplify iops, throughput, volumeType modification
 )
@@ -57,6 +57,8 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 	testVolume, _ := volumeDetails.SetupDynamicPersistentVolumeClaim(c, ns, ebsDriver)
 	defer testVolume.Cleanup()
 
+	parametersWithPrefix := PrefixAnnotations("ebs.csi.aws.com/", modifyVolumeTest.ModifyVolumeParameters)
+
 	By("deploying pod continuously writing to volume")
 	formatOptionMountPod := createPodWithVolume(c, ns, PodCmdContinuousWrite(DefaultMountPath), testVolume, volumeDetails)
 	defer formatOptionMountPod.Cleanup()
@@ -70,7 +72,7 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 	By("modifying the pvc")
 	modifyingPvc, _ := c.CoreV1().PersistentVolumeClaims(ns.Name).Get(context.TODO(), testVolume.persistentVolumeClaim.Name, metav1.GetOptions{})
 	if testType == VolumeModifierForK8s {
-		AnnotatePvc(modifyingPvc, modifyVolumeTest.ModifyVolumeAnnotations)
+		AnnotatePvc(modifyingPvc, parametersWithPrefix)
 	} else if testType == ExternalResizer {
 		vac, err := c.StorageV1alpha1().VolumeAttributesClasses().Create(context.Background(), &v1alpha1.VolumeAttributesClass{
 			ObjectMeta: metav1.ObjectMeta{
@@ -78,7 +80,7 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 				Namespace: ns.Name,
 			},
 			DriverName: "ebs.csi.aws.com",
-			Parameters: modifyVolumeTest.ModifyVolumeAnnotations,
+			Parameters: modifyVolumeTest.ModifyVolumeParameters,
 		}, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
 
@@ -100,7 +102,7 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 
 	By("wait for and confirm pv modification")
 	if testType == VolumeModifierForK8s {
-		err = WaitForPvToModify(c, ns, testVolume.persistentVolume.Name, modifyVolumeTest.ModifyVolumeAnnotations, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
+		err = WaitForPvToModify(c, ns, testVolume.persistentVolume.Name, parametersWithPrefix, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
 	} else if testType == ExternalResizer {
 		err = WaitForVacToApplyToPv(c, ns, testVolume.persistentVolume.Name, *modifyingPvc.Spec.VolumeAttributesClassName, DefaultModificationTimeout, DefaultK8sApiPollingInterval)
 	}
