@@ -200,6 +200,8 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 				options.modifyTagsOptions.TagsToAdd[st[0]] = st[1]
 			} else if strings.HasPrefix(key, ModificationDeleteTag) {
 				options.modifyTagsOptions.TagsToDelete = append(options.modifyTagsOptions.TagsToDelete, value)
+			} else {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter key: %s", key)
 			}
 		}
 	}
