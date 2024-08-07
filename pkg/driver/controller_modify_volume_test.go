@@ -137,6 +137,7 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 		params          map[string]string
 		expectedOptions *modifyVolumeRequest
 		expectError     bool
+		pvcName         string
 	}{
 		{
 			name:   "blank params",
@@ -155,7 +156,9 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 				ModificationKeyIOPS:       validIops,
 				ModificationKeyThroughput: validThroughput,
 				ModificationAddTag:        validTagSpecificationInput,
+				ModificationAddTag + "_1": "key2={{ .PVCName }}",
 				ModificationDeleteTag:     validTagDeletion,
+				PVCNameKey:                "ebs-claim",
 			},
 			expectedOptions: &modifyVolumeRequest{
 				modifyDiskOptions: cloud.ModifyDiskOptions{
@@ -166,6 +169,7 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 				modifyTagsOptions: cloud.ModifyTagsOptions{
 					TagsToAdd: map[string]string{
 						"key1": "tag1",
+						"key2": "ebs-claim",
 					},
 					TagsToDelete: []string{
 						"key2",
