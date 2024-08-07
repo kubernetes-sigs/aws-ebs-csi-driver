@@ -19,7 +19,6 @@ package driver
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -41,11 +40,6 @@ func ValidateDriverOptions(options *Options) error {
 
 	return nil
 }
-
-var (
-	/// https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html
-	awsTagValidRegex = regexp.MustCompile(`[a-zA-Z0-9_.:=+\-@]*`)
-)
 
 func validateExtraTags(tags map[string]string, warnOnly bool) error {
 	if len(tags) > cloud.MaxNumTagsPerResource {
@@ -75,12 +69,6 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		}
 		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
 			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
-		}
-		if !awsTagValidRegex.MatchString(k) {
-			return fmt.Errorf("Tag key '%s' is not a valid AWS tag key", k)
-		}
-		if !awsTagValidRegex.MatchString(v) {
-			return fmt.Errorf("Tag value '%s' is not a valid AWS tag value", v)
 		}
 		return nil
 	}
