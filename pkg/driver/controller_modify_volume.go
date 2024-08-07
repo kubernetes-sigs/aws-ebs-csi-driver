@@ -214,10 +214,6 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
 	}
-	addTags, err := template.Evaluate(scTags, tProps, false)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
-	}
 	if err := validateExtraTags(addTags, false); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
