@@ -1183,6 +1183,57 @@ func TestGetVolumesLimit(t *testing.T) {
 				return m
 			},
 		},
+		// 1 gpu
+		{
+			name: "g4dn.xlarge_volume_attach_limit",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 24,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("g4dn.xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		// 1 gpu
+		{
+			name: "g4ad.xlarge_volume_attach_limit",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 24,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("g4ad.xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		// 4 gpus
+		{
+			name: "g4dn.12xlarge_volume_attach_limit",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 21,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("g4dn.12xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
 	}
 
 	for _, tc := range testCases {

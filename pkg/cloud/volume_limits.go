@@ -138,11 +138,17 @@ func GetDedicatedLimitForInstanceType(it string) int {
 	}
 }
 
-func GetNVMeInstanceStoreVolumesForInstanceType(it string) int {
-	if v, ok := nvmeInstanceStoreVolumes[it]; ok {
-		return v
+func GetReservedSlotsForInstanceType(it string) int {
+	total := 0
+	nvmeInstanceStoreVolumes, ok := nvmeInstanceStoreVolumes[it]
+	if ok {
+		total += nvmeInstanceStoreVolumes
 	}
-	return 0
+	gpus, ok := gpuInstanceGpus[it]
+	if ok {
+		total += gpus
+	}
+	return total
 }
 
 // / https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-volumes.html
@@ -488,4 +494,59 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"z1d.large":       1,
 	"z1d.metal":       2,
 	"z1d.xlarge":      1,
+}
+
+// / https://aws.amazon.com/ec2/instance-types
+var gpuInstanceGpus = map[string]int{
+	"dl1.24xlarge":  8,
+	"g3.16xlarge":   4,
+	"g3.4xlarge":    1,
+	"g3.8xlarge":    2,
+	"g3s.xlarge":    1,
+	"g4ad.16xlarge": 4,
+	"g4ad.2xlarge":  1,
+	"g4ad.4xlarge":  1,
+	"g4ad.8xlarge":  2,
+	"g4ad.xlarge":   1,
+	"g4dn.12xlarge": 4,
+	"g4dn.16xlarge": 1,
+	"g4dn.2xlarge":  1,
+	"g4dn.4xlarge":  1,
+	"g4dn.8xlarge":  1,
+	"g4dn.metal":    8,
+	"g4dn.xlarge":   1,
+	"g5.12xlarge":   4,
+	"g5.16xlarge":   1,
+	"g5.24xlarge":   4,
+	"g5.2xlarge":    1,
+	"g5.48xlarge":   8,
+	"g5.4xlarge":    1,
+	"g5.8xlarge":    1,
+	"g5g.16xlarge":  2,
+	"g5g.2xlarge":   1,
+	"g5g.4xlarge":   1,
+	"g5g.8xlarge":   1,
+	"g5g.metal":     2,
+	"g5g.xlarge":    1,
+	"g5.xlarge":     1,
+	"g6.12xlarge":   4,
+	"g6.16xlarge":   1,
+	"g6.24xlarge":   4,
+	"g6.2xlarge":    1,
+	"g6.48xlarge":   8,
+	"g6.4xlarge":    1,
+	"g6.8xlarge":    1,
+	"g6.xlarge":     1,
+	"gr6.4xlarge":   1,
+	"gr6.8xlarge":   1,
+	"p2.16xlarge":   16,
+	"p2.8xlarge":    8,
+	"p2.xlarge":     1,
+	"p3.16xlarge":   8,
+	"p3.2xlarge":    1,
+	"p3.8xlarge":    4,
+	"p3dn.24xlarge": 8,
+	"p4d.24xlarge":  8,
+	"p4de.24xlarge": 8,
+	"p5.48xlarge":   8,
 }
