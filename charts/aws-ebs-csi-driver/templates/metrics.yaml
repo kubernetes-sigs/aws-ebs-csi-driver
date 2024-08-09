@@ -1,4 +1,4 @@
-{{- if .Values.controller.enableMetrics -}}
+{{- if and .Values.controller.enableMetrics (not .Values.nodeComponentOnly) -}}
 ---
 apiVersion: v1
 kind: Service
