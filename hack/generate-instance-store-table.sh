@@ -24,7 +24,7 @@ BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
 
 function get_instance_stores_for_region() {
   REGION="${1}"
-  echo "Getting limits for ${REGION}..." >&2
+  echo "Getting instance store limits for ${REGION}..." >&2
   "${BIN}/aws" ec2 describe-instance-types --region "${REGION}" --filters "Name=instance-storage-supported,Values=true" --query "InstanceTypes[].[InstanceType, InstanceStorageInfo]" |
     jq -r 'map("\"" + .[0] + "\": " + (.[1].Disks | map(.Count) | add | tostring) + ",") | .[]'
 }
