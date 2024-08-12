@@ -245,6 +245,10 @@ controller:
   deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
+  podDisruptionBudget:
+    # Warning: Disabling PodDisruptionBudget may lead to delays in stateful workloads starting due to controller
+    # pod restarts or evictions.
+    enabled: true
   priorityClassName: system-cluster-critical
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
   # service.
