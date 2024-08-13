@@ -1,4 +1,4 @@
-{{- if not .Values.nodeComponentOnly -}}
+{{- if and .Values.controller.podDisruptionBudget.enabled (not .Values.nodeComponentOnly) -}}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -16,4 +16,4 @@ spec:
   {{- else }}
   minAvailable: 2
   {{- end }}
-{{- end }}
+{{- end -}}
