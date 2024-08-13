@@ -1183,9 +1183,8 @@ func TestGetVolumesLimit(t *testing.T) {
 				return m
 			},
 		},
-		// 1 gpu
 		{
-			name: "g4dn.xlarge_volume_attach_limit",
+			name: "g4dn.xlarge_volume_attach_limit (1 GPU 1 InstanceStoreVolume)",
 			options: &Options{
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
@@ -1202,7 +1201,7 @@ func TestGetVolumesLimit(t *testing.T) {
 		},
 		// 1 gpu
 		{
-			name: "g4ad.xlarge_volume_attach_limit",
+			name: "g4ad.xlarge_volume_attach_limit (1 GPU 1 InstanceStoreVolume)",
 			options: &Options{
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
@@ -1219,7 +1218,7 @@ func TestGetVolumesLimit(t *testing.T) {
 		},
 		// 4 gpus
 		{
-			name: "g4dn.12xlarge_volume_attach_limit",
+			name: "g4dn.12xlarge_volume_attach_limit (4 GPUS, 1 InstanceStoreVolume)",
 			options: &Options{
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,

@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Generates gpu table for `pkg/cloud/volume_limits.go` from the AWS API
+# Ensure you are opted into all opt-in regions before running
+# Ensure your account isn't in any private instance type betas before running
+
 set -euo pipefail
 
 BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
@@ -25,7 +29,8 @@ function get_gpus_for_region() {
 
 function get_all_gpus() {
   "${BIN}/aws" account list-regions --max-results 50 | jq -r '.Regions | map(.RegionName) | .[]' | while read REGION; do
-    get_gpus_for_region $REGION
+    sleep 1
+    get_gpus_for_region $REGION &
   done
 }
 

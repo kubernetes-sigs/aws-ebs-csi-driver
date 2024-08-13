@@ -138,6 +138,7 @@ func GetDedicatedLimitForInstanceType(it string) int {
 	}
 }
 
+// GetReservedSlotsForInstanceType calculates how many attachment slots are already used up by other devices on shared EBS volume limit instances.
 func GetReservedSlotsForInstanceType(it string) int {
 	total := 0
 	nvmeInstanceStoreVolumes, ok := nvmeInstanceStoreVolumes[it]

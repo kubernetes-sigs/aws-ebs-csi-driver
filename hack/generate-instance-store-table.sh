@@ -31,7 +31,8 @@ function get_instance_stores_for_region() {
 
 function get_all_instance_stores() {
   "${BIN}/aws" account list-regions --max-results 50 | jq -r '.Regions | map(.RegionName) | .[]' | while read REGION; do
-    get_instance_stores_for_region $REGION
+    sleep 1
+    get_instance_stores_for_region $REGION &
   done
 }
 
