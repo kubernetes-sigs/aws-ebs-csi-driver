@@ -1,3 +1,4 @@
+{{- if not .Values.nodeComponentOnly -}}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -35,3 +36,4 @@ rules:
   {{- with .Values.sidecars.resizer.additionalClusterRoleRules }}
     {{- . | toYaml | nindent 2 }}
   {{- end }}
+{{- end }}

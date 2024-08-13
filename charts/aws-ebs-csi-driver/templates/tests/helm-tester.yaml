@@ -1,4 +1,4 @@
-{{- if .Values.helmTester.enabled -}}
+{{- if and .Values.helmTester.enabled (not .Values.nodeComponentOnly) -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
