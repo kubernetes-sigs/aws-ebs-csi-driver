@@ -12,12 +12,14 @@ The EBS CSI Driver (starting from v1.19.0) supports volume modification through 
 
 To use this feature, it must be enabled in the following places:
 - `VolumeAttributesClass` feature gate on `kube-apiserver` (consult your Kubernetes distro's documentation)
-- `storage.k8s.io/v1alpha1` enabled in `kube-apiserver` via [`runtime-config`](https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/) (consult your Kubernetes distro's documentation)
+- `storage.k8s.io/v1alpha1` (Kubernetes 1.30 and before) or `storage.k8s.io/v1alpha1` (Kubernetes 1.31 and later) enabled in `kube-apiserver` via [`runtime-config`](https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/) (consult your Kubernetes distro's documentation)
 - `VolumeAttributesClass` feature gate on `kube-controller-manager` (consult your Kubernetes distro's documentation)
-- `VolumeAttributesClass` feature gate on `external-provisioner` (add `--feature-gates=VolumeAttributesClass=true` to `sidecars.provisioner.additionalArgs` when using the EBS CSI Helm chart)
-- `VolumeAttributesClass` feature gate on `kube-controller-manager` (add `--feature-gates=VolumeAttributesClass=true` to `sidecars.resizer.additionalArgs` when using the EBS CSI Helm chart)
+- `VolumeAttributesClass` feature gate on `external-provisioner` sidecar
+- `VolumeAttributesClass` feature gate on `external-resizer` sidecar
 
-For more information, see the [Kubernetes documentation for the feature](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/).
+The EBS CSI Driver Helm chart will automatically enable the `VolumeAttributesClass` feature gate on the sidecars if `VolumeAttributesClass` object is detected with a beta API version (Kubernetes 1.31 and later). You (or your Kubernetes distro, on your behalf) are responsible for enabling the feature gate on the control plane components (`kube-apiserver` and `kube-controller-manager`).
+
+For more information, see the [Kubernetes documentation for Volume Attributes Classes](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/).
 
 ### `volume-modifier-for-k8s`
 
@@ -32,6 +34,8 @@ Users can specify the following modification parameters:
 - `type`: to update the volume type
 - `iops`: to update the IOPS
 - `throughput`: to update the throughput
+
+The EBS CSI Driver also supports modifying tags of existing volumes (only available for `VolumeAttributesClass`), see [the modification section in the tagging documentation](tagging.md#adding-modifying-and-deleting-tags-of-existing-volumes) for more information.
 
 ## Considerations
 
