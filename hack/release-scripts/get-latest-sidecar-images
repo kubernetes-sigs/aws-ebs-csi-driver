@@ -53,15 +53,7 @@ trap 'error_handler ${LINENO} $? "$BASH_COMMAND"' ERR
 trap 'rm $tmp_filename' EXIT
 
 generate_image_digests_file() {
-  touch "$OUTPUT_FILEPATH"
-
-  yq '.sidecars.snapshotter.image = "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.attacher.image = "public.ecr.aws/eks-distro/kubernetes-csi/external-attacher"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.provisioner.image = "public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.resizer.image = "public.ecr.aws/eks-distro/kubernetes-csi/external-resizer"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.livenessProbe.image = "public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.nodeDriverRegistrar.image = "public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar"' -i "$OUTPUT_FILEPATH"
-  yq '.sidecars.volumemodifier.image = "public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s"' -i "$OUTPUT_FILEPATH"
+  cp "${SCRIPT_PATH}/image-digests-template.yaml" "${OUTPUT_FILEPATH}"
 }
 
 crane_get_latest_image_tag() {

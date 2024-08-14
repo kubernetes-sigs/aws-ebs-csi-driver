@@ -1,0 +1,41 @@
+# Copyright 2024 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an 'AS IS' BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+sidecars:
+  snapshotter:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+    repo: https://github.com/kubernetes-csi/external-snapshotter
+    rbacSource: deploy/kubernetes/csi-snapshotter/rbac-csi-snapshotter.yaml
+    rbacDestination: clusterrole-snapshotter.yaml
+  attacher:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
+    repo: https://github.com/kubernetes-csi/external-attacher
+    rbacSource: deploy/kubernetes/rbac.yaml
+    rbacDestination: clusterrole-attacher.yaml
+  provisioner:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
+    repo: https://github.com/kubernetes-csi/external-provisioner
+    rbacSource: deploy/kubernetes/rbac.yaml
+    rbacDestination: clusterrole-provisioner.yaml
+  resizer:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+    repo: https://github.com/kubernetes-csi/external-resizer
+    rbacSource: deploy/kubernetes/rbac.yaml
+    rbacDestination: clusterrole-resizer.yaml
+  livenessProbe:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
+  nodeDriverRegistrar:
+    image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
+  volumemodifier:
+    image: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
