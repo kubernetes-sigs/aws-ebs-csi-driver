@@ -17,6 +17,7 @@
 # Generates instance store table for `pkg/cloud/volume_limits.go` from the AWS API
 # Ensure you are opted into all opt-in regions before running
 # Ensure your account isn't in any private instance type betas before running
+# We are exluding the g5.48xlarge instance type as it is a special case that does not comply to regular ebs volume limit calculations
 
 set -euo pipefail
 
@@ -36,4 +37,4 @@ function get_all_instance_stores() {
   done
 }
 
-get_all_instance_stores | sort | uniq
+get_all_instance_stores | sort | uniq | grep -v "g5.48xlarge"
