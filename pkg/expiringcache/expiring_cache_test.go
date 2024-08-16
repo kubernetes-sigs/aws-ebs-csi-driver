@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	testExpiration = time.Millisecond * 50
-	testSleep      = time.Millisecond * 35
+	testExpiration = time.Millisecond * 100
+	testSleep      = time.Millisecond * 80
 	testKey        = "key"
 )
 
