@@ -111,7 +111,7 @@ func TestAddFlags(t *testing.T) {
 		t.Errorf("unexpected ReservedVolumeAttachments: got %d, want 5", o.ReservedVolumeAttachments)
 	}
 	if o.RoleARN != "arn:aws:iam::012345678910:role/ExampleRole" {
-		t.Errorf("unexpected role-arn: got %d, want arn:aws:iam::012345678910:role/ExampleRole", o.RoleARN)
+		t.Errorf("unexpected role-arn: got %s, want arn:aws:iam::012345678910:role/ExampleRole", o.RoleARN)
 	}
 }
 
