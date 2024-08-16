@@ -168,7 +168,7 @@ func main() {
 		region = md.GetRegion()
 	}
 
-	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching)
+	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.RoleARN)
 	if err != nil {
 		klog.ErrorS(err, "failed to create cloud service")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)

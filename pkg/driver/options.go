@@ -32,6 +32,9 @@ type Options struct {
 	// If empty, the in-cluster config will be loaded.
 	Kubeconfig string
 
+	//RoleArn is the role driver will use to interact with the AWS EC2 APIs.
+	RoleARN string
+
 	// #### Server options ####
 
 	//Endpoint is the endpoint for the CSI driver server
@@ -91,6 +94,7 @@ type Options struct {
 
 func (o *Options) AddFlags(f *flag.FlagSet) {
 	f.StringVar(&o.Kubeconfig, "kubeconfig", "", "Absolute path to a kubeconfig file. The default is the emtpy string, which causes the in-cluster config to be used")
+	f.StringVar(&o.RoleARN, "role-arn", "", "Arn of the role to be used while interacting with EC2 APIs. The default is the empty string, which causes the role provided by the Pod identity or OIDC to be used.")
 
 	// Server options
 	f.StringVar(&o.Endpoint, "endpoint", DefaultCSIEndpoint, "Endpoint for the CSI driver server")

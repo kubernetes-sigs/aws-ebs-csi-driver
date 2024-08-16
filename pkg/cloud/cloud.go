@@ -30,8 +30,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
@@ -94,6 +96,8 @@ const (
 	volumeDetachedState = "detached"
 	volumeAttachedState = "attached"
 	cacheForgetDelay    = 1 * time.Hour
+
+	assumeRoleSessionDuration = 1 * time.Hour
 )
 
 // AWS provisioning limits.
@@ -333,12 +337,12 @@ var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (Cloud, error) {
-	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching)
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool, roleARN string) (Cloud, error) {
+	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching, roleARN)
 	return c, nil
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool) Cloud {
+func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, roleARN string) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -355,7 +359,19 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
 	}
 
-	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
+	ec2Config := cfg
+	if roleARN != "" {
+		creds := stscreds.NewAssumeRoleProvider(sts.NewFromConfig(cfg), roleARN, func(aro *stscreds.AssumeRoleOptions) {
+			aro.Duration = assumeRoleSessionDuration
+		})
+		ec2Config = aws.Config{
+			Region:       cfg.Region,
+			DefaultsMode: aws.DefaultsModeStandard,
+			Credentials:  aws.NewCredentialsCache(creds),
+		}
+	}
+
+	svc := ec2.NewFromConfig(ec2Config, func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
 			RecordRequestsMiddleware(),
 		)

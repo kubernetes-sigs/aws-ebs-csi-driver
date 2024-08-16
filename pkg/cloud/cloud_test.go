@@ -83,7 +83,6 @@ func extractVolumeIdentifiers(volumes []types.Volume) (volumeIDs []string, volum
 	return volumeIDs, volumeNames
 }
 func TestNewCloud(t *testing.T) {
-
 	testCases := []struct {
 		name            string
 		region          string
@@ -110,7 +109,7 @@ func TestNewCloud(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled)
+		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, "")
 		if err != nil {
 			t.Fatalf("error %v", err)
 		}
