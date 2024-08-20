@@ -1,3 +1,15 @@
+# v1.34.0
+### Notable Changes
+* Consider accelerators when calculating node attachment limit ([#2115](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2115), [@ElijahQuinones](https://github.com/ElijahQuinones))
+* Consider GPUs when calculating node attachment limit ([#2108](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2108), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Bug Fixes
+* Ensure ModifyVolume returns InvalidArgument error code if VAC contains invalid parameter ([#2103](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2103), [@mdzraf](https://github.com/mdzraf))
+
+### Improvements
+* Document metadata requirement and available sources ([#2117](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2117), [@ConnorJC3](https://github.com/ConnorJC3))
+* Upgrade dependencies ([#2123](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2123), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.33.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
