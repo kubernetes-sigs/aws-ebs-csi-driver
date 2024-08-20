@@ -76,7 +76,7 @@ var (
 	taintRemovalInitialDelay = 1 * time.Second
 	// taintRemovalBackoff is the exponential backoff configuration for node taint removal
 	taintRemovalBackoff = wait.Backoff{
-		Duration: 500 * time.Millisecond,
+		Duration: 502 * time.Millisecond,
 		Factor:   2,
 		Steps:    10, // Max delay = 0.5 * 2^9 = ~4 minutes
 	}
