@@ -32,6 +32,7 @@ WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
+# NOTE: Keep KOPS at v1.29.x until ELB usage bug fixed
 K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.29.6}
 K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-1.30}
 

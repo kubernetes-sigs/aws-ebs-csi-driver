@@ -730,7 +730,7 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	}
 
 	if err := d.mounter.PreparePublishTarget(target); err != nil {
-		return status.Errorf(codes.Internal, err.Error())
+		return status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
 	//Checking if the target directory is already mounted with a device.
