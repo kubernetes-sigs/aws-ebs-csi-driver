@@ -22,6 +22,7 @@ jobs:
   build:
     name: Release
     runs-on: ubuntu-latest
+    permissions: write-all
     steps:
       - name: Create Release
         id: create-release
