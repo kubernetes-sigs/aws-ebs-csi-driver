@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.171.0
 	github.com/aws/smithy-go v1.20.3
 	github.com/awslabs/volume-modifier-for-k8s v0.3.1
-	github.com/container-storage-interface/spec v1.10.0
+	github.com/container-storage-interface/spec v1.9.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
