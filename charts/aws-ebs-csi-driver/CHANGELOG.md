@@ -1,4 +1,10 @@
 # Helm chart
+## v2.34.0
+* Bump driver version to `v1.34.0`
+* Add toggle for PodDisruptionBudget in chart ([#2109](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2109), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add nodeComponentOnly parameter to helm chart ([#2106](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2106), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* fix: sidecars.snapshotter.logLevel not being respect ([#2102](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2102), [@zyue110026](https://github.com/zyue110026))
+
 ## v2.33.0
 * Bump driver version to `v1.33.0`
 * Bump CSI sidecar container versions
