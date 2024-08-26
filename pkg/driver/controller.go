@@ -669,6 +669,7 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	snapshotName := req.GetName()
 	volumeID := req.GetSourceVolumeId()
+	var outpostArn string
 
 	// check if a request is already in-flight
 	if ok := d.inFlight.Insert(snapshotName); !ok {
@@ -709,6 +710,8 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		case FastSnapshotRestoreAvailabilityZones:
 			f := strings.ReplaceAll(value, " ", "")
 			fsrAvailabilityZones = strings.Split(f, ",")
+		case outpostArn:
+			outpostArn = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				vscTags = append(vscTags, value)
@@ -741,7 +744,8 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	}
 
 	opts := &cloud.SnapshotOptions{
-		Tags: snapshotTags,
+		Tags:       snapshotTags,
+		OutpostArn: outpostArn,
 	}
 
 	// Check if the availability zone is supported for fast snapshot restore

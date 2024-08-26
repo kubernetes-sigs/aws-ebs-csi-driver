@@ -2059,6 +2059,25 @@ func TestCreateSnapshot(t *testing.T) {
 			},
 			expErr: nil,
 		},
+		{
+			name:         "success: outpost",
+			snapshotName: "snap-test-name",
+			snapshotOptions: &SnapshotOptions{
+				Tags: map[string]string{
+					SnapshotNameTagKey: "snap-test-name",
+					AwsEbsDriverTagKey: "true",
+					"extra-tag-key":    "extra-tag-value",
+				},
+				OutpostArn: "example-arn",
+			},
+			expSnapshot: &Snapshot{
+				SnapshotID:     "snap-test-name",
+				SourceVolumeID: "snap-test-volume",
+				Size:           10,
+				ReadyToUse:     true,
+			},
+			expErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {
