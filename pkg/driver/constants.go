@@ -104,7 +104,7 @@ const (
 	TagKeyPrefix = "tagSpecification"
 
 	// OutpostArn represents key for outpost's arn
-	OutpostArn = "outpostarn"
+	OutpostArnKey = "outpostarn"
 )
 
 // constants of keys in snapshot parameters

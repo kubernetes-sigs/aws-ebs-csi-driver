@@ -1284,19 +1284,13 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		ResourceType: types.ResourceTypeSnapshot,
 		Tags:         tags,
 	}
+	request = &ec2.CreateSnapshotInput{
+		VolumeId:          aws.String(volumeID),
+		TagSpecifications: []types.TagSpecification{tagSpec},
+		Description:       aws.String(descriptions),
+	}
 	if snapshotOptions.OutpostArn != "" {
-		request = &ec2.CreateSnapshotInput{
-			VolumeId:          aws.String(volumeID),
-			TagSpecifications: []types.TagSpecification{tagSpec},
-			Description:       aws.String(descriptions),
-			OutpostArn:        aws.String(snapshotOptions.OutpostArn),
-		}
-	} else {
-		request = &ec2.CreateSnapshotInput{
-			VolumeId:          aws.String(volumeID),
-			TagSpecifications: []types.TagSpecification{tagSpec},
-			Description:       aws.String(descriptions),
-		}
+		request.OutpostArn = aws.String(snapshotOptions.OutpostArn)
 	}
 	res, err := c.ec2.CreateSnapshot(ctx, request, func(o *ec2.Options) {
 		o.Retryer = c.rm.createSnapshotRetryer

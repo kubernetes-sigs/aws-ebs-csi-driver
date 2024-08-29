@@ -710,7 +710,7 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 		case FastSnapshotRestoreAvailabilityZones:
 			f := strings.ReplaceAll(value, " ", "")
 			fsrAvailabilityZones = strings.Split(f, ",")
-		case outpostArn:
+		case OutpostArnKey:
 			outpostArn = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
