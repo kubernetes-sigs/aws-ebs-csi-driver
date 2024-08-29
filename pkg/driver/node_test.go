@@ -1136,28 +1136,12 @@ func TestGetVolumesLimit(t *testing.T) {
 			},
 		},
 		{
-			name: "inf1.24xlarge_volume_attach_limit",
-			options: &Options{
-				VolumeAttachLimit:         -1,
-				ReservedVolumeAttachments: -1,
-			},
-			expectedVal: 9,
-			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
-				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
-				m.EXPECT().GetInstanceType().Return("inf1.24xlarge")
-				m.EXPECT().GetNumAttachedENIs().Return(1)
-				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
-				return m
-			},
-		},
-		{
 			name: "mac1.metal_volume_attach_limit",
 			options: &Options{
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
 			},
-			expectedVal: 14,
+			expectedVal: 15,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetRegion().Return("us-west-2")
@@ -1173,7 +1157,7 @@ func TestGetVolumesLimit(t *testing.T) {
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
 			},
-			expectedVal: 17,
+			expectedVal: 18,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetRegion().Return("us-west-2")
@@ -1199,7 +1183,6 @@ func TestGetVolumesLimit(t *testing.T) {
 				return m
 			},
 		},
-		// 1 gpu
 		{
 			name: "g4ad.xlarge_volume_attach_limit (1 GPU 1 InstanceStoreVolume)",
 			options: &Options{
@@ -1216,7 +1199,6 @@ func TestGetVolumesLimit(t *testing.T) {
 				return m
 			},
 		},
-		// 4 gpus
 		{
 			name: "g4dn.12xlarge_volume_attach_limit (4 GPUS, 1 InstanceStoreVolume)",
 			options: &Options{
@@ -1228,6 +1210,107 @@ func TestGetVolumesLimit(t *testing.T) {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("g4dn.12xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			name: "dl1.24xlarge_volume_attach_limit (8 Accelerator slots , 4 InstanceStoreVolume)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 14,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("dl1.24xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			// will and should fail if g5.48xlarge instance type is in any table other than maxVolumeLimits table
+			name: "g5.48xlarge_volume_attach_limit (Instance has attached GPUs and NVMe Instance Store volumes but should be ignored for EBS volume limits calculation)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 8,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("g5.48xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			// Should fail if inf1.xlarge instance type is in any table other than maxVolumeLimits table
+			name: "inf1.xlarge_volume_attach_limit (Instance has attached Accelerators but should be ignored for EBS volume limits calculation)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 25,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("inf1.xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			// Should fail if inf1.xlarge instance type is in any table other than maxVolumeLimits table
+			name: "inf1.2xlarge_volume_attach_limit (Instance has attached Accelerators but should be ignored for EBS volume limits calculation)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 25,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("inf1.2xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			// Should fail if inf1.6xlarge instance type is in any table other than maxVolumeLimits table
+			name: "inf1.6xlarge_volume_attach_limit (Instance has attached Accelerators but should be ignored for EBS volume limits calculation)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 22,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("inf1.6xlarge")
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetNumAttachedENIs().Return(1)
+				return m
+			},
+		},
+		{
+			// Should fail if inf1.24xlarge instance type is in any table other than maxVolumeLimits table
+			name: "inf1.24xlarge_volume_attach_limit (Instance has attached Accelerators but should be ignored for EBS volume limits calculation)",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 10,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				m.EXPECT().GetInstanceType().Return("inf1.24xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
 				return m

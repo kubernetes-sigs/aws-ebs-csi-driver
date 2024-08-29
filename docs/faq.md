@@ -32,9 +32,9 @@ Warning  FailedAttachVolume      6m51s              attachdetach-controller  Mul
   systemctl restart kubelet
 ```
 
-3. **Spot Instances and Karpenter Best Practices:** When using Spot Instances with Karpenter, enable [interruption handling](https://aws.github.io/aws-eks-best-practices/karpenter/#enable-interruption-handling-when-using-spot) to manage involuntary interruptions gracefully. Karpenter supports native interruption handling, which cordons, drains, and terminates nodes ahead of interruption events, maximizing workload cleanup time.
-
-4. **Set `.node.tolerateAllTaints=false` when deploying the EBS CSI Driver:** This allows Karpenter to safely drain the `ebs-csi-node` pod before terminating the instance. If you are relying on the `ebs-csi-node` pod to tolerate certain taints, please manually add those tolerations to the driver with `.node.tolerations`.
+3. **Karpenter Best Practices:**
+  - Upgrade to Karpenter version ≥ v1.0.0, where Karpenter will now wait to terminate nodes until all volumes have been detached from them. 
+  - When using Spot Instances with Karpenter, enable [interruption handling](https://aws.github.io/aws-eks-best-practices/karpenter/#enable-interruption-handling-when-using-spot) to manage involuntary interruptions gracefully. Karpenter supports native interruption handling, which cordons, drains, and terminates nodes ahead of interruption events, maximizing workload cleanup time.
 
 ### What is the PreStop lifecycle hook?
 
