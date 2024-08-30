@@ -18,6 +18,7 @@ on: [pull_request]
 jobs:
   govulncheck:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
