@@ -716,7 +716,6 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			} else {
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter value %s is not a valid arn", value)
 			}
-			outpostArn = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				vscTags = append(vscTags, value)
