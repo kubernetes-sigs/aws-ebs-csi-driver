@@ -711,6 +711,11 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			f := strings.ReplaceAll(value, " ", "")
 			fsrAvailabilityZones = strings.Split(f, ",")
 		case OutpostArnKey:
+			if arn.IsARN(value) {
+				outpostArn = value
+			} else {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter value %s is not a valid arn", value)
+			}
 			outpostArn = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {

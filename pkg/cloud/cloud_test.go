@@ -2068,7 +2068,7 @@ func TestCreateSnapshot(t *testing.T) {
 					AwsEbsDriverTagKey: "true",
 					"extra-tag-key":    "extra-tag-value",
 				},
-				OutpostArn: "example-arn",
+				OutpostArn: "arn:aws:outposts:us-east-1:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
 			},
 			expSnapshot: &Snapshot{
 				SnapshotID:     "snap-test-name",
