@@ -1,7 +1,7 @@
 ## Supported Parameters
 | Parameter                          | Description of value                                      |
 |------------------------------------|-----------------------------------------------------------|
-| fastSnapshotRestoreAvaliblityZones | Comma separated list of availability zones                |
+| fastSnapshotRestoreAvailabilityZones | Comma separated list of availability zones                |
 | outpostArn                         | Arn of the outpost you wish to have the snapshot saved to | 
 
 The AWS EBS CSI Driver supports [tagging](tagging.md) through `VolumeSnapshotClass.parameters` (in v1.6.0 and later). 
