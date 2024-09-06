@@ -32,6 +32,8 @@ function eksctl_create_cluster() {
   WINDOWS=${10}
   VPC_CONFIGMAP_FILE=${11}
   TEMPLATE_FILE=${12}
+  OUTPOST_ARN=${13}
+  OUTPOST_INSTANCE_TYPE=${14}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
@@ -42,6 +44,7 @@ function eksctl_create_cluster() {
     ZONES="${ZONES}" \
     INSTANCE_TYPE="${INSTANCE_TYPE}" \
     WINDOWS="${WINDOWS}" \
+    OUTPOST_ARN="" \
     ${GOMPLATE_BIN} -f "${TEMPLATE_FILE}" -o "${CLUSTER_FILE}"
 
   if eksctl_cluster_exists "${CLUSTER_NAME}" "${EKSCTL_BIN}"; then
@@ -52,9 +55,27 @@ function eksctl_create_cluster() {
     ${EKSCTL_BIN} create cluster -f "${CLUSTER_FILE}" --kubeconfig "${KUBECONFIG}"
   fi
 
-  if [[ "$WINDOWS" == true ]]; then
+  if [[ "${WINDOWS}" == true ]]; then
     loudecho "Applying VPC ConfigMap (Windows only)"
     kubectl apply --kubeconfig "${KUBECONFIG}" -f "${VPC_CONFIGMAP_FILE}"
+  fi
+
+  if [[ -n "${OUTPOST_ARN}" ]]; then
+    loudecho "Creating outpost nodegroup"
+    # Outpost nodegroup cannot be created during initial cluster create
+    # Thus, re-render the cluster with the outpost nodegroup included,
+    # and then add new nodegroup to the existing cluster
+    # https://eksctl.io/usage/outposts/#extending-existing-clusters-to-aws-outposts
+    CLUSTER_NAME="${CLUSTER_NAME}" \
+      REGION="${REGION}" \
+      K8S_VERSION="${K8S_VERSION}" \
+      ZONES="${ZONES}" \
+      INSTANCE_TYPE="${INSTANCE_TYPE}" \
+      WINDOWS="${WINDOWS}" \
+      OUTPOST_ARN="${OUTPOST_ARN}" \
+      OUTPOST_INSTANCE_TYPE="${OUTPOST_INSTANCE_TYPE}" \
+      ${GOMPLATE_BIN} -f "${TEMPLATE_FILE}" -o "${CLUSTER_FILE}"
+    ${EKSCTL_BIN} create nodegroup -f "${CLUSTER_FILE}"
   fi
 }
 
