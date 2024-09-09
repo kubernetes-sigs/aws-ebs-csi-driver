@@ -84,6 +84,8 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 				}
 			}
 		}
+		config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+		config.ContentType = "application/vnd.kubernetes.protobuf"
 		// creates the clientset
 		clientset, err = kubernetes.NewForConfig(config)
 		if err != nil {
