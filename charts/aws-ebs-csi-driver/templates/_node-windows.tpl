@@ -68,6 +68,9 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            {{- with .Values.node.reservedVolumeAttachments }}
+            - --reserved-volume-attachments={{ . }}
+            {{- end }}
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
