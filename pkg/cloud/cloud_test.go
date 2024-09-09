@@ -82,11 +82,12 @@ func extractVolumeIdentifiers(volumes []types.Volume) (volumeIDs []string, volum
 	}
 	return volumeIDs, volumeNames
 }
-func TestNewCloud(t *testing.T) {
 
+func TestNewCloud(t *testing.T) {
 	testCases := []struct {
 		name            string
 		region          string
+		roleARN         string
 		awsSdkDebugLog  bool
 		userAgentExtra  string
 		batchingEnabled bool
@@ -108,9 +109,14 @@ func TestNewCloud(t *testing.T) {
 			name:   "success: with only region",
 			region: "us-east-1",
 		},
+		{
+			name:    "success: with role & region",
+			region:  "us-east-1",
+			roleARN: "arn:aws:iam::012345678910:role/ExampleRole",
+		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled)
+		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.roleARN)
 		if err != nil {
 			t.Fatalf("error %v", err)
 		}
@@ -120,6 +126,11 @@ func TestNewCloud(t *testing.T) {
 			assert.NotNil(t, ec2CloudAscloud.bm)
 		} else {
 			assert.Nil(t, ec2CloudAscloud.bm)
+		}
+		if tc.roleARN != "" {
+			ec2, ok := ec2CloudAscloud.ec2.(*ec2.Client)
+			assert.True(t, ok)
+			assert.IsType(t, &aws.CredentialsCache{}, ec2.Options().Credentials)
 		}
 	}
 }

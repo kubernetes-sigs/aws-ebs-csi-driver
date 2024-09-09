@@ -88,7 +88,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region, false, "", true)
+		cloud, err = awscloud.NewCloud(region, false, "", true, "")
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
@@ -261,7 +261,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 			Tags:               map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region, false, "", true)
+		cloud, err = awscloud.NewCloud(region, false, "", true, "")
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

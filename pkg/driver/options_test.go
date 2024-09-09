@@ -70,6 +70,9 @@ func TestAddFlags(t *testing.T) {
 	if err := f.Set("reserved-volume-attachments", "5"); err != nil {
 		t.Errorf("error setting reserved-volume-attachments: %v", err)
 	}
+	if err := f.Set("role-arn", "arn:aws:iam::012345678910:role/ExampleRole"); err != nil {
+		t.Errorf("error setting role-arn: %v", err)
+	}
 
 	if o.Endpoint != "custom-endpoint" {
 		t.Errorf("unexpected Endpoint: got %s, want custom-endpoint", o.Endpoint)
@@ -106,6 +109,9 @@ func TestAddFlags(t *testing.T) {
 	}
 	if o.ReservedVolumeAttachments != 5 {
 		t.Errorf("unexpected ReservedVolumeAttachments: got %d, want 5", o.ReservedVolumeAttachments)
+	}
+	if o.RoleARN != "arn:aws:iam::012345678910:role/ExampleRole" {
+		t.Errorf("unexpected role-arn: got %s, want arn:aws:iam::012345678910:role/ExampleRole", o.RoleARN)
 	}
 }
 
