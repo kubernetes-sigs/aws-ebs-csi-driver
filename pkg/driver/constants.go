@@ -102,6 +102,9 @@ const (
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource
 	TagKeyPrefix = "tagSpecification"
+
+	// OutpostArn represents key for outpost's arn
+	OutpostArnKey = "outpostarn"
 )
 
 // constants of keys in snapshot parameters
