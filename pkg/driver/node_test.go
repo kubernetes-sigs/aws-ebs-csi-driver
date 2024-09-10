@@ -84,6 +84,7 @@ func TestNodeStageVolume(t *testing.T) {
 		req          *csi.NodeStageVolumeRequest
 		mounterMock  func(ctrl *gomock.Controller) *mounter.MockMounter
 		metadataMock func(ctrl *gomock.Controller) *metadata.MockMetadataService
+		options      *Options
 		expectedErr  error
 		inflight     bool
 	}{
@@ -966,6 +967,45 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
+		{
+			name: "format_options_xfs_legacy",
+			req: &csi.NodeStageVolumeRequest{
+				VolumeId:          "vol-test",
+				StagingTargetPath: "/staging/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "xfs",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeContext: map[string]string{
+					InodeSizeKey: "512",
+				},
+				PublishContext: map[string]string{
+					DevicePathKey: "/dev/xvdba",
+				},
+			},
+			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
+				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("xfs"), gomock.Any(), gomock.Any(), gomock.Eq([]string{"-i", "size=512", "-m", "bigtime=0,inobtcount=0,reflink=0"})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
+				return m
+			},
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				return m
+			},
+			options:     &Options{LegacyXFSProgs: true},
+			expectedErr: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -983,9 +1023,15 @@ func TestNodeStageVolume(t *testing.T) {
 				metadata = tc.metadataMock(ctrl)
 			}
 
+			options := tc.options
+			if options == nil {
+				options = &Options{} // Initialize struct to avoid nil pointer dereference
+			}
+
 			driver := &NodeService{
 				metadata: metadata,
 				mounter:  mounter,
+				options:  options,
 				inFlight: internal.NewInFlight(),
 			}
 
