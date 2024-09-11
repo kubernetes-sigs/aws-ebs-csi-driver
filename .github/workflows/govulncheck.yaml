@@ -13,8 +13,10 @@
 # limitations under the License.
 
 name: 'govulncheck'
-on: [pull_request]
-
+on:
+  pull_request:
+    branches:
+      - 'release-*'
 jobs:
   govulncheck:
     runs-on: ubuntu-latest
