@@ -15,6 +15,8 @@ limitations under the License.
 package e2e
 
 import (
+	"os"
+
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
@@ -149,9 +151,13 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", fu
 				}
 				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.VolumeModifierForK8s)
 			})
-			It("will modify associated PV and EBS Volume via external-resizer", func() {
-				modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.ExternalResizer)
-			})
+			// HACK: Only run VAC tests if TEST_VAC is set - these tests are being skipped in CI because Kubernetes 1.31 is available
+			// This check can safely be removed after the single-az test is moved to Kubernetes 1.31 or later
+			if os.Getenv("TEST_VAC") != "" {
+				It("will modify associated PV and EBS Volume via external-resizer", func() {
+					modifyVolumeTest.Run(cs, ns, ebsDriver, testsuites.ExternalResizer)
+				})
+			}
 		})
 	}
 })
