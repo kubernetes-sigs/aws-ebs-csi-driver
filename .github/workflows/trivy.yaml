@@ -18,6 +18,10 @@ on:
     branches:
       - master
   pull_request:
+
+permissions:
+  contents: read
+  security-events: write # Update findings in security tab
   
 jobs:
   build:

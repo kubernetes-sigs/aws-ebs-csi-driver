@@ -17,6 +17,10 @@ on:
   workflow_run:
     workflows: [Generate Code Coverage]
     types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write # Create/update comment on PRs
   
 jobs:
   output-code-coverage:
