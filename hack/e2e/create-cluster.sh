@@ -68,7 +68,9 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "$KUBECONFIG" \
     "$WINDOWS" \
     "${BASE_DIR}/eksctl/vpc-resource-controller-configmap.yaml" \
-    "${BASE_DIR}/eksctl/cluster.yaml"
+    "${BASE_DIR}/eksctl/cluster.yaml" \
+    "${OUTPOST_ARN}" \
+    "${OUTPOST_INSTANCE_TYPE}"
 else
   echo "Cluster type ${CLUSTER_TYPE} is invalid, must be kops or eksctl" >&2
   exit 1

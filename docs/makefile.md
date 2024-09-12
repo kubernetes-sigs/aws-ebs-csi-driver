@@ -55,6 +55,8 @@ Creates a cluster for running E2E tests against. There are many parameters that 
 - `WINDOWS`: Whether or not to create a Windows node group for the cluster (`eksctl` clusters only) - defaults to `false`
 - `AWS_REGION`: Which region to create the cluster in - defaults to `us-west-2`
 - `AWS_AVAILABILITY_ZONES`: Which AZs to create nodes for the cluster in - defaults to `us-west-2a,us-west-2b,us-west-2c`
+- `OUTPOST_ARN`: If set, create an additional nodegroup on an [outpost](https://aws.amazon.com/outposts/) (`eksctl clusters only)
+- `OUTPOST_INSTANCE_TYPE`: The instance type to use for the outpost nodegroup (only used when `OUTPOST_ARN` is non-empty) - defaults to `INSTANCE_TYPE`
 
 #### Example: Create a default (`kops`) cluster
 
@@ -88,6 +90,15 @@ make cluster/create
 ```bash
 export WINDOWS="true"
 export CLUSTER_TYPE="eksctl"
+make cluster/create
+```
+
+#### Example: Create a cluster with an outpost nodegroup
+
+```bash
+export CLUSTER_TYPE="eksctl"
+export OUTPOST_ARN="arn:aws:outposts:us-east-1:123456789012:outpost/op-0f39f7c0af9b166a3"
+export OUTPOST_INSTANCE_TYPE=c5.xlarge
 make cluster/create
 ```
 
