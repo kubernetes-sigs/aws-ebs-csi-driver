@@ -1,3 +1,13 @@
+# v1.35.0
+### Notable Changes
+* Add legacy-xfs driver option for clusters that mount XFS volumes to nodes with Linux kernel <= 5.4. Warning: This is a temporary workaround for customers unable to immediately upgrade their nodes. It will be removed in a future release. See [the options documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/release-1.35/docs/options.md) for more details.([#2121](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2121),[@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add local snapshots on outposts ([#2130](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2130), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Improvements
+* Bump dependencies for driver release v1.35.0 ([#2142](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2142), [@ElijahQuinones](https://github.com/ElijahQuinones))
+* Add support for outpost nodegroups to make cluster/create ([#2135](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2135), [@ConnorJC3](https://github.com/ConnorJC3))
+* Update faq.md with Karpenter best practices ([#2131](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2131),[@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.34.0
 ### Notable Changes
 * Consider accelerators when calculating node attachment limit ([#2115](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2115), [@ElijahQuinones](https://github.com/ElijahQuinones))
