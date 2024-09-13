@@ -1,4 +1,10 @@
 # Helm chart
+## v2.35.0
+* Bump driver version to `v1.35.0`
+* Add reservedVolumeAttachments to windows nodes ([#2134](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2134),[@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add legacy-xfs driver option for clusters that mount XFS volumes to nodes with Linux kernel <= 5.4. Warning: This is a temporary workaround for customers unable to immediately upgrade their nodes. It will be removed in a future release. See [the options documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/release-1.35/docs/options.md) for more details.([#2121](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2121),[@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add back "Auto-enable VAC on clusters with beta API version" ([#2141](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2141), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## v2.34.0
 * Bump driver version to `v1.34.0`
 * Add toggle for PodDisruptionBudget in chart ([#2109](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2109), [@AndrewSirenko](https://github.com/AndrewSirenko))
