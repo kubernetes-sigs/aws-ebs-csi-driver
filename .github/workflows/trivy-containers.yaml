@@ -20,6 +20,10 @@ on:
   schedule:
     - cron: '0 */24 * * *'
 
+permissions:
+  contents: read
+  security-events: write # Update findings in security tab
+
 jobs:
   build-matrix:
     runs-on: ubuntu-latest

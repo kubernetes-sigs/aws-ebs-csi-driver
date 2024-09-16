@@ -17,6 +17,10 @@ on:
   pull_request:
     branches:
       - 'release-*'
+
+permissions:
+  contents: read
+
 jobs:
   govulncheck:
     runs-on: ubuntu-latest

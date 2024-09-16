@@ -14,6 +14,11 @@
 
 name: Generate Code Coverage
 on: [pull_request]
+
+permissions:
+  contents: read
+# upload-artifact does not need write permissions as it relies on an undocumented token
+# https://github.com/actions/upload-artifact/issues/197#issuecomment-832279436
   
 jobs:
   cover-base:
