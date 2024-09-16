@@ -290,9 +290,6 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
             - --retry-interval-max=5m
             {{- end }}
-            {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
-            - --feature-gates=VolumeAttributesClass=true
-            {{- end }}
             {{- range .Values.sidecars.attacher.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -454,6 +451,9 @@ spec:
             {{- end }}
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
             - --retry-interval-max=30m
+            {{- end }}
+            {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
+            - --feature-gates=VolumeAttributesClass=true
             {{- end }}
             {{- range .Values.sidecars.resizer.additionalArgs }}
             - {{ . }}
