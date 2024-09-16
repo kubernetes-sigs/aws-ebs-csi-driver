@@ -1,4 +1,7 @@
 # Helm chart
+## v2.35.1
+* Fix an issue causing the `csi-attacher` container to get stuck in `CrashLoopBackoff` on clusters with VAC enabled. Users with a VAC-enabled cluster are strongly encouraged to skip `v2.35.0` and/or upgrade directly to `v2.35.1` or later.
+
 ## v2.35.0
 * Bump driver version to `v1.35.0`
 * Add reservedVolumeAttachments to windows nodes ([#2134](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2134),[@AndrewSirenko](https://github.com/AndrewSirenko))
