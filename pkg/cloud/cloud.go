@@ -176,6 +176,9 @@ var (
 
 	// ErrInvalidRequest is returned if parameters were rejected by driver
 	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrInsufficientVolumeCapacity is returned when there's not enough capacity to fulfill the volume provision request.
+	ErrInsufficientVolumeCapacity = errors.New("There is not enough capacity to fulfill your EBS volume provision request. You can try to provision a different volume type, EBS volume in a different availability zone, or you can wait for additional capacity to become available.")
 )
 
 // Set during build time via -ldflags
@@ -664,6 +667,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			}
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
+		}
+		if isAWSErrorInsufficientVolumeCapacity(err) {
+			return nil, ErrInsufficientVolumeCapacity
 		}
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
@@ -1682,6 +1688,12 @@ func isAWSErrorInvalidParameter(err error) bool {
 		return found
 	}
 	return false
+}
+
+// isAWSErrorInsufficientVolumeCapacity returns a boolean indicating whether the
+// given error is an AWS InsufficientVolumeCapacity error.
+func isAWSErrorInsufficientVolumeCapacity(err error) bool {
+	return isAWSError(err, "InsufficientVolumeCapacity")
 }
 
 // Checks for desired size on volume by also verifying volume size by describing volume.
