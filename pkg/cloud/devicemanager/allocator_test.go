@@ -68,16 +68,21 @@ func TestNameAllocatorLikelyBadName(t *testing.T) {
 		})
 	}
 
-	onlyExisting := new(sync.Map)
-	onlyExisting.Store(skippedNameExisting, struct{}{})
-	_, err := allocator.GetNext(existingNames, onlyExisting)
-	if err != nil {
-		t.Errorf("got nil when error expected (likelyBadNames with only existing names)")
-	}
-
+	// Test likely bad name fallback when it is the only device name available
+	// We should receive the likely bad device name because it is the only option left
 	lastName, _ := allocator.GetNext(existingNames, likelyBadNames)
 	if lastName != skippedNameNew {
 		t.Errorf("test %q: expected %q, got %q (likelyBadNames fallback)", skippedNameNew, skippedNameNew, lastName)
+	}
+	existingNames[skippedNameNew] = ""
+
+	// Test likely bad name fallback when the likely bad device name already exists
+	// Because the device name already exists, this should return an error
+	onlyExisting := new(sync.Map)
+	onlyExisting.Store(skippedNameExisting, struct{}{})
+	_, err := allocator.GetNext(existingNames, onlyExisting)
+	if err == nil {
+		t.Errorf("got nil when error expected (likelyBadNames with only existing names)")
 	}
 }
 
