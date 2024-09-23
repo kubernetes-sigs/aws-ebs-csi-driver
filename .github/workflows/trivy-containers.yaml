@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
 
       - id: set-matrix
-        uses: mikefarah/yq@4
+        uses: mikefarah/yq@v4
         with:
           # Dynamically build the matrix of images to scan
           cmd: "yq '[{\"repository\": .image.repository, \"tag\": \"v'$(yq '.appVersion' charts/aws-ebs-csi-driver/Chart.yaml)'\"}] + (.sidecars | map(.image)) | map(.repository + \":\" + .tag) | . style=\"flow\"' charts/aws-ebs-csi-driver/values.yaml"
