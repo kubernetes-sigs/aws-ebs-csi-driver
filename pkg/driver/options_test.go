@@ -70,6 +70,9 @@ func TestAddFlags(t *testing.T) {
 	if err := f.Set("reserved-volume-attachments", "5"); err != nil {
 		t.Errorf("error setting reserved-volume-attachments: %v", err)
 	}
+	if err := f.Set("legacy-xfs", "true"); err != nil {
+		t.Errorf("error setting legacy-xfs: %v", err)
+	}
 
 	if o.Endpoint != "custom-endpoint" {
 		t.Errorf("unexpected Endpoint: got %s, want custom-endpoint", o.Endpoint)
@@ -106,6 +109,9 @@ func TestAddFlags(t *testing.T) {
 	}
 	if o.ReservedVolumeAttachments != 5 {
 		t.Errorf("unexpected ReservedVolumeAttachments: got %d, want 5", o.ReservedVolumeAttachments)
+	}
+	if !o.LegacyXFSProgs {
+		t.Errorf("unexpected LegacyXFSProgs: got false, want true")
 	}
 }
 

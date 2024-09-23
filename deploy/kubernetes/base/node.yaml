@@ -54,7 +54,7 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.34.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.35.0
           imagePullPolicy: IfNotPresent
           args:
             - node
@@ -102,7 +102,7 @@ spec:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.11.0-eks-1-30-10
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.12.0-eks-1-31-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -139,7 +139,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.13.0-eks-1-30-10
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-31-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock

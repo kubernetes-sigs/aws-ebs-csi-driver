@@ -116,7 +116,8 @@ else
 
     set -x
     set +e
-    "${BIN}/kubetest2" noop \
+    # kubetest2 looks for deployers/testers in $PATH
+    PATH="${BIN}:${PATH}" "${BIN}/kubetest2" noop \
       --run-id="e2e-kubernetes" \
       --test=ginkgo \
       -- \

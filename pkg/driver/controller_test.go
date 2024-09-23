@@ -2272,6 +2272,49 @@ func TestCreateSnapshot(t *testing.T) {
 			},
 		},
 		{
+			name: "success outpost",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateSnapshotRequest{
+					Name: "test-snapshot",
+					Parameters: map[string]string{
+						"outpostArn": "arn:aws:outposts:us-east-1:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+					},
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := context.Background()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Any()).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
 				const (
@@ -2416,6 +2459,35 @@ func TestCreateSnapshot(t *testing.T) {
 				} else {
 					t.Fatalf("Expected error %v, got no error", codes.InvalidArgument)
 				}
+			},
+		},
+		{
+			name: "fail outpost arn not valid",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateSnapshotRequest{
+					Name: "test-snapshot",
+					Parameters: map[string]string{
+						"outpostArn": "notAnArn",
+					},
+					SourceVolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateSnapshot(context.Background(), req)
+				checkExpectedErrorCode(t, err, codes.InvalidArgument)
+
 			},
 		},
 		{

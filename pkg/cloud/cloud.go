@@ -252,7 +252,8 @@ type ListSnapshotsResponse struct {
 
 // SnapshotOptions represents parameters to create an EBS volume
 type SnapshotOptions struct {
-	Tags map[string]string
+	Tags       map[string]string
+	OutpostArn string
 }
 
 // ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function
@@ -1275,6 +1276,7 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 	descriptions := "Created by AWS EBS CSI driver for volume " + volumeID
 
 	var tags []types.Tag
+	var request *ec2.CreateSnapshotInput
 	for key, value := range snapshotOptions.Tags {
 		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
@@ -1282,12 +1284,14 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		ResourceType: types.ResourceTypeSnapshot,
 		Tags:         tags,
 	}
-	request := &ec2.CreateSnapshotInput{
+	request = &ec2.CreateSnapshotInput{
 		VolumeId:          aws.String(volumeID),
 		TagSpecifications: []types.TagSpecification{tagSpec},
 		Description:       aws.String(descriptions),
 	}
-
+	if snapshotOptions.OutpostArn != "" {
+		request.OutpostArn = aws.String(snapshotOptions.OutpostArn)
+	}
 	res, err := c.ec2.CreateSnapshot(ctx, request, func(o *ec2.Options) {
 		o.Retryer = c.rm.createSnapshotRetryer
 	})

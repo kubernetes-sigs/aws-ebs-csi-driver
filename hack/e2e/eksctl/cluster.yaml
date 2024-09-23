@@ -45,3 +45,18 @@ managedNodeGroups:
     ssh:
       allow: false
 {{- end }}
+# env.Getenv will return empty for missing variables, unlike .Env
+# https://docs.gomplate.ca/syntax/#env
+{{- if env.Getenv "OUTPOST_ARN" }}
+# Outpost nodegroups cannot be managed
+nodeGroups:
+  - name: ng-outpost
+    amiFamily: AmazonLinux2
+    desiredCapacity: 3
+    # Driver needs access to IMDS on outposts for correct metadata
+    disablePodIMDS: false
+    instanceType: {{ .Env.OUTPOST_INSTANCE_TYPE }}
+    ssh:
+      allow: false
+    outpostARN: {{ .Env.OUTPOST_ARN }}
+{{- end }}
