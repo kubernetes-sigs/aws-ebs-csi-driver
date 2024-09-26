@@ -103,7 +103,7 @@ The AWS EBS CSI Driver supports the modifying of tags of existing volumes throug
 
 If a key has the prefix `tagSpecification`, the CSI driver will treat the value as a key-value pair to be added to the existing volume. If there is already an existing tag with the specified key, the CSI driver will overwrite the value of that tag with the new value specified. 
 ```
-apiVersion: storage.k8s.io/v1alpha1
+apiVersion: storage.k8s.io/v1beta1
 kind: VolumeAttributesClass
 metadata:
   name: io2-class
@@ -116,7 +116,7 @@ parameters:
 
 If a key has the prefix `tagDeletion`, the CSI driver will treat the value as a tag key, and the existing tag with that key will be removed from the volume.
 ```
-apiVersion: storage.k8s.io/v1alpha1
+apiVersion: storage.k8s.io/v1beta1
 kind: VolumeAttributesClass
 metadata:
   name: io2-class

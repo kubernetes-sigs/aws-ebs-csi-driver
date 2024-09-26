@@ -50,7 +50,7 @@ This example will only work on a cluster with the `VolumeAttributesClass` featur
     ```sh
     $ kubectl get pvc ebs-claim
     NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
-    ebs-claim   Bound    pvc-076b2d14-b643-47d4-a2ce-fbf9cd36572b   100Gi      RWO            ebs-sc         io2-class               5m54s
+    ebs-claim   Bound    pvc-076b2d14-b643-47d4-a2ce-fbf9cd36572b   10Gi      RWO            ebs-sc         io2-class               5m54s
     ```
 
 7. (Optional) Delete example resources
