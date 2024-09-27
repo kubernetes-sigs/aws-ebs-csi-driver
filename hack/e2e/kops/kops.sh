@@ -19,6 +19,8 @@
 
 set -euo pipefail
 
+export KOPS_RUN_TOO_NEW_VERSION=true
+
 function kops_create_cluster() {
   CLUSTER_NAME=${1}
   KOPS_BIN=${2}

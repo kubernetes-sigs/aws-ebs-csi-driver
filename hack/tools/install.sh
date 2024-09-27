@@ -33,8 +33,8 @@ GOMPLATE_VERSION="v4.1.0"
 # https://github.com/helm/helm
 HELM_VERSION="v3.15.4"
 # https://github.com/kubernetes/kops
-# NOTE: Keep at v1.29.0 until ELB usage bug fixed
-KOPS_VERSION="v1.29.0"
+# NOTE: We pin kops to a commit instead of a release to support newer versions of k8s earlier
+KOPS_COMMIT="3a8da3d7fc1d632ef5ffe4a6ef7e5e9fc048e0c7"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20240703180642-53f3d216ad9f"
 # https://github.com/golang/mock
@@ -153,9 +153,11 @@ function install_helm() {
 }
 
 function install_kops() {
+  # Build from source so we can test latest Kubernetes version earlier.
   INSTALL_PATH="${1}"
 
-  install_binary "${INSTALL_PATH}" "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-${OS}-${ARCH}" "kops"
+  # Lower max processes to avoid oom-killed
+  GOMAXPROCS=1 install_go "${INSTALL_PATH}" "k8s.io/kops/cmd/kops@${KOPS_COMMIT}"
 }
 
 function install_kubetest2() {

@@ -71,6 +71,8 @@ export CLUSTER_NAME="e2e-${BUILD_ID:-${RANDOM}}.k8s.local"
 export KOPS_BUCKET=${KOPS_BUCKET:-"k8s-kops-csi-shared-e2e"}
 # Always use us-west-2 in CI, no matter where the local client is
 export AWS_REGION=us-west-2
+# Allow attempting using newer versions of K8s before kops releases catch up
+export KOPS_RUN_TOO_NEW_VERSION=true
 
 make cluster/create &
 PIDS[1]=$!
