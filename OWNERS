@@ -2,6 +2,7 @@ approvers:
 - AndrewSirenko
 - bertinatto
 - ConnorJC3
+- ElijahQuinones
 - gnufied
 - jsafrane
 - leakingtapan
@@ -15,4 +16,5 @@ emiritus_approvers:
 reviewers:
 - AndrewSirenko
 - ConnorJC3
+- ElijahQuinones
 - torredil
