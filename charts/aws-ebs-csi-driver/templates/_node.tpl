@@ -53,6 +53,7 @@ spec:
         {{- with .Values.node.tolerations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- include "aws-ebs-csi-driver.daemonset-tolerations" . | nindent 8 }}
         - key: "ebs.csi.aws.com/agent-not-ready"
           operator: "Exists"
         {{- end }}

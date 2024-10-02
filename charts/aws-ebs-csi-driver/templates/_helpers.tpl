@@ -83,3 +83,18 @@ Handle http proxy env vars
 - name: NO_PROXY
   value: {{ .Values.proxy.no_proxy | quote }}
 {{- end -}}
+
+{{/*
+Recommended daemonset tolerations
+*/}}
+{{- define "aws-ebs-csi-driver.daemonset-tolerations" -}}
+# Prevents undesired eviction by Cluster Autoscalar
+- key: "ToBeDeletedByClusterAutoscaler"
+  operator: Exists
+# Prevents undesired eviction by v1 Karpenter
+- key: "karpenter.sh/disrupted"
+  operator: Exists
+# Prevents undesired eviction by v1beta1 Karpenter
+- key: "karpenter.sh/disruption"
+  operator: Exists
+{{- end -}}
