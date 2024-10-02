@@ -66,7 +66,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "*",
+          "Resource": "arn:aws:ec2:*:*:volume/*",
           "Condition": {
             "StringLike": {
               "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
@@ -78,7 +78,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "*",
+          "Resource": "arn:aws:ec2:*:*:volume/*",
           "Condition": {
             "StringLike": {
               "aws:RequestTag/CSIVolumeName": "*"
@@ -90,12 +90,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "*",
-          "Condition": {
-            "StringLike": {
-              "aws:RequestTag/kubernetes.io/cluster/*": "owned"
-            }
-          }
+          "Resource": "arn:aws:ec2:*:*:snapshot/*"
         },
         {
           "Effect": "Allow",
@@ -129,7 +124,7 @@ spec:
           "Resource": "*",
           "Condition": {
             "StringLike": {
-              "ec2:ResourceTag/kubernetes.io/cluster/*": "owned"
+              "ec2:ResourceTag/kubernetes.io/created-for/pvc/name": "*"
             }
           }
         },
