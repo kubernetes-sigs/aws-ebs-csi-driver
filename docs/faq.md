@@ -1,5 +1,23 @@
 # Frequently Asked Questions
 
+## Volume Attachment Capacity Issues
+
+There's a known issue where a mismatch between the reported and actual attachment capacity on nodes can result in scheduling errors and stuck workloads. This commonly occurs when volume slots are consumed after the driver starts up, which results in `kube-scheduler` assigning stateful pods to nodes lacking the necessary capacity to support attachments. As a consequence, volumes can become stuck in the attaching state until a slot is freed up, leading to prolonged delays in pod startup.
+
+### What causes this misalignment?
+
+Today, CSI plugins report node attachment capacity only once, at startup, via the `NodeGetInfo` RPC. This static reporting fails to reflect any subsequent changes in capacity (which may occur when dynamically allocated ENIs or non-CSI devices consume attachment slots).
+
+### What steps can be taken to mitigate this issue?
+
+While a long-term fix is worked on (see [kubernetes/enhancements#4875](https://github.com/kubernetes/enhancements/pull/4875)), you can adopt one or more of the following solutions to mitigate this issue:
+
+1. **Use Dedicated EBS Instance Types**: Gen7 and later EC2 instance types have dedicated EBS volume limits and are not affected by dynamic ENI attachments taking up volume slots.
+2. **Enable VPC CNI's Prefix Delegation Feature**: This can reduce the number of ENIs needed in your cluster. See the [aws-eks-best-practices/networking docs](https://aws.github.io/aws-eks-best-practices/networking/prefix-mode/index_linux/) for recommendations and further instructions.
+3. **Use the `--volume-attach-limit` CLI Option**: Configure the driver with this option to explicitly specify the limit for volumes to be reported to Kubernetes. This is useful when you have a known safe limit.
+4. **Use the `--reserved-volume-attachments` CLI Option**: Configure the driver with this option to reserve a number of slots for non-CSI volumes. These reserved slots will be subtracted from the total slots reported to Kubernetes.
+5. **Use Multiple DaemonSets**: For clusters that need a mix of the above solutions across different groups of nodes, the Helm chart can construct multiple `DaemonSets` via the `additionalDaemonSets` parameter. See [Additional DaemonSets](additional-daemonsets.md) for more information.
+
 ## 6-Minute Delays in Attaching Volumes
 
 ### What causes 6-minute delays in attaching volumes?
