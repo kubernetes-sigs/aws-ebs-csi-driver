@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-	corev1beta1 "sigs.k8s.io/karpenter/pkg/apis/v1beta1"
 )
 
 /*
@@ -44,6 +43,16 @@ If the PreStop hook hangs during its execution, the driver node pod will be forc
 */
 
 const clusterAutoscalerTaint = "ToBeDeletedByClusterAutoscaler"
+const v1KarpenterTaint = "karpenter.sh/disrupted"
+const v1beta1KarpenterTaint = "karpenter.sh/disruption"
+
+// drainTaints includes taints used by K8s or autoscalers that signify node draining or pod eviction
+var drainTaints = map[string]struct{}{
+	v1.TaintNodeUnschedulable: {}, // Kubernetes common eviction taint (kubectl drain)
+	clusterAutoscalerTaint:    {},
+	v1KarpenterTaint:          {},
+	v1beta1KarpenterTaint:     {},
+}
 
 func PreStop(clientset kubernetes.Interface) error {
 	klog.InfoS("PreStop: executing PreStop lifecycle hook")
@@ -76,20 +85,10 @@ func fetchNode(clientset kubernetes.Interface, nodeName string) (*v1.Node, error
 	return node, nil
 }
 
+// isNodeBeingDrained returns true if node resource has a known drain/eviction taint.
 func isNodeBeingDrained(node *v1.Node) bool {
 	for _, taint := range node.Spec.Taints {
-		// Kubernetes common eviction taint (kubectl drain)
-		if taint.Key == v1.TaintNodeUnschedulable && taint.Effect == v1.TaintEffectNoSchedule {
-			return true
-		}
-
-		// Karpenter eviction taint
-		if corev1beta1.IsDisruptingTaint(taint) {
-			return true
-		}
-
-		// cluster-autoscaler eviction taint
-		if taint.Key == clusterAutoscalerTaint {
+		if _, isDrainTaint := drainTaints[taint.Key]; isDrainTaint {
 			return true
 		}
 	}
