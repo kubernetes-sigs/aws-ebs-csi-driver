@@ -602,7 +602,7 @@ func TestCheckDesiredState(t *testing.T) {
 		expErr         error
 	}{
 		{
-			name:           "sucess: normal path",
+			name:           "success: normal path",
 			volumeId:       "vol-001",
 			desiredSizeGiB: 5,
 			options: &ModifyDiskOptions{
