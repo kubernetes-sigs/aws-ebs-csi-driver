@@ -53,17 +53,15 @@ check_dependencies
 log "Fetching latest kubekins-e2e-v2 image from $KUBEKINS_REPO"
 KUBEKINS_TAG=$(crane ls "$KUBEKINS_REPO" | grep -E 'master$' | sort -V | tail -n 1)
 export KUBEKINS_IMAGE="$KUBEKINS_REPO:$KUBEKINS_TAG"
-log "Found $KUBEKINS_IMAGE"
 
-log "Updating kubekins-e2e-v2 image in $HELM_VALUES_FILEPATH"
+log "Updating kubekins-e2e-v2 image in $HELM_VALUES_FILEPATH to $KUBEKINS_IMAGE"
 yq ".helmTester.image = env(KUBEKINS_IMAGE)" -i "$HELM_VALUES_FILEPATH"
 
 log "Fetching latest gcb-docker-gcloud image from $GCB_REPO"
 GCB_TAG=$(crane ls "$GCB_REPO" | sort -V | tail -n 1)
 export GCB_IMAGE="$GCB_REPO:$GCB_TAG"
-log "Found $GCB_IMAGE"
 
-log "Updating gcb-docker-gcloud image in $CLOUDBUILD_FILEPATH"
+log "Updating gcb-docker-gcloud image in $CLOUDBUILD_FILEPATH to $GCB_IMAGE"
 yq ".steps[0].name = env(GCB_IMAGE)" -i "$CLOUDBUILD_FILEPATH"
 
 log "Success! Updated kubekins-e2e-v2 and gcb-docker-gcloud images!"
