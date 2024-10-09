@@ -199,9 +199,13 @@ Test the EBS CSI Driver Helm chart via the [Helm `chart-testing` tool](https://g
 
 ## Release Scripts
 
+### 'make update-image-dependencies'
+
+Convenience target to perform all image updates (including sidecars, kubekins-e2e-v2, and gcb-docker-gcloud). This is the primary target to use unless more granular control is needed.
+
 ### `make update-sidecar-dependencies`
 
-Convenience target to perform all sidecar updates and regenerate the manifests. This is the primary target to use unless more granular control is needed.
+Convenience target to perform all sidecar updates and regenerate the manifests. 
 
 ### `make update-truth-sidecars`
 
