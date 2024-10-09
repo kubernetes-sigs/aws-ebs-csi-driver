@@ -28,6 +28,7 @@ import (
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/coalescer"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
@@ -168,6 +169,8 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 			TagsToDelete: make([]string, 0),
 		},
 	}
+	var rawTagsToAdd []string
+	tProps := new(template.PVProps)
 	for key, value := range params {
 		switch key {
 		case ModificationKeyIOPS:
@@ -191,13 +194,15 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 			options.modifyDiskOptions.VolumeType = value
 		case ModificationKeyVolumeType:
 			options.modifyDiskOptions.VolumeType = value
+		case PVCNameKey:
+			tProps.PVCName = value
+		case PVCNamespaceKey:
+			tProps.PVCNamespace = value
+		case PVNameKey:
+			tProps.PVName = value
 		default:
 			if strings.HasPrefix(key, ModificationAddTag) {
-				st := strings.SplitN(value, "=", 2)
-				if len(st) < 2 {
-					return nil, status.Errorf(codes.InvalidArgument, "Invalid tag specification: %v", st)
-				}
-				options.modifyTagsOptions.TagsToAdd[st[0]] = st[1]
+				rawTagsToAdd = append(rawTagsToAdd, value)
 			} else if strings.HasPrefix(key, ModificationDeleteTag) {
 				options.modifyTagsOptions.TagsToDelete = append(options.modifyTagsOptions.TagsToDelete, value)
 			} else {
@@ -205,8 +210,13 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 			}
 		}
 	}
-	if err := validateExtraTags(options.modifyTagsOptions.TagsToAdd, false); err != nil {
+	addTags, err := template.Evaluate(rawTagsToAdd, tProps, false)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+	}
+	if err := validateExtraTags(addTags, false); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
+	options.modifyTagsOptions.TagsToAdd = addTags
 	return &options, nil
 }
