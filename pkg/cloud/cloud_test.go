@@ -1347,6 +1347,22 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
 		},
+		{
+			name:       "failure: InsufficientVolumeCapacity error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(2000),
+			},
+			expErr: ErrInsufficientVolumeCapacity,
+			expCreateVolumeErr: &smithy.GenericAPIError{
+				Code: "InsufficientVolumeCapacity",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
