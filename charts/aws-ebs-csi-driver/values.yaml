@@ -490,4 +490,4 @@ nodeComponentOnly: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "gcr.io/k8s-staging-test-infra/kubekins-e2e:v20240903-6a352c5344-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20240903-6a352c5344-master"

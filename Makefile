@@ -185,6 +185,10 @@ generate-sidecar-tags: update-truth-sidecars charts/aws-ebs-csi-driver/values.ya
 .PHONY: update-sidecar-dependencies
 update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/kustomize
 
+.PHONY: update-image-dependencies
+update-image-dependencies: update-sidecar-dependencies
+	./hack/release-scripts/update-e2e-images
+
 ## CI aliases
 # Targets intended to be executed mostly or only by CI jobs
 
