@@ -25,7 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	corev1beta1 "sigs.k8s.io/karpenter/pkg/apis/v1beta1"
 )
 
 func TestPreStopHook(t *testing.T) {
@@ -63,29 +62,6 @@ func TestPreStopHook(t *testing.T) {
 				mockNodeObj := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{},
-					},
-				}
-
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).Times(1)
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).Times(1)
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(mockNodeObj, nil).Times(1)
-
-				return nil
-			},
-		},
-		{
-			name:     "TestPreStopHook: node is not being drained, skipping VolumeAttachments check - missing TaintEffectNoSchedule",
-			nodeName: "test-node",
-			expErr:   nil,
-			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockStorageV1 *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-				mockNodeObj := &v1.Node{
-					Spec: v1.NodeSpec{
-						Taints: []v1.Taint{
-							{
-								Key:    v1.TaintNodeUnschedulable,
-								Effect: "",
-							},
-						},
 					},
 				}
 
@@ -226,29 +202,6 @@ func TestPreStopHook(t *testing.T) {
 			},
 		},
 		{
-			name:     "TestPreStopHook: Karpenter node is not being drained, skipping VolumeAttachments check - missing TaintEffectNoSchedule",
-			nodeName: "test-karpenter-node",
-			expErr:   nil,
-			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockStorageV1 *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-				mockNodeObj := &v1.Node{
-					Spec: v1.NodeSpec{
-						Taints: []v1.Taint{
-							{
-								Key:    corev1beta1.DisruptionNoScheduleTaint.Key,
-								Effect: "",
-							},
-						},
-					},
-				}
-
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).Times(1)
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).Times(1)
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(mockNodeObj, nil).Times(1)
-
-				return nil
-			},
-		},
-		{
 			name:     "TestPreStopHook: Karpenter node is being drained, no volume attachments remain",
 			nodeName: "test-karpenter-node",
 			expErr:   nil,
@@ -258,7 +211,7 @@ func TestPreStopHook(t *testing.T) {
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
-								Key:    corev1beta1.DisruptionNoScheduleTaint.Key,
+								Key:    v1beta1KarpenterTaint,
 								Effect: v1.TaintEffectNoSchedule,
 							},
 						},
@@ -290,7 +243,7 @@ func TestPreStopHook(t *testing.T) {
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
-								Key:    corev1beta1.DisruptionNoScheduleTaint.Key,
+								Key:    v1beta1KarpenterTaint,
 								Effect: v1.TaintEffectNoSchedule,
 							},
 						},
@@ -330,7 +283,7 @@ func TestPreStopHook(t *testing.T) {
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
-								Key:    corev1beta1.DisruptionNoScheduleTaint.Key,
+								Key:    v1beta1KarpenterTaint,
 								Effect: v1.TaintEffectNoSchedule,
 							},
 						},
@@ -408,6 +361,48 @@ func TestPreStopHook(t *testing.T) {
 				assert.Equal(t, tc.expErr.Error(), err.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestIsNodeBeingDrained(t *testing.T) {
+	testCases := []struct {
+		name         string
+		nodeTaintKey string
+		want         bool
+	}{
+		{"Should recognize common eviction taint", v1.TaintNodeUnschedulable, true},
+		{"Should recognize cluster autoscaler taint", clusterAutoscalerTaint, true},
+		{"Should recognize Karpenter v1beta1 taint", v1beta1KarpenterTaint, true},
+		{"Should recognize Karpenter v1 taint", v1KarpenterTaint, true},
+		{"Should not block on generic taint", "ebs/fake-taint", false},
+		{"Should not block on no taint", "", false},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var taints []v1.Taint
+
+			if tc.nodeTaintKey != "" {
+				taint := v1.Taint{
+					Key:    tc.nodeTaintKey,
+					Value:  "",
+					Effect: v1.TaintEffectNoSchedule,
+				}
+
+				taints = append(taints, taint)
+			}
+
+			testNode := &v1.Node{
+				Spec: v1.NodeSpec{
+					Taints: taints,
+				},
+			}
+
+			got := isNodeBeingDrained(testNode)
+
+			if tc.want != got {
+				t.Fatalf("isNodeBeingDrained returned wrong answer when node contained taint with key: %s; got: %t, want: %t", tc.nodeTaintKey, got, tc.want)
 			}
 		})
 	}

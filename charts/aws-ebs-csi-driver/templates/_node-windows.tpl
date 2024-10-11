@@ -49,6 +49,7 @@ spec:
         {{- with .Values.node.tolerations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- include "aws-ebs-csi-driver.daemonset-tolerations" . | nindent 8 }}
         {{- end }}
       {{- if .Values.node.windowsHostProcess }}
       securityContext:

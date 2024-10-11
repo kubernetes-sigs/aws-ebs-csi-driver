@@ -13,7 +13,8 @@
         "ec2:DescribeSnapshots",
         "ec2:DescribeTags",
         "ec2:DescribeVolumes",
-        "ec2:DescribeVolumesModifications"
+        "ec2:DescribeVolumesModifications",
+        "ec2:EnableFastSnapshotRestores"
       ],
       "Resource": "*"
     },
@@ -42,7 +43,7 @@
       "Action": [
         "ec2:CreateVolume"
       ],
-      "Resource": "*",
+      "Resource": "arn:aws:ec2:*:*:volume/*",
       "Condition": {
         "StringLike": {
           "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
@@ -54,12 +55,19 @@
       "Action": [
         "ec2:CreateVolume"
       ],
-      "Resource": "*",
+      "Resource": "arn:aws:ec2:*:*:volume/*",
       "Condition": {
         "StringLike": {
           "aws:RequestTag/CSIVolumeName": "*"
         }
       }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateVolume"
+      ],
+      "Resource": "arn:aws:ec2:*:*:snapshot/*"
     },
     {
       "Effect": "Allow",

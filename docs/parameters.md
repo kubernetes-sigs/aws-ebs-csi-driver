@@ -53,7 +53,7 @@ allowedTopologies:
 - matchLabelExpressions:
   - key: topology.kubernetes.io/zone
     values:
-    - us-east-1
+    - us-east-1a
 ```
 
 Additionally, statically provisioned volumes can be restricted to pods in the appropriate Availability Zone, see the [static provisioning example](../examples/kubernetes/static-provisioning/).
