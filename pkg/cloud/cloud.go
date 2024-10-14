@@ -1080,7 +1080,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		// if we expected volume to be attached and it was reported as already attached via DescribeInstance call
 		// but DescribeVolume told us volume is detached, we will short-circuit this long wait loop and return error
 		// so as AttachDisk can be retried without waiting for 20 minutes.
-		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState != expectedState) {
+		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState == volumeDetachedState) {
 			request := &ec2.AttachVolumeInput{
 				Device:     aws.String(expectedDevice),
 				InstanceId: aws.String(expectedInstance),
