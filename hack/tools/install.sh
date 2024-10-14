@@ -19,24 +19,24 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.17.33"
+AWSCLI_VERSION="2.18.5"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.191.0"
+EKSCTL_VERSION="v0.192.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.20.0"
+GINKGO_VERSION="v2.20.2"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.60.1"
+GOLANGCI_LINT_VERSION="v1.61.0"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.1.0"
 # https://github.com/helm/helm
-HELM_VERSION="v3.15.4"
+HELM_VERSION="v3.16.2"
 # https://github.com/kubernetes/kops
 # NOTE: Keep at v1.29.0 until ELB usage bug fixed
 KOPS_VERSION="v1.29.0"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20240703180642-53f3d216ad9f"
+KUBETEST2_VERSION="v0.0.0-20240905095256-f6e8664cd2b1"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
