@@ -1,4 +1,9 @@
 # Helm chart
+## v2.36.0
+* Bump driver version to `v1.36.0`
+* Add recommended autoscalar Tolerations to driver DaemonSet ([#2165](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2165), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add support for unhealthyPodEvictionPolicy on PodDisruptionBudget ([#2159](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2159), [@peterabarr](https://github.com/peterabarr))
+
 ## v2.35.1
 * Fix an issue causing the `csi-attacher` container to get stuck in `CrashLoopBackoff` on clusters with VAC enabled. Users with a VAC-enabled cluster are strongly encouraged to skip `v2.35.0` and/or upgrade directly to `v2.35.1` or later.
 
