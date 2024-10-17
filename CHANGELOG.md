@@ -1,4 +1,10 @@
 # v1.36.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+#### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
+
 ### Bug Fixes
 * Prevent `VolumeInUse` error when volume is still attaching ([#2183](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2183), [@ConnorJC3](https://github.com/ConnorJC3))
 * Add v1 Karpenter disrupted taint to pre-stop hook ([#2166](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2166), [@AndrewSirenko](https://github.com/AndrewSirenko))
