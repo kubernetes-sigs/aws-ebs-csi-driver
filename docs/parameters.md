@@ -41,7 +41,7 @@ The EBS CSI Driver supports the [`WaitForFirstConsumer` volume binding mode in K
 
 When using static provisioning, or if `WaitForFirstConsumer` is not suitable for a specific usecase, the Availability Zone can be specified via the standard CSI topology mechanisms. The EBS CSI Driver supports specifying the Availability Zone via either the key `topology.kubernetes.io/zone` or the key `topology.ebs.csi.aws.com/zone`.
 
-On Kubernetes, the Availability Zone of dynamically provisioned volumes can be restricted with the [`StorageClass`'s `availableToplogies` parameter](https://kubernetes.io/docs/concepts/storage/storage-classes/#allowed-topologies), for example:
+On Kubernetes, the Availability Zone of dynamically provisioned volumes can be restricted with the [`StorageClass`'s `allowedTopologies` parameter](https://kubernetes.io/docs/concepts/storage/storage-classes/#allowed-topologies), for example:
 
 ```
 apiVersion: storage.k8s.io/v1
