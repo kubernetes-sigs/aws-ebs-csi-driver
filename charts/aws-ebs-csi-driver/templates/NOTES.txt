@@ -2,4 +2,6 @@ To verify that aws-ebs-csi-driver has started, run:
 
     kubectl get pod -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "aws-ebs-csi-driver.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
 
-NOTE: The [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter) controller and CRDs will no longer be installed as part of this chart and moving forward will be a prerequisite of using the snap shotting functionality.
+[ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see GitHub issue #2190 (https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
