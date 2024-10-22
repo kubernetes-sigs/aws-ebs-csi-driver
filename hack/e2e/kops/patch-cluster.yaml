@@ -47,8 +47,8 @@ spec:
             "ec2:CreateTags"
           ],
           "Resource": [
-            "arn:aws:ec2:*:*:volume/*",
-            "arn:aws:ec2:*:*:snapshot/*"
+            "arn:*:ec2:*:*:volume/*",
+            "arn:*:ec2:*:*:snapshot/*"
           ]
         },
         {
@@ -57,8 +57,8 @@ spec:
             "ec2:DeleteTags"
           ],
           "Resource": [
-            "arn:aws:ec2:*:*:volume/*",
-            "arn:aws:ec2:*:*:snapshot/*"
+            "arn:*:ec2:*:*:volume/*",
+            "arn:*:ec2:*:*:snapshot/*"
           ]
         },
         {
@@ -66,7 +66,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "arn:aws:ec2:*:*:volume/*",
+          "Resource": "arn:*:ec2:*:*:volume/*",
           "Condition": {
             "StringLike": {
               "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
@@ -78,7 +78,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "arn:aws:ec2:*:*:volume/*",
+          "Resource": "arn:*:ec2:*:*:volume/*",
           "Condition": {
             "StringLike": {
               "aws:RequestTag/CSIVolumeName": "*"
@@ -90,7 +90,7 @@ spec:
           "Action": [
             "ec2:CreateVolume"
           ],
-          "Resource": "arn:aws:ec2:*:*:snapshot/*"
+          "Resource": "arn:*:ec2:*:*:snapshot/*"
         },
         {
           "Effect": "Allow",
