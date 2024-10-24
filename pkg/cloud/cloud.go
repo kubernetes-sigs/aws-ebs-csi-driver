@@ -359,6 +359,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
 			RecordRequestsMiddleware(),
+			LogServerErrorsMiddleware(), // This middlware should always be last so it sees an unmangled error
 		)
 
 		endpoint := os.Getenv("AWS_EC2_ENDPOINT")
