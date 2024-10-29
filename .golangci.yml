@@ -14,3 +14,15 @@
 
 run:
   modules-download-mode: readonly
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - whitespace
+  disable:
+    - govet # We already run with `make verify/govet`

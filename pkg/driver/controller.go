@@ -975,7 +975,6 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) *csi.CreateSnapshotResp
 }
 
 func newListSnapshotsResponse(cloudResponse *cloud.ListSnapshotsResponse) *csi.ListSnapshotsResponse {
-
 	var entries []*csi.ListSnapshotsResponse_Entry
 	for _, snapshot := range cloudResponse.Snapshots {
 		snapshotResponseEntry := newListSnapshotsResponseEntry(snapshot)
@@ -1018,7 +1017,6 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 
 // BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
 func BuildOutpostArn(segments map[string]string) string {
-
 	if len(segments[AwsPartitionKey]) <= 0 {
 		return ""
 	}

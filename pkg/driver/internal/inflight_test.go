@@ -68,7 +68,6 @@ func TestInFlight(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "success add, delete, add copy",
 			requests: []testRequest{
@@ -107,6 +106,5 @@ func TestInFlight(t *testing.T) {
 				}
 			}
 		})
-
 	}
 }

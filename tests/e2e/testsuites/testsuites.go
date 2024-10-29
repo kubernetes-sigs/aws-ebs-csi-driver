@@ -185,7 +185,6 @@ func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapsh
 	volumeSnapshotContent.Spec.VolumeSnapshotRef.Name = volumeSnapshot.Name
 	_, err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Update(context.Background(), volumeSnapshotContent, metav1.UpdateOptions{})
 	framework.ExpectNoError(err)
-
 }
 func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *volumesnapshotv1.VolumeSnapshot) {
 	By("waiting for VolumeSnapshot to be ready to use - " + snapshot.Name)
@@ -389,7 +388,6 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values {
 				Expect(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values).To(ContainElement(v))
 			}
-
 		}
 	}
 }

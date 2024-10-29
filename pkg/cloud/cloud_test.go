@@ -82,8 +82,8 @@ func extractVolumeIdentifiers(volumes []types.Volume) (volumeIDs []string, volum
 	}
 	return volumeIDs, volumeNames
 }
-func TestNewCloud(t *testing.T) {
 
+func TestNewCloud(t *testing.T) {
 	testCases := []struct {
 		name            string
 		region          string

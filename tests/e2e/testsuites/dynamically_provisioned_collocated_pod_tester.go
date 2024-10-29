@@ -52,5 +52,4 @@ func (t *DynamicallyProvisionedCollocatedPodTest) Run(client clientset.Interface
 		tpod.WaitForRunning()
 		nodeName = tpod.pod.Spec.NodeName
 	}
-
 }

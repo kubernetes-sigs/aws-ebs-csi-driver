@@ -2487,7 +2487,6 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
 				checkExpectedErrorCode(t, err, codes.InvalidArgument)
-
 			},
 		},
 		{
@@ -3519,7 +3518,6 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			errorCode: codes.OK,
 			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
 				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(nil)
-
 			},
 			expResp: &csi.ControllerUnpublishVolumeResponse{},
 		},

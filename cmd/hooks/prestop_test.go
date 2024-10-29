@@ -77,7 +77,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
@@ -109,7 +108,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
@@ -149,7 +147,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
@@ -206,7 +203,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-karpenter-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
@@ -238,7 +234,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-karpenter-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
@@ -278,7 +273,6 @@ func TestPreStopHook(t *testing.T) {
 			nodeName: "test-karpenter-node",
 			expErr:   nil,
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockVolumeAttachments *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
-
 				fakeNode := &v1.Node{
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{

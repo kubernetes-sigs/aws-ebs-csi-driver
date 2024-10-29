@@ -555,7 +555,6 @@ func (d *NodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 			},
 		},
 	}, nil
-
 }
 
 func (d *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
@@ -765,7 +764,6 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 
 // getVolumesLimit returns the limit of volumes that the node supports
 func (d *NodeService) getVolumesLimit() int64 {
-
 	if d.options.VolumeAttachLimit >= 0 {
 		return d.options.VolumeAttachLimit
 	}
