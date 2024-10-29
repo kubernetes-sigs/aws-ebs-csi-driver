@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -108,7 +107,7 @@ func main() {
 			klog.ErrorS(err, "failed to get version")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
-		fmt.Println(versionInfo)
+		klog.Info(versionInfo)
 		os.Exit(0)
 	}
 

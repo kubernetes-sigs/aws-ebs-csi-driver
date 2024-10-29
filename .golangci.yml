@@ -33,6 +33,8 @@ linters:
     - errname
     - errorlint
     - exhaustive
+    - fatcontext
+    - forbidigo
     - whitespace
   disable:
     - govet # We already run with `make verify/govet`
