@@ -23,6 +23,7 @@ linters:
     - canonicalheader
     - containedctx
     - contextcheck
+    - copyloopvar
     - whitespace
   disable:
     - govet # We already run with `make verify/govet`

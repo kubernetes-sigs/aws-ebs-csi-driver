@@ -90,7 +90,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 
 		Context(fmt.Sprintf("using an %s filesystem", fsType), func() {
 			for testedParameter, formatOptionTestCase := range formatOptionTests {
-				formatOptionTestCase := formatOptionTestCase
 				if fsTypeDoesNotSupportFormatOptionParameter(fsType, testedParameter) {
 					continue
 				}

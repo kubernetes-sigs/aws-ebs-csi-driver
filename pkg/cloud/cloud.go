@@ -1057,7 +1057,6 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		attachmentState := ""
 
 		for _, a := range volume.Attachments {
-			a := a
 			if a.InstanceId != nil {
 				if aws.ToString(a.InstanceId) == expectedInstance {
 					attachmentState = string(a.State)
@@ -1202,7 +1201,6 @@ func execBatchDescribeSnapshots(svc EC2API, input []string, batcher snapshotBatc
 	result := make(map[string]*types.Snapshot)
 
 	for _, snapshot := range resp {
-		snapshot := snapshot
 		key, err := extractSnapshotKey(&snapshot, batcher)
 		if err != nil {
 			klog.Warningf("execBatchDescribeSnapshots: skipping snapshot: %v, reason: %v", snapshot, err)
