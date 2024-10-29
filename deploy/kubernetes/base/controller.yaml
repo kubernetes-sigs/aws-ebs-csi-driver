@@ -195,6 +195,7 @@ spec:
           image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.1.0-eks-1-31-5
           imagePullPolicy: IfNotPresent
           args:
+            - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --leader-election=true
             - --v=2

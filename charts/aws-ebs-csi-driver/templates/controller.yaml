@@ -318,6 +318,7 @@ spec:
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.snapshotter.image.pullPolicy }}
           args:
+            - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --leader-election=true
             - --v={{ .Values.sidecars.snapshotter.logLevel }}
