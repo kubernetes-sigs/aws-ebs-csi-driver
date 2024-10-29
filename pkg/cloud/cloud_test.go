@@ -2534,7 +2534,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 			expErr:              fmt.Errorf("InvalidParameterCombination: The parameter iops is not supported for gp2 volumes"),
 		},
 		{
-			name:     "failure: returned returned ErrInvalidArgument when ModifyVolume returned UnknownVolumeType",
+			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned UnknownVolumeType",
 			volumeID: "vol-test",
 			modifyDiskOptions: &ModifyDiskOptions{
 				VolumeType: "GPFake",

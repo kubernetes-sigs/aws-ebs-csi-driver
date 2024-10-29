@@ -24,6 +24,13 @@ linters:
     - containedctx
     - contextcheck
     - copyloopvar
+    - decorder
+    - dogsled
+    - dupword
+    - durationcheck
     - whitespace
   disable:
     - govet # We already run with `make verify/govet`
+    - depguard # We don't use this
+    - cyclop # TODO FIXME (at least for non-tests)
+    - dupl # TODO FIXME (tests + non-tests)
