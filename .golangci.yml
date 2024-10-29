@@ -35,6 +35,7 @@ linters:
     - exhaustive
     - fatcontext
     - forbidigo
+    - forcetypeassert
     - whitespace
   disable:
     - govet # We already run with `make verify/govet`

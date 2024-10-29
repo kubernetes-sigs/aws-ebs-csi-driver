@@ -104,7 +104,10 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			klog.V(5).InfoS("DeleteFunc: VolumeAttachment deleted", "node", nodeName)
-			va := obj.(*storagev1.VolumeAttachment)
+			va, ok := obj.(*storagev1.VolumeAttachment)
+			if !ok {
+				klog.Error("DeleteFunc: error asserting object as type VolumeAttachment", "obj", va)
+			}
 			if va.Spec.NodeName == nodeName {
 				if err := checkVolumeAttachments(clientset, nodeName, allAttachmentsDeleted); err != nil {
 					klog.ErrorS(err, "DeleteFunc: error checking VolumeAttachments")
@@ -113,7 +116,10 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			klog.V(5).InfoS("UpdateFunc: VolumeAttachment updated", "node", nodeName)
-			va := newObj.(*storagev1.VolumeAttachment)
+			va, ok := newObj.(*storagev1.VolumeAttachment)
+			if !ok {
+				klog.Error("UpdateFunc: error asserting object as type VolumeAttachment", "obj", va)
+			}
 			if va.Spec.NodeName == nodeName {
 				if err := checkVolumeAttachments(clientset, nodeName, allAttachmentsDeleted); err != nil {
 					klog.ErrorS(err, "UpdateFunc: error checking VolumeAttachments")

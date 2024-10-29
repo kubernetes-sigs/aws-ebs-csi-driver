@@ -114,7 +114,10 @@ func TestNewCloud(t *testing.T) {
 		if err != nil {
 			t.Fatalf("error %v", err)
 		}
-		ec2CloudAscloud := ec2Cloud.(*cloud)
+		ec2CloudAscloud, ok := ec2Cloud.(*cloud)
+		if !ok {
+			t.Fatalf("could not assert object ec2Cloud as cloud type, %v", ec2Cloud)
+		}
 		assert.Equal(t, ec2CloudAscloud.region, tc.region)
 		if tc.batchingEnabled {
 			assert.NotNil(t, ec2CloudAscloud.bm)
@@ -224,7 +227,10 @@ func TestBatchDescribeVolumes(t *testing.T) {
 
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
-			cloudInstance := c.(*cloud)
+			cloudInstance, ok := c.(*cloud)
+			if !ok {
+				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
+			}
 			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
 
 			tc.mockFunc(mockEC2, tc.expErr, tc.volumes)
@@ -340,7 +346,10 @@ func TestBatchDescribeInstances(t *testing.T) {
 
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
-			cloudInstance := c.(*cloud)
+			cloudInstance, ok := c.(*cloud)
+			if !ok {
+				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
+			}
 			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
 
 			// Setup mocks
@@ -514,7 +523,10 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
-			cloudInstance := c.(*cloud)
+			cloudInstance, ok := c.(*cloud)
+			if !ok {
+				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
+			}
 			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
 
 			tc.mockFunc(mockEC2, tc.expErr, tc.snapshots)
@@ -658,7 +670,10 @@ func TestCheckDesiredState(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockEC2 := NewMockEC2API(mockCtrl)
 		c := newCloud(mockEC2)
-		cloudInstance := c.(*cloud)
+		cloudInstance, ok := c.(*cloud)
+		if !ok {
+			t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
+		}
 		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{
 				{
@@ -727,7 +742,10 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
-			cloudInstance := c.(*cloud)
+			cloudInstance, ok := c.(*cloud)
+			if !ok {
+				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
+			}
 			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
 
 			// Setup mocks
@@ -1729,11 +1747,15 @@ func TestAttachDisk(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
+			cloudInstance, ok := c.(*cloud)
+			if !ok {
+				t.Fatalf("could not assert c as type cloud, %v", c)
+			}
 
 			ctx := context.Background()
-			dm := c.(*cloud).dm
+			deviceManager := cloudInstance.dm
 
-			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID, tc.nodeID2, tc.path, dm)
+			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID, tc.nodeID2, tc.path, deviceManager)
 
 			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
 
