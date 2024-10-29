@@ -57,10 +57,6 @@ func TestNewNodeService(t *testing.T) {
 
 	nodeService := NewNodeService(options, mockMetadataService, mockMounter, mockKubernetesClient)
 
-	if nodeService == nil {
-		t.Fatal("Expected NewNodeService to return a non-nil NodeService")
-	}
-
 	if nodeService.metadata != mockMetadataService {
 		t.Error("Expected NodeService.metadata to be set to the mock MetadataService")
 	}

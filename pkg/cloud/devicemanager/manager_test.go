@@ -243,10 +243,6 @@ func assertDevice(t *testing.T, d *Device, assigned bool, err error) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if d == nil {
-		t.Fatalf("Expected valid device, got nil")
-	}
-
 	if d.IsAlreadyAssigned != assigned {
 		t.Fatalf("Expected IsAlreadyAssigned to be %v, got %v", assigned, d.IsAlreadyAssigned)
 	}
