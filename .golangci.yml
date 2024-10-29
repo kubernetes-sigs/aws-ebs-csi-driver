@@ -28,9 +28,31 @@ linters:
     - dogsled
     - dupword
     - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
     - whitespace
   disable:
     - govet # We already run with `make verify/govet`
-    - depguard # We don't use this
+    - depguard # We don't use this today
     - cyclop # TODO FIXME (at least for non-tests)
     - dupl # TODO FIXME (tests + non-tests)
+    - err113 # TODO FIXME
+    - wsl # Doesn't fit with existing code style
+    - wrapcheck # Many false positives
+    - varnamelen # Many false positives
+    - mnd # Many false positives
+    - gomnd # Many false positives
+    - testpackage # We don't do this
+    - paralleltest # TODO FIXME
+    - gomoddirectives # We need `replace` in `go.mod`
+    - funlen # Many false positives
+    - gochecknoglobals  # TODO FIXME
+    - interfacebloat # False positives on AWS SDK interfaces
+    - exhaustruct # TODO FIXME
+    - lll # TODO FIXME
+    - nestif # Many false positives
+    - gocognit # Many false positives
+    - cyclop # Many false positives

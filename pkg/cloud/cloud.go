@@ -168,8 +168,8 @@ var (
 	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
 	ErrInvalidMaxResults = errors.New("MaxResults parameter must be 0 or greater than or equal to 5")
 
-	// VolumeNotBeingModified is returned if volume being described is not being modified
-	VolumeNotBeingModified = fmt.Errorf("volume is not being modified")
+	// ErrVolumeNotBeingModified is returned if volume being described is not being modified
+	ErrVolumeNotBeingModified = fmt.Errorf("volume is not being modified")
 
 	// ErrInvalidArgument is returned if parameters were rejected by cloud provider
 	ErrInvalidArgument = errors.New("invalid argument")
@@ -1718,7 +1718,7 @@ func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) 
 	waitErr := wait.ExponentialBackoff(c.vwp.modificationBackoff, func() (bool, error) {
 		m, err := c.getLatestVolumeModification(ctx, volumeID, true)
 		// Consider volumes that have never been modified as done
-		if err != nil && errors.Is(err, VolumeNotBeingModified) {
+		if err != nil && errors.Is(err, ErrVolumeNotBeingModified) {
 			return true, nil
 		} else if err != nil {
 			return false, err
@@ -1746,7 +1746,7 @@ func describeVolumesModifications(ctx context.Context, svc EC2API, request *ec2.
 		response, err := svc.DescribeVolumesModifications(ctx, request)
 		if err != nil {
 			if isAWSErrorModificationNotFound(err) {
-				return nil, VolumeNotBeingModified
+				return nil, ErrVolumeNotBeingModified
 			}
 			return nil, fmt.Errorf("error describing volume modifications: %w", err)
 		}
@@ -1774,14 +1774,14 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 		})
 		if err != nil {
 			if isAWSErrorModificationNotFound(err) {
-				return nil, VolumeNotBeingModified
+				return nil, ErrVolumeNotBeingModified
 			}
 			return nil, fmt.Errorf("error describing modifications in volume %q: %w", volumeID, err)
 		}
 
 		volumeMods := mod.VolumesModifications
 		if len(volumeMods) == 0 {
-			return nil, VolumeNotBeingModified
+			return nil, ErrVolumeNotBeingModified
 		}
 
 		return &volumeMods[len(volumeMods)-1], nil
@@ -1860,7 +1860,7 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 
 	// This call must NOT be batched because a missing volume modification will return client error
 	latestMod, err := c.getLatestVolumeModification(ctx, volumeID, false)
-	if err != nil && !errors.Is(err, VolumeNotBeingModified) {
+	if err != nil && !errors.Is(err, ErrVolumeNotBeingModified) {
 		return true, oldSizeGiB, fmt.Errorf("error fetching volume modifications for %q: %w", volumeID, err)
 	}
 
