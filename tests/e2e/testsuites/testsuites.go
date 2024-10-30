@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"

@@ -15,14 +15,12 @@ limitations under the License.
 package testsuites
 
 import (
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
-
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 // DynamicallyProvisionedVolumeSnapshotTest will provision required StorageClass(es),VolumeSnapshotClass(es), PVC(s) and Pod(s)

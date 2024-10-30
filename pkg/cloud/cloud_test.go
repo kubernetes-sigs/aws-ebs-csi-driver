@@ -26,20 +26,17 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-
 	"github.com/aws/smithy-go"
-
 	"github.com/golang/mock/gomock"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (

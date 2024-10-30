@@ -36,7 +36,85 @@ linters:
     - fatcontext
     - forbidigo
     - forcetypeassert
+    - gci
+    - ginkgolinter
+    - gocheckcompilerdirectives
+#    - gochecknoglobals
+#    - gochecknoinits
+#    - gochecksumtype
+#    - gocognit
+#    - goconst
+#    - gocritic
+#    - gocyclo
+#    - godot
+#    - godox
+#    - gofmt
+#    - gofumpt
+#    - goheader
+#    - goimports
+#    - gomoddirectives
+#    - gomodguard
+#    - goprintffuncname
+#    - gosec
+#    - gosimple
+#    - gosmopolitan
+#    - govet
+#    - grouper
+#    - importas
+#    - inamedparam
+#    - ineffassign
+#    - interfacebloat
+#    - intrange
+#    - ireturn
+#    - lll
+#    - loggercheck
+#    - maintidx
+#    - makezero
+#    - mirror
+#    - misspell
+#    - mnd
+#    - musttag
+#    - nakedret
+#    - nestif
+#    - nilerr
+#    - nilnil
+#    - nlreturn
+#    - noctx
+#    - nolintlint
+#    - nonamedreturns
+#    - nosprintfhostport
+#    - paralleltest
+#    - perfsprint
+#    - prealloc
+#    - predeclared
+#    - promlinter
+#    - protogetter
+#    - reassign
+#    - revive
+#    - rowserrcheck
+#    - sloglint
+#    - spancheck
+#    - sqlclosecheck
+#    - staticcheck
+#    - stylecheck
+#    - tagalign
+#    - tagliatelle
+#    - tenv
+#    - testableexamples
+#    - testifylint
+#    - testpackage
+#    - thelper
+#    - tparallel
+#    - unconvert
+#    - unparam
+#    - unused
+#    - usestdlibvars
+#    - varnamelen
+#    - wastedassign
     - whitespace
+#    - wrapcheck
+#    - wsl
+#    - zerologlint
   disable:
     - govet # We already run with `make verify/govet`
     - depguard # We don't use this today

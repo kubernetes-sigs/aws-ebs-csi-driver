@@ -18,13 +18,11 @@ import (
 	"fmt"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/kubernetes/test/e2e/framework"
-
-	clientset "k8s.io/client-go/kubernetes"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/test/e2e/framework"
 )
 
 const expectedReadOnlyLog = "Read-only file system"

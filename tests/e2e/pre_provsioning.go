@@ -22,15 +22,14 @@ import (
 	"strings"
 	"time"
 
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	k8srestclient "k8s.io/client-go/rest"
-
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
+	k8srestclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
 )

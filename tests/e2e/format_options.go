@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"fmt"
+
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
