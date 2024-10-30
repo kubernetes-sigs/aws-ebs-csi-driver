@@ -583,7 +583,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		iops = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
-	var tags []types.Tag
+	tags := make([]types.Tag, 0, len(diskOptions.Tags))
 	for key, value := range diskOptions.Tags {
 		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
@@ -1274,8 +1274,9 @@ func extractSnapshotKey(s *types.Snapshot, batcher snapshotBatcherType) (string,
 func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
 	descriptions := "Created by AWS EBS CSI driver for volume " + volumeID
 
-	var tags []types.Tag
 	var request *ec2.CreateSnapshotInput
+
+	tags := make([]types.Tag, 0, len(snapshotOptions.Tags))
 	for key, value := range snapshotOptions.Tags {
 		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
@@ -1384,7 +1385,8 @@ func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults i
 	if err != nil {
 		return nil, err
 	}
-	var snapshots []*Snapshot
+
+	snapshots := make([]*Snapshot, 0, len(ec2SnapshotsResponse.Snapshots))
 	for _, ec2Snapshot := range ec2SnapshotsResponse.Snapshots {
 		snapshots = append(snapshots, c.ec2SnapshotResponseToStruct(ec2Snapshot))
 	}

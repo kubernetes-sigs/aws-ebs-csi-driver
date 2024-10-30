@@ -53,27 +53,19 @@ linters:
     - inamedparam
     - ineffassign
     - intrange
-#    - ireturn
-#    - lll
-#    - loggercheck
-#    - maintidx
-#    - makezero
-#    - mirror
-#    - misspell
-#    - mnd
-#    - musttag
-#    - nakedret
-#    - nestif
-#    - nilerr
-#    - nilnil
-#    - nlreturn
-#    - noctx
-#    - nolintlint
-#    - nonamedreturns
-#    - nosprintfhostport
-#    - paralleltest
+    - loggercheck
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
 #    - perfsprint
-#    - prealloc
+    - prealloc
 #    - predeclared
 #    - promlinter
 #    - protogetter
@@ -128,3 +120,7 @@ linters:
     - godox # TODO FIXME
     - gofumpt # TODO Ask team
     - gosec # TODO Urgent not too bad
+    - ireturn # ask team
+    - maintidx # oof
+    - nlreturn # Meh, ask team
+    - nonamedreturns # meh ask team

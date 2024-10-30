@@ -489,7 +489,8 @@ func validateControllerUnpublishVolumeRequest(req *csi.ControllerUnpublishVolume
 
 func (d *ControllerService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
 	klog.V(4).InfoS("ControllerGetCapabilities: called", "args", req)
-	var caps []*csi.ControllerServiceCapability
+
+	caps := make([]*csi.ControllerServiceCapability, 0, len(controllerCaps))
 	for _, cap := range controllerCaps {
 		c := &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
@@ -975,7 +976,7 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) *csi.CreateSnapshotResp
 }
 
 func newListSnapshotsResponse(cloudResponse *cloud.ListSnapshotsResponse) *csi.ListSnapshotsResponse {
-	var entries []*csi.ListSnapshotsResponse_Entry
+	entries := make([]*csi.ListSnapshotsResponse_Entry, 0, len(cloudResponse.Snapshots))
 	for _, snapshot := range cloudResponse.Snapshots {
 		snapshotResponseEntry := newListSnapshotsResponseEntry(snapshot)
 		entries = append(entries, snapshotResponseEntry)
