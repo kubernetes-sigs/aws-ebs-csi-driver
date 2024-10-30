@@ -287,21 +287,22 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 
 	wg.Wait()
 
-	if volumeTypeChosen == NewVolumeType1 {
+	switch volumeTypeChosen {
+	case NewVolumeType1:
 		if volumeType1Err {
 			t.Error("Controller chose", NewVolumeType1, "but errored request")
 		}
 		if !volumeType2Error {
 			t.Error("Controller chose", NewVolumeType1, "but returned success to", NewVolumeType2, "request")
 		}
-	} else if volumeTypeChosen == NewVolumeType2 {
+	case NewVolumeType2:
 		if volumeType2Error {
 			t.Error("Controller chose", NewVolumeType2, "but errored request")
 		}
 		if !volumeType1Err {
 			t.Error("Controller chose", NewVolumeType2, "but returned success to", NewVolumeType1, "request")
 		}
-	} else {
+	default:
 		t.Error("No volume type chosen")
 	}
 }

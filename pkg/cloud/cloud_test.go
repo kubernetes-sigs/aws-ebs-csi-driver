@@ -2667,24 +2667,14 @@ func TestResizeOrModifyDisk(t *testing.T) {
 			}
 
 			newSize, err := c.ResizeOrModifyDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB), tc.modifyDiskOptions)
-			if err != nil {
-				if tc.expErr == nil {
-					t.Fatalf("ResizeOrModifyDisk() failed: expected no error, got: %v", err)
-				} else {
-					if errors.Is(tc.expErr, ErrInvalidArgument) {
-						if !errors.Is(err, ErrInvalidArgument) {
-							t.Fatalf("ResizeOrModifyDisk() failed: expected ErrInvalidArgument, got: %v", err)
-						}
-					}
-				}
-			} else {
-				if tc.expErr != nil {
-					t.Fatal("ResizeOrModifyDisk() failed: expected error, got nothing")
-				} else {
-					if tc.reqSizeGiB != newSize {
-						t.Fatalf("ResizeOrModifyDisk() failed: expected capacity %d, got %d", tc.reqSizeGiB, newSize)
-					}
-				}
+			switch {
+			case errors.Is(tc.expErr, ErrInvalidArgument):
+				require.ErrorIs(t, err, ErrInvalidArgument, "ResizeOrModifyDisk() should return ErrInvalidArgument")
+			case tc.expErr != nil:
+				require.Error(t, err, "ResizeOrModifyDisk() should return error")
+			default:
+				require.NoError(t, err, "ResizeOrModifyDisk() should not return error")
+				assert.Equal(t, tc.reqSizeGiB, newSize, "ResizeOrModifyDisk() returned unexpected capacity")
 			}
 
 			mockCtrl.Finish()
@@ -2788,15 +2778,11 @@ func TestModifyTags(t *testing.T) {
 			if err != nil {
 				if tc.expErr == nil {
 					t.Fatalf("ModifyTags() failed: expected no error, got: %v", err)
-				} else {
-					if !strings.Contains(err.Error(), tc.expErr.Error()) {
-						t.Fatalf("ModifyTags() failed: expected error %v, got: %v", tc.expErr, err)
-					}
+				} else if !strings.Contains(err.Error(), tc.expErr.Error()) {
+					t.Fatalf("ModifyTags() failed: expected error %v, got: %v", tc.expErr, err)
 				}
-			} else {
-				if tc.expErr != nil {
-					t.Fatal("ModifyTags() failed: expected error, got nothing")
-				}
+			} else if tc.expErr != nil {
+				t.Fatal("ModifyTags() failed: expected error, got nothing")
 			}
 
 			mockCtrl.Finish()

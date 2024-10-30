@@ -34,7 +34,7 @@ type Options struct {
 
 	// #### Server options ####
 
-	//Endpoint is the endpoint for the CSI driver server
+	// Endpoint is the endpoint for the CSI driver server
 	Endpoint string
 	// HttpEndpoint is the TCP network address where the HTTP server for metrics will listen
 	HttpEndpoint string
@@ -52,7 +52,7 @@ type Options struct {
 	ExtraTags map[string]string
 	// ExtraVolumeTags is a map of tags that will be attached to each dynamically provisioned
 	// volume.
-	// DEPRECATED: Use ExtraTags instead.
+	// Deprecated: Use ExtraTags instead.
 	ExtraVolumeTags map[string]string
 	// ID of the kubernetes cluster.
 	KubernetesClusterID string
@@ -129,11 +129,12 @@ func (o *Options) Validate() error {
 	}
 
 	if o.MetricsCertFile != "" || o.MetricsKeyFile != "" {
-		if o.HttpEndpoint == "" {
+		switch {
+		case o.HttpEndpoint == "":
 			return fmt.Errorf("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
-		} else if o.MetricsCertFile == "" {
+		case o.MetricsCertFile == "":
 			return fmt.Errorf("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
-		} else if o.MetricsKeyFile == "" {
+		case o.MetricsKeyFile == "":
 			return fmt.Errorf("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
 		}
 	}

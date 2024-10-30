@@ -63,14 +63,15 @@ func PreStop(clientset kubernetes.Interface) error {
 	}
 
 	node, err := fetchNode(clientset, nodeName)
-	if k8serrors.IsNotFound(err) {
+	switch {
+	case k8serrors.IsNotFound(err):
 		klog.InfoS("PreStop: node does not exist - assuming this is a termination event, checking for remaining VolumeAttachments", "node", nodeName)
-	} else if err != nil {
+	case err != nil:
 		return err
-	} else if !isNodeBeingDrained(node) {
+	case !isNodeBeingDrained(node):
 		klog.InfoS("PreStop: node is not being drained, skipping VolumeAttachments check", "node", nodeName)
 		return nil
-	} else {
+	default:
 		klog.InfoS("PreStop: node is being drained, checking for remaining VolumeAttachments", "node", nodeName)
 	}
 

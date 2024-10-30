@@ -136,8 +136,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// If the access type is block, do nothing for stage
-	switch volCap.GetAccessType().(type) {
-	case *csi.VolumeCapability_Block:
+	if _, isAccessTypeBlock := volCap.GetAccessType().(*csi.VolumeCapability_Block); isAccessTypeBlock {
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
@@ -657,7 +656,7 @@ func (d *NodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		return status.Errorf(codes.Internal, "Could not create file %q: %v", target, err)
 	}
 
-	//Checking if the target file is already mounted with a device.
+	// Checking if the target file is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
@@ -689,14 +688,14 @@ func (d *NodeService) isMounted(_ string, target string) (bool, error) {
 	*/
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
-		//Checking if the path exists and error is related to Corrupted Mount, in that case, the system could unmount and mount.
+		// Checking if the path exists and error is related to Corrupted Mount, in that case, the system could unmount and mount.
 		_, pathErr := d.mounter.PathExists(target)
 		if pathErr != nil && d.mounter.IsCorruptedMnt(pathErr) {
 			klog.V(4).InfoS("NodePublishVolume: Target path is a corrupted mount. Trying to unmount.", "target", target)
 			if mntErr := d.mounter.Unpublish(target); mntErr != nil {
 				return false, status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, mntErr)
 			}
-			//After successful unmount, the device is ready to be mounted.
+			// After successful unmount, the device is ready to be mounted.
 			return false, nil
 		}
 		return false, status.Errorf(codes.Internal, "Could not check if %q is a mount point: %v, %v", target, err, pathErr)
@@ -735,7 +734,7 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		return status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
-	//Checking if the target directory is already mounted with a device.
+	// Checking if the target directory is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
@@ -799,7 +798,7 @@ func (d *NodeService) getVolumesLimit() int64 {
 			availableAttachments = availableAttachments - enis - reservedSlots
 		}
 	}
-	availableAttachments = availableAttachments - reservedVolumeAttachments
+	availableAttachments -= reservedVolumeAttachments
 	if availableAttachments <= 0 {
 		availableAttachments = 1
 	}

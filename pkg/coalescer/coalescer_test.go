@@ -95,11 +95,12 @@ func TestCoalescer(t *testing.T) {
 			for range tc.inputs {
 				err := <-testChannel
 				if err != nil {
-					if errors.Is(err, errFailedToMerge) {
+					switch {
+					case errors.Is(err, errFailedToMerge):
 						mergeFailure = true
-					} else if errors.Is(err, errFailedToExecute) {
+					case errors.Is(err, errFailedToExecute):
 						executeFailure = true
-					} else {
+					default:
 						t.Fatalf("Unexpected error %v", err)
 					}
 				}

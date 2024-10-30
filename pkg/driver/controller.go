@@ -645,8 +645,8 @@ func isBlock(cap *csi.VolumeCapability) bool {
 }
 
 func isValidVolumeContext(volContext map[string]string) bool {
-	//There could be multiple volume attributes in the volumeContext map
-	//Validate here case by case
+	// There could be multiple volume attributes in the volumeContext map
+	// Validate here case by case
 	if partition, ok := volContext[VolumeAttributePartition]; ok {
 		partitionInt, err := strconv.ParseInt(partition, 10, 64)
 		if err != nil {
@@ -1017,17 +1017,17 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 
 // BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
 func BuildOutpostArn(segments map[string]string) string {
-	if len(segments[AwsPartitionKey]) <= 0 {
+	if len(segments[AwsPartitionKey]) == 0 {
 		return ""
 	}
 
-	if len(segments[AwsRegionKey]) <= 0 {
+	if len(segments[AwsRegionKey]) == 0 {
 		return ""
 	}
-	if len(segments[AwsOutpostIDKey]) <= 0 {
+	if len(segments[AwsOutpostIDKey]) == 0 {
 		return ""
 	}
-	if len(segments[AwsAccountIDKey]) <= 0 {
+	if len(segments[AwsAccountIDKey]) == 0 {
 		return ""
 	}
 
@@ -1041,8 +1041,7 @@ func BuildOutpostArn(segments map[string]string) string {
 
 func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramName string, fsConfigs map[string]fileSystemConfig) error {
 	for _, volCap := range volumeCapabilities {
-		switch volCap.GetAccessType().(type) {
-		case *csi.VolumeCapability_Block:
+		if _, isBlockVolCap := volCap.GetAccessType().(*csi.VolumeCapability_Block); isBlockVolCap {
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("Cannot use %s with block volume", paramName))
 		}
 

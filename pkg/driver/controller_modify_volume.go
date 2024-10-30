@@ -192,15 +192,16 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 		case ModificationKeyVolumeType:
 			options.modifyDiskOptions.VolumeType = value
 		default:
-			if strings.HasPrefix(key, ModificationAddTag) {
+			switch {
+			case strings.HasPrefix(key, ModificationAddTag):
 				st := strings.SplitN(value, "=", 2)
 				if len(st) < 2 {
 					return nil, status.Errorf(codes.InvalidArgument, "Invalid tag specification: %v", st)
 				}
 				options.modifyTagsOptions.TagsToAdd[st[0]] = st[1]
-			} else if strings.HasPrefix(key, ModificationDeleteTag) {
+			case strings.HasPrefix(key, ModificationDeleteTag):
 				options.modifyTagsOptions.TagsToDelete = append(options.modifyTagsOptions.TagsToDelete, value)
-			} else {
+			default:
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter key: %s", key)
 			}
 		}

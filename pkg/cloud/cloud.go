@@ -127,7 +127,7 @@ const (
 	KubernetesTagKeyPrefix = "kubernetes.io"
 	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
 	AWSTagKeyPrefix = "aws:"
-	//AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver
+	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
 
@@ -1700,13 +1700,14 @@ func (c *cloud) checkDesiredState(ctx context.Context, volumeID string, desiredS
 
 	// Check if there is a mismatch between the requested modification and the current volume
 	// If there is, the volume is still modifying and we should not return a success
-	if realSizeGiB < desiredSizeGiB {
+	switch {
+	case realSizeGiB < desiredSizeGiB:
 		return realSizeGiB, fmt.Errorf("volume %q is still being expanded to %d size", volumeID, desiredSizeGiB)
-	} else if options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != options.IOPS) {
+	case options.IOPS != 0 && (volume.Iops == nil || *volume.Iops != options.IOPS):
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to iops %d", volumeID, options.IOPS)
-	} else if options.VolumeType != "" && !strings.EqualFold(string(volume.VolumeType), options.VolumeType) {
+	case options.VolumeType != "" && !strings.EqualFold(string(volume.VolumeType), options.VolumeType):
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to type %q", volumeID, options.VolumeType)
-	} else if options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != options.Throughput) {
+	case options.Throughput != 0 && (volume.Throughput == nil || *volume.Throughput != options.Throughput):
 		return realSizeGiB, fmt.Errorf("volume %q is still being modified to throughput %d", volumeID, options.Throughput)
 	}
 

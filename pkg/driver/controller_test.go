@@ -3666,10 +3666,8 @@ func TestControllerExpandVolume(t *testing.T) {
 				if !tc.expError {
 					t.Fatalf("Unexpected error: %v", err)
 				}
-			} else {
-				if tc.expError {
-					t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
-				}
+			} else if tc.expError {
+				t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
 			}
 
 			sizeGiB := util.BytesToGiB(resp.GetCapacityBytes())

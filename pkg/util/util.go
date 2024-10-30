@@ -147,7 +147,7 @@ func CountMACAddresses(s string) int {
 
 // NormalizeWindowsPath normalizes a Windows path
 func NormalizeWindowsPath(path string) string {
-	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	normalizedPath := strings.ReplaceAll(path, "/", "\\")
 	if strings.HasPrefix(normalizedPath, "\\") {
 		normalizedPath = "c:" + normalizedPath
 	}

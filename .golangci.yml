@@ -39,14 +39,8 @@ linters:
     - gci
     - ginkgolinter
     - gocheckcompilerdirectives
-#    - gochecknoglobals
-#    - gochecknoinits
-#    - gochecksumtype
-#    - gocognit
-#    - goconst
-#    - gocritic
-#    - gocyclo
-#    - godot
+    - gochecksumtype
+    - gocritic
 #    - godox
 #    - gofmt
 #    - gofumpt
@@ -137,3 +131,6 @@ linters:
     - nestif # Many false positives
     - gocognit # Many false positives
     - cyclop # Many false positives
+    - godot # TODO Ask team
+    - goconst # TODO FIXME
+    - gochecknoinits # TODO FIXME
