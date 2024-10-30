@@ -43,6 +43,7 @@ func mockExecutionWithError(inputs []string) (map[string]string, error) {
 }
 
 func TestBatcher(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		name         string
 		mockFunc     func(inputs []string) (map[string]string, error)

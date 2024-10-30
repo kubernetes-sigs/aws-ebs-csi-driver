@@ -51,6 +51,7 @@ func mockExecute(_ string, input int) (string, error) {
 }
 
 func TestCoalescer(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name                 string
 		inputs               []int

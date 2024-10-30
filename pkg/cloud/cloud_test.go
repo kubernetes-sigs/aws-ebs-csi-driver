@@ -124,6 +124,7 @@ func TestNewCloud(t *testing.T) {
 	}
 }
 func TestBatchDescribeVolumes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		volumes  []types.Volume
@@ -302,6 +303,7 @@ func executeDescribeVolumesTest(t *testing.T, c *cloud, volumeIDs, volumeNames [
 }
 
 func TestBatchDescribeInstances(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name        string
 		instanceIds []string
@@ -446,6 +448,7 @@ func extractSnapshotIdentifiers(snapshots []types.Snapshot) (snapshotIDs []strin
 }
 
 func TestBatchDescribeSnapshots(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name      string
 		snapshots []types.Snapshot
@@ -698,6 +701,7 @@ func TestCheckDesiredState(t *testing.T) {
 }
 
 func TestBatchDescribeVolumesModifications(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name      string
 		volumeIds []string
@@ -810,6 +814,7 @@ func executeDescribeVolumesModificationsTest(t *testing.T, c *cloud, volumeIds [
 }
 
 func TestCreateDisk(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name                 string
 		volumeName           string

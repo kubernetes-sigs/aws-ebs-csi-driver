@@ -79,10 +79,9 @@ linters:
     - tagliatelle
     - tenv
     - testableexamples
-#    - testifylint
-#    - testpackage
+    - testifylint
 #    - thelper
-#    - tparallel
+    - tparallel
     - unconvert
     - unparam
     - unused

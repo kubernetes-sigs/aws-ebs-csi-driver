@@ -51,6 +51,7 @@ func modifierForK8sModifyVolume(ctx context.Context, driver ControllerService, n
 }
 
 func TestVolumeModificationWithCoalescing(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name         string
 		testFunction func(t *testing.T, executor modifyVolumeExecutor)
