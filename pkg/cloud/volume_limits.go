@@ -28,6 +28,7 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
+//nolint:gochecknoinits // TODO Refactor to avoid using init function to prevent side-effects
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
