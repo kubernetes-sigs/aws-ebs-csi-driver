@@ -96,6 +96,7 @@ func TestVolumeModificationWithCoalescing(t *testing.T) {
 
 // TestBasicRequestCoalescingSuccess tests the success case of coalescing 2 requests from ControllerExpandVolume and a modify function respectively.
 func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -157,6 +158,7 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 
 // TestRequestFail tests failing requests from ResizeOrModifyDisk failure.
 func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -216,6 +218,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 // 3) Change volume type to NewVolumeType2
 // The expected result is the resizing request succeeds and one of the volume-type requests fails.
 func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType1 = "gp3"
 	const NewVolumeType2 = "io2"
 	const NewSize = 5 * util.GiB
@@ -310,6 +313,7 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 
 // TestSequential tests sending 2 requests sequentially.
 func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -368,6 +372,7 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 
 // TestDuplicateRequest tests sending multiple same requests roughly in parallel.
 func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
 
@@ -423,6 +428,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 
 // TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk
 func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	var ec2ModifyVolumeFinished = false
@@ -490,6 +496,7 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 }
 
 func wrapTimeout(t *testing.T, failMessage string, execFunc func()) {
+	t.Helper()
 	timeout := time.After(15 * time.Second)
 	done := make(chan bool)
 	go func() {

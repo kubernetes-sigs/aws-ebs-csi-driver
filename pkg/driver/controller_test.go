@@ -98,6 +98,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -137,6 +138,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success outposts",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				outpostArn := strippedOutpostArn
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
@@ -227,6 +229,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -283,6 +286,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot, volume already exists",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -339,6 +343,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot, volume already exists with different snapshot ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -374,6 +379,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "",
 					CapacityRange:      stdCapRange,
@@ -410,6 +416,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success same name and same capacity",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -497,6 +504,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail same name and different capacity",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -561,6 +569,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success no capacity range",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					VolumeCapabilities: stdVolCap,
@@ -621,6 +630,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with correct round up",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      &csi.CapacityRange{RequiredBytes: 1073741825},
@@ -675,6 +685,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type gp3",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				// iops 5000 requires at least 10GB
 				volSize := int64(20 * 1024 * 1024 * 1024)
 				capRange := &csi.CapacityRange{RequiredBytes: volSize}
@@ -721,6 +732,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io1 using iopsPerGB",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -763,6 +775,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io1 using iops",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -805,6 +818,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io2 using iopsPerGB",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -847,6 +861,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io2 using iops",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -889,6 +904,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type sc1",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -930,6 +946,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type standard",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -971,6 +988,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume encryption",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1012,6 +1030,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume encryption with KMS key",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1054,6 +1073,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with mutable parameters",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				volSize := int64(20 * 1024 * 1024 * 1024)
 				capRange := &csi.CapacityRange{RequiredBytes: volSize}
 				req := &csi.CreateVolumeRequest{
@@ -1103,6 +1123,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid volume parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1144,6 +1165,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid iops parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1184,6 +1206,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid throughput parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1224,6 +1247,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success when volume exists and contains VolumeContext and AccessibleTopology",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -1321,6 +1345,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with extra tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName          = "random-vol-name"
 					extraVolumeTagKey   = "extra-tag-key"
@@ -1379,6 +1404,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName                        = "random-vol-name"
 					clusterID                         = "test-cluster-id"
@@ -1442,6 +1468,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with legacy tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName              = "random-vol-name"
 					expectedPVCNameTag      = "kubernetes.io/created-for/pvc/name"
@@ -1506,6 +1533,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid volume access modes",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1547,6 +1575,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with in-flight request",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1579,6 +1608,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "Fail with IdempotentParameterMismatch error",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1606,6 +1636,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success multi-attach",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1645,6 +1676,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail multi-attach - invalid mount capability",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1870,6 +1902,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "vol-test",
 				}
@@ -1902,6 +1935,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "success invalid volume id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "invalid-volume-name",
 				}
@@ -1934,6 +1968,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "fail delete disk",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "test-vol",
 				}
@@ -1970,6 +2005,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "fail another request already in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "vol-test",
 				}
@@ -2233,6 +2269,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2274,6 +2311,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success outpost",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name: "test-snapshot",
 					Parameters: map[string]string{
@@ -2317,6 +2355,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName          = "test-snapshot"
 					clusterID             = "test-cluster-id"
@@ -2376,6 +2415,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with extra tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName        = "test-snapshot"
 					extraVolumeTagKey   = "extra-tag-key"
@@ -2433,6 +2473,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Parameters:     nil,
 					SourceVolumeId: "vol-test",
@@ -2464,6 +2505,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail outpost arn not valid",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name: "test-snapshot",
 					Parameters: map[string]string{
@@ -2492,6 +2534,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail same name different volume ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2559,6 +2602,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success same name same volume ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2611,6 +2655,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with another request in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2639,6 +2684,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with VolumeSnapshotClass tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName  = "test-snapshot"
 					extraTagKey   = "test-key"
@@ -2696,6 +2742,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with VolumeSnapshotClass with Name tag and cluster id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 					nameTagValue = "test-name-tag-value"
@@ -2754,6 +2801,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with EnableFastSnapshotRestore - normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2819,6 +2867,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with EnableFastSnapshotRestore - failed to get availability zones",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2883,6 +2932,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore - call to enable FSR failed",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2948,6 +2998,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore - invalid availability zones",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2984,6 +3035,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -3049,6 +3101,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3074,6 +3127,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success not found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3099,6 +3153,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "fail with another request in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3139,6 +3194,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{}
 				mockCloudSnapshotsResponse := &cloud.ListSnapshotsResponse{
 					Snapshots: []*cloud.Snapshot{
@@ -3184,6 +3240,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success no snapshots",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{}
 				ctx := context.Background()
 				mockCtl := gomock.NewController(t)
@@ -3211,6 +3268,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success snapshot ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3247,6 +3305,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success snapshot ID not found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3277,6 +3336,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail snapshot ID multiple found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3310,6 +3370,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail 0 < MaxEntries < 5",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					MaxEntries: 4,
 				}
@@ -3680,6 +3741,7 @@ func TestControllerExpandVolume(t *testing.T) {
 }
 
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
+	t.Helper()
 	if err == nil {
 		t.Fatalf("Expected operation to fail but got no error")
 	}

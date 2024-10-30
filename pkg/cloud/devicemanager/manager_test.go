@@ -239,6 +239,7 @@ func newFakeInstance(instanceID, volumeID, devicePath string) *types.Instance {
 }
 
 func assertDevice(t *testing.T, d *Device, assigned bool, err error) {
+	t.Helper()
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

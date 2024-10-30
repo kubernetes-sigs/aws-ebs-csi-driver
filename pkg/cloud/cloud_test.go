@@ -238,6 +238,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 	}
 }
 func executeDescribeVolumesTest(t *testing.T, c *cloud, volumeIDs, volumeNames []string, expErr error) {
+	t.Helper()
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeVolumesInput {
@@ -366,6 +367,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 }
 
 func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIDs []string, expErr error) {
+	t.Helper()
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeInstancesInput {
@@ -537,6 +539,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 }
 
 func executeDescribeSnapshotsTest(t *testing.T, c *cloud, snapshotIDs, snapshotNames []string, expErr error) {
+	t.Helper()
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeSnapshotsInput {
@@ -762,6 +765,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 }
 
 func executeDescribeVolumesModificationsTest(t *testing.T, c *cloud, volumeIDs []string, expErr error) {
+	t.Helper()
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeVolumesModificationsInput {
@@ -2970,6 +2974,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success: normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				expSnapshots := []*Snapshot{
 					{
 						SourceVolumeID: "snap-test-volume1",
@@ -3043,6 +3048,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success: with volume ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				sourceVolumeID := "snap-test-volume"
 				expSnapshots := []*Snapshot{
 					{
@@ -3117,6 +3123,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success: max results, next token",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				maxResults := 5
 				nextTokenValue := "nextTokenValue"
 				var expSnapshots []*Snapshot
@@ -3189,6 +3196,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail: AWS DescribeSnapshots error",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 				mockEC2 := NewMockEC2API(mockCtl)
@@ -3206,6 +3214,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail: no snapshots ErrNotFound",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 				mockEC2 := NewMockEC2API(mockCtl)

@@ -2510,6 +2510,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "failed to get node",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, nil, fmt.Errorf("Failed to get node!"))
 
@@ -2522,6 +2523,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "no taints to remove",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{}, nil)
 
@@ -2563,6 +2565,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "failed to patch node",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2621,6 +2624,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "success",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, mockNode := getNodeMock(mockCtl, nodeName, &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2679,6 +2683,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "failed to get CSINode",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2714,6 +2719,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "allocatable value not set for driver on node",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2763,6 +2769,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 		{
 			name: "driver not found on node",
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
+				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
 				getNodeMock, _ := getNodeMock(mockCtl, nodeName, &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
