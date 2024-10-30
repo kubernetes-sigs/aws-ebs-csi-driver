@@ -150,8 +150,8 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *volumesnapshot
 	return snapshotObj
 }
 
-func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId string) *volumesnapshotv1.VolumeSnapshotContent {
-	By("creating a VolumeSnapshotContent from snapshotId: " + snapshotId)
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotID string) *volumesnapshotv1.VolumeSnapshotContent {
+	By("creating a VolumeSnapshotContent from snapshotID: " + snapshotID)
 	snapshotContent := &volumesnapshotv1.VolumeSnapshotContent{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       VolumeSnapshotContentKind,
@@ -171,7 +171,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 			},
 			Driver: "ebs.csi.aws.com",
 			Source: volumesnapshotv1.VolumeSnapshotContentSource{
-				SnapshotHandle: aws.String(snapshotId),
+				SnapshotHandle: aws.String(snapshotID),
 			},
 		},
 	}

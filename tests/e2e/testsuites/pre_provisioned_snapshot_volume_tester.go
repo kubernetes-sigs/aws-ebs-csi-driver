@@ -31,12 +31,12 @@ type PreProvisionedVolumeSnapshotTest struct {
 	Pod       PodDetails
 }
 
-func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient k8srestclient.Interface, namespace *v1.Namespace, snapshotId string) {
+func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient k8srestclient.Interface, namespace *v1.Namespace, snapshotID string) {
 	By("taking snapshots")
 	tvsc, cleanup := CreateVolumeSnapshotClass(restclient, namespace, t.CSIDriver, nil)
 	defer cleanup()
 
-	tvolumeSnapshotContent := tvsc.CreateStaticVolumeSnapshotContent(snapshotId)
+	tvolumeSnapshotContent := tvsc.CreateStaticVolumeSnapshotContent(snapshotID)
 	tvs := tvsc.CreateStaticVolumeSnapshot(tvolumeSnapshotContent)
 
 	defer tvsc.DeleteVolumeSnapshotContent(tvolumeSnapshotContent)

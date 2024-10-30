@@ -2699,7 +2699,7 @@ func TestCreateSnapshot(t *testing.T) {
 				const (
 					snapshotName = "test-snapshot"
 					nameTagValue = "test-name-tag-value"
-					clusterId    = "test-cluster-id"
+					clusterID    = "test-cluster-id"
 				)
 
 				req := &csi.CreateSnapshotRequest{
@@ -2728,7 +2728,7 @@ func TestCreateSnapshot(t *testing.T) {
 						cloud.SnapshotNameTagKey:               snapshotName,
 						cloud.AwsEbsDriverTagKey:               isManagedByDriver,
 						NameTag:                                nameTagValue,
-						ResourceLifecycleTagPrefix + clusterId: ResourceLifecycleOwned,
+						ResourceLifecycleTagPrefix + clusterID: ResourceLifecycleOwned,
 					},
 				}
 
@@ -2739,7 +2739,7 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := ControllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					options:  &Options{KubernetesClusterID: clusterId},
+					options:  &Options{KubernetesClusterID: clusterID},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -3358,21 +3358,21 @@ func TestControllerPublishVolume(t *testing.T) {
 
 	testCases := []struct {
 		name             string
-		volumeId         string
-		nodeId           string
+		volumeID         string
+		nodeID           string
 		volumeCapability *csi.VolumeCapability
-		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
+		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string)
 		expResp          *csi.ControllerPublishVolumeResponse
 		errorCode        codes.Code
 		setupFunc        func(ControllerService *ControllerService)
 	}{
 		{
 			name:             "AttachDisk successfully with valid volume ID, node ID, and volume capability",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), volumeId, gomock.Eq(nodeId)).Return(expDevicePath, nil)
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), volumeID, gomock.Eq(nodeID)).Return(expDevicePath, nil)
 			},
 			expResp: &csi.ControllerPublishVolumeResponse{
 				PublishContext: map[string]string{DevicePathKey: expDevicePath},
@@ -3381,11 +3381,11 @@ func TestControllerPublishVolume(t *testing.T) {
 		},
 		{
 			name:             "AttachDisk when volume is already attached to the node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
 			},
 			expResp: &csi.ControllerPublishVolumeResponse{
 				PublishContext: map[string]string{DevicePathKey: expDevicePath},
@@ -3395,28 +3395,28 @@ func TestControllerPublishVolume(t *testing.T) {
 
 		{
 			name:             "Invalid argument error when no VolumeId provided",
-			volumeId:         "",
-			nodeId:           expInstanceID,
+			volumeID:         "",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
 			errorCode:        codes.InvalidArgument,
 		},
 		{
 			name:             "Invalid argument error when no NodeId provided",
-			volumeId:         "vol-test",
-			nodeId:           "",
+			volumeID:         "vol-test",
+			nodeID:           "",
 			volumeCapability: stdVolCap,
 			errorCode:        codes.InvalidArgument,
 		},
 		{
 			name:      "Invalid argument error when no VolumeCapability provided",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:     "Invalid argument error when invalid VolumeCapability provided",
-			volumeId: "vol-test",
-			nodeId:   expInstanceID,
+			volumeID: "vol-test",
+			nodeID:   expInstanceID,
 			volumeCapability: &csi.VolumeCapability{
 				AccessMode: &csi.VolumeCapability_AccessMode{
 					Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
@@ -3426,40 +3426,40 @@ func TestControllerPublishVolume(t *testing.T) {
 		},
 		{
 			name:             "Internal error when AttachDisk fails",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "test error"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "test error"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Fail when node does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(nodeId)).Return("", status.Error(codes.Internal, "test error"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(nodeID)).Return("", status.Error(codes.Internal, "test error"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Fail when volume does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "volume not found"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "volume not found"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Aborted error when AttachDisk operation already in-flight",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
 			},
 			errorCode: codes.Aborted,
 			setupFunc: func(ControllerService *ControllerService) {
@@ -3471,9 +3471,9 @@ func TestControllerPublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &csi.ControllerPublishVolumeRequest{
-				NodeId:           tc.nodeId,
+				NodeId:           tc.nodeID,
 				VolumeCapability: tc.volumeCapability,
-				VolumeId:         tc.volumeId,
+				VolumeId:         tc.volumeID,
 			}
 			ctx := context.Background()
 
@@ -3504,58 +3504,58 @@ func TestControllerPublishVolume(t *testing.T) {
 func TestControllerUnpublishVolume(t *testing.T) {
 	testCases := []struct {
 		name       string
-		volumeId   string
-		nodeId     string
+		volumeID   string
+		nodeID     string
 		errorCode  codes.Code
-		mockDetach func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
+		mockDetach func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string)
 		expResp    *csi.ControllerUnpublishVolumeResponse
 		setupFunc  func(driver *ControllerService)
 	}{
 		{
 			name:      "DetachDisk successfully with valid volume ID and node ID",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(nil)
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(nil)
 			},
 			expResp: &csi.ControllerUnpublishVolumeResponse{},
 		},
 		{
 			name:      "Return success when volume not found during DetachDisk operation",
-			volumeId:  "vol-not-found",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-not-found",
+			nodeID:    expInstanceID,
 			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(cloud.ErrNotFound)
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(cloud.ErrNotFound)
 			},
 			expResp: &csi.ControllerUnpublishVolumeResponse{},
 		},
 		{
 			name:      "Invalid argument error when no VolumeId provided",
-			volumeId:  "",
-			nodeId:    expInstanceID,
+			volumeID:  "",
+			nodeID:    expInstanceID,
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:      "Invalid argument error when no NodeId provided",
-			volumeId:  "vol-test",
-			nodeId:    "",
+			volumeID:  "vol-test",
+			nodeID:    "",
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:      "Internal error when DetachDisk operation fails",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.Internal,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(errors.New("test error"))
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(errors.New("test error"))
 			},
 		},
 		{
 			name:      "Aborted error when operation already in-flight",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.Aborted,
 			setupFunc: func(driver *ControllerService) {
 				driver.inFlight.Insert("vol-test" + expInstanceID)
@@ -3566,8 +3566,8 @@ func TestControllerUnpublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &csi.ControllerUnpublishVolumeRequest{
-				NodeId:   tc.nodeId,
-				VolumeId: tc.volumeId,
+				NodeId:   tc.nodeID,
+				VolumeId: tc.volumeID,
 			}
 
 			ctx := context.Background()

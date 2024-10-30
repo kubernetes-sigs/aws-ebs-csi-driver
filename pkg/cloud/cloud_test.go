@@ -50,10 +50,10 @@ const (
 	defaultCreateDiskDeadline = time.Second * 5
 )
 
-func generateVolumes(volIdCount, volTagCount int) []types.Volume {
-	volumes := make([]types.Volume, 0, volIdCount+volTagCount)
+func generateVolumes(volIDCount, volTagCount int) []types.Volume {
+	volumes := make([]types.Volume, 0, volIDCount+volTagCount)
 
-	for i := range volIdCount {
+	for i := range volIDCount {
 		volumeID := fmt.Sprintf("vol-%d", i)
 		volumes = append(volumes, types.Volume{VolumeId: aws.String(volumeID)})
 	}
@@ -306,13 +306,13 @@ func TestBatchDescribeInstances(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name        string
-		instanceIds []string
+		instanceIDs []string
 		mockFunc    func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation)
 		expErr      error
 	}{
 		{
 			name:        "success: instance by ID",
-			instanceIds: []string{"i-001", "i-002", "i-003"},
+			instanceIDs: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
 				reservationOutput := &ec2.DescribeInstancesOutput{Reservations: reservations}
 				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(reservationOutput, expErr).Times(1)
@@ -321,7 +321,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 		},
 		{
 			name:        "fail: EC2 API generic error",
-			instanceIds: []string{"i-001", "i-002", "i-003"},
+			instanceIDs: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
 				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
@@ -329,7 +329,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 		},
 		{
 			name:        "fail: invalid request",
-			instanceIds: []string{""},
+			instanceIDs: []string{""},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
 				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
 			},
@@ -353,27 +353,27 @@ func TestBatchDescribeInstances(t *testing.T) {
 
 			// Setup mocks
 			var instances []types.Instance
-			for _, instanceId := range tc.instanceIds {
-				instances = append(instances, types.Instance{InstanceId: aws.String(instanceId)})
+			for _, instanceID := range tc.instanceIDs {
+				instances = append(instances, types.Instance{InstanceId: aws.String(instanceID)})
 			}
 			reservation := types.Reservation{Instances: instances}
 			reservations := []types.Reservation{reservation}
 			tc.mockFunc(mockEC2, tc.expErr, reservations)
 
-			executeDescribeInstancesTest(t, cloudInstance, tc.instanceIds, tc.expErr)
+			executeDescribeInstancesTest(t, cloudInstance, tc.instanceIDs, tc.expErr)
 		})
 	}
 }
 
-func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIds []string, expErr error) {
+func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIDs []string, expErr error) {
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeInstancesInput {
 		return &ec2.DescribeInstancesInput{InstanceIds: []string{id}}
 	}
 
-	requests := make([]*ec2.DescribeInstancesInput, 0, len(instanceIds))
-	for _, instanceID := range instanceIds {
+	requests := make([]*ec2.DescribeInstancesInput, 0, len(instanceIDs))
+	for _, instanceID := range instanceIDs {
 		requests = append(requests, getRequestForID(instanceID))
 	}
 
@@ -605,14 +605,14 @@ func executeDescribeSnapshotsTest(t *testing.T, c *cloud, snapshotIDs, snapshotN
 func TestCheckDesiredState(t *testing.T) {
 	testCases := []struct {
 		name           string
-		volumeId       string
+		volumeID       string
 		desiredSizeGiB int32
 		options        *ModifyDiskOptions
 		expErr         error
 	}{
 		{
 			name:           "success: normal path",
-			volumeId:       "vol-001",
+			volumeID:       "vol-001",
 			desiredSizeGiB: 5,
 			options: &ModifyDiskOptions{
 				VolumeType: VolumeTypeGP2,
@@ -622,7 +622,7 @@ func TestCheckDesiredState(t *testing.T) {
 		},
 		{
 			name:           "failure: volume is still being expanded",
-			volumeId:       "vol-001",
+			volumeID:       "vol-001",
 			desiredSizeGiB: 500,
 			options: &ModifyDiskOptions{
 				VolumeType: VolumeTypeGP2,
@@ -633,7 +633,7 @@ func TestCheckDesiredState(t *testing.T) {
 		},
 		{
 			name:           "failure: volume is still being modified to iops",
-			volumeId:       "vol-001",
+			volumeID:       "vol-001",
 			desiredSizeGiB: 50,
 			options: &ModifyDiskOptions{
 				VolumeType: VolumeTypeGP2,
@@ -644,7 +644,7 @@ func TestCheckDesiredState(t *testing.T) {
 		},
 		{
 			name:           "failure: volume is still being modifed to type",
-			volumeId:       "vol-001",
+			volumeID:       "vol-001",
 			desiredSizeGiB: 50,
 			options: &ModifyDiskOptions{
 				VolumeType: VolumeTypeGP3,
@@ -655,7 +655,7 @@ func TestCheckDesiredState(t *testing.T) {
 		},
 		{
 			name:           "failure: volume is still being modified to throughput",
-			volumeId:       "vol-001",
+			volumeID:       "vol-001",
 			desiredSizeGiB: 5,
 			options: &ModifyDiskOptions{
 				VolumeType: VolumeTypeGP2,
@@ -685,7 +685,7 @@ func TestCheckDesiredState(t *testing.T) {
 				},
 			},
 		}, nil)
-		_, err := cloudInstance.checkDesiredState(context.Background(), tc.volumeId, tc.desiredSizeGiB, tc.options)
+		_, err := cloudInstance.checkDesiredState(context.Background(), tc.volumeID, tc.desiredSizeGiB, tc.options)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("Did not expect to get an error but got %q", err)
@@ -704,13 +704,13 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name      string
-		volumeIds []string
+		volumeIDs []string
 		mockFunc  func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification)
 		expErr    error
 	}{
 		{
 			name:      "success: volumeModification by ID",
-			volumeIds: []string{"vol-001", "vol-002", "vol-003"},
+			volumeIDs: []string{"vol-001", "vol-002", "vol-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
 				volumeModificationsOutput := &ec2.DescribeVolumesModificationsOutput{VolumesModifications: volumeModifications}
 				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(volumeModificationsOutput, expErr).Times(1)
@@ -719,7 +719,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 		},
 		{
 			name:      "fail: EC2 API generic error",
-			volumeIds: []string{"vol-001", "vol-002", "vol-003"},
+			volumeIDs: []string{"vol-001", "vol-002", "vol-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
 				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
@@ -727,7 +727,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 		},
 		{
 			name:      "fail: invalid request",
-			volumeIds: []string{""},
+			volumeIDs: []string{""},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
 				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(0)
 			},
@@ -751,26 +751,26 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 
 			// Setup mocks
 			var volumeModifications []types.VolumeModification
-			for _, volumeId := range tc.volumeIds {
-				volumeModifications = append(volumeModifications, types.VolumeModification{VolumeId: aws.String(volumeId)})
+			for _, volumeID := range tc.volumeIDs {
+				volumeModifications = append(volumeModifications, types.VolumeModification{VolumeId: aws.String(volumeID)})
 			}
 			tc.mockFunc(mockEC2, tc.expErr, volumeModifications)
 
-			executeDescribeVolumesModificationsTest(t, cloudInstance, tc.volumeIds, tc.expErr)
+			executeDescribeVolumesModificationsTest(t, cloudInstance, tc.volumeIDs, tc.expErr)
 		})
 	}
 }
 
-func executeDescribeVolumesModificationsTest(t *testing.T, c *cloud, volumeIds []string, expErr error) {
+func executeDescribeVolumesModificationsTest(t *testing.T, c *cloud, volumeIDs []string, expErr error) {
 	var wg sync.WaitGroup
 
 	getRequestForID := func(id string) *ec2.DescribeVolumesModificationsInput {
 		return &ec2.DescribeVolumesModificationsInput{VolumeIds: []string{id}}
 	}
 
-	requests := make([]*ec2.DescribeVolumesModificationsInput, 0, len(volumeIds))
-	for _, volumeId := range volumeIds {
-		requests = append(requests, getRequestForID(volumeId))
+	requests := make([]*ec2.DescribeVolumesModificationsInput, 0, len(volumeIDs))
+	for _, volumeID := range volumeIDs {
+		requests = append(requests, getRequestForID(volumeID))
 	}
 
 	r := make([]chan types.VolumeModification, len(requests))
@@ -1452,7 +1452,7 @@ func TestCreateDiskClientToken(t *testing.T) {
 	t.Parallel()
 
 	const volumeName = "test-vol-client-token"
-	const volumeId = "vol-abcd1234"
+	const volumeID = "vol-abcd1234"
 	diskOptions := &DiskOptions{
 		CapacityBytes:    util.GiBToBytes(1),
 		Tags:             map[string]string{VolumeNameTagKey: volumeName, AwsEbsDriverTagKey: "true"},
@@ -1485,14 +1485,14 @@ func TestCreateDiskClientToken(t *testing.T) {
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				assert.Equal(t, expectedClientToken3, *input.ClientToken)
 				return &ec2.CreateVolumeOutput{
-					VolumeId: aws.String(volumeId),
+					VolumeId: aws.String(volumeID),
 					Size:     aws.Int32(util.BytesToGiB(diskOptions.CapacityBytes)),
 				}, nil
 			}),
 		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{
 				{
-					VolumeId:         aws.String(volumeId),
+					VolumeId:         aws.String(volumeID),
 					Size:             aws.Int32(util.BytesToGiB(diskOptions.CapacityBytes)),
 					State:            types.VolumeState("available"),
 					AvailabilityZone: aws.String(diskOptions.AvailabilityZone),

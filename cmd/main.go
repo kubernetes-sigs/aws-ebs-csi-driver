@@ -132,9 +132,9 @@ func main() {
 		}()
 	}
 
-	if options.HttpEndpoint != "" {
+	if options.HTTPEndpoint != "" {
 		r := metrics.InitializeRecorder()
-		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
+		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 	}
 
 	cfg := metadata.MetadataServiceConfig{

@@ -24,8 +24,8 @@ import (
 )
 
 var (
-	errFailedToMerge   = fmt.Errorf("Failed to merge")
-	errFailedToExecute = fmt.Errorf("Failed to execute")
+	errFailedToMerge   = fmt.Errorf("failed to merge")
+	errFailedToExecute = fmt.Errorf("failed to execute")
 )
 
 // Merge function used to test the coalescer

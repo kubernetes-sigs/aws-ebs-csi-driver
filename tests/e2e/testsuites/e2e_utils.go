@@ -37,7 +37,7 @@ const (
 
 	DefaultModificationTimeout   = 3 * time.Minute
 	DefaultResizeTimout          = 1 * time.Minute
-	DefaultK8sApiPollingInterval = 5 * time.Second
+	DefaultK8sAPIPollingInterval = 5 * time.Second
 
 	Iops       = "iops"
 	Throughput = "throughput"
@@ -105,7 +105,7 @@ func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc 
 	updatedSize = updatedPvc.Spec.Resources.Requests["storage"]
 
 	framework.Logf("checking the resizing PV result")
-	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, DefaultResizeTimout, DefaultK8sApiPollingInterval)
+	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, DefaultResizeTimout, DefaultK8sAPIPollingInterval)
 	framework.ExpectNoError(err)
 	return updatedSize
 }

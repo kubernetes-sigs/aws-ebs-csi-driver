@@ -90,31 +90,31 @@ func newModifyVolumeCoalescer(c cloud.Cloud, o *Options) coalescer.Coalescer[mod
 func mergeModifyVolumeRequest(input modifyVolumeRequest, existing modifyVolumeRequest) (modifyVolumeRequest, error) {
 	if input.newSize != 0 {
 		if existing.newSize != 0 && input.newSize != existing.newSize {
-			return existing, fmt.Errorf("Different size was requested by a previous request. Current: %d, Requested: %d", existing.newSize, input.newSize)
+			return existing, fmt.Errorf("different size was requested by a previous request. Current: %d, Requested: %d", existing.newSize, input.newSize)
 		}
 		existing.newSize = input.newSize
 	}
 	if input.modifyDiskOptions.IOPS != 0 {
 		if existing.modifyDiskOptions.IOPS != 0 && input.modifyDiskOptions.IOPS != existing.modifyDiskOptions.IOPS {
-			return existing, fmt.Errorf("Different IOPS was requested by a previous request. Current: %d, Requested: %d", existing.modifyDiskOptions.IOPS, input.modifyDiskOptions.IOPS)
+			return existing, fmt.Errorf("different IOPS was requested by a previous request. Current: %d, Requested: %d", existing.modifyDiskOptions.IOPS, input.modifyDiskOptions.IOPS)
 		}
 		existing.modifyDiskOptions.IOPS = input.modifyDiskOptions.IOPS
 	}
 	if input.modifyDiskOptions.Throughput != 0 {
 		if existing.modifyDiskOptions.Throughput != 0 && input.modifyDiskOptions.Throughput != existing.modifyDiskOptions.Throughput {
-			return existing, fmt.Errorf("Different throughput was requested by a previous request. Current: %d, Requested: %d", existing.modifyDiskOptions.Throughput, input.modifyDiskOptions.Throughput)
+			return existing, fmt.Errorf("different throughput was requested by a previous request. Current: %d, Requested: %d", existing.modifyDiskOptions.Throughput, input.modifyDiskOptions.Throughput)
 		}
 		existing.modifyDiskOptions.Throughput = input.modifyDiskOptions.Throughput
 	}
 	if input.modifyDiskOptions.VolumeType != "" {
 		if existing.modifyDiskOptions.VolumeType != "" && input.modifyDiskOptions.VolumeType != existing.modifyDiskOptions.VolumeType {
-			return existing, fmt.Errorf("Different volume type was requested by a previous request. Current: %s, Requested: %s", existing.modifyDiskOptions.VolumeType, input.modifyDiskOptions.VolumeType)
+			return existing, fmt.Errorf("different volume type was requested by a previous request. Current: %s, Requested: %s", existing.modifyDiskOptions.VolumeType, input.modifyDiskOptions.VolumeType)
 		}
 		existing.modifyDiskOptions.VolumeType = input.modifyDiskOptions.VolumeType
 	}
 	if len(input.modifyTagsOptions.TagsToAdd) > 0 || len(input.modifyTagsOptions.TagsToDelete) > 0 {
 		if (len(existing.modifyTagsOptions.TagsToAdd) > 0 || len(existing.modifyTagsOptions.TagsToDelete) > 0) && !(reflect.DeepEqual(input.modifyTagsOptions, existing.modifyTagsOptions)) {
-			return existing, fmt.Errorf("Different tags were requested by a previous request. Current: %v, Requested: %v", existing.modifyTagsOptions, input.modifyTagsOptions)
+			return existing, fmt.Errorf("different tags were requested by a previous request. Current: %v, Requested: %v", existing.modifyTagsOptions, input.modifyTagsOptions)
 		}
 		existing.modifyTagsOptions = cloud.ModifyTagsOptions{
 			TagsToAdd:    input.modifyTagsOptions.TagsToAdd,

@@ -2355,7 +2355,7 @@ func TestNodeExpandVolume(t *testing.T) {
 func TestNodeGetVolumeStats(t *testing.T) {
 	testCases := []struct {
 		name           string
-		validVolId     bool
+		validVolID     bool
 		validPath      bool
 		metricsStatErr bool
 		mounterMock    func(mockCtl *gomock.Controller, dir string) *mounter.MockMounter
@@ -2363,7 +2363,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 	}{
 		{
 			name:       "success normal",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2377,14 +2377,14 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "invalid_volume_id",
-			validVolId: false,
+			validVolID: false,
 			expectedErr: func(dir string) error {
 				return status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume ID was empty")
 			},
 		},
 		{
 			name:       "invalid_volume_path",
-			validVolId: true,
+			validVolID: true,
 			validPath:  false,
 			expectedErr: func(dir string) error {
 				return status.Error(codes.InvalidArgument, "NodeGetVolumeStats volume path was empty")
@@ -2392,7 +2392,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "path_exists_error",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2405,7 +2405,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "path_does_not_exist",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2418,7 +2418,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "is_block_device_error",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2432,7 +2432,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "get_block_size_bytes_error",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2447,7 +2447,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 		},
 		{
 			name:       "success block device",
-			validVolId: true,
+			validVolID: true,
 			validPath:  true,
 			mounterMock: func(ctrl *gomock.Controller, dir string) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
@@ -2481,7 +2481,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 			}
 
 			req := &csi.NodeGetVolumeStatsRequest{}
-			if tc.validVolId {
+			if tc.validVolID {
 				req.VolumeId = "vol-test"
 			}
 			if tc.validPath {

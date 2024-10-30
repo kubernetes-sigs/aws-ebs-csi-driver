@@ -146,27 +146,27 @@ const (
 var (
 	// ErrMultiDisks is an error that is returned when multiple
 	// disks are found with the same volume name.
-	ErrMultiDisks = errors.New("Multiple disks with same name")
+	ErrMultiDisks = errors.New("multiple disks with same name")
 
 	// ErrDiskExistsDiffSize is an error that is returned if a disk with a given
 	// name, but different size, is found.
-	ErrDiskExistsDiffSize = errors.New("There is already a disk with same name and different size")
+	ErrDiskExistsDiffSize = errors.New("there is already a disk with same name and different size")
 
 	// ErrNotFound is returned when a resource is not found.
-	ErrNotFound = errors.New("Resource was not found")
+	ErrNotFound = errors.New("resource was not found")
 
-	// ErrIdempotent is returned when another request with same idempotent token is in-flight.
-	ErrIdempotentParameterMismatch = errors.New("Parameters on this idempotent request are inconsistent with parameters used in previous request(s)")
+	// ErrIdempotentParameterMismatch is returned when another request with same idempotent token is in-flight.
+	ErrIdempotentParameterMismatch = errors.New("parameters on this idempotent request are inconsistent with parameters used in previous request(s)")
 
 	// ErrAlreadyExists is returned when a resource is already existent.
-	ErrAlreadyExists = errors.New("Resource already exists")
+	ErrAlreadyExists = errors.New("resource already exists")
 
 	// ErrMultiSnapshots is returned when multiple snapshots are found
 	// with the same ID
-	ErrMultiSnapshots = errors.New("Multiple snapshots with the same name found")
+	ErrMultiSnapshots = errors.New("multiple snapshots with the same name found")
 
 	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
-	ErrInvalidMaxResults = errors.New("MaxResults parameter must be 0 or greater than or equal to 5")
+	ErrInvalidMaxResults = errors.New("maxResults parameter must be 0 or greater than or equal to 5")
 
 	// ErrVolumeNotBeingModified is returned if volume being described is not being modified
 	ErrVolumeNotBeingModified = fmt.Errorf("volume is not being modified")
