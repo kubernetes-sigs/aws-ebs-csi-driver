@@ -53,6 +53,7 @@ func RoundUpGiB(volumeSizeBytes int64) (int32, error) {
 	if result > int64(math.MaxInt32) {
 		return 0, fmt.Errorf("rounded up size exceeds maximum value of int32: %d", result)
 	}
+	//nolint:gosec // Integer overflow handled
 	return int32(result), nil
 }
 
@@ -63,6 +64,7 @@ func BytesToGiB(volumeSizeBytes int64) int32 {
 		// Handle overflow
 		return math.MaxInt32
 	}
+	//nolint:gosec // Integer overflow handled
 	return int32(result)
 }
 

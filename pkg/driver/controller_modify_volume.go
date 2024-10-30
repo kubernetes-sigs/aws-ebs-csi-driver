@@ -171,13 +171,13 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 	for key, value := range params {
 		switch key {
 		case ModificationKeyIOPS:
-			iops, err := strconv.Atoi(value)
+			iops, err := strconv.ParseInt(value, 10, 32)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
 			}
 			options.modifyDiskOptions.IOPS = int32(iops)
 		case ModificationKeyThroughput:
-			throughput, err := strconv.Atoi(value)
+			throughput, err := strconv.ParseInt(value, 10, 32)
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
 			}
