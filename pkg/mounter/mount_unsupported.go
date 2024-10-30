@@ -21,7 +21,6 @@ package mounter
 
 import (
 	"errors"
-	"fmt"
 
 	mountutils "k8s.io/mount-utils"
 )
@@ -36,11 +35,11 @@ run driver e2e tests.
 */
 
 func NewSafeMounter() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounter is not supported on this platform")
+	return nil, errors.New("NewSafeMounter is not supported on this platform")
 }
 
 func NewSafeMounterV2() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounterV2 is not supported on this platform")
+	return nil, errors.New("NewSafeMounterV2 is not supported on this platform")
 }
 
 func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region string) (string, error) {

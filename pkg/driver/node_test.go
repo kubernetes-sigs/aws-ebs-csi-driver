@@ -2512,13 +2512,13 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 			setup: func(t *testing.T, mockCtl *gomock.Controller) func() (kubernetes.Interface, error) {
 				t.Helper()
 				t.Setenv("CSI_NODE_NAME", nodeName)
-				getNodeMock, _ := getNodeMock(mockCtl, nodeName, nil, fmt.Errorf("Failed to get node!"))
+				getNodeMock, _ := getNodeMock(mockCtl, nodeName, nil, errors.New("Failed to get node!"))
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
 			},
-			expResult: fmt.Errorf("Failed to get node!"),
+			expResult: errors.New("Failed to get node!"),
 		},
 		{
 			name: "no taints to remove",
@@ -2612,14 +2612,14 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				mockNode.EXPECT().
 					Patch(gomock.Any(), gomock.Eq(nodeName), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil, fmt.Errorf("Failed to patch node!")).
+					Return(nil, errors.New("Failed to patch node!")).
 					Times(1)
 
 				return func() (kubernetes.Interface, error) {
 					return getNodeMock, nil
 				}
 			},
-			expResult: fmt.Errorf("Failed to patch node!"),
+			expResult: errors.New("Failed to patch node!"),
 		},
 		{
 			name: "success",
@@ -2707,7 +2707,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				csiNodesMock.EXPECT().
 					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
-					Return(nil, fmt.Errorf("Failed to get CSINode")).
+					Return(nil, errors.New("Failed to get CSINode")).
 					Times(1)
 
 				return func() (kubernetes.Interface, error) {
@@ -2842,7 +2842,7 @@ func TestRemoveTaintInBackground(t *testing.T) {
 			if mockRemovalCount == 3 {
 				return nil
 			} else {
-				return fmt.Errorf("Taint removal failed!")
+				return errors.New("Taint removal failed!")
 			}
 		}
 		removeTaintInBackground(nil, taintRemovalBackoff, mockRemovalFunc)
@@ -2853,7 +2853,7 @@ func TestRemoveTaintInBackground(t *testing.T) {
 		mockRemovalCount := 0
 		mockRemovalFunc := func(_ kubernetes.Interface) error {
 			mockRemovalCount += 1
-			return fmt.Errorf("Taint removal failed!")
+			return errors.New("Taint removal failed!")
 		}
 		removeTaintInBackground(nil, wait.Backoff{
 			Steps:    5,

@@ -169,7 +169,7 @@ var (
 	ErrInvalidMaxResults = errors.New("maxResults parameter must be 0 or greater than or equal to 5")
 
 	// ErrVolumeNotBeingModified is returned if volume being described is not being modified
-	ErrVolumeNotBeingModified = fmt.Errorf("volume is not being modified")
+	ErrVolumeNotBeingModified = errors.New("volume is not being modified")
 
 	// ErrInvalidArgument is returned if parameters were rejected by cloud provider
 	ErrInvalidArgument = errors.New("invalid argument")
@@ -438,7 +438,7 @@ func execBatchDescribeVolumes(svc EC2API, input []string, batcher volumeBatcherT
 		}
 
 	default:
-		return nil, fmt.Errorf("execBatchDescribeVolumes: unsupported request type")
+		return nil, errors.New("execBatchDescribeVolumes: unsupported request type")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
@@ -538,7 +538,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	if diskOptions.IOPS > 0 && diskOptions.IOPSPerGB > 0 {
-		return nil, fmt.Errorf("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both")
+		return nil, errors.New("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both")
 	}
 
 	createType = diskOptions.VolumeType
@@ -571,7 +571,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
-		return nil, fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes")
+		return nil, errors.New("CreateDisk: multi-attach is only supported for io2 volumes")
 	}
 
 	if maxIops > 0 {
@@ -671,12 +671,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	volumeID := aws.ToString(response.VolumeId)
 	if len(volumeID) == 0 {
-		return nil, fmt.Errorf("volume ID was not returned by CreateVolume")
+		return nil, errors.New("volume ID was not returned by CreateVolume")
 	}
 
 	size := *response.Size
 	if size == 0 {
-		return nil, fmt.Errorf("disk size was not returned by CreateVolume")
+		return nil, errors.New("disk size was not returned by CreateVolume")
 	}
 
 	if err := c.waitForVolume(ctx, volumeID); err != nil {
@@ -1187,7 +1187,7 @@ func execBatchDescribeSnapshots(svc EC2API, input []string, batcher snapshotBatc
 		}
 
 	default:
-		return nil, fmt.Errorf("execBatchDescribeSnapshots: unsupported request type")
+		return nil, errors.New("execBatchDescribeSnapshots: unsupported request type")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
@@ -1299,7 +1299,7 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
 	if res == nil {
-		return nil, fmt.Errorf("nil CreateSnapshotResponse")
+		return nil, errors.New("nil CreateSnapshotResponse")
 	}
 
 	return &Snapshot{

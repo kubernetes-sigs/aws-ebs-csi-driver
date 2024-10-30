@@ -17,6 +17,7 @@ limitations under the License.
 package devicemanager
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -108,7 +109,7 @@ func (d *deviceManager) NewDevice(instance *types.Instance, volumeID string, lik
 	defer d.mux.Unlock()
 
 	if instance == nil {
-		return nil, fmt.Errorf("instance is nil")
+		return nil, errors.New("instance is nil")
 	}
 
 	// Get device names being attached and already attached to this instance
@@ -220,7 +221,7 @@ func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string
 
 func getInstanceID(instance *types.Instance) (string, error) {
 	if instance == nil {
-		return "", fmt.Errorf("can't get ID from a nil instance")
+		return "", errors.New("can't get ID from a nil instance")
 	}
 	return aws.ToString(instance.InstanceId), nil
 }

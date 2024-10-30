@@ -18,7 +18,7 @@ package driver
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -169,7 +169,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	mockCloud := cloud.NewMockCloud(mockCtl)
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
-		return 0, fmt.Errorf("ResizeOrModifyDisk failed")
+		return 0, errors.New("ResizeOrModifyDisk failed")
 	})
 
 	options := &Options{

@@ -15,6 +15,7 @@
 package batcher
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -39,7 +40,7 @@ func mockExecutionWithError(inputs []string) (map[string]string, error) {
 	for _, input := range inputs {
 		results[input] = input
 	}
-	return results, fmt.Errorf("mock execution error")
+	return results, errors.New("mock execution error")
 }
 
 func TestBatcher(t *testing.T) {

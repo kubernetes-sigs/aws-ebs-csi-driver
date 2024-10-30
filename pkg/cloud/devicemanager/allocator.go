@@ -17,7 +17,7 @@ limitations under the License.
 package devicemanager
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 )
 
@@ -70,5 +70,5 @@ func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames *syn
 		return finalResortName, nil
 	}
 
-	return "", fmt.Errorf("there are no names available")
+	return "", errors.New("there are no names available")
 }

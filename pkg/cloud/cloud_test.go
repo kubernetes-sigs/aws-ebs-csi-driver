@@ -182,7 +182,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
-			expErr: fmt.Errorf("Generic EC2 API error"),
+			expErr: errors.New("Generic EC2 API error"),
 		},
 		{
 			name:    "fail: volume not found",
@@ -190,7 +190,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
-			expErr: fmt.Errorf("volume not found"),
+			expErr: errors.New("volume not found"),
 		},
 		{
 			name: "fail: invalid tag",
@@ -205,7 +205,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(0)
 			},
-			expErr: fmt.Errorf("invalid tag"),
+			expErr: errors.New("invalid tag"),
 		},
 		{
 			name:    "fail: invalid request",
@@ -326,7 +326,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
 				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
-			expErr: fmt.Errorf("generic EC2 API error"),
+			expErr: errors.New("generic EC2 API error"),
 		},
 		{
 			name:        "fail: invalid request",
@@ -487,7 +487,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(2)
 			},
-			expErr: fmt.Errorf("generic EC2 API error"),
+			expErr: errors.New("generic EC2 API error"),
 		},
 		{
 			name:      "fail: Snapshot not found by ID",
@@ -632,7 +632,7 @@ func TestCheckDesiredState(t *testing.T) {
 				IOPS:       3000,
 				Throughput: 1000,
 			},
-			expErr: fmt.Errorf("volume \"vol-001\" is still being expanded to 500 size"),
+			expErr: errors.New("volume \"vol-001\" is still being expanded to 500 size"),
 		},
 		{
 			name:           "failure: volume is still being modified to iops",
@@ -643,7 +643,7 @@ func TestCheckDesiredState(t *testing.T) {
 				IOPS:       4000,
 				Throughput: 1000,
 			},
-			expErr: fmt.Errorf("volume \"vol-001\" is still being modified to iops 4000"),
+			expErr: errors.New("volume \"vol-001\" is still being modified to iops 4000"),
 		},
 		{
 			name:           "failure: volume is still being modifed to type",
@@ -665,7 +665,7 @@ func TestCheckDesiredState(t *testing.T) {
 				IOPS:       3000,
 				Throughput: 2000,
 			},
-			expErr: fmt.Errorf("volume \"vol-001\" is still being modified to throughput 2000"),
+			expErr: errors.New("volume \"vol-001\" is still being modified to throughput 2000"),
 		},
 	}
 	for _, tc := range testCases {
@@ -726,7 +726,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
 				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
 			},
-			expErr: fmt.Errorf("generic EC2 API error"),
+			expErr: errors.New("generic EC2 API error"),
 		},
 		{
 			name:      "fail: invalid request",
@@ -1036,8 +1036,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: expZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("could not create volume in EC2: CreateVolume generic error"),
-			expCreateVolumeErr:   fmt.Errorf("CreateVolume generic error"),
+			expErr:               errors.New("could not create volume in EC2: CreateVolume generic error"),
+			expCreateVolumeErr:   errors.New("CreateVolume generic error"),
 		},
 		{
 			name:       "fail: ec2.CreateVolume returned snapshot not found error",
@@ -1076,8 +1076,8 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("timed out waiting for volume to create: DescribeVolumes generic error"),
-			expDescVolumeErr:     fmt.Errorf("DescribeVolumes generic error"),
+			expErr:               errors.New("timed out waiting for volume to create: DescribeVolumes generic error"),
+			expDescVolumeErr:     errors.New("DescribeVolumes generic error"),
 		},
 		{
 			name:       "fail: Volume is not ready to use, volume stuck in creating status and controller context deadline exceeded",
@@ -1089,7 +1089,7 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: "",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               fmt.Errorf("timed out waiting for volume to create: timed out waiting for the condition"),
+			expErr:               errors.New("timed out waiting for volume to create: timed out waiting for the condition"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -1144,7 +1144,7 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: nil,
-			expErr:               fmt.Errorf("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both"),
+			expErr:               errors.New("invalid StorageClass parameters; specify either IOPS or IOPSPerGb, not both"),
 		},
 		{
 			name:       "success: small io1 with too high iopsPerGB",
@@ -1289,13 +1289,13 @@ func TestCreateDisk(t *testing.T) {
 				VolumeType:       "sbg1",
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expCreateTagsErr:     fmt.Errorf("CreateTags generic error"),
+			expCreateTagsErr:     errors.New("CreateTags generic error"),
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
 				AvailabilityZone: snowZone,
 			},
-			expErr: fmt.Errorf("could not attach tags to volume: vol-test. CreateTags generic error"),
+			expErr: errors.New("could not attach tags to volume: vol-test. CreateTags generic error"),
 		},
 		{
 			name:       "success: create default volume with throughput",
@@ -1350,7 +1350,7 @@ func TestCreateDisk(t *testing.T) {
 				CapacityGiB:      4,
 				AvailabilityZone: defaultZone,
 			},
-			expErr: fmt.Errorf("CreateDisk: multi-attach is only supported for io2 volumes"),
+			expErr: errors.New("CreateDisk: multi-attach is only supported for io2 volumes"),
 		},
 		{
 			name:       "failure: invalid VolumeType",
@@ -1534,13 +1534,13 @@ func TestDeleteDisk(t *testing.T) {
 			name:     "fail: DeleteVolume returned generic error",
 			volumeID: "vol-test-1234",
 			expResp:  false,
-			expErr:   fmt.Errorf("DeleteVolume generic error"),
+			expErr:   errors.New("DeleteVolume generic error"),
 		},
 		{
 			name:     "fail: DeleteVolume returned not found error",
 			volumeID: "vol-test-1234",
 			expResp:  false,
-			expErr:   fmt.Errorf("InvalidVolume.NotFound"),
+			expErr:   errors.New("InvalidVolume.NotFound"),
 		},
 	}
 
@@ -1892,7 +1892,7 @@ func TestGetDiskByName(t *testing.T) {
 			name:           "fail: DescribeVolumes returned generic error",
 			volumeName:     "vol-test-1234",
 			volumeCapacity: util.GiBToBytes(1),
-			expErr:         fmt.Errorf("DescribeVolumes generic error"),
+			expErr:         errors.New("DescribeVolumes generic error"),
 		},
 	}
 
@@ -1999,7 +1999,7 @@ func TestGetDiskByID(t *testing.T) {
 		{
 			name:     "fail: DescribeVolumes returned generic error",
 			volumeID: "vol-test-1234",
-			expErr:   fmt.Errorf("DescribeVolumes generic error"),
+			expErr:   errors.New("DescribeVolumes generic error"),
 		},
 	}
 
@@ -2209,14 +2209,14 @@ func TestEnableFastSnapshotRestores(t *testing.T) {
 					},
 				}},
 			},
-			expErr: fmt.Errorf("failed to create fast snapshot restores for snapshot"),
+			expErr: errors.New("failed to create fast snapshot restores for snapshot"),
 		},
 		{
 			name:              "fail: error",
 			snapshotID:        "",
 			availabilityZones: nil,
 			expOutput:         nil,
-			expErr:            fmt.Errorf("EnableFastSnapshotRestores error"),
+			expErr:            errors.New("EnableFastSnapshotRestores error"),
 		},
 	}
 
@@ -2279,7 +2279,7 @@ func TestAvailabilityZones(t *testing.T) {
 			name:             "fail: error",
 			availabilityZone: "",
 			expOutput:        nil,
-			expErr:           fmt.Errorf("TestAvailabilityZones error"),
+			expErr:           errors.New("TestAvailabilityZones error"),
 		},
 	}
 
@@ -2325,7 +2325,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name:         "fail: delete snapshot return generic error",
 			snapshotName: "snap-test-name",
-			expErr:       fmt.Errorf("DeleteSnapshot generic error"),
+			expErr:       errors.New("DeleteSnapshot generic error"),
 		},
 		{
 			name:         "fail: delete snapshot return not found error",
@@ -2506,9 +2506,9 @@ func TestResizeOrModifyDisk(t *testing.T) {
 			name:                "fail: volume doesn't exist",
 			volumeID:            "vol-test",
 			existingVolume:      &types.Volume{},
-			existingVolumeError: fmt.Errorf("DescribeVolumes generic error"),
+			existingVolumeError: errors.New("DescribeVolumes generic error"),
 			reqSizeGiB:          2,
-			expErr:              fmt.Errorf("ResizeDisk generic error"),
+			expErr:              errors.New("ResizeDisk generic error"),
 		},
 		{
 			name:     "failure: volume in modifying state",
@@ -2528,7 +2528,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				},
 			},
 			reqSizeGiB: 2,
-			expErr:     fmt.Errorf("ResizeDisk generic error"),
+			expErr:     errors.New("ResizeDisk generic error"),
 		},
 		{
 			name:     "failure: ModifyVolume returned generic error",
@@ -2542,8 +2542,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				AvailabilityZone: aws.String(defaultZone),
 				VolumeType:       types.VolumeTypeGp2,
 			},
-			modifiedVolumeError: fmt.Errorf("GenericErr"),
-			expErr:              fmt.Errorf("GenericErr"),
+			modifiedVolumeError: errors.New("GenericErr"),
+			expErr:              errors.New("GenericErr"),
 		},
 		{
 			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned InvalidParameterCombination",
@@ -2558,8 +2558,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeType:       types.VolumeTypeGp2,
 				Size:             aws.Int32(1),
 			},
-			modifiedVolumeError: fmt.Errorf("InvalidParameterCombination: The parameter iops is not supported for gp2 volumes"),
-			expErr:              fmt.Errorf("InvalidParameterCombination: The parameter iops is not supported for gp2 volumes"),
+			modifiedVolumeError: errors.New("InvalidParameterCombination: The parameter iops is not supported for gp2 volumes"),
+			expErr:              errors.New("InvalidParameterCombination: The parameter iops is not supported for gp2 volumes"),
 		},
 		{
 			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned UnknownVolumeType",
@@ -2573,8 +2573,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeType:       types.VolumeTypeGp2,
 				Size:             aws.Int32(1),
 			},
-			modifiedVolumeError: fmt.Errorf("UnknownVolumeType: Unknown volume type: GPFake"),
-			expErr:              fmt.Errorf("UnknownVolumeType: Unknown volume type: GPFake"),
+			modifiedVolumeError: errors.New("UnknownVolumeType: Unknown volume type: GPFake"),
+			expErr:              errors.New("UnknownVolumeType: Unknown volume type: GPFake"),
 		},
 		{
 			name:     "failure: returned ErrInvalidArgument when ModifyVolume returned InvalidParameterValue",
@@ -2589,8 +2589,8 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeType:       types.VolumeTypeGp2,
 				Size:             aws.Int32(1),
 			},
-			modifiedVolumeError: fmt.Errorf("InvalidParameterValue: iops value 9999999 is not valid"),
-			expErr:              fmt.Errorf("InvalidParameterValue: iops value 9999999 is not valid"),
+			modifiedVolumeError: errors.New("InvalidParameterValue: iops value 9999999 is not valid"),
+			expErr:              errors.New("InvalidParameterValue: iops value 9999999 is not valid"),
 		},
 		{
 			name:     "success: does not call ModifyVolume when no modification required",
@@ -2742,7 +2742,7 @@ func TestModifyTags(t *testing.T) {
 			name:         "fail: EC2 API generic error TagsToAdd",
 			volumeID:     "mod-tag-test-name",
 			negativeCase: true,
-			expErr:       fmt.Errorf("Generic EC2 API error"),
+			expErr:       errors.New("Generic EC2 API error"),
 			modifyTagsOptions: ModifyTagsOptions{
 				TagsToAdd:    validTagsToAddInput,
 				TagsToDelete: emptyTagsToDeleteInput,
@@ -2752,7 +2752,7 @@ func TestModifyTags(t *testing.T) {
 			name:         "fail: EC2 API generic error TagsToDelete",
 			volumeID:     "mod-tag-test-name",
 			negativeCase: true,
-			expErr:       fmt.Errorf("Generic EC2 API error"),
+			expErr:       errors.New("Generic EC2 API error"),
 			modifyTagsOptions: ModifyTagsOptions{
 				TagsToAdd:    emptyTagsToAddInput,
 				TagsToDelete: validTagsToDeleteInput,

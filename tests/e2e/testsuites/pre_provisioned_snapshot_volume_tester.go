@@ -15,7 +15,7 @@ limitations under the License.
 package testsuites
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
@@ -42,8 +42,7 @@ func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restc
 	defer tvsc.DeleteVolumeSnapshotContent(tvolumeSnapshotContent)
 	defer tvsc.DeleteSnapshot(tvs)
 	if len(t.Pod.Volumes) < 1 {
-		err := fmt.Errorf("Volume is not setup for testing pod, exit. ")
-		framework.ExpectNoError(err)
+		framework.ExpectNoError(errors.New("volume is not setup for testing pod, exit"))
 	}
 
 	volume := t.Pod.Volumes[0]

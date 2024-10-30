@@ -20,6 +20,7 @@ limitations under the License.
 package mounter
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ func NewSafeMounter() (*mountutils.SafeFormatAndMount, error) {
 }
 
 func NewSafeMounterV2() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounterV2 is not supported on this platform")
+	return nil, errors.New("NewSafeMounterV2 is not supported on this platform")
 }
 
 // FindDevicePath finds path of device and verifies its existence

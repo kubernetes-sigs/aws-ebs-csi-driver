@@ -18,14 +18,13 @@ package coalescer
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 )
 
 var (
-	errFailedToMerge   = fmt.Errorf("failed to merge")
-	errFailedToExecute = fmt.Errorf("failed to execute")
+	errFailedToMerge   = errors.New("failed to merge")
+	errFailedToExecute = errors.New("failed to execute")
 )
 
 // Merge function used to test the coalescer
@@ -34,9 +33,8 @@ var (
 func mockMerge(input int, existing int) (int, error) {
 	if input < 0 {
 		return 0, errFailedToMerge
-	} else {
-		return input + existing, nil
 	}
+	return input + existing, nil
 }
 
 // Execute function used to test the coalescer
@@ -45,9 +43,8 @@ func mockMerge(input int, existing int) (int, error) {
 func mockExecute(_ string, input int) (string, error) {
 	if input < 100 {
 		return "success", nil
-	} else {
-		return "failure", errFailedToExecute
 	}
+	return "failure", errFailedToExecute
 }
 
 func TestCoalescer(t *testing.T) {

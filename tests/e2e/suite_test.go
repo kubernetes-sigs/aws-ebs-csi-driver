@@ -31,6 +31,7 @@ import (
 
 const kubeconfigEnvVar = "KUBECONFIG"
 
+//nolint:gochecknoinits
 func init() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	testing.Init()

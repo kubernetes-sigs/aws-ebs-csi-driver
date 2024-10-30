@@ -21,7 +21,7 @@ linters-settings:
       - name: increment-decrement
         disabled: true
   stylecheck:
-    # dot importing ginkgo and gomega is standard
+    # Dot importing ginkgo and gomega is standard practice
     dot-import-whitelist:
       - "github.com/onsi/gomega"
       - "github.com/onsi/ginkgo/v2"
@@ -103,12 +103,15 @@ linters:
     - goconst
     - gochecknoinits
     - perfsprint
-    - revive # TODO
+    - revive
+    - gosec
   disable:
     - govet # We already run with `make verify/govet`
     # We do not use today
     - gomoddirectives # We need `replace` in `go.mod`
     - depguard # We don't use this today
+    - testpackage # We don't do this
+    # TODO Investigate FIXME
     - cyclop # TODO FIXME (at least for non-tests)
     - dupl # TODO FIXME (tests + non-tests)
     - err113 # TODO FIXME
@@ -117,21 +120,19 @@ linters:
     - varnamelen # Many false positives
     - mnd # Many false positives
     - gomnd # Many false positives
-    - testpackage # We don't do this
     - paralleltest # TODO FIXME (Too many tests that aren't parallelized right now)
     - funlen # Many false positives
     - gochecknoglobals  # TODO FIXME
     - interfacebloat # False positives on AWS SDK interfaces
-    - exhaustruct # TODO FIXME
     - nestif # Many false positives
     - gocognit # Many false positives
+    - godox # TODO FIXME
+    - maintidx # Maintainability index... Oof
     # Ask team
     - lll # Limit line length
-    - godot # TODO Ask team
-    - godox # TODO FIXME
-    - gofumpt # TODO Ask team
-    - gosec # TODO Urgent not too bad
-    - ireturn # ask team
-    - maintidx # oof
-    - nlreturn # Meh, ask team
-    - nonamedreturns # meh ask team
+    - godot # TODO Ask team if we want to end all godoc comments with period
+    - gofumpt # TODO Ask team if we want to rely on gofumpt
+    - ireturn # ask team if we want to accept interfaces return concrete types
+    - nlreturn # Meh, ask team newline return
+    - nonamedreturns # Ask team, maybe nolint a few of the places it actually leads to cleaner code
+    - exhaustruct # Seems REALLY painful for kubernetes structs...

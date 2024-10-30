@@ -20,7 +20,7 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -107,7 +107,7 @@ func TestParseEndpoint(t *testing.T) {
 		{
 			name:     "invalid endpoint",
 			endpoint: "http://127.0.0.1",
-			expErr:   fmt.Errorf("unsupported protocol: http"),
+			expErr:   errors.New("unsupported protocol: http"),
 		},
 	}
 

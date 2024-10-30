@@ -17,7 +17,7 @@ limitations under the License.
 package metadata
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
@@ -57,7 +57,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	}
 	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
 
-	return nil, fmt.Errorf("IMDS metadata and Kubernetes metadata are both unavailable")
+	return nil, errors.New("IMDS metadata and Kubernetes metadata are both unavailable")
 }
 
 func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {

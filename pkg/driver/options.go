@@ -17,7 +17,7 @@ limitations under the License.
 package driver
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -124,18 +124,18 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 func (o *Options) Validate() error {
 	if o.Mode == AllMode || o.Mode == NodeMode {
 		if o.VolumeAttachLimit != -1 && o.ReservedVolumeAttachments != -1 {
-			return fmt.Errorf("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
+			return errors.New("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
 		}
 	}
 
 	if o.MetricsCertFile != "" || o.MetricsKeyFile != "" {
 		switch {
 		case o.HTTPEndpoint == "":
-			return fmt.Errorf("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
 		case o.MetricsCertFile == "":
-			return fmt.Errorf("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
 		case o.MetricsKeyFile == "":
-			return fmt.Errorf("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
 		}
 	}
 

@@ -50,7 +50,7 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		if len(k) > cloud.MaxTagKeyLength {
 			return fmt.Errorf("tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
 		} else if len(k) < cloud.MinTagKeyLength {
-			return fmt.Errorf("tag key cannot be empty (min: 1)")
+			return errors.New("tag key cannot be empty (min: 1)")
 		}
 		if len(v) > cloud.MaxTagValueLength {
 			return fmt.Errorf("tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)

@@ -20,6 +20,7 @@ limitations under the License.
 package mounter
 
 import (
+	"errors"
 	"fmt"
 
 	"regexp"
@@ -31,7 +32,7 @@ import (
 )
 
 var (
-	ErrUnsupportedMounter = fmt.Errorf("unsupported mounter type")
+	ErrUnsupportedMounter = errors.New("unsupported mounter type")
 )
 
 func (m NodeMounter) FindDevicePath(devicePath, volumeID, _, _ string) (string, error) {

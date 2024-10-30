@@ -16,6 +16,7 @@ package metadata
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -57,18 +58,18 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	doc := docOutput.InstanceIdentityDocument
 
 	if len(doc.InstanceID) == 0 {
-		return nil, fmt.Errorf("could not get valid EC2 instance ID")
+		return nil, errors.New("could not get valid EC2 instance ID")
 	}
 
 	if len(doc.InstanceType) == 0 {
-		return nil, fmt.Errorf("could not get valid EC2 instance type")
+		return nil, errors.New("could not get valid EC2 instance type")
 	}
 
 	if len(doc.Region) == 0 {
 		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
 			doc.Region = regionFromSession
 		} else {
-			return nil, fmt.Errorf("could not get valid EC2 region")
+			return nil, errors.New("could not get valid EC2 region")
 		}
 	}
 
@@ -76,7 +77,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
 			doc.AvailabilityZone = regionFromSession
 		} else {
-			return nil, fmt.Errorf("could not get valid EC2 availability zone")
+			return nil, errors.New("could not get valid EC2 availability zone")
 		}
 	}
 

@@ -71,7 +71,7 @@ func TestValidateExtraTags(t *testing.T) {
 			tags: map[string]string{
 				"": "extra-tag-value",
 			},
-			expErr: fmt.Errorf("tag key cannot be empty (min: 1)"),
+			expErr: errors.New("tag key cannot be empty (min: 1)"),
 		},
 		{
 			name: "invalid tag: value too long",

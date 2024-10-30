@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -59,7 +60,7 @@ func PreStop(clientset kubernetes.Interface) error {
 
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
-		return fmt.Errorf("PreStop: CSI_NODE_NAME missing")
+		return errors.New("PreStop: CSI_NODE_NAME missing")
 	}
 
 	node, err := fetchNode(clientset, nodeName)
