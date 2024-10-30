@@ -92,7 +92,7 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 		Spec: v1.PersistentVolumeSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{accessMode},
 			Capacity: v1.ResourceList{
-				v1.ResourceName(v1.ResourceStorage): resource.MustParse(size),
+				v1.ResourceStorage: resource.MustParse(size),
 			},
 			PersistentVolumeReclaimPolicy: pvReclaimPolicy,
 			PersistentVolumeSource: v1.PersistentVolumeSource{

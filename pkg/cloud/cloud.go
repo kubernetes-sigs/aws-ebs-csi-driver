@@ -845,7 +845,7 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 		}
 	}
 	// Perform one final check on the volume
-	return c.checkDesiredState(ctx, volumeID, int32(newSizeGiB), options)
+	return c.checkDesiredState(ctx, volumeID, newSizeGiB, options)
 }
 
 func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {

@@ -41,13 +41,10 @@ linters:
     - gocheckcompilerdirectives
     - gochecksumtype
     - gocritic
-#    - godox
-#    - gofmt
-#    - gofumpt
-#    - goheader
-#    - goimports
-#    - gomoddirectives
-#    - gomodguard
+    - gofmt
+    - goheader
+    - goimports
+    - gomodguard
 #    - goprintffuncname
 #    - gosec
 #    - gosimple
@@ -99,16 +96,13 @@ linters:
 #    - testpackage
 #    - thelper
 #    - tparallel
-#    - unconvert
-#    - unparam
-#    - unused
-#    - usestdlibvars
-#    - varnamelen
-#    - wastedassign
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
     - whitespace
-#    - wrapcheck
-#    - wsl
-#    - zerologlint
+    - zerologlint
   disable:
     - govet # We already run with `make verify/govet`
     - depguard # We don't use this today
@@ -134,3 +128,5 @@ linters:
     - godot # TODO Ask team
     - goconst # TODO FIXME
     - gochecknoinits # TODO FIXME
+    - godox # TODO FIXME
+    - gofumpt # TODO Ask team
