@@ -45,6 +45,8 @@ const (
 	expZone       = "us-west-2b"
 	expInstanceID = "i-123456789abcdef01"
 	expDevicePath = "/dev/xvda"
+
+	testOutpostARN = "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
 )
 
 func TestCreateVolume(t *testing.T) {
@@ -88,7 +90,7 @@ func TestCreateVolume(t *testing.T) {
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
-	rawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	rawOutpostArn := testOutpostARN
 	strippedOutpostArn, _ := arn.Parse(strings.ReplaceAll(rawOutpostArn, "outpost/", ""))
 
 	testCases := []struct {
@@ -2121,7 +2123,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 }
 
 func TestGetOutpostArn(t *testing.T) {
-	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	expRawOutpostArn := testOutpostARN
 	outpostArn, _ := arn.Parse(strings.ReplaceAll(expRawOutpostArn, "outpost/", ""))
 	testCases := []struct {
 		name          string
@@ -2198,7 +2200,7 @@ func TestGetOutpostArn(t *testing.T) {
 }
 
 func TestBuildOutpostArn(t *testing.T) {
-	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	expRawOutpostArn := testOutpostARN
 	testCases := []struct {
 		name         string
 		awsPartition string

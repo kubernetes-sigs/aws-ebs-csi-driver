@@ -55,7 +55,8 @@ var (
 	}
 )
 
-const isManagedByDriver = "true"
+const trueStr = "true"
+const isManagedByDriver = trueStr
 
 // ControllerService represents the controller service of CSI driver
 type ControllerService struct {
@@ -141,7 +142,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
-			allowIOPSPerGBIncrease = value == "true"
+			allowIOPSPerGBIncrease = isTrue(value)
 		case IopsKey:
 			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsKeyErr != nil {
@@ -155,9 +156,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
-			if value == "true" {
-				isEncrypted = true
-			}
+			isEncrypted = isTrue(value)
 		case KmsKeyIDKey:
 			kmsKeyID = value
 		case PVCNameKey:
@@ -170,9 +169,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			volumeTags[PVNameTag] = value
 			tProps.PVName = value
 		case BlockExpressKey:
-			if value == "true" {
-				blockExpress = true
-			}
+			blockExpress = isTrue(value)
 		case BlockSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
@@ -194,9 +191,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			numberOfInodes = value
 		case Ext4BigAllocKey:
-			if value == "true" {
-				ext4BigAlloc = true
-			}
+			ext4BigAlloc = isTrue(value)
 		case Ext4ClusterSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
@@ -255,7 +250,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 	if ext4BigAlloc {
-		responseCtx[Ext4BigAllocKey] = "true"
+		responseCtx[Ext4BigAllocKey] = trueStr
 		if err = validateFormattingOption(volCap, Ext4BigAllocKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
@@ -1058,4 +1053,8 @@ func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramN
 	}
 
 	return nil
+}
+
+func isTrue(value string) bool {
+	return value == trueStr
 }
