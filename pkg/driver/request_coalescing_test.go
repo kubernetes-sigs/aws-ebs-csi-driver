@@ -393,7 +393,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	num := 5
 	wg.Add(num * 2)
 
-	for j := 0; j < num; j++ {
+	for range num {
 		go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
 			_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
 				VolumeId: volumeID,

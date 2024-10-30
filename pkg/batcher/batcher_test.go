@@ -135,7 +135,7 @@ func TestBatcher(t *testing.T) {
 
 			var wg sync.WaitGroup
 
-			for i := 0; i < len(tc.tasks); i++ {
+			for i := range tc.tasks {
 				wg.Add(1)
 				go func(taskNum int) {
 					defer wg.Done()
@@ -147,7 +147,7 @@ func TestBatcher(t *testing.T) {
 
 			wg.Wait()
 
-			for i := 0; i < len(tc.tasks); i++ {
+			for i := range tc.tasks {
 				select {
 				case r := <-resultChans[i]:
 					task := fmt.Sprintf("task%d", i)
@@ -174,7 +174,7 @@ func TestBatcherConcurrentTaskAdditions(t *testing.T) {
 	b := New(numTasks, 1*time.Second, mockExecution)
 	resultChans := make([]chan BatchResult[string], numTasks)
 
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		wg.Add(1)
 		go func(taskNum int) {
 			defer wg.Done()
@@ -186,7 +186,7 @@ func TestBatcherConcurrentTaskAdditions(t *testing.T) {
 
 	wg.Wait()
 
-	for i := 0; i < numTasks; i++ {
+	for i := range numTasks {
 		r := <-resultChans[i]
 		task := fmt.Sprintf("task%d", i)
 		if r.Err != nil {

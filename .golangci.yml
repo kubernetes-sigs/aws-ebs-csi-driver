@@ -45,17 +45,14 @@ linters:
     - goheader
     - goimports
     - gomodguard
-#    - goprintffuncname
-#    - gosec
-#    - gosimple
-#    - gosmopolitan
-#    - govet
-#    - grouper
-#    - importas
-#    - inamedparam
-#    - ineffassign
-#    - interfacebloat
-#    - intrange
+    - goprintffuncname
+    - gosimple
+    - gosmopolitan
+    - grouper
+    - importas
+    - inamedparam
+    - ineffassign
+    - intrange
 #    - ireturn
 #    - lll
 #    - loggercheck
@@ -130,3 +127,4 @@ linters:
     - gochecknoinits # TODO FIXME
     - godox # TODO FIXME
     - gofumpt # TODO Ask team
+    - gosec # TODO Urgent not too bad

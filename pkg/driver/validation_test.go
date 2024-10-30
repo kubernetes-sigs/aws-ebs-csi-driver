@@ -40,7 +40,7 @@ func randomString(n int) string {
 
 func randomStringMap(n int) map[string]string {
 	result := map[string]string{}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		result[strconv.Itoa(i)] = randomString(10)
 	}
 	return result

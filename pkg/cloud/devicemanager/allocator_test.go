@@ -90,7 +90,7 @@ func TestNameAllocatorError(t *testing.T) {
 	allocator := nameAllocator{}
 	existingNames := map[string]string{}
 
-	for i := 0; i < len(deviceNames); i++ {
+	for range deviceNames {
 		name, _ := allocator.GetNext(existingNames, new(sync.Map))
 		existingNames[name] = ""
 	}

@@ -53,12 +53,12 @@ const (
 func generateVolumes(volIdCount, volTagCount int) []types.Volume {
 	volumes := make([]types.Volume, 0, volIdCount+volTagCount)
 
-	for i := 0; i < volIdCount; i++ {
+	for i := range volIdCount {
 		volumeID := fmt.Sprintf("vol-%d", i)
 		volumes = append(volumes, types.Volume{VolumeId: aws.String(volumeID)})
 	}
 
-	for i := 0; i < volTagCount; i++ {
+	for i := range volTagCount {
 		volumeName := fmt.Sprintf("vol-name-%d", i)
 		volumes = append(volumes, types.Volume{Tags: []types.Tag{{Key: aws.String(VolumeNameTagKey), Value: aws.String(volumeName)}}})
 	}
@@ -418,12 +418,12 @@ func executeDescribeInstancesTest(t *testing.T, c *cloud, instanceIds []string, 
 func generateSnapshots(snapIDCount, snapTagCount int) []types.Snapshot {
 	snapshots := make([]types.Snapshot, 0, snapIDCount+snapTagCount)
 
-	for i := 0; i < snapIDCount; i++ {
+	for i := range snapIDCount {
 		snapID := fmt.Sprintf("snap-%d", i)
 		snapshots = append(snapshots, types.Snapshot{SnapshotId: aws.String(snapID)})
 	}
 
-	for i := 0; i < snapTagCount; i++ {
+	for i := range snapTagCount {
 		snapshotName := fmt.Sprintf("snap-name-%d", i)
 		snapshots = append(snapshots, types.Snapshot{Tags: []types.Tag{{Key: aws.String(SnapshotNameTagKey), Value: aws.String(snapshotName)}}})
 	}
@@ -3115,7 +3115,7 @@ func TestListSnapshots(t *testing.T) {
 				maxResults := 5
 				nextTokenValue := "nextTokenValue"
 				var expSnapshots []*Snapshot
-				for i := 0; i < maxResults*2; i++ {
+				for i := range maxResults * 2 {
 					expSnapshots = append(expSnapshots, &Snapshot{
 						SourceVolumeID: "snap-test-volume1",
 						SnapshotID:     fmt.Sprintf("snap-test-name%d", i),
@@ -3125,7 +3125,7 @@ func TestListSnapshots(t *testing.T) {
 				}
 
 				var ec2Snapshots []types.Snapshot
-				for i := 0; i < maxResults*2; i++ {
+				for i := range maxResults * 2 {
 					ec2Snapshots = append(ec2Snapshots, types.Snapshot{
 						SnapshotId: aws.String(expSnapshots[i].SnapshotID),
 						VolumeId:   aws.String(fmt.Sprintf("snap-test-volume%d", i)),
