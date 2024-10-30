@@ -64,23 +64,21 @@ linters:
     - noctx
     - nolintlint
     - nosprintfhostport
-#    - perfsprint
     - prealloc
 #    - predeclared
-#    - promlinter
-#    - protogetter
-#    - reassign
-#    - revive
-#    - rowserrcheck
-#    - sloglint
-#    - spancheck
-#    - sqlclosecheck
-#    - staticcheck
+    - promlinter
+    - protogetter
+    - reassign
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
 #    - stylecheck
-#    - tagalign
-#    - tagliatelle
-#    - tenv
-#    - testableexamples
+    - tagalign
+    - tagliatelle
+    - tenv
+    - testableexamples
 #    - testifylint
 #    - testpackage
 #    - thelper
@@ -124,3 +122,5 @@ linters:
     - maintidx # oof
     - nlreturn # Meh, ask team
     - nonamedreturns # meh ask team
+    - perfsprint # TODO FIXME
+    - revive # TODO

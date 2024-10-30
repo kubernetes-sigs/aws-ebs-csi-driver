@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"runtime"
 	"testing"
@@ -51,8 +50,7 @@ func TestNewNodeService(t *testing.T) {
 	mockMounter := mounter.NewMockMounter(ctrl)
 	mockKubernetesClient := NewMockKubernetesClient(ctrl)
 
-	os.Setenv("AWS_REGION", "us-west-2")
-	defer os.Unsetenv("AWS_REGION")
+	t.Setenv("AWS_REGION", "us-west-2")
 
 	options := &Options{}
 
