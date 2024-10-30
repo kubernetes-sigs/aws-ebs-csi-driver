@@ -806,13 +806,6 @@ func (d *NodeService) getVolumesLimit() int64 {
 	return int64(availableAttachments)
 }
 
-func min(x, y int) int {
-	if x <= y {
-		return x
-	}
-	return y
-}
-
 // hasMountOption returns a boolean indicating whether the given
 // slice already contains a mount option. This is used to prevent
 // passing duplicate option to the mount command.

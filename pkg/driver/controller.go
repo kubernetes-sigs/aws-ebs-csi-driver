@@ -569,8 +569,8 @@ func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 	nodeExpansionRequired := true
 	// if this is a raw block device, no expansion should be necessary on the node
-	cap := req.GetVolumeCapability()
-	if cap != nil && cap.GetBlock() != nil {
+	capability := req.GetVolumeCapability()
+	if capability != nil && capability.GetBlock() != nil {
 		nodeExpansionRequired = false
 	}
 
@@ -640,9 +640,9 @@ func isValidCapability(c *csi.VolumeCapability) bool {
 	}
 }
 
-func isBlock(cap *csi.VolumeCapability) bool {
-	_, isBlock := cap.GetAccessType().(*csi.VolumeCapability_Block)
-	return isBlock
+func isBlock(capability *csi.VolumeCapability) bool {
+	_, isBlk := capability.GetAccessType().(*csi.VolumeCapability_Block)
+	return isBlk
 }
 
 func isValidVolumeContext(volContext map[string]string) bool {
@@ -755,9 +755,9 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	// Check if the availability zone is supported for fast snapshot restore
 	if len(fsrAvailabilityZones) > 0 {
-		zones, error := d.cloud.AvailabilityZones(ctx)
-		if error != nil {
-			klog.ErrorS(error, "failed to get availability zones")
+		zones, err := d.cloud.AvailabilityZones(ctx)
+		if err != nil {
+			klog.ErrorS(err, "failed to get availability zones")
 		} else {
 			klog.V(4).InfoS("Availability Zones", "zone", zones)
 			for _, az := range fsrAvailabilityZones {
@@ -1042,7 +1042,7 @@ func BuildOutpostArn(segments map[string]string) string {
 
 func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramName string, fsConfigs map[string]fileSystemConfig) error {
 	for _, volCap := range volumeCapabilities {
-		if _, isBlockVolCap := volCap.GetAccessType().(*csi.VolumeCapability_Block); isBlockVolCap {
+		if isBlock(volCap) {
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("Cannot use %s with block volume", paramName))
 		}
 

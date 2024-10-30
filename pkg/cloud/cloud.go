@@ -694,8 +694,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		if err != nil {
 			// To avoid leaking volume, we should delete the volume just created
 			// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
-			if _, error := c.DeleteDisk(ctx, volumeID); err != nil {
-				klog.ErrorS(error, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
+			if _, deleteDiskErr := c.DeleteDisk(ctx, volumeID); deleteDiskErr != nil {
+				klog.ErrorS(deleteDiskErr, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
 			} else {
 				klog.V(5).InfoS("volume is deleted because there was an error while attaching the tags", "volumeID", volumeID)
 			}

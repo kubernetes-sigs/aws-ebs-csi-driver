@@ -65,7 +65,7 @@ linters:
     - nolintlint
     - nosprintfhostport
     - prealloc
-#    - predeclared
+    - predeclared
     - promlinter
     - protogetter
     - reassign
