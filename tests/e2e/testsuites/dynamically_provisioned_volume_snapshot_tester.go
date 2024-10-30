@@ -28,7 +28,7 @@ import (
 // Testing if the Pod(s) can write and read to mounted volumes
 // Create a snapshot, validate the data is still on the disk, and then write and read to it again
 // And finally delete the snapshot
-// This test only supports a single volume
+// This test only supports a single volume.
 type DynamicallyProvisionedVolumeSnapshotTest struct {
 	CSIDriver    driver.PVTestDriver
 	Pod          PodDetails

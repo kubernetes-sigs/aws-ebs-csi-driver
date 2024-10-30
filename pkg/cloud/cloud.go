@@ -41,7 +41,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// AWS volume types
+// AWS volume types.
 const (
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
@@ -111,13 +111,13 @@ const (
 	MaxTagValueLength = 256
 )
 
-// Defaults
+// Defaults.
 const (
 	// DefaultVolumeSize represents the default volume size.
 	DefaultVolumeSize int64 = 100 * util.GiB
 )
 
-// Tags
+// Tags.
 const (
 	// VolumeNameTagKey is the key value that refers to the volume's name.
 	VolumeNameTagKey = "CSIVolumeName"
@@ -127,11 +127,11 @@ const (
 	KubernetesTagKeyPrefix = "kubernetes.io"
 	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
 	AWSTagKeyPrefix = "aws:"
-	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver
+	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
 
-// Batcher
+// Batcher.
 const (
 	volumeIDBatcher volumeBatcherType = iota
 	volumeTagBatcher
@@ -162,23 +162,23 @@ var (
 	ErrAlreadyExists = errors.New("resource already exists")
 
 	// ErrMultiSnapshots is returned when multiple snapshots are found
-	// with the same ID
+	// with the same ID.
 	ErrMultiSnapshots = errors.New("multiple snapshots with the same name found")
 
-	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4
+	// ErrInvalidMaxResults is returned when a MaxResults pagination parameter is between 1 and 4.
 	ErrInvalidMaxResults = errors.New("maxResults parameter must be 0 or greater than or equal to 5")
 
-	// ErrVolumeNotBeingModified is returned if volume being described is not being modified
+	// ErrVolumeNotBeingModified is returned if volume being described is not being modified.
 	ErrVolumeNotBeingModified = errors.New("volume is not being modified")
 
-	// ErrInvalidArgument is returned if parameters were rejected by cloud provider
+	// ErrInvalidArgument is returned if parameters were rejected by cloud provider.
 	ErrInvalidArgument = errors.New("invalid argument")
 
-	// ErrInvalidRequest is returned if parameters were rejected by driver
+	// ErrInvalidRequest is returned if parameters were rejected by driver.
 	ErrInvalidRequest = errors.New("invalid request")
 )
 
-// Set during build time via -ldflags
+// Set during build time via -ldflags.
 var driverVersion string
 
 var invalidParameterErrorCodes = map[string]struct{}{
@@ -192,7 +192,7 @@ var invalidParameterErrorCodes = map[string]struct{}{
 	"ValidationError":             {},
 }
 
-// Disk represents a EBS volume
+// Disk represents a EBS volume.
 type Disk struct {
 	VolumeID         string
 	CapacityGiB      int32
@@ -202,7 +202,7 @@ type Disk struct {
 	Attachments      []string
 }
 
-// DiskOptions represents parameters to create an EBS volume
+// DiskOptions represents parameters to create an EBS volume.
 type DiskOptions struct {
 	CapacityBytes          int64
 	Tags                   map[string]string
@@ -222,20 +222,20 @@ type DiskOptions struct {
 	SnapshotID string
 }
 
-// ModifyDiskOptions represents parameters to modify an EBS volume
+// ModifyDiskOptions represents parameters to modify an EBS volume.
 type ModifyDiskOptions struct {
 	VolumeType string
 	IOPS       int32
 	Throughput int32
 }
 
-// ModifyTagsOptions represents parameter to modify the tags of an existing EBS volume
+// ModifyTagsOptions represents parameter to modify the tags of an existing EBS volume.
 type ModifyTagsOptions struct {
 	TagsToAdd    map[string]string
 	TagsToDelete []string
 }
 
-// Snapshot represents an EBS volume snapshot
+// Snapshot represents an EBS volume snapshot.
 type Snapshot struct {
 	SnapshotID     string
 	SourceVolumeID string
@@ -244,19 +244,19 @@ type Snapshot struct {
 	ReadyToUse     bool
 }
 
-// ListSnapshotsResponse is the container for our snapshots along with a pagination token to pass back to the caller
+// ListSnapshotsResponse is the container for our snapshots along with a pagination token to pass back to the caller.
 type ListSnapshotsResponse struct {
 	Snapshots []*Snapshot
 	NextToken string
 }
 
-// SnapshotOptions represents parameters to create an EBS volume
+// SnapshotOptions represents parameters to create an EBS volume.
 type SnapshotOptions struct {
 	Tags       map[string]string
 	OutpostArn string
 }
 
-// ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function
+// ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function.
 type ec2ListSnapshotsResponse struct {
 	Snapshots []types.Snapshot
 	NextToken *string
@@ -333,7 +333,7 @@ type cloud struct {
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
-// It panics if session is invalid
+// It panics if session is invalid.
 func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (Cloud, error) {
 	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching)
 	return c, nil
@@ -705,7 +705,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
 }
 
-// execBatchDescribeVolumesModifications executes a batched DescribeVolumesModifications API call
+// execBatchDescribeVolumesModifications executes a batched DescribeVolumesModifications API call.
 func execBatchDescribeVolumesModifications(svc EC2API, input []string) (map[string]*types.VolumeModification, error) {
 	klog.V(7).InfoS("execBatchDescribeVolumeModifications", "volumeIds", input)
 	request := &ec2.DescribeVolumesModificationsInput{
@@ -861,7 +861,7 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 	return true, nil
 }
 
-// execBatchDescribeInstances executes a batched DescribeInstances API call
+// execBatchDescribeInstances executes a batched DescribeInstances API call.
 func execBatchDescribeInstances(svc EC2API, input []string) (map[string]*types.Instance, error) {
 	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
 	request := &ec2.DescribeInstancesInput{
@@ -1401,7 +1401,7 @@ func (c *cloud) ListSnapshots(ctx context.Context, volumeID string, maxResults i
 	}, nil
 }
 
-// Helper method converting EC2 snapshot type to the internal struct
+// Helper method converting EC2 snapshot type to the internal struct.
 func (c *cloud) ec2SnapshotResponseToStruct(ec2Snapshot types.Snapshot) *Snapshot {
 	snapshotSize := *ec2Snapshot.VolumeSize
 	snapshot := &Snapshot{
@@ -1557,7 +1557,7 @@ func (c *cloud) getSnapshot(ctx context.Context, request *ec2.DescribeSnapshotsI
 	}
 }
 
-// listSnapshots returns all snapshots based from a request
+// listSnapshots returns all snapshots based from a request.
 func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshotsInput) (*ec2ListSnapshotsResponse, error) {
 	var snapshots []types.Snapshot
 	var nextToken *string
@@ -1643,7 +1643,7 @@ func isAWSErrorInvalidAttachmentNotFound(err error) bool {
 }
 
 // isAWSErrorModificationNotFound returns a boolean indicating whether the given
-// error is an AWS InvalidVolumeModification.NotFound error
+// error is an AWS InvalidVolumeModification.NotFound error.
 func isAWSErrorModificationNotFound(err error) bool {
 	return isAWSError(err, "InvalidVolumeModification.NotFound")
 }
@@ -1657,7 +1657,7 @@ func isAWSErrorSnapshotNotFound(err error) bool {
 
 // isAWSErrorIdempotentParameterMismatch returns a boolean indicating whether the
 // given error is an AWS IdempotentParameterMismatch error.
-// This error is reported when the two request contains same client-token but different parameters
+// This error is reported when the two request contains same client-token but different parameters.
 func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
 }
@@ -1794,7 +1794,7 @@ func (c *cloud) getLatestVolumeModification(ctx context.Context, volumeID string
 }
 
 // randomAvailabilityZone returns a random zone from the given region
-// the randomness relies on the response of DescribeAvailabilityZones
+// the randomness relies on the response of DescribeAvailabilityZones.
 func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	request := &ec2.DescribeAvailabilityZonesInput{}
 	response, err := c.ec2.DescribeAvailabilityZones(ctx, request)
@@ -1810,7 +1810,7 @@ func (c *cloud) randomAvailabilityZone(ctx context.Context) (string, error) {
 	return zones[0], nil
 }
 
-// AvailabilityZones returns availability zones from the given region
+// AvailabilityZones returns availability zones from the given region.
 func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, error) {
 	response, err := c.ec2.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
 	if err != nil {

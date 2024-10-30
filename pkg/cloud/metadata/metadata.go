@@ -24,7 +24,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Metadata is info about the ec2 instance on which the driver is running
+// Metadata is info about the ec2 instance on which the driver is running.
 type Metadata struct {
 	InstanceID             string
 	InstanceType           string
@@ -83,7 +83,7 @@ func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
 	return KubernetesAPIInstanceInfo(clientset)
 }
 
-// Override the region on a Metadata object if it is non-empty
+// Override the region on a Metadata object if it is non-empty.
 func (m *Metadata) overrideRegion(region string) *Metadata {
 	if region != "" {
 		m.Region = region

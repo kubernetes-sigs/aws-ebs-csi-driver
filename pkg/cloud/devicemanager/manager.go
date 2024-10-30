@@ -44,7 +44,7 @@ func (d *Device) Release(force bool) {
 	}
 }
 
-// Taint marks the device as no longer reusable
+// Taint marks the device as no longer reusable.
 func (d *Device) Taint() {
 	d.isTainted = true
 }
@@ -194,7 +194,7 @@ func (d *deviceManager) release(device *Device) error {
 }
 
 // getDeviceNamesInUse returns the device to volume ID mapping
-// the mapping includes both already attached and being attached volumes
+// the mapping includes both already attached and being attached volumes.
 func (d *deviceManager) getDeviceNamesInUse(instance *types.Instance) map[string]string {
 	nodeID := aws.ToString(instance.InstanceId)
 	inUse := map[string]string{}

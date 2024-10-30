@@ -29,12 +29,12 @@ const (
 	True = "true"
 )
 
-// Implement DynamicPVTestDriver interface
+// Implement DynamicPVTestDriver interface.
 type ebsCSIDriver struct {
 	driverName string
 }
 
-// InitEbsCSIDriver returns ebsCSIDriver that implements DynamicPVTestDriver interface
+// InitEbsCSIDriver returns ebsCSIDriver that implements DynamicPVTestDriver interface.
 func InitEbsCSIDriver() PVTestDriver {
 	return &ebsCSIDriver{
 		driverName: ebscsidriver.DriverName,
@@ -107,7 +107,7 @@ func (d *ebsCSIDriver) GetPersistentVolume(volumeID string, fsType string, size 
 	}
 }
 
-// MinimumSizeForVolumeType returns the minimum disk size for each volumeType
+// MinimumSizeForVolumeType returns the minimum disk size for each volumeType.
 func MinimumSizeForVolumeType(volumeType string) string {
 	switch volumeType {
 	case "st1", "sc1":

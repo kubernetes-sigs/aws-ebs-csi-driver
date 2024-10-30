@@ -29,7 +29,7 @@ const expectedReadOnlyLog = "Read-only file system"
 
 // DynamicallyProvisionedReadOnlyVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)
 // Waiting for the PV provisioner to create a new PV
-// Testing that the Pod(s) cannot write to the volume when mounted
+// Testing that the Pod(s) cannot write to the volume when mounted.
 type DynamicallyProvisionedReadOnlyVolumeTest struct {
 	CSIDriver driver.DynamicPVTestDriver
 	Pods      []PodDetails

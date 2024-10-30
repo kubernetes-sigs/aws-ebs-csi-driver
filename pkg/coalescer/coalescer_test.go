@@ -29,7 +29,7 @@ var (
 
 // Merge function used to test the coalescer
 // For testing purposes, positive numbers are added to the existing input,
-// and negative numbers return an error ("fail to merge")
+// and negative numbers return an error ("fail to merge").
 func mockMerge(input int, existing int) (int, error) {
 	if input < 0 {
 		return 0, errFailedToMerge
@@ -39,7 +39,7 @@ func mockMerge(input int, existing int) (int, error) {
 
 // Execute function used to test the coalescer
 // For testing purposes, small numbers (numbers less than 100) successfully execute,
-// and large numbers (numbers 100 or greater) fail to execute
+// and large numbers (numbers 100 or greater) fail to execute.
 func mockExecute(_ string, input int) (string, error) {
 	if input < 100 {
 		return "success", nil

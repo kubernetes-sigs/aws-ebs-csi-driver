@@ -37,14 +37,14 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Supported access modes
+// Supported access modes.
 const (
 	SingleNodeWriter     = csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER
 	MultiNodeMultiWriter = csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER
 )
 
 var (
-	// controllerCaps represents the capability of controller service
+	// controllerCaps represents the capability of controller service.
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
@@ -58,7 +58,7 @@ var (
 const trueStr = "true"
 const isManagedByDriver = trueStr
 
-// ControllerService represents the controller service of CSI driver
+// ControllerService represents the controller service of CSI driver.
 type ControllerService struct {
 	cloud                 cloud.Cloud
 	inFlight              *internal.InFlight
@@ -68,7 +68,7 @@ type ControllerService struct {
 	csi.UnimplementedControllerServer
 }
 
-// NewControllerService creates a new controller service
+// NewControllerService creates a new controller service.
 func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
 	return &ControllerService{
 		cloud:                 c,
@@ -1011,7 +1011,7 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 	return volSizeBytes, nil
 }
 
-// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
+// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments.
 func BuildOutpostArn(segments map[string]string) string {
 	if len(segments[AwsPartitionKey]) == 0 {
 		return ""

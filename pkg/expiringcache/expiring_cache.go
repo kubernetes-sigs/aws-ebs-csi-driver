@@ -30,7 +30,7 @@ import (
 //
 // From the consumer's perspective, it behaves similarly to a map
 // KeyType is the type of the object that is used as a key
-// ValueType is the type of the object that is stored
+// ValueType is the type of the object that is stored.
 type ExpiringCache[KeyType comparable, ValueType any] interface {
 	// Get operates identically to retrieving from a map, returning
 	// the value and/or boolean indicating if the value existed in the map
@@ -55,7 +55,7 @@ type expiringCache[KeyType comparable, ValueType any] struct {
 }
 
 // New returns a new ExpiringCache
-// for a given KeyType, ValueType, and expiration delay
+// for a given KeyType, ValueType, and expiration delay.
 func New[KeyType comparable, ValueType any](expirationDelay time.Duration) ExpiringCache[KeyType, ValueType] {
 	return &expiringCache[KeyType, ValueType]{
 		expirationDelay: expirationDelay,

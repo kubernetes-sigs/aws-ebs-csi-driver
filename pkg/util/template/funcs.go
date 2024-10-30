@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// Disable functions
+// Disable functions.
 func html(...interface{}) (string, error) {
 	return "", errors.New("cannot call 'html' function")
 }

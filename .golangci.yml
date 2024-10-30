@@ -114,34 +114,34 @@ linters:
     - perfsprint
     - revive
     - gosec
-    - gochecknoglobals  # TODO FIXME
+    - godot # End all godoc comments with period
   disable:
     - govet # We already run with `make verify/govet`
     # We do not use
     - gomoddirectives # We need `replace` in `go.mod`
     - depguard # We don't guard against dependencies
-    - testpackage # Requires separate test package
-    - funlen # Long names happen
-    - maintidx # Maintainability Index
+    - testpackage # Require separate test package to catch leaky unexported dependencies
+    - funlen # Long func names happen
+    - varnamelen # Long var names happen
+    - maintidx # Maintainability index
     - cyclop # Cyclomatic complexity
+    - gocognit # Cognitive complexity
     - wsl # Too strict of a whitespace linter
     # TODO Investigate FIXME
-    - dupl # TODO FIXME (tests + non-tests)
-    - err113 # TODO FIXME
-    - wrapcheck # Many false positives
-    - varnamelen # Many false positives
-    - mnd # Many false positives
-    - gomnd # Many false positives
-    - paralleltest # TODO FIXME (Too many tests that aren't parallelized right now)
-    - nestif # Many false positives
-    - gocognit # Many false positives
-    - godox # TODO FIXME
-    # Ask team
+    - err113 # TODO FIXME do not create errors dynamically from scratch. Instead wrap static (package-level) error. 2 points
+    - wrapcheck # TODO ^^
+    - gochecknoglobals  # TODO FIXME A whole 2 point task on its own
+    - paralleltest # TODO FIXME (Too many tests that aren't parallelized right now, probably half a day to attempt to mark the ones we can)
+    - nestif # TODO whole refactoring/readability task, should split up
+    - godox # TODO FIXME audit our project TODOs
+    # TODO Q: Consult with team
     - lll # Limit line length
-    - godot # TODO Ask team if we want to end all godoc comments with period
-    - gofumpt # TODO Ask team if we want to rely on gofumpt
-    - ireturn # ask team if we want to accept interfaces return concrete types
-    - nlreturn # Meh, ask team newline return
-    - nonamedreturns # Ask team, maybe nolint a few of the places it actually leads to cleaner code
-    - exhaustruct # Seems REALLY painful for kubernetes structs...
-    - interfacebloat # Cloud and Mounter have 15 instead of 10... Smell or necessary? We can nolint
+    - gofumpt # Rely on gofumpt's stricter formatting opinions
+    - ireturn # Always accept interfaces return concrete types (gopherism)
+    - nlreturn # Always have emptyline before return
+    - nonamedreturns # No using named returns in functions. Maybe nolint a few of the places it actually leads to cleaner code
+    - exhaustruct # Forces you to explicitly instantiate all structs. REALLY painful for kubernetes structs...
+    - interfacebloat # Cloud and Mounter have 15 methods instead of linter's recommended 10... Smell or necessary? We can nolint specific ones
+    - mnd # Magic Number Detection. Many false positives, still worth with nolint?
+    - gomnd # Many false positives, still worth with nolint?
+    - dupl # Tracks code duplication. Brutal amount of duplication in tests. False positives in non-tests.

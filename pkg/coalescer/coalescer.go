@@ -30,7 +30,7 @@ import (
 //
 // When the delay on the request expires (determined by the time the first request comes in), the merged
 // input is passed to the execution function, and the result to all waiting callers (those that were
-// not rejected during the merge step)
+// not rejected during the merge step).
 type Coalescer[InputType any, ResultType any] interface {
 	// Coalesce is a function to coalesce a given input
 	// key = only requests with this same key will be coalesced (such as volume ID)
@@ -45,7 +45,7 @@ type Coalescer[InputType any, ResultType any] interface {
 // mergeFunction = a function to merge a new input with the existing inputs
 // (should return an error if the new input cannot be combined with the existing inputs,
 // otherwise return the new merged input)
-// executeFunction = the function to call when the delay expires
+// executeFunction = the function to call when the delay expires.
 func New[InputType any, ResultType any](delay time.Duration,
 	mergeFunction func(input InputType, existing InputType) (InputType, error),
 	executeFunction func(key string, input InputType) (ResultType, error),
@@ -63,21 +63,21 @@ func New[InputType any, ResultType any](delay time.Duration,
 	return &c
 }
 
-// Type to store a result or error in channels
+// Type to store a result or error in channels.
 type result[ResultType any] struct {
 	result ResultType
 	err    error
 }
 
 // Type to send inputs from Coalesce() to coalescerThread() via channel
-// Includes a return channel for the result
+// Includes a return channel for the result.
 type newInput[InputType any, ResultType any] struct {
 	key           string
 	input         InputType
 	resultChannel chan result[ResultType]
 }
 
-// Type to store pending inputs in the input map
+// Type to store pending inputs in the input map.
 type pendingInput[InputType any, ResultType any] struct {
 	input          InputType
 	resultChannels []chan result[ResultType]

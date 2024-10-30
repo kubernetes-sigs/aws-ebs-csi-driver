@@ -29,7 +29,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// RecordRequestsHandler is added to the Complete chain; called after any request
+// RecordRequestsHandler is added to the Complete chain; called after any request.
 func RecordRequestsMiddleware() func(*middleware.Stack) error {
 	return func(stack *middleware.Stack) error {
 		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("RecordRequestsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
@@ -60,7 +60,7 @@ func RecordRequestsMiddleware() func(*middleware.Stack) error {
 
 // LogServerErrorsMiddleware is a middleware that logs server errors received when attempting to contact the AWS API
 // A specialized middleware is used instead of the SDK's built-in retry logging to allow for customizing the verbosity
-// of throttle errors vs server/unknown errors, to prevent flooding the logs with throttle error
+// of throttle errors vs server/unknown errors, to prevent flooding the logs with throttle error.
 func LogServerErrorsMiddleware() func(*middleware.Stack) error {
 	return func(stack *middleware.Stack) error {
 		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("LogServerErrorsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {

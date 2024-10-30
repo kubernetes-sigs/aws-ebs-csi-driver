@@ -426,7 +426,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Wait()
 }
 
-// TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk
+// TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk.
 func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	t.Helper()
 	const NewVolumeType = "gp3"

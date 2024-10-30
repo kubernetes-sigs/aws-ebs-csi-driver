@@ -22,7 +22,7 @@ import (
 )
 
 // DynamicallyProvisionedReclaimPolicyTest will provision required PV(s) and PVC(s)
-// Testing the correct behavior for different reclaimPolicies
+// Testing the correct behavior for different reclaimPolicies.
 type DynamicallyProvisionedReclaimPolicyTest struct {
 	CSIDriver driver.DynamicPVTestDriver
 	Volumes   []VolumeDetails

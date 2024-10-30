@@ -47,7 +47,7 @@ const (
 	execTimeout = 10 * time.Second
 	// Some pods can take much longer to get ready due to volume attach/detach latency.
 	slowPodStartTimeout = 15 * time.Minute
-	// Description that will printed during tests
+	// Description that will printed during tests.
 	failedConditionDescription = "Error status code"
 
 	volumeSnapshotNameStatic         = "volume-snapshot-tester"
@@ -665,7 +665,7 @@ func (t *TestPod) WaitForRunning() {
 }
 
 // Ideally this would be in "k8s.io/kubernetes/test/e2e/framework"
-// Similar to framework.WaitForPodSuccessInNamespace
+// Similar to framework.WaitForPodSuccessInNamespace.
 var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 	switch pod.Status.Phase {
 	case v1.PodFailed:

@@ -26,7 +26,7 @@ import (
 // DynamicallyProvisionedTopologyAwareVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)
 // Waiting for the PV provisioner to create a new PV
 // Testing if the Pod(s) can write and read to mounted volumes
-// Validate PVs have expected PV nodeAffinity
+// Validate PVs have expected PV nodeAffinity.
 type DynamicallyProvisionedTopologyAwareVolumeTest struct {
 	CSIDriver driver.DynamicPVTestDriver
 	Pods      []PodDetails

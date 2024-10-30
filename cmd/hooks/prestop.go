@@ -47,7 +47,7 @@ const clusterAutoscalerTaint = "ToBeDeletedByClusterAutoscaler"
 const v1KarpenterTaint = "karpenter.sh/disrupted"
 const v1beta1KarpenterTaint = "karpenter.sh/disruption"
 
-// drainTaints includes taints used by K8s or autoscalers that signify node draining or pod eviction
+// drainTaints includes taints used by K8s or autoscalers that signify node draining or pod eviction.
 var drainTaints = map[string]struct{}{
 	v1.TaintNodeUnschedulable: {}, // Kubernetes common eviction taint (kubectl drain)
 	clusterAutoscalerTaint:    {},

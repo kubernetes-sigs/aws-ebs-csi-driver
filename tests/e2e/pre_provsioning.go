@@ -48,7 +48,7 @@ var (
 	defaultDiskSizeBytes int64 = defaultDiskSize * 1024 * 1024 * 1024
 )
 
-// Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set
+// Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set.
 var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged

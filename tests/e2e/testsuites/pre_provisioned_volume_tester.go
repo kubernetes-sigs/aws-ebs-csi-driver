@@ -22,7 +22,7 @@ import (
 )
 
 // PreProvisionedVolumeTest will provision required PV(s), PVC(s) and Pod(s)
-// Testing if the Pod(s) can write and read to mounted volumes
+// Testing if the Pod(s) can write and read to mounted volumes.
 type PreProvisionedVolumeTest struct {
 	CSIDriver driver.PreProvisionedVolumeTestDriver
 	Pods      []PodDetails

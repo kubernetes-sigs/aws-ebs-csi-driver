@@ -1451,7 +1451,7 @@ func TestCreateDisk(t *testing.T) {
 	}
 }
 
-// Test client error IdempotentParameterMismatch by forcing it to progress twice
+// Test client error IdempotentParameterMismatch by forcing it to progress twice.
 func TestCreateDiskClientToken(t *testing.T) {
 	t.Parallel()
 

@@ -23,7 +23,7 @@ import (
 
 // DynamicallyProvisionedCollocatedPodTest will provision required StorageClass(es), PVC(s) and Pod(s)
 // Waiting for the PV provisioner to create a new PV
-// Testing if multiple Pod(s) can write simultaneously
+// Testing if multiple Pod(s) can write simultaneously.
 type DynamicallyProvisionedCollocatedPodTest struct {
 	CSIDriver    driver.DynamicPVTestDriver
 	Pods         []PodDetails

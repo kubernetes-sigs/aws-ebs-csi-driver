@@ -21,7 +21,7 @@ import (
 )
 
 // PreProvisionedReclaimPolicyTest will provision required PV(s) and PVC(s)
-// Testing the correct behavior for different reclaimPolicies
+// Testing the correct behavior for different reclaimPolicies.
 type PreProvisionedReclaimPolicyTest struct {
 	CSIDriver driver.PreProvisionedVolumeTestDriver
 	Volumes   []VolumeDetails

@@ -39,7 +39,7 @@ import (
 const testTagNamePrefix = "testTag"
 const testTagValue = "3.1415926"
 
-// generateTagName appends a random uuid to tag name to prevent clashes on parallel e2e test runs on shared cluster
+// generateTagName appends a random uuid to tag name to prevent clashes on parallel e2e test runs on shared cluster.
 func generateTagName() string {
 	return testTagNamePrefix + uuid.NewString()[:8]
 }

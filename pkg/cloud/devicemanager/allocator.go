@@ -46,7 +46,7 @@ var _ NameAllocator = &nameAllocator{}
 // It does this by using a list of legal EBS device names from device_names.go
 //
 // likelyBadNames is a map of names that have previously returned an "in use" error when attempting to mount to them
-// These names are unlikely to result in a successful mount, and may be permanently unavailable, so use them last
+// These names are unlikely to result in a successful mount, and may be permanently unavailable, so use them last.
 func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames *sync.Map) (string, error) {
 	for _, name := range deviceNames {
 		_, existing := existingNames[name]

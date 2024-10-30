@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn
+	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn.
 	OutpostArnEndpoint string = "outpost-arn"
 
-	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs
+	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
 	EnisEndpoint string = "network/interfaces/macs"
 
-	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices
+	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
 	BlockDevicesEndpoint string = "block-device-mapping"
 )
 
