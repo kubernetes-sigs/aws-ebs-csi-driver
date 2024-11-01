@@ -1089,7 +1089,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			}
 			_, err := c.ec2.AttachVolume(ctx, request)
 			if err != nil {
-				return false, fmt.Errorf("WaitForAttachmentState AttachVolume error, expected device but be attached but was %s, volumeID=%q, instanceID=%q, Device=%q, err=%w", attachmentState, volumeID, expectedInstance, expectedDevice, err)
+				return false, fmt.Errorf("WaitForAttachmentState AttachVolume error, expected device to be attached but was %s, volumeID=%q, instanceID=%q, Device=%q, err=%w", attachmentState, volumeID, expectedInstance, expectedDevice, err)
 			}
 			return false, fmt.Errorf("attachment of disk %q failed, expected device to be attached but was %s", volumeID, attachmentState)
 		}
