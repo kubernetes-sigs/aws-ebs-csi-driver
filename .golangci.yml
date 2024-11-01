@@ -35,113 +35,36 @@ linters-settings:
       - "github.com/onsi/gomega"
       - "github.com/onsi/ginkgo/v2"
 linters:
-  enable:
-    - asasalint
-    - asciicheck
-    - bidichk
-    - bodyclose
-    - canonicalheader
-    - containedctx
-    - contextcheck
-    - copyloopvar
-    - decorder
-    - dogsled
-    - dupword
-    - durationcheck
-    - errcheck
-    - errchkjson
-    - errname
-    - errorlint
-    - exhaustive
-    - fatcontext
-    - forbidigo
-    - forcetypeassert
-    - gci
-    - ginkgolinter
-    - gocheckcompilerdirectives
-    - gochecksumtype
-    - gocritic
-    - gofmt
-    - goheader
-    - goimports
-    - gomodguard
-    - goprintffuncname
-    - gosimple
-    - gosmopolitan
-    - grouper
-    - importas
-    - inamedparam
-    - ineffassign
-    - intrange
-    - loggercheck
-    - makezero
-    - mirror
-    - misspell
-    - musttag
-    - nakedret
-    - nilerr
-    - nilnil
-    - noctx
-    - nolintlint
-    - nosprintfhostport
-    - prealloc
-    - predeclared
-    - promlinter
-    - protogetter
-    - reassign
-    - rowserrcheck
-    - sloglint
-    - spancheck
-    - sqlclosecheck
-    - staticcheck
-    - stylecheck
-    - tagalign
-    - tagliatelle
-    - tenv
-    - testableexamples
-    - testifylint
-    - thelper
-    - tparallel
-    - unconvert
-    - unparam
-    - unused
-    - usestdlibvars
-    - wastedassign
-    - whitespace
-    - zerologlint
-    - goconst
-    - gochecknoinits
-    - perfsprint
-    - revive
-    - gosec
-    - godot # End all godoc comments with period
+  enable-all: true
   disable:
     - govet # We already run with `make verify/govet`
     # We do not use
-    - gomoddirectives # We need `replace` in `go.mod`
-    - depguard # We don't guard against dependencies
-    - testpackage # Require separate test package to catch leaky unexported dependencies
-    - funlen # Long func names happen
-    - varnamelen # Long var names happen
-    - maintidx # Maintainability index
     - cyclop # Cyclomatic complexity
+    - depguard # We don't guard against dependencies
+    - dupl # Tracks code duplication. Too much duplication in tests. False positives in non-tests
+    - execinquery # Deprecated but enabled-by-default
+    - exhaustruct # Explicitly instantiating all structs is painful for K8s structs
+    - exportloopref # Deprecated but enabled-by-default
+    - funlen # Long func names happen
     - gocognit # Cognitive complexity
-    - wsl # Too strict of a whitespace linter
-    # TODO Investigate FIXME
-    - err113 # TODO FIXME do not create errors dynamically from scratch. Instead wrap static (package-level) error. 2 points
-    - wrapcheck # TODO ^^
-    - gochecknoglobals  # TODO FIXME A whole 2 point task on its own
-    - paralleltest # TODO FIXME (Too many tests that aren't parallelized right now, probably half a day to attempt to mark the ones we can)
-    - nestif # TODO whole refactoring/readability task, should split up
-    - godox # TODO FIXME audit our project TODOs
-    # TODO Q: Consult with team
+    - gocyclo # Cyclomatic complexity
+    - gofumpt # We don't rely on gofumpt
+    - gomnd # Magic Number Detection. Many false positives.
+    - gomoddirectives # We need `replace` in `go.mod`
+    - interfacebloat # No more than 10 interface methods
+    - ireturn # Accept interfaces return concrete types
     - lll # Limit line length
-    - gofumpt # Rely on gofumpt's stricter formatting opinions
-    - ireturn # Always accept interfaces return concrete types (gopherism)
-    - nlreturn # Always have emptyline before return
-    - nonamedreturns # No using named returns in functions. Maybe nolint a few of the places it actually leads to cleaner code
-    - exhaustruct # Forces you to explicitly instantiate all structs. REALLY painful for kubernetes structs...
-    - interfacebloat # Cloud and Mounter have 15 methods instead of linter's recommended 10... Smell or necessary? We can nolint specific ones
-    - mnd # Magic Number Detection. Many false positives, still worth with nolint?
-    - gomnd # Many false positives, still worth with nolint?
-    - dupl # Tracks code duplication. Brutal amount of duplication in tests. False positives in non-tests.
+    - maintidx # Maintainability index
+    - mnd # Magic Number Detection. Many false positives
+    - nestif # Don't allow too many nested if statements
+    - nlreturn # Always have empty line before return
+    - testpackage # Require separate test package to catch leaky unexported dependencies
+    - varnamelen # Long var names happen
+    - wsl # Too strict of a whitespace linter
+    # Consider adding in future
+    - err113 # Do not create errors dynamically from scratch. Instead, wrap static (package-level) error.
+    - wrapcheck # Same as err113
+    - gochecknoglobals  # Do not allow global variables
+    - godox # Do not allow TODOs
+    - nonamedreturns # Need to nolint/refactor a few places our code
+    - paralleltest # There are many tests that aren't parallelized

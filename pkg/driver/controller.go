@@ -486,11 +486,11 @@ func (d *ControllerService) ControllerGetCapabilities(ctx context.Context, req *
 	klog.V(4).InfoS("ControllerGetCapabilities: called", "args", req)
 
 	caps := make([]*csi.ControllerServiceCapability, 0, len(controllerCaps))
-	for _, cap := range controllerCaps {
+	for _, capability := range controllerCaps {
 		c := &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: cap,
+					Type: capability,
 				},
 			},
 		}

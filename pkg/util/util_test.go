@@ -24,9 +24,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRoundUpBytes(t *testing.T) {
@@ -119,7 +118,6 @@ func TestParseEndpoint(t *testing.T) {
 				if err.Error() != tc.expErr.Error() {
 					t.Fatalf("Expecting err: expected %v, got %v", tc.expErr, err)
 				}
-
 			} else {
 				if err != nil {
 					t.Fatalf("err is not nil. got: %v", err)
@@ -134,7 +132,6 @@ func TestParseEndpoint(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestGetAccessModes(t *testing.T) {
