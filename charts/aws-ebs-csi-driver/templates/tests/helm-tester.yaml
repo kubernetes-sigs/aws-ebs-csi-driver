@@ -220,15 +220,28 @@ spec:
           else
             FOCUS_REGEX="${FOCUS_REGEX})"
           fi
-          export KUBE_VERSION=$(kubectl version --output json | jq -r '.serverVersion.major + "." + .serverVersion.minor')
-          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version="$(curl -L https://dl.k8s.io/release/stable-${KUBE_VERSION}.txt)" --skip-regex='[Disruptive]|[Serial]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
+
+          echo "Detecting Kubernetes server version"
+          export KUBE_VERSION=$(kubectl version --output json | jq -r '.serverVersion.major + "." + .serverVersion.minor' | sed 's/[^0-9.]*$//')
+          echo "Detected KUBE_VERSION=${KUBE_VERSION}"
+
+          echo "Fetching the stable test package version for KUBE_VERSION=${KUBE_VERSION}"
+          test_package_version=$(curl -L https://dl.k8s.io/release/stable-${KUBE_VERSION}.txt 2>/dev/null)
+
+          if echo "$test_package_version" | grep -q "Error"; then
+            echo "Error: Failed to fetch test package version for KUBE_VERSION=${KUBE_VERSION}. Exiting."
+            exit 1
+          fi
+          echo "Fetched test package version ${test_package_version}"
+
+          echo "Starting kubetest2 with ginkgo tests..."
+          kubetest2 noop --run-id='e2e-kubernetes' --test=ginkgo -- --test-package-version="$test_package_version" --skip-regex='[Disruptive]|[Serial]' --focus-regex="$FOCUS_REGEX" --parallel=25 --test-args='-storage.testdriver=/etc/config/manifests.yaml'
+          echo "kubetest2 test run completed."
       volumeMounts:
       - name: config-vol
         mountPath: /etc/config
-  # kubekins-e2e v1 image is linux amd64 only.
   nodeSelector:
     kubernetes.io/os: linux
-    kubernetes.io/arch: amd64
   serviceAccountName: ebs-csi-driver-test
   volumes:
     - name: config-vol

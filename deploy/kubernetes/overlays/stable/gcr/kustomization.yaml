@@ -16,7 +16,7 @@ images:
     newTag: v2.14.0
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
     newName: registry.k8s.io/sig-storage/csi-snapshotter
-    newTag: v8.0.1
+    newTag: v8.1.0
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newName: registry.k8s.io/sig-storage/csi-resizer
     newTag: v1.12.0

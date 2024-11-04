@@ -32,6 +32,7 @@ function kops_create_cluster() {
   KOPS_PATCH_FILE=${10}
   KOPS_PATCH_NODE_FILE=${11}
   KOPS_STATE_FILE=${12}
+  declare -x KOPS_TOO_NEW_VERSION=true
 
   if kops_cluster_exists "${CLUSTER_NAME}" "${KOPS_BIN}" "${KOPS_STATE_FILE}"; then
     loudecho "Replacing cluster $CLUSTER_NAME with $CLUSTER_FILE"

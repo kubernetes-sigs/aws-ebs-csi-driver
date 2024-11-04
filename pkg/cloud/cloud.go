@@ -359,6 +359,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
 			RecordRequestsMiddleware(),
+			LogServerErrorsMiddleware(), // This middlware should always be last so it sees an unmangled error
 		)
 
 		endpoint := os.Getenv("AWS_EC2_ENDPOINT")
@@ -1080,7 +1081,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		// if we expected volume to be attached and it was reported as already attached via DescribeInstance call
 		// but DescribeVolume told us volume is detached, we will short-circuit this long wait loop and return error
 		// so as AttachDisk can be retried without waiting for 20 minutes.
-		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState != expectedState) {
+		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState == volumeDetachedState) {
 			request := &ec2.AttachVolumeInput{
 				Device:     aws.String(expectedDevice),
 				InstanceId: aws.String(expectedInstance),
@@ -1088,7 +1089,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			}
 			_, err := c.ec2.AttachVolume(ctx, request)
 			if err != nil {
-				return false, fmt.Errorf("WaitForAttachmentState AttachVolume error, expected device but be attached but was %s, volumeID=%q, instanceID=%q, Device=%q, err=%w", attachmentState, volumeID, expectedInstance, expectedDevice, err)
+				return false, fmt.Errorf("WaitForAttachmentState AttachVolume error, expected device to be attached but was %s, volumeID=%q, instanceID=%q, Device=%q, err=%w", attachmentState, volumeID, expectedInstance, expectedDevice, err)
 			}
 			return false, fmt.Errorf("attachment of disk %q failed, expected device to be attached but was %s", volumeID, attachmentState)
 		}

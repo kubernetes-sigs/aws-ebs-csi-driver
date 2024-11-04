@@ -3301,13 +3301,22 @@ func TestWaitForAttachmentState(t *testing.T) {
 			expectError:      true,
 		},
 		{
-			name:             "failure: already assigned but wrong state",
+			name:             "failure: already assigned but detached state",
 			volumeID:         "vol-test-1234",
 			expectedState:    volumeAttachedState,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  true,
 			expectError:      true,
+		},
+		{
+			name:             "failure: already assigned but attaching state",
+			volumeID:         "vol-test-1234",
+			expectedState:    volumeAttachedState,
+			expectedInstance: "1234",
+			expectedDevice:   defaultPath,
+			alreadyAssigned:  true,
+			expectError:      false,
 		},
 		{
 			name:             "failure: multiple attachments with Multi-Attach disabled",
@@ -3353,9 +3362,12 @@ func TestWaitForAttachmentState(t *testing.T) {
 			switch tc.name {
 			case "success: detached":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil).AnyTimes()
-			case "failure: already assigned but wrong state":
+			case "failure: already assigned but detached state":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil)
 				mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Any()).Return(nil, nil)
+			case "failure: already assigned but attaching state":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil)
 			case "success: disk not found, assumed detached", "failure: disk not found, expected attached":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{
 					Code:    "InvalidVolume.NotFound",

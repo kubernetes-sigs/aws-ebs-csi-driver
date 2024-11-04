@@ -30,7 +30,7 @@ jobs:
     steps:
       # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
       - name: 'Download reports'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             let fs = require('fs');
@@ -80,7 +80,7 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Create or update comment
-        uses: edumserrano/find-create-or-update-comment@60a62b88d02efeb2c405e578d3a2b47ea0b230b1
+        uses: edumserrano/find-create-or-update-comment@82880b65c8a3a6e4c70aa05a204995b6c9696f53
         with:
           issue-number: ${{ steps.source-run-info.outputs.pullRequestNumber }}
           body-includes: '<!-- pr-coverage -->'

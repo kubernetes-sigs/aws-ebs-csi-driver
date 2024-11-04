@@ -1,3 +1,23 @@
+# v1.36.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+#### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
+
+### Bug Fixes
+* Prevent `VolumeInUse` error when volume is still attaching ([#2183](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2183), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add v1 Karpenter disrupted taint to pre-stop hook ([#2166](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2166), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Improvements
+* Update example policy for IAM change ([#2163](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2163), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add EnableFSRs to example policy ([#2168](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2168), [@ConnorJC3](https://github.com/ConnorJC3))
+* Add m8g, c8g, x8g, g6e, and p5e attachment limits ([#2181](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2181), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Update FAQ to include section on Volume Attachment Capacity Issues ([#2169](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2169), [@torredil](https://github.com/torredil))
+* Use protobuf content type instead of json for k8s client ([#2138](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2138), [@bhavi-koduru](https://github.com/bhavi-koduru))
+* Update dependencies ahead of v1.36 ([#2182](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2182), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Migrate to kubekins-e2e-v2 ([#2177](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2177), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.35.0
 ### Notable Changes
 * Add legacy-xfs driver option for clusters that mount XFS volumes to nodes with Linux kernel <= 5.4. Warning: This is a temporary workaround for customers unable to immediately upgrade their nodes. It will be removed in a future release. See [the options documentation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/release-1.35/docs/options.md) for more details.([#2121](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2121),[@AndrewSirenko](https://github.com/AndrewSirenko))

@@ -31,7 +31,7 @@ const (
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
-	instanceFamilies := []string{"m7i", "m7i-flex", "m7a", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "u7i", "g6", "gr6"}
+	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "g6", "g6e", "gr6"}
 	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
 
 	for _, family := range instanceFamilies {
@@ -257,6 +257,14 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"g6.48xlarge":     8,
 	"g6.4xlarge":      1,
 	"g6.8xlarge":      2,
+	"g6e.12xlarge":    2,
+	"g6e.16xlarge":    2,
+	"g6e.24xlarge":    2,
+	"g6e.2xlarge":     1,
+	"g6e.48xlarge":    4,
+	"g6e.4xlarge":     1,
+	"g6e.8xlarge":     2,
+	"g6e.xlarge":      1,
 	"g6.xlarge":       1,
 	"gr6.4xlarge":     1,
 	"gr6.8xlarge":     2,
@@ -391,6 +399,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"p4d.24xlarge":    8,
 	"p4de.24xlarge":   8,
 	"p5.48xlarge":     8,
+	"p5e.48xlarge":    8,
 	"r3.2xlarge":      1,
 	"r3.4xlarge":      1,
 	"r3.8xlarge":      2,
@@ -542,6 +551,14 @@ var gpuInstanceGpus = map[string]int{
 	"g6.48xlarge":   8,
 	"g6.4xlarge":    1,
 	"g6.8xlarge":    1,
+	"g6e.12xlarge":  4,
+	"g6e.16xlarge":  1,
+	"g6e.24xlarge":  4,
+	"g6e.2xlarge":   1,
+	"g6e.48xlarge":  8,
+	"g6e.4xlarge":   1,
+	"g6e.8xlarge":   1,
+	"g6e.xlarge":    1,
 	"g6.xlarge":     1,
 	"gr6.4xlarge":   1,
 	"gr6.8xlarge":   1,
@@ -555,6 +572,7 @@ var gpuInstanceGpus = map[string]int{
 	"p4d.24xlarge":  8,
 	"p4de.24xlarge": 8,
 	"p5.48xlarge":   8,
+	"p5e.48xlarge":  8,
 }
 
 // Note this table is not a reflection of how many accelerators an instance has but of how many slots their combined accelerators take up
