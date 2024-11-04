@@ -18,31 +18,28 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/google/uuid"
+	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
-	"k8s.io/kubernetes/test/e2e/framework"
-
-	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
+	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
-
-	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 )
 
 const testTagNamePrefix = "testTag"
 const testTagValue = "3.1415926"
 
-// generateTagName appends a random uuid to tag name to prevent clashes on parallel e2e test runs on shared cluster
+// generateTagName appends a random uuid to tag name to prevent clashes on parallel e2e test runs on shared cluster.
 func generateTagName() string {
 	return testTagNamePrefix + uuid.NewString()[:8]
 }

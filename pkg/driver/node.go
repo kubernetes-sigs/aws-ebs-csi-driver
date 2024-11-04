@@ -44,10 +44,10 @@ import (
 )
 
 const (
-	// default file system type to be used when it is not provided
+	// default file system type to be used when it is not provided.
 	defaultFsType = FSTypeExt4
 
-	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID
+	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID.
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
 
 	// sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
@@ -72,9 +72,9 @@ var (
 		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 	}
 
-	// taintRemovalInitialDelay is the initial delay for node taint removal
+	// taintRemovalInitialDelay is the initial delay for node taint removal.
 	taintRemovalInitialDelay = 1 * time.Second
-	// taintRemovalBackoff is the exponential backoff configuration for node taint removal
+	// taintRemovalBackoff is the exponential backoff configuration for node taint removal.
 	taintRemovalBackoff = wait.Backoff{
 		Duration: 500 * time.Millisecond,
 		Factor:   2,
@@ -82,7 +82,7 @@ var (
 	}
 )
 
-// NodeService represents the node service of CSI driver
+// NodeService represents the node service of CSI driver.
 type NodeService struct {
 	metadata metadata.MetadataService
 	mounter  mounter.Mounter
@@ -91,7 +91,7 @@ type NodeService struct {
 	csi.UnimplementedNodeServer
 }
 
-// NewNodeService creates a new node service
+// NewNodeService creates a new node service.
 func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, k kubernetes.Interface) *NodeService {
 	if k != nil {
 		// Remove taint from node to indicate driver startup success
@@ -136,8 +136,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// If the access type is block, do nothing for stage
-	switch volCap.GetAccessType().(type) {
-	case *csi.VolumeCapability_Block:
+	if _, isAccessTypeBlock := volCap.GetAccessType().(*csi.VolumeCapability_Block); isAccessTypeBlock {
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
@@ -555,12 +554,11 @@ func (d *NodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 			},
 		},
 	}, nil
-
 }
 
 func (d *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	klog.V(4).InfoS("NodeGetCapabilities: called", "args", req)
-	var caps []*csi.NodeServiceCapability
+	caps := make([]*csi.NodeServiceCapability, 0, len(nodeCaps))
 	for _, cap := range nodeCaps {
 		c := &csi.NodeServiceCapability{
 			Type: &csi.NodeServiceCapability_Rpc{
@@ -658,7 +656,7 @@ func (d *NodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		return status.Errorf(codes.Internal, "Could not create file %q: %v", target, err)
 	}
 
-	//Checking if the target file is already mounted with a device.
+	// Checking if the target file is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
@@ -690,14 +688,14 @@ func (d *NodeService) isMounted(_ string, target string) (bool, error) {
 	*/
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
-		//Checking if the path exists and error is related to Corrupted Mount, in that case, the system could unmount and mount.
+		// Checking if the path exists and error is related to Corrupted Mount, in that case, the system could unmount and mount.
 		_, pathErr := d.mounter.PathExists(target)
 		if pathErr != nil && d.mounter.IsCorruptedMnt(pathErr) {
 			klog.V(4).InfoS("NodePublishVolume: Target path is a corrupted mount. Trying to unmount.", "target", target)
 			if mntErr := d.mounter.Unpublish(target); mntErr != nil {
 				return false, status.Errorf(codes.Internal, "Unable to unmount the target %q : %v", target, mntErr)
 			}
-			//After successful unmount, the device is ready to be mounted.
+			// After successful unmount, the device is ready to be mounted.
 			return false, nil
 		}
 		return false, status.Errorf(codes.Internal, "Could not check if %q is a mount point: %v, %v", target, err, pathErr)
@@ -736,7 +734,7 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 		return status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
-	//Checking if the target directory is already mounted with a device.
+	// Checking if the target directory is already mounted with a device.
 	mounted, err := d.isMounted(source, target)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check if %q is mounted: %v", target, err)
@@ -763,9 +761,8 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	return nil
 }
 
-// getVolumesLimit returns the limit of volumes that the node supports
+// getVolumesLimit returns the limit of volumes that the node supports.
 func (d *NodeService) getVolumesLimit() int64 {
-
 	if d.options.VolumeAttachLimit >= 0 {
 		return d.options.VolumeAttachLimit
 	}
@@ -801,19 +798,12 @@ func (d *NodeService) getVolumesLimit() int64 {
 			availableAttachments = availableAttachments - enis - reservedSlots
 		}
 	}
-	availableAttachments = availableAttachments - reservedVolumeAttachments
+	availableAttachments -= reservedVolumeAttachments
 	if availableAttachments <= 0 {
 		availableAttachments = 1
 	}
 
 	return int64(availableAttachments)
-}
-
-func min(x, y int) int {
-	if x <= y {
-		return x
-	}
-	return y
 }
 
 // hasMountOption returns a boolean indicating whether the given
@@ -849,14 +839,14 @@ func collectMountOptions(fsType string, mntFlags []string) []string {
 	return options
 }
 
-// Struct for JSON patch operations
+// Struct for JSON patch operations.
 type JSONPatch struct {
 	OP    string      `json:"op,omitempty"`
 	Path  string      `json:"path,omitempty"`
 	Value interface{} `json:"value"`
 }
 
-// removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff
+// removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff.
 func removeTaintInBackground(k8sClient kubernetes.Interface, backoff wait.Backoff, removalFunc func(kubernetes.Interface) error) {
 	backoffErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
 		err := removalFunc(k8sClient)

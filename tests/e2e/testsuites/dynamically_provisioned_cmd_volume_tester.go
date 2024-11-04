@@ -16,15 +16,14 @@ package testsuites
 
 import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 // DynamicallyProvisionedCmdVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)
 // Waiting for the PV provisioner to create a new PV
-// Testing if the Pod(s) Cmd is run with a 0 exit code
+// Testing if the Pod(s) Cmd is run with a 0 exit code.
 type DynamicallyProvisionedCmdVolumeTest struct {
 	CSIDriver    driver.DynamicPVTestDriver
 	Pods         []PodDetails

@@ -21,7 +21,7 @@ import (
 )
 
 type testRequest struct {
-	volumeId string
+	volumeID string
 	extra    string
 	expResp  bool
 	delete   bool
@@ -37,54 +37,53 @@ func TestInFlight(t *testing.T) {
 			requests: []testRequest{
 				{
 
-					volumeId: "random-vol-name",
+					volumeID: "random-vol-name",
 					expResp:  true,
 				},
 			},
 		},
 		{
-			name: "success adding request with different volumeId",
+			name: "success adding request with different volumeID",
 			requests: []testRequest{
 				{
-					volumeId: "random-vol-foobar",
+					volumeID: "random-vol-foobar",
 					expResp:  true,
 				},
 				{
-					volumeId: "random-vol-name-foobar",
+					volumeID: "random-vol-name-foobar",
 					expResp:  true,
 				},
 			},
 		},
 		{
-			name: "failed adding request with same volumeId",
+			name: "failed adding request with same volumeID",
 			requests: []testRequest{
 				{
-					volumeId: "random-vol-name-foobar",
+					volumeID: "random-vol-name-foobar",
 					expResp:  true,
 				},
 				{
-					volumeId: "random-vol-name-foobar",
+					volumeID: "random-vol-name-foobar",
 					expResp:  false,
 				},
 			},
 		},
-
 		{
 			name: "success add, delete, add copy",
 			requests: []testRequest{
 				{
-					volumeId: "random-vol-name",
+					volumeID: "random-vol-name",
 					extra:    "random-node-id",
 					expResp:  true,
 				},
 				{
-					volumeId: "random-vol-name",
+					volumeID: "random-vol-name",
 					extra:    "random-node-id",
 					expResp:  false,
 					delete:   true,
 				},
 				{
-					volumeId: "random-vol-name",
+					volumeID: "random-vol-name",
 					extra:    "random-node-id",
 					expResp:  true,
 				},
@@ -98,15 +97,14 @@ func TestInFlight(t *testing.T) {
 			for _, r := range tc.requests {
 				var resp bool
 				if r.delete {
-					db.Delete(r.volumeId)
+					db.Delete(r.volumeID)
 				} else {
-					resp = db.Insert(r.volumeId)
+					resp = db.Insert(r.volumeID)
 				}
 				if r.expResp != resp {
 					t.Fatalf("expected insert to be %+v, got %+v", r.expResp, resp)
 				}
 			}
 		})
-
 	}
 }

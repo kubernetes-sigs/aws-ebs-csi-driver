@@ -55,7 +55,7 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 					// it provides the absolute host path to the container volume.
 					sandboxMountPoint := os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT")
 					if sandboxMountPoint == "" {
-						return nil, fmt.Errorf("CONTAINER_SANDBOX_MOUNT_POINT environment variable is not set")
+						return nil, errors.New("CONTAINER_SANDBOX_MOUNT_POINT environment variable is not set")
 					}
 
 					tokenFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "token")
@@ -98,7 +98,7 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error) {
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
-		return nil, fmt.Errorf("CSI_NODE_NAME env var not set")
+		return nil, errors.New("CSI_NODE_NAME env var not set")
 	}
 
 	// get node with k8s API
@@ -109,7 +109,7 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 
 	providerID := node.Spec.ProviderID
 	if providerID == "" {
-		return nil, fmt.Errorf("node providerID empty, cannot parse")
+		return nil, errors.New("node providerID empty, cannot parse")
 	}
 
 	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|i-[a-z0-9]+$"
@@ -117,28 +117,28 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 	re := regexp.MustCompile(awsInstanceIDRegex)
 	instanceID := re.FindString(providerID)
 	if instanceID == "" {
-		return nil, fmt.Errorf("did not find aws instance ID in node providerID string")
+		return nil, errors.New("did not find aws instance ID in node providerID string")
 	}
 
 	var instanceType string
 	if val, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
 		instanceType = val
 	} else {
-		return nil, fmt.Errorf("could not retrieve instance type from topology label")
+		return nil, errors.New("could not retrieve instance type from topology label")
 	}
 
 	var region string
 	if val, ok := node.GetLabels()[corev1.LabelTopologyRegion]; ok {
 		region = val
 	} else {
-		return nil, fmt.Errorf("could not retrieve region from topology label")
+		return nil, errors.New("could not retrieve region from topology label")
 	}
 
 	var availabilityZone string
 	if val, ok := node.GetLabels()[corev1.LabelTopologyZone]; ok {
 		availabilityZone = val
 	} else {
-		return nil, fmt.Errorf("could not retrieve AZ from topology label")
+		return nil, errors.New("could not retrieve AZ from topology label")
 	}
 
 	instanceInfo := Metadata{

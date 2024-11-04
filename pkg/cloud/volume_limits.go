@@ -28,6 +28,7 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
+//nolint:gochecknoinits // TODO Refactor to avoid using init function to prevent side-effects
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
@@ -159,7 +160,7 @@ func GetReservedSlotsForInstanceType(it string) int {
 
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-volumes.html
 // IMDS does not provide NVMe instance store data; we'll just list all instances here
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits
+// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
 var nvmeInstanceStoreVolumes = map[string]int{
 	"c1.medium":       1,
 	"c1.xlarge":       4,
@@ -512,7 +513,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 
 // https://aws.amazon.com/ec2/instance-types
 // Despite the dl1.24xlarge having Gaudi Accelerators describe instance types considers them GPUs as such that instance type is in this table
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits
+// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
 var gpuInstanceGpus = map[string]int{
 	"dl1.24xlarge":  8,
 	"g3.16xlarge":   4,

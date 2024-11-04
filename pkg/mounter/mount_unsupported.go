@@ -20,7 +20,8 @@ limitations under the License.
 package mounter
 
 import (
-	"fmt"
+	"errors"
+
 	mountutils "k8s.io/mount-utils"
 )
 
@@ -34,35 +35,31 @@ run driver e2e tests.
 */
 
 func NewSafeMounter() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounter is not supported on this platform")
+	return nil, errors.New("NewSafeMounter is not supported on this platform")
 }
 
 func NewSafeMounterV2() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounterV2 is not supported on this platform")
+	return nil, errors.New("NewSafeMounterV2 is not supported on this platform")
 }
 
 func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region string) (string, error) {
-	return stubMessage, fmt.Errorf(stubMessage)
+	return stubMessage, errors.New(stubMessage)
 }
 
 func (m *NodeMounter) PreparePublishTarget(target string) error {
-	return fmt.Errorf(stubMessage)
+	return errors.New(stubMessage)
 }
 
 func (m *NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
-	return false, fmt.Errorf(stubMessage)
+	return false, errors.New(stubMessage)
 }
 
 func (m *NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
-	return 1, fmt.Errorf(stubMessage)
-}
-
-func (m *NodeMounter) appendPartition(devicePath, partition string) string {
-	return stubMessage
+	return 1, errors.New(stubMessage)
 }
 
 func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
-	return stubMessage, 0, fmt.Errorf(stubMessage)
+	return stubMessage, 0, errors.New(stubMessage)
 }
 
 func (m NodeMounter) IsCorruptedMnt(err error) bool {
@@ -70,29 +67,29 @@ func (m NodeMounter) IsCorruptedMnt(err error) bool {
 }
 
 func (m *NodeMounter) MakeFile(path string) error {
-	return fmt.Errorf(stubMessage)
+	return errors.New(stubMessage)
 }
 
 func (m *NodeMounter) MakeDir(path string) error {
-	return fmt.Errorf(stubMessage)
+	return errors.New(stubMessage)
 }
 
 func (m *NodeMounter) PathExists(path string) (bool, error) {
-	return false, fmt.Errorf(stubMessage)
+	return false, errors.New(stubMessage)
 }
 
 func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
-	return false, fmt.Errorf(stubMessage)
+	return false, errors.New(stubMessage)
 }
 
 func (m *NodeMounter) NeedResize(devicePath string, deviceMountPath string) (bool, error) {
-	return false, fmt.Errorf(stubMessage)
+	return false, errors.New(stubMessage)
 }
 
 func (m *NodeMounter) Unpublish(path string) error {
-	return fmt.Errorf(stubMessage)
+	return errors.New(stubMessage)
 }
 
 func (m *NodeMounter) Unstage(path string) error {
-	return fmt.Errorf(stubMessage)
+	return errors.New(stubMessage)
 }

@@ -108,6 +108,7 @@ func main() {
 			klog.ErrorS(err, "failed to get version")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
+		//nolint:forbidigo // Print version info without klog/timestamp
 		fmt.Println(versionInfo)
 		os.Exit(0)
 	}
@@ -133,9 +134,9 @@ func main() {
 		}()
 	}
 
-	if options.HttpEndpoint != "" {
+	if options.HTTPEndpoint != "" {
 		r := metrics.InitializeRecorder()
-		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
+		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 	}
 
 	cfg := metadata.MetadataServiceConfig{

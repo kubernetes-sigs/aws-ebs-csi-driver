@@ -162,7 +162,7 @@ func (mounter *CSIProxyMounter) WriteVolumeCache(target string) {
 }
 
 func (mounter *CSIProxyMounter) List() ([]mountutils.MountPoint, error) {
-	return []mountutils.MountPoint{}, fmt.Errorf("List not implemented for CSIProxyMounter")
+	return []mountutils.MountPoint{}, errors.New("List not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) IsMountPointMatch(mp mountutils.MountPoint, dir string) bool {
@@ -203,11 +203,11 @@ func (mounter *CSIProxyMounter) IsLikelyNotMountPoint(path string) (bool, error)
 }
 
 func (mounter *CSIProxyMounter) PathIsDevice(pathname string) (bool, error) {
-	return false, fmt.Errorf("PathIsDevice not implemented for CSIProxyMounter")
+	return false, errors.New("PathIsDevice not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) DeviceOpened(pathname string) (bool, error) {
-	return false, fmt.Errorf("DeviceOpened not implemented for CSIProxyMounter")
+	return false, errors.New("DeviceOpened not implemented for CSIProxyMounter")
 }
 
 // GetDeviceNameFromMount returns the disk number for a mount path.
@@ -230,11 +230,11 @@ func (mounter *CSIProxyMounter) GetDeviceNameFromMount(mountPath, _ string) (str
 }
 
 func (mounter *CSIProxyMounter) MakeRShared(path string) error {
-	return fmt.Errorf("MakeRShared not implemented for CSIProxyMounter")
+	return errors.New("MakeRShared not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) MakeFile(pathname string) error {
-	return fmt.Errorf("MakeFile not implemented for CSIProxyMounter")
+	return errors.New("MakeFile not implemented for CSIProxyMounter")
 }
 
 // MakeDir - Creates a directory. The CSI proxy takes in context information.
@@ -266,35 +266,35 @@ func (mounter *CSIProxyMounter) ExistsPath(path string) (bool, error) {
 }
 
 func (mounter *CSIProxyMounter) EvalHostSymlinks(pathname string) (string, error) {
-	return "", fmt.Errorf("EvalHostSymlinks is not implemented for CSIProxyMounter")
+	return "", errors.New("EvalHostSymlinks is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) GetMountRefs(pathname string) ([]string, error) {
-	return []string{}, fmt.Errorf("GetMountRefs is not implemented for CSIProxyMounter")
+	return []string{}, errors.New("GetMountRefs is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) GetFSGroup(pathname string) (int64, error) {
-	return -1, fmt.Errorf("GetFSGroup is not implemented for CSIProxyMounter")
+	return -1, errors.New("GetFSGroup is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) GetSELinuxSupport(pathname string) (bool, error) {
-	return false, fmt.Errorf("GetSELinuxSupport is not implemented for CSIProxyMounter")
+	return false, errors.New("GetSELinuxSupport is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) GetMode(pathname string) (os.FileMode, error) {
-	return 0, fmt.Errorf("GetMode is not implemented for CSIProxyMounter")
+	return 0, errors.New("GetMode is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) MountSensitive(source string, target string, fstype string, options []string, sensitiveOptions []string) error {
-	return fmt.Errorf("MountSensitive is not implemented for CSIProxyMounter")
+	return errors.New("MountSensitive is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemd(source string, target string, fstype string, options []string, sensitiveOptions []string) error {
-	return fmt.Errorf("MountSensitiveWithoutSystemd is not implemented for CSIProxyMounter")
+	return errors.New("MountSensitiveWithoutSystemd is not implemented for CSIProxyMounter")
 }
 
 func (mounter *CSIProxyMounter) MountSensitiveWithoutSystemdWithMountFlags(source string, target string, fstype string, options []string, sensitiveOptions []string, mountFlags []string) error {
-	return fmt.Errorf("MountSensitiveWithoutSystemdWithMountFlags is not implemented for CSIProxyMounter")
+	return errors.New("MountSensitiveWithoutSystemdWithMountFlags is not implemented for CSIProxyMounter")
 }
 
 // Rescan would trigger an update storage cache via the CSI proxy.

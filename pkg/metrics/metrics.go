@@ -65,7 +65,12 @@ func (m *metricRecorder) IncreaseCount(name string, labels map[string]string) {
 		return
 	}
 
-	metric.(*metrics.CounterVec).With(metrics.Labels(labels)).Inc()
+	metricAsCounterVec, ok := metric.(*metrics.CounterVec)
+	if ok {
+		metricAsCounterVec.With(labels).Inc()
+	} else {
+		klog.V(4).InfoS("Could not assert metric as metrics.CounterVec. Metric increase may have been skipped")
+	}
 }
 
 // ObserveHistogram records the given value in the histogram metric.
@@ -82,7 +87,12 @@ func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map
 		return
 	}
 
-	metric.(*metrics.HistogramVec).With(metrics.Labels(labels)).Observe(value)
+	metricAsHistogramVec, ok := metric.(*metrics.HistogramVec)
+	if ok {
+		metricAsHistogramVec.With(labels).Observe(value)
+	} else {
+		klog.V(4).InfoS("Could not assert metric as metrics.HistogramVec. Metric observation may have been skipped")
+	}
 }
 
 // InitializeMetricsHandler starts a new HTTP server to expose the metrics.

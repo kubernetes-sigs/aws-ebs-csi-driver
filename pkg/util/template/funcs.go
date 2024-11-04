@@ -15,26 +15,27 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"strings"
 )
 
-// Disable functions
-func html(args ...interface{}) (string, error) {
-	return "", fmt.Errorf("cannot call 'html' function")
+// Disable functions.
+func html(...interface{}) (string, error) {
+	return "", errors.New("cannot call 'html' function")
 }
 
-func js(args ...interface{}) (string, error) {
-	return "", fmt.Errorf("cannot call 'js' function")
+func js(...interface{}) (string, error) {
+	return "", errors.New("cannot call 'js' function")
 }
 
-func call(args ...interface{}) (string, error) {
-	return "", fmt.Errorf("cannot call 'call' function")
+func call(...interface{}) (string, error) {
+	return "", errors.New("cannot call 'call' function")
 }
 
-func urlquery(args ...interface{}) (string, error) {
-	return "", fmt.Errorf("cannot call 'urlquery' function")
+func urlquery(...interface{}) (string, error) {
+	return "", errors.New("cannot call 'urlquery' function")
 }
 
 func contains(arg1, arg2 string) bool {

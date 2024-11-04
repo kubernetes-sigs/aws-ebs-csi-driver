@@ -19,7 +19,6 @@ package metadata
 import (
 	"errors"
 	"io"
-	"os"
 	"strings"
 	"testing"
 
@@ -103,7 +102,7 @@ func TestNewMetadataService(t *testing.T) {
 				return fake.NewSimpleClientset(node), nil
 			}
 
-			os.Setenv("CSI_NODE_NAME", "test-node")
+			t.Setenv("CSI_NODE_NAME", "test-node")
 
 			if tc.ec2MetadataError == nil {
 				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
@@ -525,8 +524,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			os.Setenv("CSI_NODE_NAME", tc.nodeName)
-			defer os.Unsetenv("CSI_NODE_NAME")
+			t.Setenv("CSI_NODE_NAME", tc.nodeName)
 
 			clientset := fake.NewSimpleClientset()
 			if tc.node != nil {

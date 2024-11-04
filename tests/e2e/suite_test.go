@@ -25,13 +25,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"k8s.io/kubernetes/test/e2e/framework"
 	frameworkconfig "k8s.io/kubernetes/test/e2e/framework/config"
 )
 
 const kubeconfigEnvVar = "KUBECONFIG"
 
+//nolint:gochecknoinits
 func init() {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	testing.Init()

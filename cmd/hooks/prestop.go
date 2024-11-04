@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -46,7 +47,7 @@ const clusterAutoscalerTaint = "ToBeDeletedByClusterAutoscaler"
 const v1KarpenterTaint = "karpenter.sh/disrupted"
 const v1beta1KarpenterTaint = "karpenter.sh/disruption"
 
-// drainTaints includes taints used by K8s or autoscalers that signify node draining or pod eviction
+// drainTaints includes taints used by K8s or autoscalers that signify node draining or pod eviction.
 var drainTaints = map[string]struct{}{
 	v1.TaintNodeUnschedulable: {}, // Kubernetes common eviction taint (kubectl drain)
 	clusterAutoscalerTaint:    {},
@@ -59,18 +60,19 @@ func PreStop(clientset kubernetes.Interface) error {
 
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
-		return fmt.Errorf("PreStop: CSI_NODE_NAME missing")
+		return errors.New("PreStop: CSI_NODE_NAME missing")
 	}
 
 	node, err := fetchNode(clientset, nodeName)
-	if k8serrors.IsNotFound(err) {
+	switch {
+	case k8serrors.IsNotFound(err):
 		klog.InfoS("PreStop: node does not exist - assuming this is a termination event, checking for remaining VolumeAttachments", "node", nodeName)
-	} else if err != nil {
+	case err != nil:
 		return err
-	} else if !isNodeBeingDrained(node) {
+	case !isNodeBeingDrained(node):
 		klog.InfoS("PreStop: node is not being drained, skipping VolumeAttachments check", "node", nodeName)
 		return nil
-	} else {
+	default:
 		klog.InfoS("PreStop: node is being drained, checking for remaining VolumeAttachments", "node", nodeName)
 	}
 
@@ -104,7 +106,10 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			klog.V(5).InfoS("DeleteFunc: VolumeAttachment deleted", "node", nodeName)
-			va := obj.(*storagev1.VolumeAttachment)
+			va, ok := obj.(*storagev1.VolumeAttachment)
+			if !ok {
+				klog.Error("DeleteFunc: error asserting object as type VolumeAttachment", "obj", va)
+			}
 			if va.Spec.NodeName == nodeName {
 				if err := checkVolumeAttachments(clientset, nodeName, allAttachmentsDeleted); err != nil {
 					klog.ErrorS(err, "DeleteFunc: error checking VolumeAttachments")
@@ -113,7 +118,10 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			klog.V(5).InfoS("UpdateFunc: VolumeAttachment updated", "node", nodeName)
-			va := newObj.(*storagev1.VolumeAttachment)
+			va, ok := newObj.(*storagev1.VolumeAttachment)
+			if !ok {
+				klog.Error("UpdateFunc: error asserting object as type VolumeAttachment", "obj", va)
+			}
 			if va.Spec.NodeName == nodeName {
 				if err := checkVolumeAttachments(clientset, nodeName, allAttachmentsDeleted); err != nil {
 					klog.ErrorS(err, "UpdateFunc: error checking VolumeAttachments")

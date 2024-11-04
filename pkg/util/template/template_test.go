@@ -202,7 +202,6 @@ func TestEvaluate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			props := &PVProps{
 				PVCName:      tc.pvcName,
 				PVCNamespace: tc.pvcNamespace,
@@ -343,7 +342,6 @@ func TestEvaluateVolumeSnapshotTemplate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			props := &VolumeSnapshotProps{
 				VolumeSnapshotName:        tc.volumeSnapshotName,
 				VolumeSnapshotNamespace:   tc.volumeSnapshotNamespace,

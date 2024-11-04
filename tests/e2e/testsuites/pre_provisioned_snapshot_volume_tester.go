@@ -15,16 +15,15 @@ limitations under the License.
 package testsuites
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	k8srestclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
-
-	. "github.com/onsi/ginkgo/v2"
 )
 
 type PreProvisionedVolumeSnapshotTest struct {
@@ -32,20 +31,18 @@ type PreProvisionedVolumeSnapshotTest struct {
 	Pod       PodDetails
 }
 
-func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient k8srestclient.Interface, namespace *v1.Namespace, snapshotId string) {
-
+func (t *PreProvisionedVolumeSnapshotTest) Run(client clientset.Interface, restclient k8srestclient.Interface, namespace *v1.Namespace, snapshotID string) {
 	By("taking snapshots")
 	tvsc, cleanup := CreateVolumeSnapshotClass(restclient, namespace, t.CSIDriver, nil)
 	defer cleanup()
 
-	tvolumeSnapshotContent := tvsc.CreateStaticVolumeSnapshotContent(snapshotId)
+	tvolumeSnapshotContent := tvsc.CreateStaticVolumeSnapshotContent(snapshotID)
 	tvs := tvsc.CreateStaticVolumeSnapshot(tvolumeSnapshotContent)
 
 	defer tvsc.DeleteVolumeSnapshotContent(tvolumeSnapshotContent)
 	defer tvsc.DeleteSnapshot(tvs)
 	if len(t.Pod.Volumes) < 1 {
-		err := fmt.Errorf("Volume is not setup for testing pod, exit. ")
-		framework.ExpectNoError(err)
+		framework.ExpectNoError(errors.New("volume is not setup for testing pod, exit"))
 	}
 
 	volume := t.Pod.Volumes[0]

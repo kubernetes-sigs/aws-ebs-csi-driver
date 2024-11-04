@@ -44,7 +44,7 @@ func Evaluate(tm []string, props interface{}, warnOnly bool) (map[string]string,
 
 		key, value := st[0], st[1]
 
-		t := template.New("tmpl").Funcs(template.FuncMap(newFuncMap()))
+		t := template.New("tmpl").Funcs(newFuncMap())
 		val, err := execTemplate(value, props, t)
 		if err != nil {
 			if warnOnly {

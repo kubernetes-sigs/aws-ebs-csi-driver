@@ -27,15 +27,15 @@ import (
 
 func ValidateDriverOptions(options *Options) error {
 	if err := validateExtraTags(options.ExtraTags, false); err != nil {
-		return fmt.Errorf("Invalid extra tags: %w", err)
+		return fmt.Errorf("invalid extra tags: %w", err)
 	}
 
 	if err := validateMode(options.Mode); err != nil {
-		return fmt.Errorf("Invalid mode: %w", err)
+		return fmt.Errorf("invalid mode: %w", err)
 	}
 
 	if options.ModifyVolumeRequestHandlerTimeout == 0 && (options.Mode == ControllerMode || options.Mode == AllMode) {
-		return errors.New("Invalid modifyVolumeRequestHandlerTimeout: Timeout cannot be zero")
+		return errors.New("invalid modifyVolumeRequestHandlerTimeout: timeout cannot be zero")
 	}
 
 	return nil
@@ -43,32 +43,32 @@ func ValidateDriverOptions(options *Options) error {
 
 func validateExtraTags(tags map[string]string, warnOnly bool) error {
 	if len(tags) > cloud.MaxNumTagsPerResource {
-		return fmt.Errorf("Too many tags (actual: %d, limit: %d)", len(tags), cloud.MaxNumTagsPerResource)
+		return fmt.Errorf("too many tags (actual: %d, limit: %d)", len(tags), cloud.MaxNumTagsPerResource)
 	}
 
 	validate := func(k, v string) error {
 		if len(k) > cloud.MaxTagKeyLength {
-			return fmt.Errorf("Tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
+			return fmt.Errorf("tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
 		} else if len(k) < cloud.MinTagKeyLength {
-			return fmt.Errorf("Tag key cannot be empty (min: 1)")
+			return errors.New("tag key cannot be empty (min: 1)")
 		}
 		if len(v) > cloud.MaxTagValueLength {
-			return fmt.Errorf("Tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)
+			return fmt.Errorf("tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)
 		}
 		if k == cloud.VolumeNameTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey)
+			return fmt.Errorf("tag key '%s' is reserved", cloud.VolumeNameTagKey)
 		}
 		if k == cloud.AwsEbsDriverTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)
+			return fmt.Errorf("tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)
 		}
 		if k == cloud.SnapshotNameTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey)
+			return fmt.Errorf("tag key '%s' is reserved", cloud.SnapshotNameTagKey)
 		}
 		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
-			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
+			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
 		}
 		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
-			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
+			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
 		}
 		return nil
 	}
@@ -88,7 +88,7 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 
 func validateMode(mode Mode) error {
 	if mode != AllMode && mode != ControllerMode && mode != NodeMode {
-		return fmt.Errorf("Mode is not supported (actual: %s, supported: %v)", mode, []Mode{AllMode, ControllerMode, NodeMode})
+		return fmt.Errorf("mode is not supported (actual: %s, supported: %v)", mode, []Mode{AllMode, ControllerMode, NodeMode})
 	}
 
 	return nil
