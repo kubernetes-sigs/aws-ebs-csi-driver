@@ -269,7 +269,7 @@ func (m *NodeMounter) MakeFile(path string) error {
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) MakeDir(path string) error {
-	err := os.MkdirAll(path, os.FileMode(0755))
+	err := os.MkdirAll(path, os.FileMode(0777))
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
