@@ -31,7 +31,8 @@ function install_driver() {
       --set image.tag="${IMAGE_TAG}"
       --set node.enableWindows="${WINDOWS}"
       --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
-      --set=controller.k8sTagClusterId="${CLUSTER_NAME}"
+      --set controller.k8sTagClusterId="${CLUSTER_NAME}"
+      --set image.pullPolicy="Always"
       --timeout 10m0s
       --wait
       --kubeconfig "${KUBECONFIG}")
