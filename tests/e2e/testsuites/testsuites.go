@@ -654,6 +654,10 @@ func (t *TestPod) Create() {
 	framework.ExpectNoError(err)
 }
 
+func (t *TestPod) GetName() string {
+	return t.pod.Name
+}
+
 func (t *TestPod) WaitForSuccess() {
 	err := e2epod.WaitForPodSuccessInNamespace(context.Background(), t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)

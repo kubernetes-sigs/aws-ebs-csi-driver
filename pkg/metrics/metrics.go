@@ -19,7 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/component-base/metrics"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
 )
 
@@ -29,7 +30,7 @@ var (
 )
 
 type metricRecorder struct {
-	registry metrics.KubeRegistry
+	registry *prometheus.Registry
 	metrics  map[string]interface{}
 }
 
@@ -43,11 +44,16 @@ func Recorder() *metricRecorder {
 func InitializeRecorder() *metricRecorder {
 	once.Do(func() {
 		r = &metricRecorder{
-			registry: metrics.NewKubeRegistry(),
+			registry: prometheus.NewRegistry(),
 			metrics:  make(map[string]interface{}),
 		}
 	})
 	return r
+}
+
+// InitializeNVME registers the NVMe collector for gathering metrics from NVMe devices.
+func InitializeNVME(r *metricRecorder, csiMountPointPath, instanceID string) {
+	registerNVMECollector(r, csiMountPointPath, instanceID)
 }
 
 // IncreaseCount increases the counter metric by 1.
@@ -65,7 +71,7 @@ func (m *metricRecorder) IncreaseCount(name string, labels map[string]string) {
 		return
 	}
 
-	metricAsCounterVec, ok := metric.(*metrics.CounterVec)
+	metricAsCounterVec, ok := metric.(*prometheus.CounterVec)
 	if ok {
 		metricAsCounterVec.With(labels).Inc()
 	} else {
@@ -87,7 +93,7 @@ func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map
 		return
 	}
 
-	metricAsHistogramVec, ok := metric.(*metrics.HistogramVec)
+	metricAsHistogramVec, ok := metric.(*prometheus.HistogramVec)
 	if ok {
 		metricAsHistogramVec.With(labels).Observe(value)
 	} else {
@@ -103,11 +109,7 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFi
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(path, metrics.HandlerFor(
-		m.registry,
-		metrics.HandlerOpts{
-			ErrorHandling: metrics.ContinueOnError,
-		}))
+	mux.Handle(path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
 
 	server := &http.Server{
 		Addr:        address,
@@ -136,7 +138,14 @@ func (m *metricRecorder) registerHistogramVec(name, help string, labels []string
 	if _, exists := m.metrics[name]; exists {
 		return
 	}
-	histogram := createHistogramVec(name, help, labels, buckets)
+	histogram := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    name,
+			Help:    help,
+			Buckets: buckets,
+		},
+		labels,
+	)
 	m.metrics[name] = histogram
 	m.registry.MustRegister(histogram)
 }
@@ -145,30 +154,15 @@ func (m *metricRecorder) registerCounterVec(name, help string, labels []string) 
 	if _, exists := m.metrics[name]; exists {
 		return
 	}
-	counter := createCounterVec(name, help, labels)
-	m.metrics[name] = counter
-	m.registry.MustRegister(counter)
-}
-
-func createHistogramVec(name, help string, labels []string, buckets []float64) *metrics.HistogramVec {
-	opts := &metrics.HistogramOpts{
-		Name:           name,
-		Help:           help,
-		StabilityLevel: metrics.ALPHA,
-		Buckets:        buckets,
-	}
-	return metrics.NewHistogramVec(opts, labels)
-}
-
-func createCounterVec(name, help string, labels []string) *metrics.CounterVec {
-	return metrics.NewCounterVec(
-		&metrics.CounterOpts{
-			Name:           name,
-			Help:           help,
-			StabilityLevel: metrics.ALPHA,
+	counter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: name,
+			Help: help,
 		},
 		labels,
 	)
+	m.metrics[name] = counter
+	m.registry.MustRegister(counter)
 }
 
 func getLabelNames(labels map[string]string) []string {

@@ -648,6 +648,9 @@ func (d *NodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	// Create the mount point as a file since bind mount device node requires it to be a file
+	// This implementation detail is relied upon by the NVMECollector,
+	// which discovers block devices by parsing /proc/self/mountinfo. The bind mount
+	// created here ensures block devices appear in mountinfo even without a filesystem.
 	klog.V(4).InfoS("NodePublishVolume [block]: making target file", "target", target)
 	if err = d.mounter.MakeFile(target); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {

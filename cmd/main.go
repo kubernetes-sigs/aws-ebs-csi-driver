@@ -134,11 +134,6 @@ func main() {
 		}()
 	}
 
-	if options.HTTPEndpoint != "" {
-		r := metrics.InitializeRecorder()
-		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
-	}
-
 	cfg := metadata.MetadataServiceConfig{
 		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
 		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
@@ -157,6 +152,15 @@ func main() {
 	} else {
 		klog.InfoS("Initializing metadata")
 		md, metadataErr = metadata.NewMetadataService(cfg, region)
+	}
+
+	if options.HTTPEndpoint != "" {
+		r := metrics.InitializeRecorder()
+		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
+
+		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
+			metrics.InitializeNVME(r, options.CsiMountPointPath, md.GetInstanceID())
+		}
 	}
 
 	if metadataErr != nil {
