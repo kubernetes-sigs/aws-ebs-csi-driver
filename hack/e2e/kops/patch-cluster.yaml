@@ -21,6 +21,9 @@ spec:
   kubeControllerManager:
     featureGates:
       VolumeAttributesClass: "true"
+  kubeScheduler:
+    featureGates:
+      VolumeAttributesClass: "true"
   additionalPolicies:
     node: |
       [
