@@ -14,6 +14,7 @@ To use this feature, it must be enabled in the following places:
 - `VolumeAttributesClass` feature gate on `kube-apiserver` (consult your Kubernetes distro's documentation)
 - `storage.k8s.io/v1alpha1` (Kubernetes 1.30 and before) or `storage.k8s.io/v1beta1` (Kubernetes 1.31 and later) enabled in `kube-apiserver` via [`runtime-config`](https://kubernetes.io/docs/tasks/administer-cluster/enable-disable-api/) (consult your Kubernetes distro's documentation)
 - `VolumeAttributesClass` feature gate on `kube-controller-manager` (consult your Kubernetes distro's documentation)
+- `VolumeAttributesClass` feature gate on `kube-scheduler` (consult your Kubernetes distro's documentation)
 - `VolumeAttributesClass` feature gate on `external-provisioner` sidecar
 - `VolumeAttributesClass` feature gate on `external-resizer` sidecar
 
