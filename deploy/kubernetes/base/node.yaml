@@ -59,6 +59,7 @@ spec:
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            - --csi-mount-point-prefix=/var/lib/kubelet
             - --logging-format=text
             - --v=2
           env:

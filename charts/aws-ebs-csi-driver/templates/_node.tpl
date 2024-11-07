@@ -70,6 +70,12 @@ spec:
             {{- with .Values.node.reservedVolumeAttachments }}
             - --reserved-volume-attachments={{ . }}
             {{- end }}
+            {{- if .Values.node.enableMetrics }}
+            - --http-endpoint=0.0.0.0:3302
+            {{- end}}
+            {{- with .Values.node.kubeletPath }}
+            - --csi-mount-point-prefix={{ . }}
+            {{- end}}
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
