@@ -57,6 +57,10 @@ spec:
           hostProcess: true
           runAsUserName: "NT AUTHORITY\\SYSTEM"
       hostNetwork: true
+      {{- with .Values.node.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
       containers:
         - name: ebs-plugin
