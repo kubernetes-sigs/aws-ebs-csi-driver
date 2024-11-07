@@ -74,6 +74,10 @@ func TestAddFlags(t *testing.T) {
 		t.Errorf("error setting legacy-xfs: %v", err)
 	}
 
+	if err := f.Set("csi-mount-point-prefix", "/var/lib/kubelet"); err != nil {
+		t.Errorf("error setting csi-mount-point-prefix: %v", err)
+	}
+
 	if o.Endpoint != "custom-endpoint" {
 		t.Errorf("unexpected Endpoint: got %s, want custom-endpoint", o.Endpoint)
 	}

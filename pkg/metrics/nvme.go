@@ -96,6 +96,11 @@ type NVMECollector struct {
 	scrapeErrorsTotal  prometheus.Counter
 }
 
+var (
+	ErrInvalidEBSMagic = errors.New("invalid EBS magic number")
+	ErrParseLogPage    = errors.New("failed to parse log page")
+)
+
 // NewNVMECollector creates a new instance of NVMECollector.
 func NewNVMECollector(path, instanceID string) *NVMECollector {
 	variableLabels := []string{"volume_id"}
@@ -295,11 +300,11 @@ func parseLogPage(data []byte) (EBSMetrics, error) {
 	reader := bytes.NewReader(data)
 
 	if err := binary.Read(reader, binary.LittleEndian, &metrics); err != nil {
-		return EBSMetrics{}, fmt.Errorf("failed to parse log page: %w", err)
+		return EBSMetrics{}, fmt.Errorf("%w: %w", ErrParseLogPage, err)
 	}
 
 	if metrics.EBSMagic != 0x3C23B510 {
-		return EBSMetrics{}, fmt.Errorf("invalid EBS magic number: %x", metrics.EBSMagic)
+		return EBSMetrics{}, fmt.Errorf("%w: %x", ErrInvalidEBSMagic, metrics.EBSMagic)
 	}
 
 	return metrics, nil

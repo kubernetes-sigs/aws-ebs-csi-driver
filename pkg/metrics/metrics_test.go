@@ -34,7 +34,7 @@ func TestMetricRecorder(t *testing.T) {
 				m.IncreaseCount("test_total", map[string]string{"key": "value"})
 			},
 			expected: `
-# HELP test_total [ALPHA] ebs_csi_aws_com metric
+# HELP test_total ebs_csi_aws_com metric
 # TYPE test_total counter
 test_total{key="value"} 1
 			`,
@@ -46,7 +46,7 @@ test_total{key="value"} 1
 				m.ObserveHistogram("test", 1.5, map[string]string{"key": "value"}, []float64{1, 2, 3})
 			},
 			expected: `
-# HELP test [ALPHA] ebs_csi_aws_com metric
+# HELP test ebs_csi_aws_com metric
 # TYPE test histogram
 test{key="value",le="1"} 0
 test{key="value",le="2"} 1
@@ -66,7 +66,7 @@ test_count{key="value"} 1
 				m.IncreaseCount("test_re_register_total", map[string]string{"key": "value2"})
 			},
 			expected: `
-# HELP test_re_register_total [ALPHA] ebs_csi_aws_com metric
+# HELP test_re_register_total ebs_csi_aws_com metric
 # TYPE test_re_register_total counter
 test_re_register_total{key="value1"} 2
 test_re_register_total{key="value2"} 1
