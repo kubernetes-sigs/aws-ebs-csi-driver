@@ -224,6 +224,9 @@ spec:
             - --kube-api-burst=100
             - --worker-threads=100
             {{- end }}
+            {{- if not (regexMatch "(-retry-interval-start)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
+            - --retry-interval-start=4s
+            {{- end }}
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
             - --retry-interval-max=30m
             {{- end }}
@@ -283,6 +286,9 @@ spec:
             - --kube-api-burst=100
             - --worker-threads=100
             {{- end }}
+            {{- if not (regexMatch "(-retry-interval-start)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
+            - --retry-interval-start=500ms
+            {{- end }}
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
             - --retry-interval-max=5m
             {{- end }}
@@ -328,6 +334,9 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            {{- end }}
+            {{- if not (regexMatch "(-retry-interval-start)" (join " " .Values.sidecars.snapshotter.additionalArgs)) }}
+            - --retry-interval-start=4s
             {{- end }}
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.snapshotter.additionalArgs)) }}
             - --retry-interval-max=30m
@@ -444,6 +453,9 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --workers=100
+            {{- end }}
+            {{- if not (regexMatch "(-retry-interval-start)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
+            - --retry-interval-start=4s
             {{- end }}
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
             - --retry-interval-max=30m
