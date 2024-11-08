@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
+apiVersion: storage.k8s.io/v1beta1
+kind: VolumeAttributesClass
 metadata:
-  name: ebs.csi.aws.com
-provisioner: ebs.csi.aws.com
-volumeBindingMode: WaitForFirstConsumer
+  name: gp2-class
+driverName: ebs.csi.aws.com
+parameters:
+  type: gp2
