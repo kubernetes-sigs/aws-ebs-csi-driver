@@ -14,9 +14,6 @@
 
 name: Trivy Scanner - Container Images
 on:
-  push:
-    branches:
-      - master
   schedule:
     - cron: '0 */24 * * *'
 
