@@ -144,6 +144,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-start=4s
             - --retry-interval-max=30m
           env:
             - name: ADDRESS
@@ -173,6 +174,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-start=500ms
             - --retry-interval-max=5m
           env:
             - name: ADDRESS
@@ -202,6 +204,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
+            - --retry-interval-start=4s
             - --retry-interval-max=30m
           env:
             - name: ADDRESS
@@ -232,6 +235,7 @@ spec:
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --workers=100
+            - --retry-interval-start=4s
             - --retry-interval-max=30m
           env:
             - name: ADDRESS
