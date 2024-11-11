@@ -27,7 +27,7 @@
                 (dict
                   "key" "eks.amazonaws.com/compute-type"
                   "operator" "NotIn"
-                  "values" (list "fargate")
+                  "values" (list "fargate" "auto" "hybrid")
                 )
                 (dict
                   "key" "node.kubernetes.io/instance-type"
