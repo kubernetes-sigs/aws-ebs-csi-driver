@@ -242,12 +242,12 @@ func (m *NodeMounter) appendPartition(devicePath, partition string) string {
 }
 
 // GetDeviceNameFromMount returns the volume ID for a mount path.
-func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
+func (m *NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
 	return mountutils.GetDeviceNameFromMount(m, mountPath)
 }
 
 // IsCorruptedMnt return true if err is about corrupted mount point.
-func (m NodeMounter) IsCorruptedMnt(err error) bool {
+func (m *NodeMounter) IsCorruptedMnt(err error) bool {
 	return mountutils.IsCorruptedMnt(err)
 }
 

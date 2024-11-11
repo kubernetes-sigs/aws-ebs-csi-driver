@@ -19,17 +19,17 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.18.5"
+AWSCLI_VERSION="2.19.4"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.192.0"
+EKSCTL_VERSION="v0.194.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.20.2"
+GINKGO_VERSION="v2.21.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.61.0"
+GOLANGCI_LINT_VERSION="v1.62.0"
 # https://github.com/hairyhenderson/gomplate
-GOMPLATE_VERSION="v4.1.0"
+GOMPLATE_VERSION="v4.2.0"
 # https://github.com/helm/helm
 HELM_VERSION="v3.16.2"
 # https://github.com/kubernetes/kops
@@ -40,7 +40,7 @@ KUBETEST2_VERSION="v0.0.0-20240905095256-f6e8664cd2b1"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
-SHFMT_VERSION="v3.9.0"
+SHFMT_VERSION="v3.10.0"
 # https://pypi.org/project/yamale/
 YAMALE_VERSION="5.2.1"
 # https://pypi.org/project/yamllint/
