@@ -31,6 +31,8 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+                - auto
+                - hybrid
               - key: node.kubernetes.io/instance-type
                 operator: NotIn
                 values:

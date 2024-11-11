@@ -37,6 +37,8 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+                - auto
+                - hybrid
             weight: 1
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
