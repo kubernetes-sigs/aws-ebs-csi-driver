@@ -1,3 +1,23 @@
+# v1.37.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+#### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
+
+### Notable Changes
+* Export EBS detailed performance statistics as Prometheus metrics for CSI-managed volumes ([#2216](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2216), [@torredil](https://github.com/torredil))
+
+### Bug Fixes
+* Update example-iam-policy.json for non 'aws' partitions ([#2193](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2193), [@willswire](https://github.com/willswire))
+
+### Improvements
+* Add Dependabot for Go module & GitHub Action dependencies ([#2179](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2179), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Add middleware to log server errors ([#2196](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2196), [@ConnorJC3](https://github.com/ConnorJC3))
+* Enable golang-ci linters ([#2204](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2204), [@AndrewSirenko](https://github.com/AndrewSirenko))
+* Enable VAC tests ([#2220](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2220), [@ElijahQuinones](https://github.com/ElijahQuinones))
+* Upgrade dependencies ([#2223](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2223), [@torredil](https://github.com/torredil))
+
 # v1.36.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*

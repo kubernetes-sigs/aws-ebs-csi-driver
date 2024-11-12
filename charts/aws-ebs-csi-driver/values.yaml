@@ -17,7 +17,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v5.1.0-eks-1-31-5"
+      tag: "v5.1.0-eks-1-31-7"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -44,7 +44,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.7.0-eks-1-31-5"
+      tag: "v4.7.0-eks-1-31-7"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -73,7 +73,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.1.0-eks-1-31-5"
+      tag: "v8.1.0-eks-1-31-7"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -89,7 +89,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.14.0-eks-1-31-5"
+      tag: "v2.14.0-eks-1-31-7"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -101,7 +101,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.12.0-eks-1-31-5"
+      tag: "v1.12.0-eks-1-31-7"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -128,7 +128,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.12.0-eks-1-31-5"
+      tag: "v2.12.0-eks-1-31-7"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -150,7 +150,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.3.0"
+      tag: "v0.4.0"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.

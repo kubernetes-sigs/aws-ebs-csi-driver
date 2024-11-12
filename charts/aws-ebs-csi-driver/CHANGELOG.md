@@ -1,4 +1,9 @@
 # Helm chart
+## v2.37.0
+* Bump driver version to `v1.37.0`
+* Add init containers to node daemonset ([#2215](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2215), [@clbx](https://github.com/clbx))
+* Fix fetching test package version for kubetest in helm-tester ([#2203](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2203), [@torredil](https://github.com/torredil))
+
 ## v2.36.0
 * Bump driver version to `v1.36.0`
 * Add recommended autoscalar Tolerations to driver DaemonSet ([#2165](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2165), [@AndrewSirenko](https://github.com/AndrewSirenko))
