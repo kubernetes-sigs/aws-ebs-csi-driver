@@ -13,8 +13,7 @@
         "ec2:DescribeSnapshots",
         "ec2:DescribeTags",
         "ec2:DescribeVolumes",
-        "ec2:DescribeVolumesModifications",
-        "ec2:EnableFastSnapshotRestores"
+        "ec2:DescribeVolumesModifications"
       ],
       "Resource": "*"
     },
@@ -24,9 +23,35 @@
         "ec2:CreateTags"
       ],
       "Resource": [
-        "arn:*:ec2:*:*:volume/*",
-        "arn:*:ec2:*:*:snapshot/*"
-      ]
+        "arn:aws:ec2:*:*:volume/*",
+        "arn:aws:ec2:*:*:snapshot/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:CreateAction": [
+            "CreateVolume",
+            "CreateSnapshot"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:volume/*",
+        "arn:aws:ec2:*:*:snapshot/*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:RequestTag/ebs.csi.aws.com/cluster": "*",
+          "aws:RequestTag/CSIVolumeName": "*",
+          "aws:RequestTag/CSIVolumeSnapshotName": "*",
+          "aws:RequestTag/kubernetes.io/created-for/pvc/name": "*"
+        }
+      }
     },
     {
       "Effect": "Allow",
@@ -34,8 +59,8 @@
         "ec2:DeleteTags"
       ],
       "Resource": [
-        "arn:*:ec2:*:*:volume/*",
-        "arn:*:ec2:*:*:snapshot/*"
+        "arn:aws:ec2:*:*:volume/*",
+        "arn:aws:ec2:*:*:snapshot/*"
       ]
     },
     {
@@ -43,7 +68,7 @@
       "Action": [
         "ec2:CreateVolume"
       ],
-      "Resource": "arn:*:ec2:*:*:volume/*",
+      "Resource": "*",
       "Condition": {
         "StringLike": {
           "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
@@ -55,7 +80,7 @@
       "Action": [
         "ec2:CreateVolume"
       ],
-      "Resource": "arn:*:ec2:*:*:volume/*",
+      "Resource": "*",
       "Condition": {
         "StringLike": {
           "aws:RequestTag/CSIVolumeName": "*"
@@ -65,9 +90,10 @@
     {
       "Effect": "Allow",
       "Action": [
-        "ec2:CreateVolume"
+        "ec2:CreateVolume",
+        "ec2:EnableFastSnapshotRestores"
       ],
-      "Resource": "arn:*:ec2:*:*:snapshot/*"
+      "Resource": "arn:aws:ec2:*:*:snapshot/*"
     },
     {
       "Effect": "Allow",
