@@ -1,11 +1,11 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.32.4
-	github.com/aws/aws-sdk-go-v2/config v1.28.3
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.19
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.187.1
-	github.com/aws/smithy-go v1.22.0
+	github.com/aws/aws-sdk-go-v2 v1.32.5
+	github.com/aws/aws-sdk-go-v2/config v1.28.5
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.20
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.191.0
+	github.com/aws/smithy-go v1.22.1
 	github.com/awslabs/volume-modifier-for-k8s v0.4.0
 	github.com/container-storage-interface/spec v1.10.0
 	github.com/golang/mock v1.6.0
@@ -26,7 +26,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.32.0
 	golang.org/x/sys v0.27.0
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.2
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
@@ -44,15 +44,15 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.44 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.23 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.46 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.24 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.24 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.24.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.32.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.24.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -97,7 +97,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/runc v1.2.1 // indirect
+	github.com/opencontainers/runc v1.2.2 // indirect
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
