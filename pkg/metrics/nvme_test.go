@@ -27,7 +27,8 @@ import (
 )
 
 func TestNewNVMECollector(t *testing.T) {
-	testPath := "/test/path"
+	testPath := "/test//unclean/../path"
+	expectedPath := "/test/path/"
 	testInstanceID := "test-instance-1"
 
 	collector := NewNVMECollector(testPath, testInstanceID)
@@ -36,8 +37,8 @@ func TestNewNVMECollector(t *testing.T) {
 		t.Fatal("NewNVMECollector returned nil")
 	}
 
-	if collector.csiMountPointPath != testPath {
-		t.Errorf("csiMountPointPath = %v, want %v", collector.csiMountPointPath, testPath)
+	if collector.csiMountPointPath != expectedPath {
+		t.Errorf("csiMountPointPath = %v, want %v", collector.csiMountPointPath, expectedPath)
 	}
 
 	if collector.instanceID != testInstanceID {

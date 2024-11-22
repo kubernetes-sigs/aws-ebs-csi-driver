@@ -78,7 +78,7 @@ spec:
             - --http-endpoint=0.0.0.0:3302
             {{- end}}
             {{- with .Values.node.kubeletPath }}
-            - --csi-mount-point-prefix={{ . }}
+            - --csi-mount-point-prefix={{ . }}/plugins/kubernetes.io/csi/ebs.csi.aws.com/
             {{- end}}
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
