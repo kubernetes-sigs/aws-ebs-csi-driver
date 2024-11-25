@@ -147,6 +147,7 @@ spec:
             - --kube-api-burst=100
             - --worker-threads=100
             - --retry-interval-max=30m
+            - --feature-gates=VolumeAttributesClass=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
@@ -235,6 +236,7 @@ spec:
             - --kube-api-burst=100
             - --workers=100
             - --retry-interval-max=30m
+            - --feature-gates=VolumeAttributesClass=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock

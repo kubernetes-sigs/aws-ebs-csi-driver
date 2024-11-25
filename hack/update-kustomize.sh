@@ -24,7 +24,7 @@ TEMP_DIR=$(mktemp -d)
 trap "rm -rf \"${TEMP_DIR}\"" EXIT
 cp "deploy/kubernetes/base/kustomization.yaml" "${TEMP_DIR}/kustomization.yaml"
 
-"${BIN}/helm" template --output-dir "${TEMP_DIR}" --skip-tests --api-versions 'snapshot.storage.k8s.io/v1' --api-versions 'policy/v1/PodDisruptionBudget' --set 'controller.userAgentExtra=kustomize' kustomize charts/aws-ebs-csi-driver >/dev/null
+"${BIN}/helm" template --output-dir "${TEMP_DIR}" --skip-tests --api-versions 'storage.k8s.io/v1beta1/VolumeAttributesClass' --api-versions 'snapshot.storage.k8s.io/v1' --api-versions 'policy/v1/PodDisruptionBudget' --set 'controller.userAgentExtra=kustomize' kustomize charts/aws-ebs-csi-driver >/dev/null
 rm -rf "deploy/kubernetes/base"
 mv "${TEMP_DIR}/aws-ebs-csi-driver/templates" "deploy/kubernetes/base"
 
