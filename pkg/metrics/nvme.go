@@ -26,6 +26,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 	"unsafe"
@@ -122,7 +123,9 @@ func NewNVMECollector(path, instanceID string) *NVMECollector {
 			"read_io_latency_histogram":                  prometheus.NewDesc("read_io_latency_histogram", "Histogram of read I/O latencies (in microseconds)", variableLabels, constLabels),
 			"write_io_latency_histogram":                 prometheus.NewDesc("write_io_latency_histogram", "Histogram of write I/O latencies (in microseconds)", variableLabels, constLabels),
 		},
-		csiMountPointPath: path,
+		// Clean CSI mount point path to normalize path
+		// Add trailing slash back that Clean prunes
+		csiMountPointPath: filepath.Clean(path) + "/",
 		instanceID:        instanceID,
 		collectionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Name:        "nvme_collector_duration_seconds",
