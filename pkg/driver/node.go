@@ -56,7 +56,6 @@ const (
 
 var (
 	ValidFSTypes = map[string]struct{}{
-		FSTypeExt2: {},
 		FSTypeExt3: {},
 		FSTypeExt4: {},
 		FSTypeXfs:  {},
