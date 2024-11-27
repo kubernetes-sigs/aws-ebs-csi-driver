@@ -27,12 +27,12 @@ require (
 	golang.org/x/sys v0.27.0
 	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.2
-	k8s.io/api v0.31.2
-	k8s.io/apimachinery v0.31.2
-	k8s.io/client-go v0.31.2
+	k8s.io/api v0.31.3
+	k8s.io/apimachinery v0.31.3
+	k8s.io/client-go v0.31.3
 	k8s.io/component-base v0.31.2
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.31.2
+	k8s.io/kubernetes v1.31.3
 	k8s.io/mount-utils v0.31.2
 	k8s.io/pod-security-admission v0.31.2
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
@@ -135,9 +135,9 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/apiserver v0.31.2 // indirect
 	k8s.io/cloud-provider v0.31.1 // indirect
-	k8s.io/component-helpers v0.31.2 // indirect
+	k8s.io/component-helpers v0.31.3 // indirect
 	k8s.io/controller-manager v0.31.2 // indirect
-	k8s.io/kms v0.31.2 // indirect
+	k8s.io/kms v0.31.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20241009091222-67ed5848f094 // indirect
 	k8s.io/kubectl v0.31.2 // indirect
 	k8s.io/kubelet v0.31.1 // indirect
