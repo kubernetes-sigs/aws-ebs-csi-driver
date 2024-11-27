@@ -30,7 +30,7 @@ import (
 )
 
 // RecordRequestsHandler is added to the Complete chain; called after any request.
-func RecordRequestsMiddleware() func(*middleware.Stack) error {
+func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) error {
 	return func(stack *middleware.Stack) error {
 		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("RecordRequestsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
 			start := time.Now()
@@ -44,14 +44,23 @@ func RecordRequestsMiddleware() func(*middleware.Stack) error {
 						labels = map[string]string{
 							"operation_name": operationName,
 						}
-						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+						metrics.Recorder().IncreaseCount("aws_ebs_csi_api_request_throttles_total", labels)
+						if deprecatedMetrics {
+							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+						}
 					} else {
-						metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+						metrics.Recorder().IncreaseCount("aws_ebs_csi_api_request_errors_total", labels)
+						if deprecatedMetrics {
+							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+						}
 					}
 				}
 			} else {
 				duration := time.Since(start).Seconds()
-				metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+				metrics.Recorder().ObserveHistogram("aws_ebs_csi_api_request_duration_seconds_total", duration, labels, nil)
+				if deprecatedMetrics {
+					metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+				}
 			}
 			return output, metadata, err
 		}), middleware.After)

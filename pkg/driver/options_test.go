@@ -52,6 +52,9 @@ func TestAddFlags(t *testing.T) {
 	if err := f.Set("aws-sdk-debug-log", "true"); err != nil {
 		t.Errorf("error setting aws-sdk-debug-log: %v", err)
 	}
+	if err := f.Set("deprecated-metrics", "true"); err != nil {
+		t.Errorf("error setting deprecated-metrics: %v", err)
+	}
 	if err := f.Set("warn-on-invalid-tag", "true"); err != nil {
 		t.Errorf("error setting warn-on-invalid-tag: %v", err)
 	}

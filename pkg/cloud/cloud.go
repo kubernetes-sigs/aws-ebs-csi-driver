@@ -334,12 +334,12 @@ var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool) (Cloud, error) {
-	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching)
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool, deprecatedMetrics bool) (Cloud, error) {
+	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching, deprecatedMetrics)
 	return c, nil
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool) Cloud {
+func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -358,7 +358,7 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 
 	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
-			RecordRequestsMiddleware(),
+			RecordRequestsMiddleware(deprecatedMetrics),
 			LogServerErrorsMiddleware(), // This middlware should always be last so it sees an unmangled error
 		)
 

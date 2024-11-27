@@ -82,11 +82,12 @@ func extractVolumeIdentifiers(volumes []types.Volume) (volumeIDs []string, volum
 
 func TestNewCloud(t *testing.T) {
 	testCases := []struct {
-		name            string
-		region          string
-		awsSdkDebugLog  bool
-		userAgentExtra  string
-		batchingEnabled bool
+		name              string
+		region            string
+		awsSdkDebugLog    bool
+		userAgentExtra    string
+		batchingEnabled   bool
+		deprecatedMetrics bool
 	}{
 		{
 			name:            "success: with awsSdkDebugLog, userAgentExtra, and batchingEnabled",
@@ -107,7 +108,7 @@ func TestNewCloud(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled)
+		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
 		if err != nil {
 			t.Fatalf("error %v", err)
 		}
