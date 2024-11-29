@@ -87,9 +87,9 @@ func TestConvertHistogram(t *testing.T) {
 			},
 			wantCount: 10,
 			wantBuckets: map[float64]uint64{
-				100: 5,
-				200: 8,
-				300: 10,
+				100 / 1e6: 5,
+				200 / 1e6: 8,
+				300 / 1e6: 10,
 			},
 		},
 	}

@@ -8,7 +8,7 @@ $ helm repo add prometheus-community https://prometheus-community.github.io/helm
 $ helm repo update
 $ helm install prometheus prometheus-community/kube-prometheus-stack
 ```
-2. Enable metrics by setting `enableMetrics: true` in [values.yaml](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml).
+2. Enable metrics by configuring `controller.enableMetrics` and `node.enableMetrics`.
 
 3. Deploy EBS CSI Driver:
 ```sh
@@ -21,26 +21,24 @@ Installing the Prometheus Operator and enabling metrics will deploy a [Service](
 
 ## AWS API Metrics
 
-The EBS CSI Driver will emit [AWS API](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/OperationList-query.html) metrics to the following TCP endpoint: `0.0.0.0:3301/metrics` if `enableMetrics: true` has been configured in the Helm chart.
+The EBS CSI Driver will emit [AWS API](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/OperationList-query.html) metrics to the following TCP endpoint: `0.0.0.0:3301/metrics` if `controller.enableMetrics: true` has been configured in the Helm chart.
 
 The metrics will appear in the following format: 
 ```sh
-# HELP cloudprovider_aws_api_request_duration_seconds [ALPHA] Latency of AWS API calls
-# TYPE cloudprovider_aws_api_request_duration_seconds histogram
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.005"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.01"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.025"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.05"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.1"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.25"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="0.5"} 0
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="1"} 1
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="2.5"} 1
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="5"} 1
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="10"} 1
-cloudprovider_aws_api_request_duration_seconds_bucket{request="AttachVolume",le="+Inf"} 1
-cloudprovider_aws_api_request_duration_seconds_sum{request="AttachVolume"} 0.547694574
-cloudprovider_aws_api_request_duration_seconds_count{request="AttachVolume"} 1
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.005"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.01"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.025"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.05"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.1"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.25"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.5"} 0
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="1"} 1
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="2.5"} 1
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="5"} 1
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="10"} 1
+aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="+Inf"} 1
+aws_ebs_csi_api_request_duration_seconds_sum{request="AttachVolume"} 0.547694574
+aws_ebs_csi_api_request_duration_seconds_count{request="AttachVolume"} 1
 ...
 ```
 
