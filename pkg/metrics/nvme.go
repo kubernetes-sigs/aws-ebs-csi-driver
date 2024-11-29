@@ -36,6 +36,30 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	// Counter metrics.
+	metricReadOps          = namespace + "read_ops_total"
+	metricWriteOps         = namespace + "write_ops_total"
+	metricReadBytes        = namespace + "read_bytes_total"
+	metricWriteBytes       = namespace + "write_bytes_total"
+	metricReadOpsSeconds   = namespace + "read_seconds_total"
+	metricWriteOpsSeconds  = namespace + "write_seconds_total"
+	metricExceededIOPS     = namespace + "exceeded_iops_seconds_total"
+	metricExceededTP       = namespace + "exceeded_tp_seconds_total"
+	metricEC2ExceededIOPS  = namespace + "ec2_exceeded_iops_seconds_total"
+	metricEC2ExceededTP    = namespace + "ec2_exceeded_tp_seconds_total"
+	metricCollectorScrapes = namespace + "nvme_collector_scrapes_total"
+	metricCollectorErrors  = namespace + "nvme_collector_errors_total"
+
+	// Gauge metrics.
+	metricVolumeQueueLength = namespace + "volume_queue_length"
+
+	// Histogram metrics.
+	metricReadLatency       = namespace + "read_io_latency_seconds"
+	metricWriteLatency      = namespace + "write_io_latency_seconds"
+	metricCollectorDuration = namespace + "nvme_collector_duration_seconds"
+)
+
 // EBSMetrics represents the parsed metrics from the NVMe log page.
 type EBSMetrics struct {
 	EBSMagic              uint64
@@ -109,38 +133,38 @@ func NewNVMECollector(path, instanceID string) *NVMECollector {
 
 	return &NVMECollector{
 		metrics: map[string]*prometheus.Desc{
-			"total_read_ops":                             prometheus.NewDesc("total_read_ops", "Total number of read operations", variableLabels, constLabels),
-			"total_write_ops":                            prometheus.NewDesc("total_write_ops", "Total number of write operations", variableLabels, constLabels),
-			"total_read_bytes":                           prometheus.NewDesc("total_read_bytes", "Total number of bytes read", variableLabels, constLabels),
-			"total_write_bytes":                          prometheus.NewDesc("total_write_bytes", "Total number of bytes written", variableLabels, constLabels),
-			"total_read_time":                            prometheus.NewDesc("total_read_time", "Total time spent on read operations (in microseconds)", variableLabels, constLabels),
-			"total_write_time":                           prometheus.NewDesc("total_write_time", "Total time spent on write operations (in microseconds)", variableLabels, constLabels),
-			"ebs_volume_performance_exceeded_iops":       prometheus.NewDesc("ebs_volume_performance_exceeded_iops", "Time EBS volume IOPS limit was exceeded (in microseconds)", variableLabels, constLabels),
-			"ebs_volume_performance_exceeded_tp":         prometheus.NewDesc("ebs_volume_performance_exceeded_tp", "Time EBS volume throughput limit was exceeded (in microseconds)", variableLabels, constLabels),
-			"ec2_instance_ebs_performance_exceeded_iops": prometheus.NewDesc("ec2_instance_ebs_performance_exceeded_iops", "Time EC2 instance EBS IOPS limit was exceeded (in microseconds)", variableLabels, constLabels),
-			"ec2_instance_ebs_performance_exceeded_tp":   prometheus.NewDesc("ec2_instance_ebs_performance_exceeded_tp", "Time EC2 instance EBS throughput limit was exceeded (in microseconds)", variableLabels, constLabels),
-			"volume_queue_length":                        prometheus.NewDesc("volume_queue_length", "Current volume queue length", variableLabels, constLabels),
-			"read_io_latency_histogram":                  prometheus.NewDesc("read_io_latency_histogram", "Histogram of read I/O latencies (in microseconds)", variableLabels, constLabels),
-			"write_io_latency_histogram":                 prometheus.NewDesc("write_io_latency_histogram", "Histogram of write I/O latencies (in microseconds)", variableLabels, constLabels),
+			metricReadOps:           prometheus.NewDesc(metricReadOps, "The total number of completed read operations.", variableLabels, constLabels),
+			metricWriteOps:          prometheus.NewDesc(metricWriteOps, "The total number of completed write operations.", variableLabels, constLabels),
+			metricReadBytes:         prometheus.NewDesc(metricReadBytes, "The total number of read bytes transferred.", variableLabels, constLabels),
+			metricWriteBytes:        prometheus.NewDesc(metricWriteBytes, "The total number of write bytes transferred.", variableLabels, constLabels),
+			metricReadOpsSeconds:    prometheus.NewDesc(metricReadOpsSeconds, "The total time spent, in seconds, by all completed read operations.", variableLabels, constLabels),
+			metricWriteOpsSeconds:   prometheus.NewDesc(metricWriteOpsSeconds, "The total time spent, in seconds, by all completed write operations.", variableLabels, constLabels),
+			metricExceededIOPS:      prometheus.NewDesc(metricExceededIOPS, "The total time, in seconds, that IOPS demand exceeded the volume's provisioned IOPS performance.", variableLabels, constLabels),
+			metricExceededTP:        prometheus.NewDesc(metricExceededTP, "The total time, in seconds, that throughput demand exceeded the volume's provisioned throughput performance.", variableLabels, constLabels),
+			metricEC2ExceededIOPS:   prometheus.NewDesc(metricEC2ExceededIOPS, "The total time, in seconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum IOPS performance.", variableLabels, constLabels),
+			metricEC2ExceededTP:     prometheus.NewDesc(metricEC2ExceededTP, "The total time, in seconds, that the EBS volume exceeded the attached Amazon EC2 instance's maximum throughput performance.", variableLabels, constLabels),
+			metricVolumeQueueLength: prometheus.NewDesc(metricVolumeQueueLength, "The number of read and write operations waiting to be completed.", variableLabels, constLabels),
+			metricReadLatency:       prometheus.NewDesc(metricReadLatency, "The number of read operations completed within each latency bin, in microseconds.", variableLabels, constLabels),
+			metricWriteLatency:      prometheus.NewDesc(metricWriteLatency, "The number of write operations completed within each latency bin, in microseconds.", variableLabels, constLabels),
 		},
 		// Clean CSI mount point path to normalize path
 		// Add trailing slash back that Clean prunes
 		csiMountPointPath: filepath.Clean(path) + "/",
 		instanceID:        instanceID,
 		collectionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:        "nvme_collector_duration_seconds",
-			Help:        "Histogram of NVMe collector duration in seconds",
+			Name:        metricCollectorDuration,
+			Help:        "Histogram of NVMe collector scrape duration in seconds.",
 			Buckets:     []float64{0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 			ConstLabels: constLabels,
 		}),
 		scrapesTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name:        "nvme_collector_scrapes_total",
-			Help:        "Total number of NVMe collector scrapes",
+			Name:        metricCollectorScrapes,
+			Help:        "Total number of NVMe collector scrapes.",
 			ConstLabels: constLabels,
 		}),
 		scrapeErrorsTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name:        "nvme_collector_scrape_errors_total",
-			Help:        "Total number of NVMe collector scrape errors",
+			Name:        metricCollectorErrors,
+			Help:        "Total number of NVMe collector scrape errors.",
 			ConstLabels: constLabels,
 		}),
 	}
@@ -207,22 +231,22 @@ func (c *NVMECollector) Collect(ch chan<- prometheus.Metric) {
 		}
 
 		// Send all collected metrics to Prometheus
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_read_ops"], prometheus.CounterValue, float64(metrics.ReadOps), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_write_ops"], prometheus.CounterValue, float64(metrics.WriteOps), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_read_bytes"], prometheus.CounterValue, float64(metrics.ReadBytes), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_write_bytes"], prometheus.CounterValue, float64(metrics.WriteBytes), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_read_time"], prometheus.CounterValue, float64(metrics.TotalReadTime), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["total_write_time"], prometheus.CounterValue, float64(metrics.TotalWriteTime), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["ebs_volume_performance_exceeded_iops"], prometheus.CounterValue, float64(metrics.EBSIOPSExceeded), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["ebs_volume_performance_exceeded_tp"], prometheus.CounterValue, float64(metrics.EBSThroughputExceeded), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["ec2_instance_ebs_performance_exceeded_iops"], prometheus.CounterValue, float64(metrics.EC2IOPSExceeded), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["ec2_instance_ebs_performance_exceeded_tp"], prometheus.CounterValue, float64(metrics.EC2ThroughputExceeded), volumeID)
-		ch <- prometheus.MustNewConstMetric(c.metrics["volume_queue_length"], prometheus.GaugeValue, float64(metrics.QueueLength), volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricReadOps], prometheus.CounterValue, float64(metrics.ReadOps), volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricWriteOps], prometheus.CounterValue, float64(metrics.WriteOps), volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricReadBytes], prometheus.CounterValue, float64(metrics.ReadBytes), volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricWriteBytes], prometheus.CounterValue, float64(metrics.WriteBytes), volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricReadOpsSeconds], prometheus.CounterValue, float64(metrics.TotalReadTime)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricWriteOpsSeconds], prometheus.CounterValue, float64(metrics.TotalWriteTime)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricExceededIOPS], prometheus.CounterValue, float64(metrics.EBSIOPSExceeded)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricExceededTP], prometheus.CounterValue, float64(metrics.EBSThroughputExceeded)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricEC2ExceededIOPS], prometheus.CounterValue, float64(metrics.EC2IOPSExceeded)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricEC2ExceededTP], prometheus.CounterValue, float64(metrics.EC2ThroughputExceeded)/1e6, volumeID)
+		ch <- prometheus.MustNewConstMetric(c.metrics[metricVolumeQueueLength], prometheus.GaugeValue, float64(metrics.QueueLength), volumeID)
 
 		// Read Latency Histogram
 		readCount, readBuckets := convertHistogram(metrics.ReadLatency)
 		ch <- prometheus.MustNewConstHistogram(
-			c.metrics["read_io_latency_histogram"],
+			c.metrics[metricReadLatency],
 			readCount,
 			0,
 			readBuckets,
@@ -232,7 +256,7 @@ func (c *NVMECollector) Collect(ch chan<- prometheus.Metric) {
 		// Write Latency Histogram
 		writeCount, writeBuckets := convertHistogram(metrics.WriteLatency)
 		ch <- prometheus.MustNewConstHistogram(
-			c.metrics["write_io_latency_histogram"],
+			c.metrics[metricWriteLatency],
 			writeCount,
 			0,
 			writeBuckets,

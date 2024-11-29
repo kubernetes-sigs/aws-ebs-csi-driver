@@ -24,6 +24,10 @@ import (
 	"k8s.io/klog/v2"
 )
 
+const (
+	namespace = "aws_ebs_csi_"
+)
+
 var (
 	r    *metricRecorder // singleton instance of metricRecorder
 	once sync.Once

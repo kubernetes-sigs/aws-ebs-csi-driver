@@ -114,19 +114,22 @@ var _ = Describe("[ebs-csi-e2e] [single-az] NVMe Metrics", func() {
 		By("Verifying NVMe metrics")
 
 		expectedMetrics := []string{
-			"total_read_ops",
-			"total_write_ops",
-			"total_read_bytes",
-			"total_write_bytes",
-			"total_read_time",
-			"total_write_time",
-			"ebs_volume_performance_exceeded_iops",
-			"ebs_volume_performance_exceeded_tp",
-			"ec2_instance_ebs_performance_exceeded_iops",
-			"ec2_instance_ebs_performance_exceeded_tp",
-			"volume_queue_length",
-			"read_io_latency_histogram",
-			"write_io_latency_histogram",
+			"aws_ebs_csi_read_ops_total",
+			"aws_ebs_csi_write_ops_total",
+			"aws_ebs_csi_read_bytes_total",
+			"aws_ebs_csi_write_bytes_total",
+			"aws_ebs_csi_read_seconds_total",
+			"aws_ebs_csi_write_seconds_total",
+			"aws_ebs_csi_exceeded_iops_seconds_total",
+			"aws_ebs_csi_exceeded_tp_seconds_total",
+			"aws_ebs_csi_ec2_exceeded_iops_seconds_total",
+			"aws_ebs_csi_ec2_exceeded_tp_seconds_total",
+			"aws_ebs_csi_nvme_collector_scrapes_total",
+			"aws_ebs_csi_nvme_collector_errors_total",
+			"aws_ebs_csi_volume_queue_length",
+			"aws_ebs_csi_read_io_latency_seconds",
+			"aws_ebs_csi_write_io_latency_seconds",
+			"aws_ebs_csi_nvme_collector_duration_seconds",
 		}
 
 		for _, metric := range expectedMetrics {

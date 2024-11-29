@@ -46,19 +46,19 @@ func TestNewNVMECollector(t *testing.T) {
 	}
 
 	expectedMetrics := []string{
-		"total_read_ops",
-		"total_write_ops",
-		"total_read_bytes",
-		"total_write_bytes",
-		"total_read_time",
-		"total_write_time",
-		"ebs_volume_performance_exceeded_iops",
-		"ebs_volume_performance_exceeded_tp",
-		"ec2_instance_ebs_performance_exceeded_iops",
-		"ec2_instance_ebs_performance_exceeded_tp",
-		"volume_queue_length",
-		"read_io_latency_histogram",
-		"write_io_latency_histogram",
+		metricReadOps,
+		metricWriteOps,
+		metricReadBytes,
+		metricWriteBytes,
+		metricReadOpsSeconds,
+		metricWriteOpsSeconds,
+		metricExceededIOPS,
+		metricExceededTP,
+		metricExceededIOPS,
+		metricExceededTP,
+		metricVolumeQueueLength,
+		metricReadLatency,
+		metricWriteLatency,
 	}
 
 	for _, metricName := range expectedMetrics {

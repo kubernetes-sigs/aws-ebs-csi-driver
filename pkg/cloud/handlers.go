@@ -57,7 +57,7 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 				}
 			} else {
 				duration := time.Since(start).Seconds()
-				metrics.Recorder().ObserveHistogram("aws_ebs_csi_api_request_duration_seconds_total", duration, labels, nil)
+				metrics.Recorder().ObserveHistogram("aws_ebs_csi_api_request_duration_seconds", duration, labels, nil)
 				if deprecatedMetrics {
 					metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
 				}
