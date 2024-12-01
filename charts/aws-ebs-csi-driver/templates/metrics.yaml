@@ -41,7 +41,7 @@ spec:
 {{- end }}
 {{- end }}
 ---
-{{- if .Values.node.enableMetrics -}}
+{{- if .Values.node.enableMetrics }}
 apiVersion: v1
 kind: Service
 metadata:
