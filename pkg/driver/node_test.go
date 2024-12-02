@@ -2135,6 +2135,7 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
@@ -2244,6 +2245,7 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("", 0, errors.New("failed to get device name"))
 				return m
@@ -2260,6 +2262,7 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("", errors.New("failed to find device path"))
@@ -2281,6 +2284,7 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
@@ -2303,6 +2307,7 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
@@ -2317,6 +2322,22 @@ func TestNodeExpandVolume(t *testing.T) {
 			},
 			expectedResp: nil,
 			expectedErr:  status.Error(codes.Internal, "failed to get block capacity on path /volume/path: failed to get block size"),
+		},
+		{
+			name: "get_not_found_error",
+			req: &csi.NodeExpandVolumeRequest{
+				VolumeId:   "vol-test",
+				VolumePath: "/volume/path",
+			},
+			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
+				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().PathExists(gomock.Eq("/volume/path")).Return(false, nil)
+				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
+				return m
+			},
+			metadataMock: nil,
+			expectedResp: nil,
+			expectedErr:  status.Errorf(codes.NotFound, "path /volume/path does not exist"),
 		},
 	}
 
