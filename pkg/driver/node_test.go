@@ -642,7 +642,7 @@ func TestNodeStageVolume(t *testing.T) {
 				m.EXPECT().GetRegion().Return("us-west-2")
 				return m
 			},
-			expectedErr: status.Errorf(codes.Internal, "Failed to find device path %s. %v", "/dev/xvdba", errors.New("find device path error")),
+			expectedErr: status.Errorf(codes.NotFound, "Failed to find device path %s. %v", "/dev/xvdba", errors.New("find device path error")),
 		},
 		{
 			name: "path_exists_error",
@@ -1743,7 +1743,7 @@ func TestNodePublishVolume(t *testing.T) {
 				m.EXPECT().GetRegion().Return("us-west-2")
 				return m
 			},
-			expectedErr: status.Error(codes.Internal, "Failed to find device path /dev/xvdba. device path error"),
+			expectedErr: status.Error(codes.NotFound, "Failed to find device path /dev/xvdba. device path error"),
 		},
 	}
 	for _, tc := range testCases {
@@ -2271,7 +2271,7 @@ func TestNodeExpandVolume(t *testing.T) {
 				return m
 			},
 			expectedResp: nil,
-			expectedErr:  status.Error(codes.Internal, "failed to find device path for device name device-name for mount /volume/path: failed to find device path"),
+			expectedErr:  status.Error(codes.NotFound, "failed to find device path for device name device-name for mount /volume/path: failed to find device path"),
 		},
 		{
 			name: "resize_error",
