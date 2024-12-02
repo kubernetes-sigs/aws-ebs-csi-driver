@@ -161,8 +161,6 @@ const (
 
 // constants for fstypes.
 const (
-	// FSTypeExt2 represents the ext2 filesystem type.
-	FSTypeExt2 = "ext2"
 	// FSTypeExt3 represents the ext3 filesystem type.
 	FSTypeExt3 = "ext3"
 	// FSTypeExt4 represents the ext4 filesystem type.
@@ -190,12 +188,6 @@ func (fsConfig fileSystemConfig) isParameterSupported(paramName string) bool {
 
 var (
 	FileSystemConfigs = map[string]fileSystemConfig{
-		FSTypeExt2: {
-			NotSupportedParams: map[string]struct{}{
-				Ext4BigAllocKey:    {},
-				Ext4ClusterSizeKey: {},
-			},
-		},
 		FSTypeExt3: {
 			NotSupportedParams: map[string]struct{}{
 				Ext4BigAllocKey:    {},
