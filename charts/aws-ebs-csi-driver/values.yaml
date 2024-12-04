@@ -342,6 +342,9 @@ controller:
   # Enable dnsConfig for the controller and node pods
   dnsConfig: {}
 node:
+  # Enable SELinux-only optimizations on the EBS CSI Driver node pods
+  # Must only be set true if all linux nodes in the DaemonSet have SELinux enabled
+  selinux: false
   env: []
   envFrom: []
   kubeletPath: /var/lib/kubelet

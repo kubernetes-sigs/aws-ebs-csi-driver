@@ -127,6 +127,12 @@ spec:
               mountPath: /csi
             - name: device-dir
               mountPath: /dev
+            {{- if .Values.node.selinux }}
+            - name: selinux-sysfs
+              mountPath: /sys/fs/selinux
+            - name: selinux-config
+              mountPath: /etc/selinux/config
+            {{- end }}
           {{- with .Values.node.volumeMounts }}
           {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -244,6 +250,18 @@ spec:
           hostPath:
             path: /dev
             type: Directory
+        {{- if .Values.node.selinux }}
+        - name: selinux-sysfs
+          hostPath:
+            path: /sys/fs/selinux
+            type: Directory
+            readOnly: true
+        - name: selinux-config
+          hostPath:
+            path: /etc/selinux/config
+            type: File
+            readOnly: true
+        {{- end }}
         - name: probe-dir
           {{- if .Values.node.probeDirVolume }}
           {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
