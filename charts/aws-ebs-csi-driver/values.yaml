@@ -348,6 +348,7 @@ node:
   kubeletPath: /var/lib/kubelet
   loggingFormat: text
   logLevel: 2
+  enableMetrics: false
   priorityClassName:
   additionalArgs: []
   affinity:
