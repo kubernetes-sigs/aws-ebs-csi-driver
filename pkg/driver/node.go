@@ -387,6 +387,13 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 			return &csi.NodeExpandVolumeResponse{CapacityBytes: bcap}, nil
 		}
 	}
+	exists, err := d.mounter.PathExists(req.GetVolumePath())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "unknown error when stat on %s: %v", req.GetVolumePath(), err)
+	}
+	if !exists {
+		return nil, status.Errorf(codes.NotFound, "path %s does not exist", req.GetVolumePath())
+	}
 
 	deviceName, _, err := d.mounter.GetDeviceNameFromMount(volumePath)
 	if err != nil {
