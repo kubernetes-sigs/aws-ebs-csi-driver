@@ -344,7 +344,6 @@ controller:
 node:
   env: []
   envFrom: []
-  enableMetrics: false
   kubeletPath: /var/lib/kubelet
   loggingFormat: text
   logLevel: 2
