@@ -1,3 +1,125 @@
+# v1.38.1
+
+_Notice: The v1.38.0 images were promoted incorrectly due to a process error. Do not use any images from `v1.38.0` and upgrade directly to `v1.38.1`._
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+#### Breaking Metrics Changes
+
+Node plugin metrics have been renamed to follow Prometheus best practices:
+- Added `aws_ebs_csi_` prefix
+- Added `_total` suffix for counters
+- Changed time units from microseconds to seconds for all counters
+
+The controller plugin metrics now use the prefix `aws_ebs_csi_` instead of `cloudprovider_aws_`. The old metric names will still be emitted, but can be disabled via the CLI parameter `--deprecated-metrics=false` on the controller. This will default to `true` in a future version of the EBS CSI Driver. The old metric names (`cloudprovider_aws_*`) are deprecated and will be removed in a future version of the EBS CSI Driver.
+
+#### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+
+_(This warning is the same as previous releases and can be disregarded if you have already taken appropriate action)_
+
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
+
+### Feature
+
+- Confirm metrics to Prometheus best practices ([#2248](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2248), [@torredil](https://github.com/torredil))
+- Enable the `VolumeAttributesClass` by default for the Kustomize deployment. If you are deploying using the Kustomize manifests on a cluster that does not have the `VolumeAttributesClass` feature gate enabled on the control plane, you may see harmless extra failures related to the feature in the csi-provisioner and/or csi-resizer logs. ([#2240](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2240), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug or Regression
+- Prevent attempting to query NVMe metrics of NVMe volumes from other CSI drivers ([#2239](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2239), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- cel.dev/expr: v0.16.1 → v0.19.1
+- github.com/aws/aws-sdk-go-v2/config: [v1.28.3 → v1.28.6](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.28.3...config/v1.28.6)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.17.44 → v1.17.47](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.17.44...credentials/v1.17.47)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.16.19 → v1.16.21](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.16.19...feature/ec2/imds/v1.16.21)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.3.23 → v1.3.25](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.3.23...internal/configsources/v1.3.25)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.6.23 → v2.6.25](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.6.23...internal/endpoints/v2/v2.6.25)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.187.1 → v1.196.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.187.1...service/ec2/v1.196.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.12.0 → v1.12.1](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.12.0...service/internal/accept-encoding/v1.12.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.12.4 → v1.12.6](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.12.4...service/internal/presigned-url/v1.12.6)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.24.5 → v1.24.7](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.24.5...service/sso/v1.24.7)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.28.4 → v1.28.6](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.28.4...service/ssooidc/v1.28.6)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.32.4 → v1.33.2](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.32.4...service/sts/v1.33.2)
+- github.com/aws/aws-sdk-go-v2: [v1.32.4 → v1.32.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.4...v1.32.6)
+- github.com/aws/smithy-go: [v1.22.0 → v1.22.1](https://github.com/aws/smithy-go/compare/v1.22.0...v1.22.1)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.4.0 → v0.5.0](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.4.0...v0.5.0)
+- github.com/container-storage-interface/spec: [v1.10.0 → v1.11.0](https://github.com/container-storage-interface/spec/compare/v1.10.0...v1.11.0)
+- github.com/cyphar/filepath-securejoin: [v0.3.4 → v0.3.5](https://github.com/cyphar/filepath-securejoin/compare/v0.3.4...v0.3.5)
+- github.com/golang/groupcache: [41bb18b → 2c02b82](https://github.com/golang/groupcache/compare/41bb18b...2c02b82)
+- github.com/google/cel-go: [v0.21.0 → v0.22.1](https://github.com/google/cel-go/compare/v0.21.0...v0.22.1)
+- github.com/google/gnostic-models: [v0.6.8 → v0.6.9](https://github.com/google/gnostic-models/compare/v0.6.8...v0.6.9)
+- github.com/google/pprof: [d1b30fe → 40e02aa](https://github.com/google/pprof/compare/d1b30fe...40e02aa)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.23.0 → v2.24.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.23.0...v2.24.0)
+- github.com/onsi/ginkgo/v2: [v2.21.0 → v2.22.0](https://github.com/onsi/ginkgo/compare/v2.21.0...v2.22.0)
+- github.com/onsi/gomega: [v1.35.1 → v1.36.1](https://github.com/onsi/gomega/compare/v1.35.1...v1.36.1)
+- github.com/opencontainers/runc: [v1.2.1 → v1.2.3](https://github.com/opencontainers/runc/compare/v1.2.1...v1.2.3)
+- github.com/prometheus/common: [v0.60.1 → v0.61.0](https://github.com/prometheus/common/compare/v0.60.1...v0.61.0)
+- github.com/stretchr/testify: [v1.9.0 → v1.10.0](https://github.com/stretchr/testify/compare/v1.9.0...v1.10.0)
+- go.etcd.io/etcd/api/v3: v3.5.16 → v3.5.17
+- go.etcd.io/etcd/client/pkg/v3: v3.5.16 → v3.5.17
+- go.etcd.io/etcd/client/v3: v3.5.16 → v3.5.17
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.56.0 → v0.57.0
+- go.opentelemetry.io/proto/otlp: v1.3.1 → v1.4.0
+- golang.org/x/crypto: v0.28.0 → v0.30.0
+- golang.org/x/exp: 701f63a → 1829a12
+- golang.org/x/mod: v0.21.0 → v0.22.0
+- golang.org/x/net: v0.30.0 → v0.32.0
+- golang.org/x/oauth2: v0.23.0 → v0.24.0
+- golang.org/x/sync: v0.9.0 → v0.10.0
+- golang.org/x/sys: v0.27.0 → v0.28.0
+- golang.org/x/term: v0.25.0 → v0.27.0
+- golang.org/x/text: v0.20.0 → v0.21.0
+- golang.org/x/time: v0.7.0 → v0.8.0
+- golang.org/x/tools: v0.26.0 → v0.28.0
+- google.golang.org/genproto/googleapis/api: dd2ea8e → e6fa225
+- google.golang.org/genproto/googleapis/rpc: dd2ea8e → e6fa225
+- google.golang.org/grpc: v1.68.0 → v1.68.1
+- google.golang.org/protobuf: v1.35.1 → v1.35.2
+- k8s.io/api: v0.31.2 → v0.31.4
+- k8s.io/apiextensions-apiserver: v0.31.2 → v0.31.4
+- k8s.io/apimachinery: v0.31.2 → v0.31.4
+- k8s.io/apiserver: v0.31.2 → v0.31.4
+- k8s.io/cli-runtime: v0.31.2 → v0.31.4
+- k8s.io/client-go: v0.31.2 → v0.31.4
+- k8s.io/cloud-provider: v0.31.2 → v0.31.4
+- k8s.io/cluster-bootstrap: v0.31.2 → v0.31.4
+- k8s.io/code-generator: v0.31.2 → v0.31.4
+- k8s.io/component-base: v0.31.2 → v0.31.4
+- k8s.io/component-helpers: v0.31.2 → v0.31.4
+- k8s.io/controller-manager: v0.31.2 → v0.31.4
+- k8s.io/cri-api: v0.31.2 → v0.31.4
+- k8s.io/cri-client: v0.31.2 → v0.31.4
+- k8s.io/csi-translation-lib: v0.31.2 → v0.31.4
+- k8s.io/dynamic-resource-allocation: v0.31.2 → v0.31.4
+- k8s.io/endpointslice: v0.31.2 → v0.31.4
+- k8s.io/kms: v0.31.2 → v0.31.4
+- k8s.io/kube-aggregator: v0.31.2 → v0.31.4
+- k8s.io/kube-controller-manager: v0.31.2 → v0.31.4
+- k8s.io/kube-openapi: 67ed584 → 9959940
+- k8s.io/kube-proxy: v0.31.2 → v0.31.4
+- k8s.io/kube-scheduler: v0.31.2 → v0.31.4
+- k8s.io/kubectl: v0.31.2 → v0.31.4
+- k8s.io/kubelet: v0.31.2 → v0.31.4
+- k8s.io/kubernetes: v1.31.2 → v1.31.4
+- k8s.io/metrics: v0.31.2 → v0.31.4
+- k8s.io/mount-utils: v0.31.2 → v0.31.4
+- k8s.io/pod-security-admission: v0.31.2 → v0.31.4
+- k8s.io/sample-apiserver: v0.31.2 → v0.31.4
+- k8s.io/utils: 6fe5fd8 → 24370be
+- sigs.k8s.io/apiserver-network-proxy/konnectivity-client: v0.31.0 → v0.31.1
+- sigs.k8s.io/structured-merge-diff/v4: v4.4.1 → v4.4.3
+
+### Removed
+_Nothing has changed._
+
 # v1.37.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
