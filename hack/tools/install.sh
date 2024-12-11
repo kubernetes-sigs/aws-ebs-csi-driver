@@ -19,24 +19,24 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.19.4"
+AWSCLI_VERSION="2.22.14"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.11.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.194.0"
+EKSCTL_VERSION="v0.197.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.21.0"
+GINKGO_VERSION="v2.22.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.62.0"
+GOLANGCI_LINT_VERSION="v1.62.2"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.2.0"
 # https://github.com/helm/helm
-HELM_VERSION="v3.16.2"
+HELM_VERSION="v3.16.3"
 # https://github.com/kubernetes/kops
 # NOTE: We pin kops to a commit instead of a release to support newer versions of k8s earlier
 KOPS_COMMIT="aaa35cc5304f9b191ca9828b552e62bddc5b263a"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20240905095256-f6e8664cd2b1"
+KUBETEST2_VERSION="v0.0.0-20241209135403-b64611bb4b03"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
