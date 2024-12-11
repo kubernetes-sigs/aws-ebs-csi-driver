@@ -1,4 +1,16 @@
 # Helm chart
+
+## v2.38.1
+
+### Feature
+
+- Render templated controller service account parameters ([#2243](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2243), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Bug or Regression
+
+- Fix rendering failrue when `node.enableMetrics` is set to `true` ([#2250](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2250), [@mindw](https://github.com/mindw))
+- Remove duplicate 'enableMetrics' key ([#2256](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2256), [@sule26](https://github.com/sule26))
+
 ## v2.37.0
 * Bump driver version to `v1.37.0`
 * Add init containers to node daemonset ([#2215](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2215), [@clbx](https://github.com/clbx))
