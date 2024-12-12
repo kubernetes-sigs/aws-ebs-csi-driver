@@ -20,7 +20,11 @@ All other tools are downloaded for you at runtime.
 
 ### `make cluster/image`
 
-Build and push a single image of the driver based on the local platform (the same overrides as `make` apply, as well as `OSVERSION` to override container OS version). In most cases, `make all-push` is more suitable. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`.
+Build and push an image of the driver for local development. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`. Setting `FIPS` to `true` will build an image using a FIPS-validated cryptographic library.
+
+### `make all-push`
+
+Build and push all image variants of the driver needed for an official release. This target is not intended or designed to be run outside of CI.
 
 ## Local Development
 

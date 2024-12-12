@@ -12,6 +12,7 @@
 {{- include "node" (deepCopy $ | mustMerge $args) -}}
 {{- end }}
 {{- if .Values.a1CompatibilityDaemonSet }}
+{{- not .Values.fips | required "FIPS mode not supported for A1 instance family compatibility image" -}}
 {{$args := dict
   "NodeName" "ebs-csi-node-a1compat"
   "Values" (dict
