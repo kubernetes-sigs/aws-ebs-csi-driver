@@ -127,6 +127,10 @@ cluster/uninstall: bin/helm bin/aws
 ## E2E targets
 # Targets to run e2e tests
 
+.PHONY: test-sanity
+test-sanity:
+	go test -v -race ./tests/sanity/...
+
 .PHONY: e2e/single-az
 e2e/single-az: bin/helm bin/ginkgo
 	AWS_AVAILABILITY_ZONES=us-west-2a \
