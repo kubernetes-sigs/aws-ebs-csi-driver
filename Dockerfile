@@ -25,6 +25,7 @@ COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
+ARG GOEXPERIMENT
 RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH make
 
 FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23 AS linux-al2023

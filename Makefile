@@ -34,6 +34,10 @@ else
 	BINARY=aws-ebs-csi-driver
 	OSVERSION?=al2023
 endif
+FIPS?=false
+ifeq ($(FIPS),true)
+	FIPS_DOCKER_ARGS=--build-arg=GOEXPERIMENT=boringcrypto
+endif
 
 GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
@@ -192,11 +196,18 @@ update-image-dependencies: update-sidecar-dependencies
 ## CI aliases
 # Targets intended to be executed mostly or only by CI jobs
 
-.PHONY: all-push
-all-push: all-image-registry push-manifest
+.PHONY: sub-push
+sub-push: all-image-registry push-manifest
 
-.PHONY: all-push-with-a1compat
-all-push-with-a1compat: sub-image-linux-arm64-al2 all-image-registry push-manifest
+.PHONY: sub-push-fips
+sub-push-fips:
+	$(MAKE) FIPS=true sub-push
+
+.PHONY: sub-push-a1compat
+sub-push-a1-compat: sub-image-linux-arm64-al2
+
+.PHONY: all-push
+all-push: sub-push sub-push-fips sub-push-a1compat
 
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*
@@ -228,6 +239,7 @@ image:
 		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
 		--build-arg=GOPROXY=$(GOPROXY) \
 		--build-arg=VERSION=$(VERSION) \
+		$(FIPS_DOCKER_ARGS) \
 		`./hack/provenance.sh` \
 		.
 
