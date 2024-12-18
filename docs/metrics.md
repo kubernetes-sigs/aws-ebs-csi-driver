@@ -51,7 +51,7 @@ $ curl 127.0.0.1:3301/metrics
 
 ## EBS Node Metrics
 
-The EBS CSI Driver will emit Container Storage Interface managed devices metrics to the following TCP endpoint: `0.0.0.0:3302/metrics` if `node.enableMetrics: true` has been configured in the Helm chart.
+The EBS CSI Driver will emit [container storage Interface managed devices metrics](https://docs.aws.amazon.com/ebs/latest/userguide/nvme-detailed-performance-stats.html) to the following TCP endpoint: `0.0.0.0:3302/metrics` if `node.enableMetrics: true` has been configured in the Helm chart.
 
 The metrics will appear in the following format: 
 ```sh
