@@ -49,6 +49,35 @@ $ kubectl port-forward $ebs_csi_controller 3301:3301 -n kube-system
 $ curl 127.0.0.1:3301/metrics
 ```
 
+## EBS Node Metrics
+
+The EBS CSI Driver will emit [container storage Interface managed devices metrics](https://docs.aws.amazon.com/ebs/latest/userguide/nvme-detailed-performance-stats.html) to the following TCP endpoint: `0.0.0.0:3302/metrics` if `node.enableMetrics: true` has been configured in the Helm chart.
+
+The metrics will appear in the following format: 
+```sh
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.001"} 0
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.0025"} 0
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.005"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.01"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.025"} 1
+nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="0.05"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.1"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.25"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.5"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="1"} 1
+nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="2.5"} 1
+nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="5"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="10"} 1
+nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="+Inf"} 1
+...
+```
+
+To manually scrape AWS metrics: 
+```sh
+$ kubectl port-forward $ebs_csi_node_pod_name 3302:3302 -n kube-system
+$ curl 127.0.0.1:3302/metrics
+```
+
 ## Volume Stats Metrics
 
 The EBS CSI Driver emits Kubelet mounted volume metrics for volumes created with the driver. 
