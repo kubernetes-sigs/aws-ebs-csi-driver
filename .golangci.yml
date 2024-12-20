@@ -23,6 +23,9 @@ issues:
     - path: tests/e2e
       linters:
         - gosec
+    - path: tests/sanity
+      linters:
+        - gosec
 linters-settings:
   revive:
     rules:
