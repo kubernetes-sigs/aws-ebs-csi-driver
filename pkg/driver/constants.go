@@ -43,6 +43,9 @@ const (
 	// AllowAutoIOPSPerGBIncreaseKey represents key for allowing automatic increase of IOPS.
 	AllowAutoIOPSPerGBIncreaseKey = "allowautoiopspergbincrease"
 
+	// AllowAutoVolumeSizeIncreaseKey represents key for allowing automatic increase of Volume size.
+	AllowAutoVolumeSizeIncreaseKey = "allowautovolumesizeincrease"
+
 	// Iops represents key for IOPS for volume.
 	IopsKey = "iops"
 

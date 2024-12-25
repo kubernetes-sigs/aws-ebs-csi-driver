@@ -106,16 +106,17 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	defer d.inFlight.Delete(volName)
 
 	var (
-		volumeType             string
-		iopsPerGB              int32
-		allowIOPSPerGBIncrease bool
-		iops                   int32
-		throughput             int32
-		isEncrypted            bool
-		blockExpress           bool
-		kmsKeyID               string
-		scTags                 []string
-		volumeTags             = map[string]string{
+		volumeType              string
+		iopsPerGB               int32
+		allowIOPSPerGBIncrease  bool
+		allowVolumeSizeIncrease bool
+		iops                    int32
+		throughput              int32
+		isEncrypted             bool
+		blockExpress            bool
+		kmsKeyID                string
+		scTags                  []string
+		volumeTags              = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
@@ -143,6 +144,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
 			allowIOPSPerGBIncrease = isTrue(value)
+		case AllowAutoVolumeSizeIncreaseKey:
+			allowVolumeSizeIncrease = isTrue(value)
 		case IopsKey:
 			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsKeyErr != nil {
@@ -312,20 +315,21 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		CapacityBytes:          volSizeBytes,
-		Tags:                   volumeTags,
-		VolumeType:             volumeType,
-		IOPSPerGB:              iopsPerGB,
-		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
-		IOPS:                   iops,
-		Throughput:             throughput,
-		AvailabilityZone:       zone,
-		OutpostArn:             outpostArn,
-		Encrypted:              isEncrypted,
-		BlockExpress:           blockExpress,
-		KmsKeyID:               kmsKeyID,
-		SnapshotID:             snapshotID,
-		MultiAttachEnabled:     multiAttach,
+		CapacityBytes:           volSizeBytes,
+		Tags:                    volumeTags,
+		VolumeType:              volumeType,
+		IOPSPerGB:               iopsPerGB,
+		AllowIOPSPerGBIncrease:  allowIOPSPerGBIncrease,
+		AllowVolumeSizeIncrease: allowVolumeSizeIncrease,
+		IOPS:                    iops,
+		Throughput:              throughput,
+		AvailabilityZone:        zone,
+		OutpostArn:              outpostArn,
+		Encrypted:               isEncrypted,
+		BlockExpress:            blockExpress,
+		KmsKeyID:                kmsKeyID,
+		SnapshotID:              snapshotID,
+		MultiAttachEnabled:      multiAttach,
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)

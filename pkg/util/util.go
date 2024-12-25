@@ -32,6 +32,7 @@ import (
 
 const (
 	GiB              = int64(1024 * 1024 * 1024)
+	TiB              = int64(1024 * 1024 * 1024 * 1024)
 	DefaultBlockSize = 4096
 )
 
@@ -71,6 +72,16 @@ func BytesToGiB(volumeSizeBytes int64) int32 {
 // GiBToBytes converts GiB to Bytes.
 func GiBToBytes(volumeSizeGiB int32) int64 {
 	return int64(volumeSizeGiB) * GiB
+}
+
+// TiBToBytes converts TiB to Bytes.
+func TiBToBytes(volumeSizeTiB int32) int64 {
+	return int64(volumeSizeTiB) * TiB
+}
+
+// TiBToGiB converts TiB to GiB.
+func TiBToGiB(volumeSizeTiB int32) int32 {
+	return volumeSizeTiB * 1024
 }
 
 func ParseEndpoint(endpoint string, hostprocess bool) (string, string, error) {
