@@ -18,7 +18,6 @@
 # cleaning up (regardless of test success/failure), and passing out the result
 
 # Prevent race conditions by frontloading tool download
-# TODO: Find a way to lock pip installs to prevent pip concurrency bugs from hurting us
 make bin/aws
 
 case ${1} in
