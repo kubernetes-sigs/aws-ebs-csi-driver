@@ -150,6 +150,8 @@ func executeModifyVolumeRequest(c cloud.Cloud) func(string, modifyVolumeRequest)
 			if err != nil {
 				if errors.Is(err, cloud.ErrInvalidArgument) {
 					return 0, status.Errorf(codes.InvalidArgument, "Could not modify volume (invalid argument) %q: %v", volumeID, err)
+				} else if errors.Is(err, cloud.ErrNotFound) {
+					return 0, status.Errorf(codes.NotFound, "Could not modify volume (not found) %q: %v", volumeID, err)
 				}
 				return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
 			} else {
