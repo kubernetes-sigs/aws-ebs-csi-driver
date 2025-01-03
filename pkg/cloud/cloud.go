@@ -69,13 +69,23 @@ const (
 	io1MinTotalIOPS             = 100
 	io1MaxTotalIOPS             = 64000
 	io1MaxIOPSPerGB             = 50
+	io1MinSize                  = 4
+	io1MaxSize                  = 16 * 1024 // 16 TiB
 	io2MinTotalIOPS             = 100
 	io2MaxTotalIOPS             = 64000
 	io2BlockExpressMaxTotalIOPS = 256000
 	io2MaxIOPSPerGB             = 500
+	io2MinSize                  = 4
+	io2MaxSize                  = 64 * 1024 // 64 TiB
 	gp3MaxTotalIOPS             = 16000
 	gp3MinTotalIOPS             = 3000
 	gp3MaxIOPSPerGB             = 500
+	gpMinSize                   = 1
+	gpMaxSize                   = 16 * 1024 // 16 TiB
+	hddMinSize                  = 125
+	hddMaxSize                  = 16 * 1024 // 16 TiB
+	standardMinSize             = 1
+	standardMaxSize             = 1024
 )
 
 var (
@@ -204,18 +214,19 @@ type Disk struct {
 
 // DiskOptions represents parameters to create an EBS volume.
 type DiskOptions struct {
-	CapacityBytes          int64
-	Tags                   map[string]string
-	VolumeType             string
-	IOPSPerGB              int32
-	AllowIOPSPerGBIncrease bool
-	IOPS                   int32
-	Throughput             int32
-	AvailabilityZone       string
-	OutpostArn             string
-	Encrypted              bool
-	BlockExpress           bool
-	MultiAttachEnabled     bool
+	CapacityBytes           int64
+	Tags                    map[string]string
+	VolumeType              string
+	IOPSPerGB               int32
+	AllowIOPSPerGBIncrease  bool
+	AllowVolumeSizeIncrease bool
+	IOPS                    int32
+	Throughput              int32
+	AvailabilityZone        string
+	OutpostArn              string
+	Encrypted               bool
+	BlockExpress            bool
+	MultiAttachEnabled      bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID   string
@@ -533,6 +544,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		minIops       int32
 		maxIopsPerGb  int32
 		requestedIops int32
+		minVolumeSize int32
+		maxVolumeSize int32
 	)
 
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -548,11 +561,22 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	switch createType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeSBG1, VolumeTypeSBP1, VolumeTypeStandard:
+	case VolumeTypeSBG1, VolumeTypeSBP1:
+	case VolumeTypeSC1, VolumeTypeST1:
+		minVolumeSize = hddMinSize
+		maxVolumeSize = hddMaxSize
+	case VolumeTypeStandard:
+		minVolumeSize = standardMinSize
+		maxVolumeSize = standardMaxSize
+	case VolumeTypeGP2:
+		minVolumeSize = gpMinSize
+		maxVolumeSize = gpMaxSize
 	case VolumeTypeIO1:
 		maxIops = io1MaxTotalIOPS
 		minIops = io1MinTotalIOPS
 		maxIopsPerGb = io1MaxIOPSPerGB
+		minVolumeSize = io1MinSize
+		maxVolumeSize = io1MaxSize
 	case VolumeTypeIO2:
 		if diskOptions.BlockExpress {
 			maxIops = io2BlockExpressMaxTotalIOPS
@@ -561,17 +585,25 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		}
 		minIops = io2MinTotalIOPS
 		maxIopsPerGb = io2MaxIOPSPerGB
+		minVolumeSize = io2MinSize
+		maxVolumeSize = io2MaxSize
 	case VolumeTypeGP3:
 		maxIops = gp3MaxTotalIOPS
 		minIops = gp3MinTotalIOPS
 		maxIopsPerGb = gp3MaxIOPSPerGB
 		throughput = diskOptions.Throughput
+		minVolumeSize = gpMinSize
+		maxVolumeSize = gpMaxSize
 	default:
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
 	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
 		return nil, errors.New("CreateDisk: multi-attach is only supported for io2 volumes")
+	}
+
+	if maxVolumeSize > 0 {
+		capacityGiB = capVolumeSize(createType, capacityGiB, minVolumeSize, maxVolumeSize, diskOptions.AllowVolumeSizeIncrease)
 	}
 
 	if maxIops > 0 {
@@ -1945,4 +1977,26 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
 	return iops
+}
+
+// Calculate actual Volume Size for a volume and cap it at supported AWS limits.
+func capVolumeSize(volumeType string, requestedCapacityGiB int32, minSize, maxSize int32, allowIncrease bool) int32 {
+	// If requestedCapacityGiB is zero the user did not request a specific amount, and the default will be used instead
+	if requestedCapacityGiB == 0 {
+		return 0
+	}
+
+	size := requestedCapacityGiB
+
+	if size < minSize {
+		if allowIncrease {
+			size = minSize
+			klog.V(5).InfoS("[Debug] Increased Volume Size to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", minSize)
+		}
+	}
+	if size > maxSize {
+		size = maxSize
+		klog.V(5).InfoS("[Debug] Capped Volume Size, volume at the max supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", maxSize)
+	}
+	return size
 }

@@ -1264,6 +1264,208 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: io1 with too low capacity and AllowVolumeSizeIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:           util.GiBToBytes(1),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeIO1,
+				AllowVolumeSizeIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(4),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io1 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(17),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(17),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(16)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io2 with too low capacity and AllowVolumeSizeIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:           util.GiBToBytes(1),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeIO2,
+				AllowVolumeSizeIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(4),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: io2 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(65),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeIO2,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(65),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(64)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: gp2 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(17),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeGP2,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(17),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(16)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: gp3 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(17),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeGP3,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(17),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(16)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: st1 with too low capacity and AllowVolumeSizeIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:           util.GiBToBytes(100),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeST1,
+				AllowVolumeSizeIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      100,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(125),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: st1 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(17),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeST1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(17),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(16)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: sc1 with too low capacity and AllowVolumeSizeIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:           util.GiBToBytes(100),
+				Tags:                    map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:              VolumeTypeSC1,
+				AllowVolumeSizeIncrease: true,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      100,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(125),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: sc1 with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(17),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeSC1,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(17),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(16)),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: standard with too high capacity",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.TiBToBytes(2),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test"},
+				VolumeType:    VolumeTypeStandard,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      util.TiBToGiB(2),
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Size: aws.Int32(util.TiBToGiB(1)),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: create volume when zone is snow and add tags",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
