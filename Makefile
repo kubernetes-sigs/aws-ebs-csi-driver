@@ -73,7 +73,7 @@ clean:
 
 .PHONY: test
 test:
-	go test -v -race ./cmd/... ./pkg/...
+	go test -v -race ./cmd/... ./pkg/... ./tests/sanity/...
 
 .PHONY: test/coverage
 test/coverage:
@@ -119,10 +119,6 @@ cluster/uninstall: bin/helm bin/aws
 
 ## E2E targets
 # Targets to run e2e tests
-
-.PHONY: sanity
-sanity:
-	go test -v -race ./tests/sanity/...
 
 .PHONY: e2e/single-az
 e2e/single-az: bin/helm bin/ginkgo
