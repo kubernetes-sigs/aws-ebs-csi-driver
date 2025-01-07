@@ -314,3 +314,23 @@ func (m *NodeMounter) Unstage(path string) error {
 		return err
 	}
 }
+
+func (m *NodeMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	stats := VolumeStats{}
+
+	statfs := &unix.Statfs_t{}
+	err := unix.Statfs(volumePath, statfs)
+	if err != nil {
+		return stats, err
+	}
+
+	stats.AvailableBytes = int64(statfs.Bavail) * int64(statfs.Bsize)
+	stats.TotalBytes = int64(statfs.Blocks) * int64(statfs.Bsize)
+	stats.UsedBytes = (int64(statfs.Blocks) - int64(statfs.Bfree)) * int64(statfs.Bsize)
+
+	stats.AvailableInodes = int64(statfs.Ffree)
+	stats.TotalInodes = int64(statfs.Files)
+	stats.UsedInodes = stats.TotalInodes - stats.AvailableInodes
+
+	return stats, nil
+}

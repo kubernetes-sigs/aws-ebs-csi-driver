@@ -22,10 +22,10 @@ package mounter
 import (
 	"errors"
 	"fmt"
-
 	"regexp"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"golang.org/x/sys/windows"
 
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -282,4 +282,17 @@ func (m *NodeMounter) Unstage(target string) error {
 	}
 
 	return nil
+}
+
+func (m *NodeMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	stats := VolumeStats{}
+	var totalFreeBytes int64
+
+	err := windows.GetDiskFreeSpaceEx(windows.UTF16PtrFromString(volumePath), &stats.AvailableBytes, &stats.TotalBytes, &totalFreeBytes)
+	if err != nil {
+		return stats, err
+	}
+	stats.UsedBytes = stats.TotalBytes - totalFreeBytes
+
+	return stats, nil
 }
