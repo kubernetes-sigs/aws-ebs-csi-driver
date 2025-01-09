@@ -37,7 +37,7 @@ Kubernetes metadata does not provide information about the number of ENIs or EBS
 ### Set up driver permissions
 The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
 
-Note: Add the below statement to the example policy if you want to encrypt the EBS drives. 
+The baseline example policy does not give the EBS CSI Driver access to KMS keys to use to encrypt volumes. If you wish to encrypt volumes, add an additional statement to the role granting these permissions, for example the below statement would grant the driver access to all KMS keys in the account:
 ```
 {
   "Effect": "Allow",
@@ -50,19 +50,41 @@ Note: Add the below statement to the example policy if you want to encrypt the E
 }
 ```
 
-For more information, review ["Creating the Amazon EBS CSI driver IAM role for service accounts" from the EKS User Guide.](https://docs.aws.amazon.com/eks/latest/userguide/csi-iam-role.html) 
+There are several options to pass credentials to the EBS CSI Driver, each documented below:
 
-There are several methods to grant the driver IAM permissions:
-* Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - attach the policy to the instance profile IAM role and turn on access to [instance metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) for the instance(s) on which the driver Deployment will run
-* EKS only: Using [IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) - create an IAM role, attach the policy to it, then follow the IRSA documentation to associate the IAM role with the driver Deployment service account, which if you are installing via Helm is determined by value `controller.serviceAccount.name`, `ebs-csi-controller-sa` by default. If you are using k8s 1.24 or higher, the ServiceAccountToken is not mounted because the `LegacyServiceAccountTokenNoAutoGeneration` feature gate is enabled.
-Therefore, if you are using k8s 1.24 or higher, you need to set `true` to `controller.serviceAccount.autoMountServiceAccountToken`.
-* Using secret object - create an IAM user, attach the policy to it, then create a generic secret in the `kube-system` namespace with the user's credentials. The snippet below creates the generic secret named `aws-secret` that the driver accepts by default. You can customize the default secret and key names via the Helm parameters `awsAccessSecret.name`, `awsAccessSecret.keyId`, and `awsAccessSecret.accessKey` in the chart's [values.yaml](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml). 
-```sh
-kubectl create secret generic aws-secret \
-    --namespace kube-system \
-    --from-literal "key_id=${AWS_ACCESS_KEY_ID}" \
-    --from-literal "access_key=${AWS_SECRET_ACCESS_KEY}"
+#### (EKS Only) EKS Pod Identity
+
+[EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) is the recommended method to provide IAM credentials to pods running on EKS clusters. 
+
+When using EKS pod identity with the EBS CSI Driver, [configure the role's trust policy and assign it](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-association.html) to the `ebs-csi-controller-sa` service account in the namespace the EBS CSI Driver is deployed (typically `kube-system`). Using EKS Pod Identity requires [installation of the EKS Pod Identity agent](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-agent-setup.html) if it is not already installed on the cluster.
+
+#### IAM Roles for ServiceAccounts (i.e. IRSA)
+
+[IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) is a method of enabling pods using a Kubernetes ServiceAccount to exchange the service account token for IAM credentials. Using IRSA requires a specially configured trust policy on the role, as well as setup of an OIDC endpoint for the cluster. On EKS, [refer to the EKS docs for setting up IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html#:~:text=Enable%20IAM%20roles%20for%20service%20accounts%20by%20completing%20the%20following%20procedures:). On other cluster providers, refer to their documentation for steps to setup IRSA.
+
+When deploying via Helm, the parameter `controller.serviceAccount.annotations` can be used to add the necessary annotation for IRSA, for example with the following values:
+```yaml
+controller:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::123412341234:role/ebs-csi-role
 ```
+
+#### Secret Object
+
+When deplying via Helm, the chart can be configured to pass IAM credentials stored in a Kubernetes `Secret` to the EBS CSI Driver. This option may be useful in confunction with third party software that stores credentials in a secret. This is configured using the `awsAccessSecret` Helm parameter:
+```yaml
+awsAccessSecret:
+  name: aws-secret # This should be the name of the secret (must be in the same namespace as the driver deployment, typically kube-system)
+  keyId: key_id # This is the name of the key on the secret that holds the AWS Key ID
+  accessKey: access_key # This is the name of the key on the secret that holds the AWS Secret Access Key
+```
+
+#### (Not Recommended) IAM Instance Profile
+
+[EC2 IAM Instance Profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) enable sharing IAM credentials with software running on EC2 instances. The policy must be attached to the instance IAM role, and the EBS CSI Driver must be able to reach IMDS in order to retrieve the credentials. In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit).
+
+This method is not recommended in production environments because any pod or software running on the node with access to IMDS could assume the role and access the wide permissions of the EBS CSI Driver, violating the best practice of [restricting pod access to the instance role](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#restrict-access-to-the-instance-profile-assigned-to-the-worker-node).
 
 ### Configure driver toleration settings
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
