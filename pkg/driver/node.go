@@ -207,7 +207,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	source, err := d.mounter.FindDevicePath(devicePath, volumeID, partition, d.metadata.GetRegion())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Failed to find device path %s. %v", devicePath, err)
+		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
 
 	klog.V(4).InfoS("NodeStageVolume: find device path", "devicePath", devicePath, "source", source)
@@ -394,7 +394,7 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	devicePath, err := d.mounter.FindDevicePath(deviceName, volumeID, "", d.metadata.GetRegion())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "failed to find device path for device name %s for mount %s: %v", deviceName, req.GetVolumePath(), err)
+		return nil, status.Errorf(codes.Internal, "failed to find device path for device name %s for mount %s: %v", deviceName, req.GetVolumePath(), err)
 	}
 
 	// TODO: lock per volume ID to have some idempotency
@@ -625,7 +625,7 @@ func (d *NodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 
 	source, err := d.mounter.FindDevicePath(devicePath, volumeID, partition, d.metadata.GetRegion())
 	if err != nil {
-		return status.Errorf(codes.NotFound, "Failed to find device path %s. %v", devicePath, err)
+		return status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
 	}
 
 	klog.V(4).InfoS("NodePublishVolume [block]: find device path", "devicePath", devicePath, "source", source)
