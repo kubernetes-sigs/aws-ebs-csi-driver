@@ -35,20 +35,48 @@ Kubernetes metadata does not provide information about the number of ENIs or EBS
 
 ## Installation
 ### Set up driver permissions
-The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a managed policy, available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`. 
 
-The baseline example policy does not give the EBS CSI Driver access to KMS keys to use to encrypt volumes. If you wish to encrypt volumes, add an additional statement to the role granting these permissions, for example the below statement would grant the driver access to all KMS keys in the account:
-```
+> [!NOTE]  
+> The example policy and documentation below use the [`aws` partition in ARNs](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html). When installing the EBS CSI Driver on other partitions, replace instances of `arn:aws:` with the local partition, such as `arn:aws-us-gov:` for AWS GovCloud.
+
+The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./example-iam-policy.json) defines these permissions. AWS maintains a [managed policy version of the example policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonEBSCSIDriverPolicy.html), available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`.
+
+The baseline example policy excludes permissions for some rarer and potentially dangerous usecases. For these usecases, additional statements are necessary:
+
+<details>
+<summary>Encrypted EBS Volumes via KMS</summary>
+<br>
+To create and manage encrypted EBS volumes, the EBS CSI Driver requires access to the KMS key(s) used for encryption/decryption of the volume(s). The below example grants the EBS CSI Driver access to all KMS keys in the account, but it is best practice to restrict the resource to only the keys the EBS CSI Driver needs access to.
+<pre>
 {
   "Effect": "Allow",
   "Action": [
-      "kms:Decrypt",
-      "kms:GenerateDataKeyWithoutPlaintext",
-      "kms:CreateGrant"
+    "kms:Decrypt",
+    "kms:GenerateDataKeyWithoutPlaintext",
+    "kms:CreateGrant"
   ],
-  "Resource": "*"
+  "Resource": "arn:aws:kms:*:*:key/*"
 }
-```
+</pre>
+</details>
+
+<details>
+<summary>Modifying tags of existing volumes</summary>
+<br>
+Modification of tags of existing volumes can, in some configurations, allow the driver to bypass tag-based policies and restrictions, so it is not included in the default policy. Below is an example statement that will grant the EBS CSI Driver the ability to modify tags of any volume or snapshot:
+<pre>
+{ 
+  "Effect": "Allow",
+  "Action": [
+    "ec2:CreateTags"
+  ],
+  "Resource": [
+    "arn:aws:ec2:*:*:volume/*",
+    "arn:aws:ec2:*:*:snapshot/*"
+  ]
+}
+</pre>
+</details>
 
 There are several options to pass credentials to the EBS CSI Driver, each documented below:
 
