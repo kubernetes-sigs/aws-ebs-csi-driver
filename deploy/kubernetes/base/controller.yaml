@@ -133,7 +133,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-provisioner
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v5.1.0-eks-1-32-1
+          image: registry.k8s.io/sig-storage/csi-provisioner:v5.1.0
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -166,7 +166,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-attacher
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.7.0-eks-1-32-1
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.8.0
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -195,7 +195,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.1.0-eks-1-32-1
+          image: registry.k8s.io/sig-storage/csi-snapshotter:v8.2.0
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -224,7 +224,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-resizer
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.12.0-eks-1-32-1
+          image: registry.k8s.io/sig-storage/csi-resizer:v1.13.1
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -255,7 +255,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-32-1
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.15.0
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
