@@ -1,0 +1,76 @@
+# EBS CSI Driver Scalability Tests
+
+EBS uses EBS CSI Driver scalability tests to validate that each release of our driver can manage EBS volume lifecycle for large-scale clusters. 
+
+Setup and run an EBS CSI Driver scalability test with our `scale-test` tool:  
+
+```shell
+# Set scalability parameters
+export CLUSTER_TYPE="pre-allocated"
+export TEST_TYPE="scale-sts"
+export REPLICAS="1000"
+
+# Setup an EKS scalability cluster and install EBS CSI Driver. 
+./scale-test setup
+
+# Run a scalability test and export results to S3.
+./scale-test run
+
+# Cleanup all AWS resources related to scalability cluster. 
+./scale-test cleanup
+```
+
+## Pre-requisites
+
+REVIEWER NOTE: I'm open to relying on `make tools` /bin dependencies. But that might be confusing to those just wanting to run scale tests. 
+
+Install the following commandline tools:
+- [gomplate](https://github.com/hairyhenderson/gomplate)
+- [aws cli v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [eksctl](https://eksctl.io/installation/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+
+## Overridable parameters
+
+You can modify the kind of scalability cluster test run, or the names of script artifacts, through environment variables.
+
+Note: The environment variables set when you run `scale-test setup` must remain the same for future `scale-test run`/`scale-test clean` commands on that scalability cluster.  
+
+```sh
+# Affect test
+CLUSTER_TYPE              # Type of scalability cluster to create.
+TEST_TYPE                 # Type of scale test to run.
+REPLICAS                  # Number of StatefulSet replicas to create.
+DRIVER_VALUES_FILEPATH    # Custom values file passed to EBS CSI Driver Helm chart.
+
+# Names
+CLUSTER_NAME              # Base name used by `eksctl` to create AWS resources.
+EXPORT_DIR                # Where to export scale test metrics/logs locally.
+S3_BUCKET                 # Name of S3 bucket used for holding scalability run results.
+SCALABILITY_TEST_RUN_NAME # Name of test run. Used as name of directory for adding run results in $S3_BUCKET.
+
+# Find default values at top of `scale-test` script. 
+```
+
+## Types of scalability tests
+
+Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run different scalability tests. 
+
+- `CLUSTER_TYPE` dictates what type of scalability cluster `scale-test` creates and which nodes are used during a scalability test run. Options include: 
+  - 'pre-allocated': Additional worker nodes are created during cluster setup. By default, we pre-allocate 1 `m7a.48xlarge` EC2 instance for every 100 StatefulSet replicas. 
+
+
+- `TEST_TYPE` dictates what type of scalability test we want to run. Options include: 
+  - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises  
+
+You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
+
+## Contributing scalability tests
+
+`scale-test` parses arguments and wraps scripts and configuration files in the `helpers` directory. These helper scripts manage the scalability cluster and test runs. 
+
+We rely on [gomplate](https://github.com/hairyhenderson/gomplate) to render configuration files based on environment variables. 
+
+The `helpers` directory includes:
+- `/helpers/cluster-setup`: Holds scripts and configuration for cluster and add-on setup/cleanup.
+- `/helpers/scale-test`: Holds directory for each scale test. Also holds utility scripts used by every test (like exporting logs/metrics to S3).
