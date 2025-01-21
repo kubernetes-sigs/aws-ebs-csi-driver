@@ -71,3 +71,4 @@ linters:
     - godox # Do not allow TODOs
     - nonamedreturns # Need to nolint/refactor a few places our code
     - paralleltest # There are many tests that aren't parallelized
+    - usetesting # TODO consider adding usetesting linter

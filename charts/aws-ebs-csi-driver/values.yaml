@@ -16,14 +16,13 @@ customLabels: {}
 # The EBS CSI Driver FIPS images have not undergone FIPS certification, and no official guarnatee is made about the compliance of these images under the FIPS standard
 # Users relying on these images for FIPS compliance should perform their own independent evaluation
 fips: false
-
 sidecars:
   provisioner:
     env: []
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v5.1.0-eks-1-32-1"
+      tag: "v5.1.0-eks-1-32-4"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -50,7 +49,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.7.0-eks-1-32-1"
+      tag: "v4.8.0-eks-1-31-12"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -79,7 +78,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.1.0-eks-1-32-1"
+      tag: "v8.2.0-eks-1-32-4"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -95,7 +94,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.14.0-eks-1-32-1"
+      tag: "v2.14.0-eks-1-32-4"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -107,7 +106,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.12.0-eks-1-32-1"
+      tag: "v1.13.1-eks-1-31-12"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -134,7 +133,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.12.0-eks-1-32-1"
+      tag: "v2.13.0-eks-1-31-12"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -156,7 +155,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.5.0"
+      tag: "v0.5.1"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
@@ -512,4 +511,4 @@ nodeComponentOnly: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20241128-8df65c072f-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20241230-3006692a6f-master"
