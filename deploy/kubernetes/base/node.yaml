@@ -142,7 +142,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-32-4
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-31-12
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
