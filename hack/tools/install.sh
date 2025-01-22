@@ -23,7 +23,7 @@ AWSCLI_VERSION="2.23.3"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.12.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.201.0"
+EKSCTL_VERSION="v0.197.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.22.2"
 # https://github.com/golangci/golangci-lint
@@ -34,7 +34,7 @@ GOMPLATE_VERSION="v4.3.0"
 HELM_VERSION="v3.17.0"
 # https://github.com/kubernetes/kops
 # NOTE: We pin kops to a commit instead of a release to support newer versions of k8s earlier
-KOPS_COMMIT="30c00ade155cf9653b65d5aba22482ee8751f258"
+KOPS_COMMIT="aaa35cc5304f9b191ca9828b552e62bddc5b263a"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20241216131453-22d5b1410bef"
 # https://github.com/golang/mock
