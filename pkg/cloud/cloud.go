@@ -281,8 +281,7 @@ var (
 		creationBackoff: wait.Backoff{
 			Duration: 500 * time.Millisecond,
 			Factor:   1.5,
-			Steps:    25,
-			Cap:      3 * time.Second,
+			Steps:    11,
 		},
 
 		// Most attach/detach operations on AWS finish within 1-4 seconds.
