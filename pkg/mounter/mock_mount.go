@@ -22,7 +22,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	mount "k8s.io/mount-utils"
+	mount_utils "k8s.io/mount-utils"
 )
 
 // MockMounter is a mock of Mounter interface.
@@ -137,6 +137,21 @@ func (mr *MockMounterMockRecorder) GetMountRefs(pathname interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMountRefs", reflect.TypeOf((*MockMounter)(nil).GetMountRefs), pathname)
 }
 
+// GetVolumeStats mocks base method.
+func (m *MockMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVolumeStats", volumePath)
+	ret0, _ := ret[0].(VolumeStats)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVolumeStats indicates an expected call of GetVolumeStats.
+func (mr *MockMounterMockRecorder) GetVolumeStats(volumePath interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeStats", reflect.TypeOf((*MockMounter)(nil).GetVolumeStats), volumePath)
+}
+
 // IsBlockDevice mocks base method.
 func (m *MockMounter) IsBlockDevice(fullPath string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -197,10 +212,10 @@ func (mr *MockMounterMockRecorder) IsMountPoint(file interface{}) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockMounter) List() ([]mount.MountPoint, error) {
+func (m *MockMounter) List() ([]mount_utils.MountPoint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].([]mount.MountPoint)
+	ret0, _ := ret[0].([]mount_utils.MountPoint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
