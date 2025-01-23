@@ -1,3 +1,163 @@
+# v1.39.0
+
+#### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
+
+_(This warning is the same as previous releases and can be disregarded if you have already taken appropriate action)_
+
+Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded.
+
+### Documentation
+
+- Note that tags-only modification does not lead to 6-hour modification cooldown period. ([#2275](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2275), [@AndrewSirenko](https://github.com/AndrewSirenko))
+- Update the example IAM policy to be in sync with the AWS managed policy ([#2287](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2287), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug or Regression
+
+- Fix backoff when waiting for volume creation ([#2303](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2303), [@khizunov](https://github.com/khizunov))
+
+## Dependencies
+
+### Added
+- cloud.google.com/go/compute: v1.25.1
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.24.2](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/tree/detectors/gcp/v1.24.2)
+- github.com/Microsoft/hnslib: [v0.0.8](https://github.com/Microsoft/hnslib/tree/v0.0.8)
+- github.com/containerd/containerd/api: [v1.8.0](https://github.com/containerd/containerd/tree/api/v1.8.0)
+- github.com/containerd/errdefs: [v0.1.0](https://github.com/containerd/errdefs/tree/v0.1.0)
+- github.com/containerd/log: [v0.1.0](https://github.com/containerd/log/tree/v0.1.0)
+- github.com/containerd/typeurl/v2: [v2.2.0](https://github.com/containerd/typeurl/tree/v2.2.0)
+- github.com/docker/docker: [v26.1.4+incompatible](https://github.com/docker/docker/tree/v26.1.4)
+- github.com/docker/go-connections: [v0.5.0](https://github.com/docker/go-connections/tree/v0.5.0)
+- github.com/kubernetes-csi/csi-test/v5: [v5.3.1](https://github.com/kubernetes-csi/csi-test/tree/v5.3.1)
+- github.com/moby/docker-image-spec: [v1.3.1](https://github.com/moby/docker-image-spec/tree/v1.3.1)
+- github.com/morikuni/aec: [v1.0.0](https://github.com/morikuni/aec/tree/v1.0.0)
+- github.com/opencontainers/image-spec: [v1.1.0](https://github.com/opencontainers/image-spec/tree/v1.1.0)
+- github.com/russross/blackfriday: [v1.6.0](https://github.com/russross/blackfriday/tree/v1.6.0)
+- github.com/xeipuuv/gojsonpointer: [4e3ac27](https://github.com/xeipuuv/gojsonpointer/tree/4e3ac27)
+- github.com/xeipuuv/gojsonreference: [bd5ef7b](https://github.com/xeipuuv/gojsonreference/tree/bd5ef7b)
+- github.com/xeipuuv/gojsonschema: [v1.2.0](https://github.com/xeipuuv/gojsonschema/tree/v1.2.0)
+- go.opentelemetry.io/auto/sdk: v1.1.0
+- go.opentelemetry.io/contrib/detectors/gcp: v1.31.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp: v1.27.0
+- go.opentelemetry.io/otel/sdk/metric: v1.31.0
+- gotest.tools/v3: v3.0.2
+- k8s.io/externaljwt: v0.32.1
+
+### Changed
+- cloud.google.com/go/compute/metadata: v0.5.0 → v0.5.2
+- github.com/Azure/go-ansiterm: [d185dfc → 306776e](https://github.com/Azure/go-ansiterm/compare/d185dfc...306776e)
+- github.com/armon/circbuf: [bbbad09 → 5111143](https://github.com/armon/circbuf/compare/bbbad09...5111143)
+- github.com/aws/aws-sdk-go-v2/config: [v1.28.6 → v1.29.1](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.28.6...config/v1.29.1)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.17.47 → v1.17.54](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.17.47...credentials/v1.17.54)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.16.21 → v1.16.24](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.16.21...feature/ec2/imds/v1.16.24)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.3.25 → v1.3.28](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.3.25...internal/configsources/v1.3.28)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.6.25 → v2.6.28](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.6.25...internal/endpoints/v2/v2.6.28)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.196.0 → v1.200.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.196.0...service/ec2/v1.200.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.12.6 → v1.12.9](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.12.6...service/internal/presigned-url/v1.12.9)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.24.7 → v1.24.11](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.24.7...service/sso/v1.24.11)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.28.6 → v1.28.10](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.28.6...service/ssooidc/v1.28.10)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.33.2 → v1.33.9](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.33.2...service/sts/v1.33.9)
+- github.com/aws/aws-sdk-go-v2: [v1.32.6 → v1.33.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.6...v1.33.0)
+- github.com/aws/smithy-go: [v1.22.1 → v1.22.2](https://github.com/aws/smithy-go/compare/v1.22.1...v1.22.2)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.5.0 → v0.5.1](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.5.0...v0.5.1)
+- github.com/containerd/ttrpc: [v1.2.2 → v1.2.7](https://github.com/containerd/ttrpc/compare/v1.2.2...v1.2.7)
+- github.com/coredns/corefile-migration: [v1.0.23 → v1.0.24](https://github.com/coredns/corefile-migration/compare/v1.0.23...v1.0.24)
+- github.com/cyphar/filepath-securejoin: [v0.3.5 → v0.3.6](https://github.com/cyphar/filepath-securejoin/compare/v0.3.5...v0.3.6)
+- github.com/envoyproxy/go-control-plane: [v0.13.0 → v0.13.1](https://github.com/envoyproxy/go-control-plane/compare/v0.13.0...v0.13.1)
+- github.com/exponent-io/jsonpath: [d6023ce → 1de76d7](https://github.com/exponent-io/jsonpath/compare/d6023ce...1de76d7)
+- github.com/google/btree: [v1.0.1 → v1.1.3](https://github.com/google/btree/compare/v1.0.1...v1.1.3)
+- github.com/google/cadvisor: [v0.49.0 → v0.51.0](https://github.com/google/cadvisor/compare/v0.49.0...v0.51.0)
+- github.com/google/pprof: [40e02aa → 997b0b7](https://github.com/google/pprof/compare/40e02aa...997b0b7)
+- github.com/gregjones/httpcache: [9cad4c3 → 901d907](https://github.com/gregjones/httpcache/compare/9cad4c3...901d907)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.24.0 → v2.26.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.24.0...v2.26.0)
+- github.com/jonboulle/clockwork: [v0.2.2 → v0.4.0](https://github.com/jonboulle/clockwork/compare/v0.2.2...v0.4.0)
+- github.com/kubernetes-csi/csi-lib-utils: [v0.19.0 → v0.20.0](https://github.com/kubernetes-csi/csi-lib-utils/compare/v0.19.0...v0.20.0)
+- github.com/kubernetes-csi/external-resizer: [v1.12.0 → v1.13.1](https://github.com/kubernetes-csi/external-resizer/compare/v1.12.0...v1.13.1)
+- github.com/mailru/easyjson: [v0.7.7 → v0.9.0](https://github.com/mailru/easyjson/compare/v0.7.7...v0.9.0)
+- github.com/matttproud/golang_protobuf_extensions: [v1.0.1 → v1.0.2](https://github.com/matttproud/golang_protobuf_extensions/compare/v1.0.1...v1.0.2)
+- github.com/mohae/deepcopy: [491d360 → c48cc78](https://github.com/mohae/deepcopy/compare/491d360...c48cc78)
+- github.com/onsi/ginkgo/v2: [v2.22.0 → v2.22.2](https://github.com/onsi/ginkgo/compare/v2.22.0...v2.22.2)
+- github.com/onsi/gomega: [v1.36.1 → v1.36.2](https://github.com/onsi/gomega/compare/v1.36.1...v1.36.2)
+- github.com/opencontainers/runc: [v1.2.3 → v1.2.4](https://github.com/opencontainers/runc/compare/v1.2.3...v1.2.4)
+- github.com/prometheus/common: [v0.61.0 → v0.62.0](https://github.com/prometheus/common/compare/v0.61.0...v0.62.0)
+- github.com/vishvananda/netlink: [v1.1.0 → b1ce50c](https://github.com/vishvananda/netlink/compare/v1.1.0...b1ce50c)
+- github.com/xiang90/probing: [43a291a → a49e3df](https://github.com/xiang90/probing/compare/43a291a...a49e3df)
+- go.etcd.io/bbolt: v1.3.9 → v1.3.11
+- go.etcd.io/etcd/client/v2: v2.305.13 → v2.305.16
+- go.etcd.io/etcd/pkg/v3: v3.5.13 → v3.5.16
+- go.etcd.io/etcd/raft/v3: v3.5.13 → v3.5.16
+- go.etcd.io/etcd/server/v3: v3.5.13 → v3.5.16
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.57.0 → v0.59.0
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.57.0 → v0.59.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.32.0 → v1.34.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.32.0 → v1.34.0
+- go.opentelemetry.io/otel/metric: v1.32.0 → v1.34.0
+- go.opentelemetry.io/otel/sdk: v1.32.0 → v1.34.0
+- go.opentelemetry.io/otel/trace: v1.32.0 → v1.34.0
+- go.opentelemetry.io/otel: v1.32.0 → v1.34.0
+- go.opentelemetry.io/proto/otlp: v1.4.0 → v1.5.0
+- golang.org/x/crypto: v0.31.0 → v0.32.0
+- golang.org/x/exp: 1829a12 → 7588d65
+- golang.org/x/net: v0.32.0 → v0.34.0
+- golang.org/x/oauth2: v0.24.0 → v0.25.0
+- golang.org/x/sys: v0.28.0 → v0.29.0
+- golang.org/x/term: v0.27.0 → v0.28.0
+- golang.org/x/time: v0.8.0 → v0.9.0
+- golang.org/x/tools: v0.28.0 → v0.29.0
+- golang.org/x/xerrors: 04be3eb → 5ec99f8
+- google.golang.org/genproto/googleapis/api: e6fa225 → 138b5a5
+- google.golang.org/genproto/googleapis/rpc: e6fa225 → 138b5a5
+- google.golang.org/genproto: b8732ec → ef43131
+- google.golang.org/grpc: v1.68.1 → v1.69.4
+- google.golang.org/protobuf: v1.35.2 → v1.36.3
+- k8s.io/api: v0.31.4 → v0.32.1
+- k8s.io/apiextensions-apiserver: v0.31.4 → v0.32.1
+- k8s.io/apimachinery: v0.31.4 → v0.32.1
+- k8s.io/apiserver: v0.31.4 → v0.32.1
+- k8s.io/cli-runtime: v0.31.4 → v0.32.1
+- k8s.io/client-go: v0.31.4 → v0.32.1
+- k8s.io/cloud-provider: v0.31.4 → v0.32.1
+- k8s.io/cluster-bootstrap: v0.31.4 → v0.32.1
+- k8s.io/code-generator: v0.31.4 → v0.32.1
+- k8s.io/component-base: v0.31.4 → v0.32.1
+- k8s.io/component-helpers: v0.31.4 → v0.32.1
+- k8s.io/controller-manager: v0.31.4 → v0.32.1
+- k8s.io/cri-api: v0.31.4 → v0.32.1
+- k8s.io/cri-client: v0.31.4 → v0.32.1
+- k8s.io/csi-translation-lib: v0.31.4 → v0.32.1
+- k8s.io/dynamic-resource-allocation: v0.31.4 → v0.32.1
+- k8s.io/endpointslice: v0.31.4 → v0.32.1
+- k8s.io/gengo/v2: a7b603a → 2b36238
+- k8s.io/kms: v0.31.4 → v0.32.1
+- k8s.io/kube-aggregator: v0.31.4 → v0.32.1
+- k8s.io/kube-controller-manager: v0.31.4 → v0.32.1
+- k8s.io/kube-openapi: 9959940 → 2c72e55
+- k8s.io/kube-proxy: v0.31.4 → v0.32.1
+- k8s.io/kube-scheduler: v0.31.4 → v0.32.1
+- k8s.io/kubectl: v0.31.4 → v0.32.1
+- k8s.io/kubelet: v0.31.4 → v0.32.1
+- k8s.io/kubernetes: v1.31.4 → v1.32.1
+- k8s.io/metrics: v0.31.4 → v0.32.1
+- k8s.io/mount-utils: v0.31.4 → v0.32.1
+- k8s.io/pod-security-admission: v0.31.4 → v0.32.1
+- k8s.io/sample-apiserver: v0.31.4 → v0.32.1
+- k8s.io/system-validators: v1.8.0 → v1.9.1
+- sigs.k8s.io/kustomize/api: v0.17.2 → v0.18.0
+- sigs.k8s.io/kustomize/kustomize/v5: v5.4.2 → v5.5.0
+- sigs.k8s.io/kustomize/kyaml: v0.17.1 → v0.18.1
+- sigs.k8s.io/structured-merge-diff/v4: v4.4.3 → v4.5.0
+
+### Removed
+- github.com/Microsoft/hcsshim: [v0.8.26](https://github.com/Microsoft/hcsshim/tree/v0.8.26)
+- github.com/checkpoint-restore/go-criu/v5: [v5.3.0](https://github.com/checkpoint-restore/go-criu/tree/v5.3.0)
+- github.com/containerd/cgroups: [v1.1.0](https://github.com/containerd/cgroups/tree/v1.1.0)
+- github.com/daviddengcn/go-colortext: [v1.0.0](https://github.com/daviddengcn/go-colortext/tree/v1.0.0)
+- github.com/go-kit/log: [v0.2.1](https://github.com/go-kit/log/tree/v0.2.1)
+- github.com/go-logfmt/logfmt: [v0.5.1](https://github.com/go-logfmt/logfmt/tree/v0.5.1)
+- github.com/golang/groupcache: [2c02b82](https://github.com/golang/groupcache/tree/2c02b82)
+- github.com/imdario/mergo: [v0.3.16](https://github.com/imdario/mergo/tree/v0.3.16)
+- go.opencensus.io: v0.24.0
+- go.starlark.net: a134d8f
+
 # v1.38.1
 
 _Notice: The v1.38.0 images were promoted incorrectly due to a process error. Do not use any images from `v1.38.0` and upgrade directly to `v1.38.1`._
