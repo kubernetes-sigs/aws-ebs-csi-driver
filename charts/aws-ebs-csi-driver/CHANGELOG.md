@@ -1,5 +1,12 @@
 # Helm chart
 
+## v2.39.0
+
+### Feature
+
+- Add Helm parameter `node.selinux` to enable SELinux-specific mounts on the node DaemonSet ([#2253](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2253), [@ConnorJC3](https://github.com/ConnorJC3))
+- Add Helm FIPS parameter ([#2244](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2244), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## v2.38.1
 
 ### Feature
