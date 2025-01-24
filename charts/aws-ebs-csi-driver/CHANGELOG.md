@@ -1,5 +1,10 @@
 # Helm chart
 
+## v2.39.1
+
+### Bug or Regression
+- Fix `node.selinux` to properly set SELinux-specific mounts as ReadOnly ([#2311](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2311), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 ## v2.39.0
 
 ### Feature
