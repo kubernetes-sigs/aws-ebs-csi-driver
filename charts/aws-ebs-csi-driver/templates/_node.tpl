@@ -134,8 +134,10 @@ spec:
             {{- if .Values.node.selinux }}
             - name: selinux-sysfs
               mountPath: /sys/fs/selinux
+              readOnly: true
             - name: selinux-config
               mountPath: /etc/selinux/config
+              readOnly: true
             {{- end }}
           {{- with .Values.node.volumeMounts }}
           {{- toYaml . | nindent 12 }}
@@ -259,12 +261,10 @@ spec:
           hostPath:
             path: /sys/fs/selinux
             type: Directory
-            readOnly: true
         - name: selinux-config
           hostPath:
             path: /etc/selinux/config
             type: File
-            readOnly: true
         {{- end }}
         - name: probe-dir
           {{- if .Values.node.probeDirVolume }}
