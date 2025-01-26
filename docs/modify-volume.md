@@ -66,7 +66,7 @@ spec:
   storageClassName: ebs-sc
   resources:
     requests:
-      storage: 100Gi
+      storage: 10Gi
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -110,7 +110,7 @@ Annotations:   pv.kubernetes.io/bind-completed: yes
                volume.kubernetes.io/selected-node: ip-192-168-32-79.ec2.internal
                volume.kubernetes.io/storage-provisioner: ebs.csi.aws.com
 Finalizers:    [kubernetes.io/pvc-protection]
-Capacity:      100Gi
+Capacity:      10Gi
 Access Modes:  RWO
 VolumeMode:    Filesystem
 Used By:       app
@@ -128,7 +128,7 @@ Events:
 ```
 $ pv=$(k get -o json pvc ebs-claim | jq -r '.spec | .volumeName')
 $ volumename=$(k get -o json pv $pv | jq -r '.spec | .csi | .volumeHandle')
-$ aws ec2 describe-volumes —volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
+$ aws ec2 describe-volumes --volume-ids $volumename | jq '.Volumes[] | "\(.VolumeType) \(.Iops) \(.Throughput)"'
 "gp3 3000 125"
 ```
 
@@ -148,7 +148,7 @@ spec:
   storageClassName: ebs-sc
   resources:
     requests:
-      storage: 100Gi
+      storage: 10Gi
 ```
 
 #### 5) Verify the volume has been updated successfully.
@@ -170,7 +170,7 @@ Annotations:   ebs.csi.aws.com/iops: 4000
                volume.kubernetes.io/selected-node: ip-192-168-88-208.us-east-2.compute.internal
                volume.kubernetes.io/storage-provisioner: ebs.csi.aws.com
 Finalizers:    [kubernetes.io/pvc-protection]
-Capacity:      100Gi
+Capacity:      10Gi
 Access Modes:  RWO
 VolumeMode:    Filesystem
 Used By:       app
@@ -204,7 +204,7 @@ Claim:             default/ebs-claim
 Reclaim Policy:    Delete
 Access Modes:      RWO
 VolumeMode:        Filesystem
-Capacity:          100Gi
+Capacity:          10Gi
 Node Affinity:     
   Required Terms:  
     Term 0:        topology.ebs.csi.aws.com/zone in [us-east-2b]
