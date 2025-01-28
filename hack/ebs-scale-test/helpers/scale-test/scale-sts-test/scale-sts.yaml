@@ -66,3 +66,5 @@ metadata:
 provisioner: ebs.csi.aws.com
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
+parameters:
+  tagSpecification_1: "ebs-scale-test={{ .Env.SCALABILITY_TEST_RUN_NAME }}"

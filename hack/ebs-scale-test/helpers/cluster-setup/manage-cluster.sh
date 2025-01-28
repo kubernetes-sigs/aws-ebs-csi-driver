@@ -37,13 +37,25 @@ cleanup_cluster() {
   eksctl delete cluster "$CLUSTER_NAME"
 }
 
+## Misc
+
+check_lingering_volumes() {
+  lingering_vol_count=$(aws ec2 describe-volumes \
+    --filters "Name=tag-key,Values=ebs-scale-test" \
+    --query 'length(Volumes[*])' \
+    --output text)
+
+  [[ lingering_vol_count -ne 0 ]] && echo "WARNING: detected $lingering_vol_count lingering ebs-scale-test EBS volumes in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-volumes --filters 'Name=tag-key,Values=ebs-scale-test'\` and audit their AWS resource tags. Note these volumes may belong to a different scalability run than $SCALABILITY_TEST_RUN_NAME"
+}
+
 ## EBS CSI Driver
 
 deploy_ebs_csi_driver() {
   path_to_chart="${BASE_DIR}/../../charts/aws-ebs-csi-driver"
   echo "Deploying EBS CSI driver from chart $path_to_chart"
 
-  helm upgrade --install aws-ebs-csi-driver \
+  # We use helm install instead of upgrade to ensure the release does not already exist
+  helm install aws-ebs-csi-driver \
     --namespace kube-system \
     --values "$DRIVER_VALUES_FILEPATH" \
     --wait \

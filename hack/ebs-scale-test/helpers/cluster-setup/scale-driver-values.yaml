@@ -17,6 +17,7 @@ image:
   pullPolicy: Always
 controller:
   logLevel: 7
+  # Having one controller simplifies metrics collection and helps track restarts
   replicaCount: 1
   enableMetrics: true
 sidecars:

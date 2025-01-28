@@ -32,14 +32,12 @@ CLUSTER_TYPE=${CLUSTER_TYPE:="pre-allocated"}
 TEST_TYPE=${TEST_TYPE:="scale-sts"}
 REPLICAS=${REPLICAS:=1000}
 DRIVER_VALUES_FILEPATH=${DRIVER_VALUES_FILEPATH:="$BASE_DIR/helpers/cluster-setup/scale-driver-values.yaml"}
-# TODO Q: Does anyone need an $OVERRIDE_KUBECONFIG? Let's discuss.
 
 CLUSTER_NAME=${CLUSTER_NAME:="ebs-scale-$CLUSTER_TYPE"}
-EXPORT_DIR=${EXPORT_DIR:=$(mktemp -d)}
-S3_BUCKET=${S3_BUCKET:="ebs-scale-tests"}
 SCALABILITY_TEST_RUN_NAME=${SCALABILITY_TEST_RUN_NAME:="$CLUSTER_NAME-$TEST_TYPE-$REPLICAS-$(date -u +%Y-%m-%dT%H:%M%Z)"}
+EXPORT_DIR=${EXPORT_DIR:="/tmp/ebs-scale-test/$SCALABILITY_TEST_RUN_NAME"}
 
-## Script helpers and internal environment variables
+## Internal environment variables
 export PRE_ALLOCATED_NODES K8S_VERSION AWS_ACCOUNT_ID AWS_REGION BASE_DIR TEMPOUT
 
 PRE_ALLOCATED_NODES=${PRE_ALLOCATED_NODES:=$((($REPLICAS / 100) + 1))}
@@ -49,9 +47,15 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 AWS_REGION=$(aws configure get region)
 TEMPOUT=$(mktemp)
 
+S3_BUCKET=${S3_BUCKET:="ebs-scale-tests-$AWS_ACCOUNT_ID"}
+
+## Sourcing helper scripts
 source "${BASE_DIR}/helpers/cluster-setup/manage-cluster.sh"
-source "${BASE_DIR}/helpers/scale-test/export-to-s3.sh"
-source "${BASE_DIR}/helpers/scale-test//scale-sts-test/scale-sts.sh"
+
+source "${BASE_DIR}/helpers/scale-test/collect-and-export-metrics.sh"
+source "${BASE_DIR}/helpers/scale-test/pre_test_validation.sh"
+
+source "${BASE_DIR}/helpers/scale-test/scale-sts-test/scale-sts.sh"
 
 usage() {
   echo "Usage: $0 [base-cmd]"
@@ -59,7 +63,6 @@ usage() {
   exit 1
 }
 
-# TODO Q: I'm open to relying on `make tools` /bin dependencies. But that might be confusing to those just wanting to run scale tests.
 check_dependencies_helper() {
   local readonly dependencies=("kubectl" "aws" "eksctl" "gomplate")
 
@@ -74,22 +77,24 @@ check_dependencies_helper() {
 ## Script start
 
 # Functions sourced from helpers/cluster-setup/manage-cluster.sh
-setup-scale() {
+setup_scale() {
   create_cluster
   deploy_ebs_csi_driver
 }
 
 # Functions sourced from helpers/scale-test/...
-run-scale() {
-  # TODO Q: Is it worth restarting EBS CSI Controller pod to ensure clean metrics/logs? Or move EBS CSI Driver install/cleanup to 'run' instead of 'setup'? Let's discuss.
-  aws eks update-kubeconfig --name "$CLUSTER_NAME"
+run_scale() {
+  pre_test_validation
+
   sts_scale_test
-  export_to_s3
+
+  collect-and-export-metrics
 }
 
 # Functions sourced from helpers/cluster-setup/manage-cluster.sh
-clean-scale() {
+clean_scale() {
   cleanup_cluster
+  check_lingering_volumes
 }
 
 main() {
@@ -97,10 +102,13 @@ main() {
   [[ $# -ne 1 ]] && usage
   check_dependencies_helper
 
+  # Make tmp directory if it doesn't exist
+  mkdir -p "$EXPORT_DIR"
+
   case "$1" in
-  *setup* | *create*) setup-scale ;;
-  *run*) run-scale ;;
-  *clean*) clean-scale ;;
+  *setup* | *create*) setup_scale ;;
+  *run*) run_scale ;;
+  *clean* | *delete*) clean_scale ;;
   *) usage ;;
   esac
 }

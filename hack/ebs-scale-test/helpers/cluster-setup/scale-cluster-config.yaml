@@ -39,4 +39,3 @@ managedNodeGroups:
 
 addons:
   - name: eks-pod-identity-agent
-  - name: snapshot-controller

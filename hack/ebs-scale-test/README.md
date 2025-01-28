@@ -13,19 +13,23 @@ export REPLICAS="1000"
 # Setup an EKS scalability cluster and install EBS CSI Driver. 
 ./scale-test setup
 
-# Run a scalability test and export results to S3.
+# Run a scalability test and export results.
 ./scale-test run
 
 # Cleanup all AWS resources related to scalability cluster. 
 ./scale-test cleanup
 ```
 
+Results will be exported to a local directory (`$EXPORT_DIR`) and an S3 Bucket in your AWS account (`$S3_BUCKET`).
+
+Note: Any `ebs-csi-controller` pod(s) will be restarted at the beginning of every scale run to clear metrics/logs.  
+
 ## Pre-requisites
 
-REVIEWER NOTE: I'm open to relying on `make tools` /bin dependencies. But that might be confusing to those just wanting to run scale tests. 
+You will need access to an AWS account role where you have [eksctl's minimum IAM policies](https://eksctl.io/usage/minimum-iam-policies/) and have permission to sync your `$S3_BUCKET`. 
 
-Install the following commandline tools:
-- [gomplate](https://github.com/hairyhenderson/gomplate)
+Additionally, please install the following commandline tools:
+- [gomplate](https://github.com/hairyhenderson/gomplate) - used to render configuration files based on environment variables.
 - [aws cli v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - [eksctl](https://eksctl.io/installation/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
@@ -57,11 +61,10 @@ SCALABILITY_TEST_RUN_NAME # Name of test run. Used as name of directory for addi
 Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run different scalability tests. 
 
 - `CLUSTER_TYPE` dictates what type of scalability cluster `scale-test` creates and which nodes are used during a scalability test run. Options include: 
-  - 'pre-allocated': Additional worker nodes are created during cluster setup. By default, we pre-allocate 1 `m7a.48xlarge` EC2 instance for every 100 StatefulSet replicas. 
-
+  - 'pre-allocated': Additional worker nodes are created during cluster setup. By default, we pre-allocate 1 `m7a.48xlarge` EC2 instance for every 100 StatefulSet replicas.
 
 - `TEST_TYPE` dictates what type of scalability test we want to run. Options include: 
-  - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises  
+  - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes. 
 
 You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
 
@@ -69,8 +72,6 @@ You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
 
 `scale-test` parses arguments and wraps scripts and configuration files in the `helpers` directory. These helper scripts manage the scalability cluster and test runs. 
 
-We rely on [gomplate](https://github.com/hairyhenderson/gomplate) to render configuration files based on environment variables. 
-
 The `helpers` directory includes:
-- `/helpers/cluster-setup`: Holds scripts and configuration for cluster and add-on setup/cleanup.
+- `/helpers/cluster-setup`: Holds scripts and configuration for cluster setup/cleanup.
 - `/helpers/scale-test`: Holds directory for each scale test. Also holds utility scripts used by every test (like exporting logs/metrics to S3).
