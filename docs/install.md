@@ -95,7 +95,11 @@ When deploying via Helm, the parameter `controller.serviceAccount.annotations` c
 controller:
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: arn:aws:iam::123412341234:role/ebs-csi-role
+      eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
+node:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:<partition>:iam::<account>:role/ebs-csi-role
 ```
 
 #### Secret Object
