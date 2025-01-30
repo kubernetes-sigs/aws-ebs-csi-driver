@@ -65,7 +65,9 @@ collect_metrics() {
   echo -e "$DEPLOYMENT_TIME" >"$METRICS_DIR_PATH/deployment_time.txt"
 
   log "Collecting resource metrics"
-  install_metrics_server
+  if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
+    install_metrics_server
+  fi
   check_pod_metrics
   collect_resource_metrics "kube-system" "app=ebs-csi-node" "$METRICS_DIR_PATH/node_resource_metrics.yaml"
   collect_resource_metrics "kube-system" "app=ebs-csi-controller" "$METRICS_DIR_PATH/controller_resource_metrics.yaml"
