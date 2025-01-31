@@ -27,7 +27,7 @@ sidecars:
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
     # Grant additional permissions to external-provisioner
-    additionalClusterRoleRules: []
+    additionalClusterRoleRules:
     resources: {}
     # Tune leader lease election for csi-provisioner.
     # Leader election is on by default.
@@ -356,7 +356,7 @@ node:
   loggingFormat: text
   logLevel: 2
   enableMetrics: false
-  priorityClassName: system-node-critical
+  priorityClassName:
   additionalArgs: []
   affinity:
     nodeAffinity:
