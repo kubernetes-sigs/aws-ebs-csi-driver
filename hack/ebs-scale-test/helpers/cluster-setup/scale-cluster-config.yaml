@@ -1,0 +1,41 @@
+# Copyright 2025 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: {{ .Env.CLUSTER_NAME }}
+  version: {{ .Env.K8S_VERSION }}
+  region: {{ .Env.AWS_REGION }}
+  tags:
+    karpenter.sh/discovery: {{ .Env.CLUSTER_NAME }}
+
+iam:
+  withOIDC: true
+  podIdentityAssociations:
+    - namespace: kube-system
+      serviceAccountName: ebs-csi-controller-sa
+      wellKnownPolicies:
+        ebsCSIController: true
+
+managedNodeGroups:
+{{- if eq ( getenv "CLUSTER_TYPE" ) "pre-allocated" }}
+  - instanceType: m7a.48xlarge
+    amiFamily: AmazonLinux2
+    name: pre-allocated-ng
+    desiredCapacity: {{ .Env.PRE_ALLOCATED_NODES }}
+{{- end }}
+
+addons:
+  - name: eks-pod-identity-agent
