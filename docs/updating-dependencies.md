@@ -35,7 +35,7 @@ For a full list of commands see [Managing pull requests for dependency updates |
 
 #### Dependabot PR failing CI due to breaking changes?
 
-1. Take-over the PR with something like `gh repo checkout pr some_number` or `git pull upstream/dependabot/rest_of_path`
+1. Take-over the PR with something like `gh pr checkout {pr_number}` or `git pull upstream/dependabot/{rest_of_path}`
 2. Make the necessary repository changes. 
 3. Commit and add the string `[dependabot-skip]` to the message so Dependabot can keep rebasing the PR. Push!
 
