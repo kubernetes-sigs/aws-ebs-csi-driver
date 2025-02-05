@@ -56,6 +56,7 @@ source "${BASE_DIR}/helpers/scale-test/collect-and-export-metrics.sh"
 source "${BASE_DIR}/helpers/scale-test/pre_test_validation.sh"
 
 source "${BASE_DIR}/helpers/scale-test/scale-sts-test/scale-sts.sh"
+source "${BASE_DIR}/helpers/scale-test/expand-and-modify-test/expand-and-modify.sh"
 
 usage() {
   echo "Usage: $0 [base-cmd]"
@@ -64,7 +65,7 @@ usage() {
 }
 
 check_dependencies_helper() {
-  local readonly dependencies=("kubectl" "aws" "eksctl" "gomplate")
+  local readonly dependencies=("kubectl" "aws" "eksctl" "gomplate" "jq")
 
   for cmd in "${dependencies[@]}"; do
     if ! command -v "${cmd}" &>/dev/null; then
@@ -86,7 +87,14 @@ setup_scale() {
 run_scale() {
   pre_test_validation
 
-  sts_scale_test
+  case "$TEST_TYPE" in
+  *scale-sts*) sts_scale_test ;;
+  *expand-and-modify*) expand_and_modify_test ;;
+  *)
+    echo "Invalid TEST_TYPE '$TEST_TYPE'. Please set to 'scale-sts' or 'expand-and-modify'"
+    exit 1
+    ;;
+  esac
 
   collect-and-export-metrics
 }

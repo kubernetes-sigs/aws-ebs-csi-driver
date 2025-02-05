@@ -26,6 +26,9 @@ sts_scale_test() {
   gomplate -f "$manifest_path" -o "$export_manifest_path"
   kubectl apply -f "$export_manifest_path"
 
+  # Cleanup K8s resources upon script interruption
+  trap 'echo "Test interrupted! Deleting test resources to prevent leak"; kubectl delete -f $export_manifest_path' EXIT
+
   echo "Scaling StatefulSet $REPLICAS replicas"
   kubectl scale sts --replicas "$REPLICAS" ebs-scale-test
   kubectl rollout status statefulset ebs-scale-test
@@ -35,11 +38,13 @@ sts_scale_test() {
 
   echo "Waiting for all PVs to be deleted"
   wait_for_pvs_to_delete
+
+  trap - EXIT
 }
 
 wait_for_pvs_to_delete() {
   while true; do
-    pv_count=$(kubectl get pv --no-headers | wc -l)
+    pv_count=$(kubectl get pv -o json | jq '.items | length')
     if [ "$pv_count" -eq 0 ]; then
       echo "No PVs exist in the cluster, proceeding..."
       break

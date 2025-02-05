@@ -1,0 +1,52 @@
+# Copyright 2025 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-scale-test-expand-and-modify
+provisioner: ebs.csi.aws.com
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+# We create immediately bounded volumes so that we do not have to attach/detach volumes in expand-and-modify scale test.
+volumeBindingMode: Immediate
+parameters:
+  type: gp2
+  tagSpecification_1: "ebs-scale-test={{ .Env.SCALABILITY_TEST_RUN_NAME }}"
+---
+apiVersion: storage.k8s.io/v1beta1
+kind: VolumeAttributesClass
+driverName: ebs.csi.aws.com
+metadata:
+  name: ebs-scale-test-expand-and-modify
+parameters:
+  type: gp3
+---
+{{- range $index, $value := seq 1 .Env.REPLICAS }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-claim-{{ $index }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ebs-scale-test-expand-and-modify
+  resources:
+    requests:
+      storage: 1Gi
+  # We use block mode so that no filesystem expansion occurs (via NodeExpandVolume)
+  volumeMode: "Block"
+---
+{{- end }}

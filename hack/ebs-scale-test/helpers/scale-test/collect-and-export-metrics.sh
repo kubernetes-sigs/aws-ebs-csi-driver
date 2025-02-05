@@ -63,10 +63,7 @@ collect_metrics() {
     echo "WARNING: Could not collect metrics from port ${port}. Something may be wrong in cluster."
   done
   # Stop forwarding ports after metrics collected.
-  kill $PID_3301
-  kill $PID_8081
-  kill $PID_8082
-  kill $PID_8084
+  kill $PID_3301 $PID_8081 $PID_8082 $PID_8084
 }
 
 clean_metrics() {
