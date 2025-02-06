@@ -18,6 +18,8 @@
 ShortName: ebs
 StorageClass:
   FromFile: storageclass.yaml
+VolumeAttributesClass:
+  FromFile: volumeattributesclass.yaml
 SnapshotClass:
   FromName: true
 DriverInfo:

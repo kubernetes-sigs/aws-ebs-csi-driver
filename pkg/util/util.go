@@ -41,32 +41,34 @@ var (
 	isMACAddressRegex = regexp.MustCompile(`([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})`)
 )
 
-// RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB
+// RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB.
 func RoundUpBytes(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB) * GiB
 }
 
 // RoundUpGiB rounds up the volume size in bytes upto multiplications of GiB
-// in the unit of GiB
+// in the unit of GiB.
 func RoundUpGiB(volumeSizeBytes int64) (int32, error) {
 	result := roundUpSize(volumeSizeBytes, GiB)
 	if result > int64(math.MaxInt32) {
 		return 0, fmt.Errorf("rounded up size exceeds maximum value of int32: %d", result)
 	}
+	//nolint:gosec // Integer overflow handled
 	return int32(result), nil
 }
 
-// BytesToGiB converts Bytes to GiB
+// BytesToGiB converts Bytes to GiB.
 func BytesToGiB(volumeSizeBytes int64) int32 {
 	result := volumeSizeBytes / GiB
 	if result > int64(math.MaxInt32) {
 		// Handle overflow
 		return math.MaxInt32
 	}
+	//nolint:gosec // Integer overflow handled
 	return int32(result)
 }
 
-// GiBToBytes converts GiB to Bytes
+// GiBToBytes converts GiB to Bytes.
 func GiBToBytes(volumeSizeGiB int32) int64 {
 	return int64(volumeSizeGiB) * GiB
 }
@@ -134,20 +136,20 @@ func IsSBE(region string) bool {
 	return region == "snow"
 }
 
-// StringIsAlphanumeric returns true if a given string contains only English letters or numbers
+// StringIsAlphanumeric returns true if a given string contains only English letters or numbers.
 func StringIsAlphanumeric(s string) bool {
 	return isAlphanumericRegex(s)
 }
 
-// CountMACAddresses returns the amount of MAC addresses within a string
+// CountMACAddresses returns the amount of MAC addresses within a string.
 func CountMACAddresses(s string) int {
 	matches := isMACAddressRegex.FindAllStringIndex(s, -1)
 	return len(matches)
 }
 
-// NormalizeWindowsPath normalizes a Windows path
+// NormalizeWindowsPath normalizes a Windows path.
 func NormalizeWindowsPath(path string) string {
-	normalizedPath := strings.Replace(path, "/", "\\", -1)
+	normalizedPath := strings.ReplaceAll(path, "/", "\\")
 	if strings.HasPrefix(normalizedPath, "\\") {
 		normalizedPath = "c:" + normalizedPath
 	}

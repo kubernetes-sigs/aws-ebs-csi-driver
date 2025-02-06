@@ -20,6 +20,7 @@ limitations under the License.
 package mounter
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,14 +49,14 @@ func NewSafeMounter() (*mountutils.SafeFormatAndMount, error) {
 }
 
 func NewSafeMounterV2() (*mountutils.SafeFormatAndMount, error) {
-	return nil, fmt.Errorf("NewSafeMounterV2 is not supported on this platform")
+	return nil, errors.New("NewSafeMounterV2 is not supported on this platform")
 }
 
 // FindDevicePath finds path of device and verifies its existence
 // if the device is not nvme, return the path directly
-// if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
+// if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1.
 func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region string) (string, error) {
-	strippedVolumeName := strings.Replace(volumeID, "-", "", -1)
+	strippedVolumeName := strings.ReplaceAll(volumeID, "-", "")
 	canonicalDevicePath := ""
 
 	// If the given path exists, the device MAY be nvme. Further, it MAY be a
@@ -131,7 +132,7 @@ func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region str
 }
 
 // findNvmeVolume looks for the nvme volume with the specified name
-// It follows the symlink (if it exists) and returns the absolute path to the device
+// It follows the symlink (if it exists) and returns the absolute path to the device.
 func findNvmeVolume(findName string) (device string, err error) {
 	p := filepath.Join("/dev/disk/by-id/", findName)
 	stat, err := os.Lstat(p)
@@ -162,12 +163,12 @@ func findNvmeVolume(findName string) (device string, err error) {
 }
 
 // execRunner is a helper to inject exec.Comamnd().CombinedOutput() for verifyVolumeSerialMatch
-// Tests use a mocked version that does not actually execute any binaries
+// Tests use a mocked version that does not actually execute any binaries.
 func execRunner(name string, arg ...string) ([]byte, error) {
 	return exec.Command(name, arg...).CombinedOutput()
 }
 
-// verifyVolumeSerialMatch checks the volume serial of the device against the expected volume
+// verifyVolumeSerialMatch checks the volume serial of the device against the expected volume.
 func verifyVolumeSerialMatch(canonicalDevicePath string, strippedVolumeName string, execRunner func(string, ...string) ([]byte, error)) error {
 	// In some rare cases, a race condition can lead to the /dev/disk/by-id/ symlink becoming out of date
 	// See https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1224 for more info
@@ -193,7 +194,7 @@ func verifyVolumeSerialMatch(canonicalDevicePath string, strippedVolumeName stri
 	return nil
 }
 
-// PreparePublishTarget creates the target directory for the volume to be mounted
+// PreparePublishTarget creates the target directory for the volume to be mounted.
 func (m *NodeMounter) PreparePublishTarget(target string) error {
 	klog.V(4).InfoS("NodePublishVolume: creating dir", "target", target)
 	if err := m.MakeDir(target); err != nil {
@@ -202,7 +203,7 @@ func (m *NodeMounter) PreparePublishTarget(target string) error {
 	return nil
 }
 
-// IsBlockDevice checks if the given path is a block device
+// IsBlockDevice checks if the given path is a block device.
 func (m *NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
 	var st unix.Stat_t
 	err := unix.Stat(fullPath, &st)
@@ -213,7 +214,7 @@ func (m *NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
 	return (st.Mode & unix.S_IFMT) == unix.S_IFBLK, nil
 }
 
-// GetBlockSizeBytes gets the size of the disk in bytes
+// GetBlockSizeBytes gets the size of the disk in bytes.
 func (m *NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
 	output, err := m.Exec.Command("blockdev", "--getsize64", devicePath).Output()
 	if err != nil {
@@ -227,7 +228,7 @@ func (m *NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
 	return gotSizeBytes, nil
 }
 
-// appendPartition appends the partition to the device path
+// appendPartition appends the partition to the device path.
 func (m *NodeMounter) appendPartition(devicePath, partition string) string {
 	if partition == "" {
 		return devicePath
@@ -241,17 +242,17 @@ func (m *NodeMounter) appendPartition(devicePath, partition string) string {
 }
 
 // GetDeviceNameFromMount returns the volume ID for a mount path.
-func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
+func (m *NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
 	return mountutils.GetDeviceNameFromMount(m, mountPath)
 }
 
-// IsCorruptedMnt return true if err is about corrupted mount point
-func (m NodeMounter) IsCorruptedMnt(err error) bool {
+// IsCorruptedMnt return true if err is about corrupted mount point.
+func (m *NodeMounter) IsCorruptedMnt(err error) bool {
 	return mountutils.IsCorruptedMnt(err)
 }
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
-// Please mirror the change to func MakeFile in ./sanity_test.go
+// Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) MakeFile(path string) error {
 	f, err := os.OpenFile(path, os.O_CREATE, os.FileMode(0644))
 	if err != nil {
@@ -266,7 +267,7 @@ func (m *NodeMounter) MakeFile(path string) error {
 }
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
-// Please mirror the change to func MakeFile in ./sanity_test.go
+// Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) MakeDir(path string) error {
 	err := os.MkdirAll(path, os.FileMode(0755))
 	if err != nil {
@@ -278,28 +279,28 @@ func (m *NodeMounter) MakeDir(path string) error {
 }
 
 // This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
-// Please mirror the change to func MakeFile in ./sanity_test.go
+// Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) PathExists(path string) (bool, error) {
 	return mountutils.PathExists(path)
 }
 
-// Resize resizes the filesystem of the given devicePath
+// Resize resizes the filesystem of the given devicePath.
 func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
 	return mountutils.NewResizeFs(m.Exec).Resize(devicePath, deviceMountPath)
 }
 
-// NeedResize checks if the filesystem of the given devicePath needs to be resized
+// NeedResize checks if the filesystem of the given devicePath needs to be resized.
 func (m *NodeMounter) NeedResize(devicePath string, deviceMountPath string) (bool, error) {
 	return mountutils.NewResizeFs(m.Exec).NeedResize(devicePath, deviceMountPath)
 }
 
-// Unpublish unmounts the given path
+// Unpublish unmounts the given path.
 func (m *NodeMounter) Unpublish(path string) error {
 	// On linux, unpublish and unstage both perform an unmount
 	return m.Unstage(path)
 }
 
-// Unstage unmounts the given path
+// Unstage unmounts the given path.
 func (m *NodeMounter) Unstage(path string) error {
 	err := mountutils.CleanupMountPoint(path, m, false)
 	// Ignore the error when it contains "not mounted", because that indicates the

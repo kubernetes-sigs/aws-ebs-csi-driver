@@ -18,20 +18,18 @@ package driver
 
 import (
 	"context"
-	"fmt"
-
+	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/mock/gomock"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog/v2"
-
-	"github.com/golang/mock/gomock"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
 
 type modifyVolumeExecutor func(ctx context.Context, driver ControllerService, name string, params map[string]string) error
@@ -53,6 +51,7 @@ func modifierForK8sModifyVolume(ctx context.Context, driver ControllerService, n
 }
 
 func TestVolumeModificationWithCoalescing(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name         string
 		testFunction func(t *testing.T, executor modifyVolumeExecutor)
@@ -84,7 +83,6 @@ func TestVolumeModificationWithCoalescing(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc // Not strictly necessary but required by `go vet`
 		t.Run(tc.name+": volume-modifier-for-k8s", func(t *testing.T) {
 			t.Parallel()
 			tc.testFunction(t, modifierForK8sModifyVolume)
@@ -98,6 +96,7 @@ func TestVolumeModificationWithCoalescing(t *testing.T) {
 
 // TestBasicRequestCoalescingSuccess tests the success case of coalescing 2 requests from ControllerExpandVolume and a modify function respectively.
 func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -159,6 +158,7 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 
 // TestRequestFail tests failing requests from ResizeOrModifyDisk failure.
 func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -169,7 +169,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	mockCloud := cloud.NewMockCloud(mockCtl)
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
-		return 0, fmt.Errorf("ResizeOrModifyDisk failed")
+		return 0, errors.New("ResizeOrModifyDisk failed")
 	})
 
 	options := &Options{
@@ -218,6 +218,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 // 3) Change volume type to NewVolumeType2
 // The expected result is the resizing request succeeds and one of the volume-type requests fails.
 func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType1 = "gp3"
 	const NewVolumeType2 = "io2"
 	const NewSize = 5 * util.GiB
@@ -290,27 +291,29 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 
 	wg.Wait()
 
-	if volumeTypeChosen == NewVolumeType1 {
+	switch volumeTypeChosen {
+	case NewVolumeType1:
 		if volumeType1Err {
 			t.Error("Controller chose", NewVolumeType1, "but errored request")
 		}
 		if !volumeType2Error {
 			t.Error("Controller chose", NewVolumeType1, "but returned success to", NewVolumeType2, "request")
 		}
-	} else if volumeTypeChosen == NewVolumeType2 {
+	case NewVolumeType2:
 		if volumeType2Error {
 			t.Error("Controller chose", NewVolumeType2, "but errored request")
 		}
 		if !volumeType1Err {
 			t.Error("Controller chose", NewVolumeType2, "but returned success to", NewVolumeType1, "request")
 		}
-	} else {
+	default:
 		t.Error("No volume type chosen")
 	}
 }
 
 // TestSequential tests sending 2 requests sequentially.
 func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
@@ -369,6 +372,7 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 
 // TestDuplicateRequest tests sending multiple same requests roughly in parallel.
 func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewSize = 5 * util.GiB
 	volumeID := t.Name()
 
@@ -395,7 +399,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	num := 5
 	wg.Add(num * 2)
 
-	for j := 0; j < num; j++ {
+	for range num {
 		go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
 			_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
 				VolumeId: volumeID,
@@ -422,8 +426,9 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Wait()
 }
 
-// TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk
+// TestResponseReturnTiming tests the caller of request coalescing blocking until receiving response from cloud.ResizeOrModifyDisk.
 func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
+	t.Helper()
 	const NewVolumeType = "gp3"
 	const NewSize = 5 * util.GiB
 	var ec2ModifyVolumeFinished = false
@@ -491,6 +496,7 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 }
 
 func wrapTimeout(t *testing.T, failMessage string, execFunc func()) {
+	t.Helper()
 	timeout := time.After(15 * time.Second)
 	done := make(chan bool)
 	go func() {

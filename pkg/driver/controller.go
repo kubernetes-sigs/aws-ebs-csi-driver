@@ -37,14 +37,14 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Supported access modes
+// Supported access modes.
 const (
 	SingleNodeWriter     = csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER
 	MultiNodeMultiWriter = csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER
 )
 
 var (
-	// controllerCaps represents the capability of controller service
+	// controllerCaps represents the capability of controller service.
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
@@ -55,9 +55,10 @@ var (
 	}
 )
 
-const isManagedByDriver = "true"
+const trueStr = "true"
+const isManagedByDriver = trueStr
 
-// ControllerService represents the controller service of CSI driver
+// ControllerService represents the controller service of CSI driver.
 type ControllerService struct {
 	cloud                 cloud.Cloud
 	inFlight              *internal.InFlight
@@ -67,7 +68,7 @@ type ControllerService struct {
 	csi.UnimplementedControllerServer
 }
 
-// NewControllerService creates a new controller service
+// NewControllerService creates a new controller service.
 func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
 	return &ControllerService{
 		cloud:                 c,
@@ -141,7 +142,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
-			allowIOPSPerGBIncrease = value == "true"
+			allowIOPSPerGBIncrease = isTrue(value)
 		case IopsKey:
 			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsKeyErr != nil {
@@ -155,9 +156,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
-			if value == "true" {
-				isEncrypted = true
-			}
+			isEncrypted = isTrue(value)
 		case KmsKeyIDKey:
 			kmsKeyID = value
 		case PVCNameKey:
@@ -170,9 +169,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			volumeTags[PVNameTag] = value
 			tProps.PVName = value
 		case BlockExpressKey:
-			if value == "true" {
-				blockExpress = true
-			}
+			blockExpress = isTrue(value)
 		case BlockSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
@@ -194,9 +191,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			numberOfInodes = value
 		case Ext4BigAllocKey:
-			if value == "true" {
-				ext4BigAlloc = true
-			}
+			ext4BigAlloc = isTrue(value)
 		case Ext4ClusterSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
@@ -255,7 +250,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 	if ext4BigAlloc {
-		responseCtx[Ext4BigAllocKey] = "true"
+		responseCtx[Ext4BigAllocKey] = trueStr
 		if err = validateFormattingOption(volCap, Ext4BigAllocKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
@@ -489,12 +484,13 @@ func validateControllerUnpublishVolumeRequest(req *csi.ControllerUnpublishVolume
 
 func (d *ControllerService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
 	klog.V(4).InfoS("ControllerGetCapabilities: called", "args", req)
-	var caps []*csi.ControllerServiceCapability
-	for _, cap := range controllerCaps {
+
+	caps := make([]*csi.ControllerServiceCapability, 0, len(controllerCaps))
+	for _, capability := range controllerCaps {
 		c := &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: cap,
+					Type: capability,
 				},
 			},
 		}
@@ -568,8 +564,8 @@ func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 	nodeExpansionRequired := true
 	// if this is a raw block device, no expansion should be necessary on the node
-	cap := req.GetVolumeCapability()
-	if cap != nil && cap.GetBlock() != nil {
+	capability := req.GetVolumeCapability()
+	if capability != nil && capability.GetBlock() != nil {
 		nodeExpansionRequired = false
 	}
 
@@ -639,14 +635,14 @@ func isValidCapability(c *csi.VolumeCapability) bool {
 	}
 }
 
-func isBlock(cap *csi.VolumeCapability) bool {
-	_, isBlock := cap.GetAccessType().(*csi.VolumeCapability_Block)
-	return isBlock
+func isBlock(capability *csi.VolumeCapability) bool {
+	_, isBlk := capability.GetAccessType().(*csi.VolumeCapability_Block)
+	return isBlk
 }
 
 func isValidVolumeContext(volContext map[string]string) bool {
-	//There could be multiple volume attributes in the volumeContext map
-	//Validate here case by case
+	// There could be multiple volume attributes in the volumeContext map
+	// Validate here case by case
 	if partition, ok := volContext[VolumeAttributePartition]; ok {
 		partitionInt, err := strconv.ParseInt(partition, 10, 64)
 		if err != nil {
@@ -754,9 +750,9 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	// Check if the availability zone is supported for fast snapshot restore
 	if len(fsrAvailabilityZones) > 0 {
-		zones, error := d.cloud.AvailabilityZones(ctx)
-		if error != nil {
-			klog.ErrorS(error, "failed to get availability zones")
+		zones, err := d.cloud.AvailabilityZones(ctx)
+		if err != nil {
+			klog.ErrorS(err, "failed to get availability zones")
 		} else {
 			klog.V(4).InfoS("Availability Zones", "zone", zones)
 			for _, az := range fsrAvailabilityZones {
@@ -975,8 +971,7 @@ func newCreateSnapshotResponse(snapshot *cloud.Snapshot) *csi.CreateSnapshotResp
 }
 
 func newListSnapshotsResponse(cloudResponse *cloud.ListSnapshotsResponse) *csi.ListSnapshotsResponse {
-
-	var entries []*csi.ListSnapshotsResponse_Entry
+	entries := make([]*csi.ListSnapshotsResponse_Entry, 0, len(cloudResponse.Snapshots))
 	for _, snapshot := range cloudResponse.Snapshots {
 		snapshotResponseEntry := newListSnapshotsResponseEntry(snapshot)
 		entries = append(entries, snapshotResponseEntry)
@@ -1016,20 +1011,19 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 	return volSizeBytes, nil
 }
 
-// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
+// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments.
 func BuildOutpostArn(segments map[string]string) string {
-
-	if len(segments[AwsPartitionKey]) <= 0 {
+	if len(segments[AwsPartitionKey]) == 0 {
 		return ""
 	}
 
-	if len(segments[AwsRegionKey]) <= 0 {
+	if len(segments[AwsRegionKey]) == 0 {
 		return ""
 	}
-	if len(segments[AwsOutpostIDKey]) <= 0 {
+	if len(segments[AwsOutpostIDKey]) == 0 {
 		return ""
 	}
-	if len(segments[AwsAccountIDKey]) <= 0 {
+	if len(segments[AwsAccountIDKey]) == 0 {
 		return ""
 	}
 
@@ -1043,8 +1037,7 @@ func BuildOutpostArn(segments map[string]string) string {
 
 func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramName string, fsConfigs map[string]fileSystemConfig) error {
 	for _, volCap := range volumeCapabilities {
-		switch volCap.GetAccessType().(type) {
-		case *csi.VolumeCapability_Block:
+		if isBlock(volCap) {
 			return status.Error(codes.InvalidArgument, fmt.Sprintf("Cannot use %s with block volume", paramName))
 		}
 
@@ -1060,4 +1053,8 @@ func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramN
 	}
 
 	return nil
+}
+
+func isTrue(value string) bool {
+	return value == trueStr
 }

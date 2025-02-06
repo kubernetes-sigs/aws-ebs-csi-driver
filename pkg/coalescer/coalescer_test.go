@@ -18,39 +18,37 @@ package coalescer
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 )
 
 var (
-	errFailedToMerge   = fmt.Errorf("Failed to merge")
-	errFailedToExecute = fmt.Errorf("Failed to execute")
+	errFailedToMerge   = errors.New("failed to merge")
+	errFailedToExecute = errors.New("failed to execute")
 )
 
 // Merge function used to test the coalescer
 // For testing purposes, positive numbers are added to the existing input,
-// and negative numbers return an error ("fail to merge")
+// and negative numbers return an error ("fail to merge").
 func mockMerge(input int, existing int) (int, error) {
 	if input < 0 {
 		return 0, errFailedToMerge
-	} else {
-		return input + existing, nil
 	}
+	return input + existing, nil
 }
 
 // Execute function used to test the coalescer
 // For testing purposes, small numbers (numbers less than 100) successfully execute,
-// and large numbers (numbers 100 or greater) fail to execute
+// and large numbers (numbers 100 or greater) fail to execute.
 func mockExecute(_ string, input int) (string, error) {
 	if input < 100 {
 		return "success", nil
-	} else {
-		return "failure", errFailedToExecute
 	}
+	return "failure", errFailedToExecute
 }
 
 func TestCoalescer(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name                 string
 		inputs               []int
@@ -95,11 +93,12 @@ func TestCoalescer(t *testing.T) {
 			for range tc.inputs {
 				err := <-testChannel
 				if err != nil {
-					if errors.Is(err, errFailedToMerge) {
+					switch {
+					case errors.Is(err, errFailedToMerge):
 						mergeFailure = true
-					} else if errors.Is(err, errFailedToExecute) {
+					case errors.Is(err, errFailedToExecute):
 						executeFailure = true
-					} else {
+					default:
 						t.Fatalf("Unexpected error %v", err)
 					}
 				}

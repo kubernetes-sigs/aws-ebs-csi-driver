@@ -108,6 +108,7 @@ func main() {
 			klog.ErrorS(err, "failed to get version")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
+		//nolint:forbidigo // Print version info without klog/timestamp
 		fmt.Println(versionInfo)
 		os.Exit(0)
 	}
@@ -133,11 +134,6 @@ func main() {
 		}()
 	}
 
-	if options.HttpEndpoint != "" {
-		r := metrics.InitializeRecorder()
-		r.InitializeMetricsHandler(options.HttpEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
-	}
-
 	cfg := metadata.MetadataServiceConfig{
 		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
 		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
@@ -158,6 +154,15 @@ func main() {
 		md, metadataErr = metadata.NewMetadataService(cfg, region)
 	}
 
+	if options.HTTPEndpoint != "" {
+		r := metrics.InitializeRecorder()
+		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
+
+		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
+			metrics.InitializeNVME(r, options.CsiMountPointPath, md.GetInstanceID())
+		}
+	}
+
 	if metadataErr != nil {
 		klog.ErrorS(metadataErr, "Failed to initialize metadata when it is required")
 		if options.Mode == driver.ControllerMode {
@@ -168,7 +173,7 @@ func main() {
 		region = md.GetRegion()
 	}
 
-	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching)
+	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 	if err != nil {
 		klog.ErrorS(err, "failed to create cloud service")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)

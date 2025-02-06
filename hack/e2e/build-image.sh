@@ -64,7 +64,7 @@ function build_and_push() {
     export ALL_OS="linux"
     export ALL_ARCH_linux="${IMAGE_ARCH}"
   fi
-  make -j $(nproc) all-push
+  make -j $(nproc) sub-push
 
   loudecho "Image pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
 }

@@ -11,13 +11,18 @@ image:
 customLabels: {}
 # k8s-app: aws-ebs-csi-driver
 
+# Instruct the AWS SDK to use AWS FIPS endpoints, and deploy container built with BoringCrypto (a FIPS-validated cryptographic library) instead of the Go default
+#
+# The EBS CSI Driver FIPS images have not undergone FIPS certification, and no official guarantee is made about the compliance of these images under the FIPS standard
+# Users relying on these images for FIPS compliance should perform their own independent evaluation
+fips: false
 sidecars:
   provisioner:
     env: []
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v5.1.0-eks-1-31-5"
+      tag: "v5.1.0-eks-1-31-12"
     logLevel: 2
     # Additional parameters provided by external-provisioner.
     additionalArgs: []
@@ -44,7 +49,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.7.0-eks-1-31-5"
+      tag: "v4.8.0-eks-1-31-12"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -73,7 +78,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.1.0-eks-1-31-5"
+      tag: "v8.2.0-eks-1-31-12"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -89,7 +94,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.14.0-eks-1-31-5"
+      tag: "v2.14.0-eks-1-31-12"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -101,7 +106,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.12.0-eks-1-31-5"
+      tag: "v1.12.0-eks-1-31-11"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -128,7 +133,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.12.0-eks-1-31-5"
+      tag: "v2.13.0-eks-1-31-12"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -150,7 +155,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.3.0"
+      tag: "v0.5.1"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
@@ -196,6 +201,8 @@ controller:
                 operator: NotIn
                 values:
                   - fargate
+                  - auto
+                  - hybrid
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
         - podAffinityTerm:
@@ -340,11 +347,15 @@ controller:
   # Enable dnsConfig for the controller and node pods
   dnsConfig: {}
 node:
+  # Enable SELinux-only optimizations on the EBS CSI Driver node pods
+  # Must only be set true if all linux nodes in the DaemonSet have SELinux enabled
+  selinux: false
   env: []
   envFrom: []
   kubeletPath: /var/lib/kubelet
   loggingFormat: text
   logLevel: 2
+  enableMetrics: false
   priorityClassName:
   additionalArgs: []
   affinity:
@@ -356,6 +367,8 @@ node:
                 operator: NotIn
                 values:
                   - fargate
+                  - auto
+                  - hybrid
               - key: node.kubernetes.io/instance-type
                 operator: NotIn
                 values:
@@ -435,6 +448,14 @@ node:
   containerSecurityContext:
     readOnlyRootFilesystem: true
     privileged: true
+  initContainers: []
+  # containers to be run before the csi-node's container starts.
+  #
+  # Example:
+  #
+  # - name: wait
+  #   image: busybox
+  #   command: [ 'sh', '-c', "sleep 20" ]
   # Enable opentelemetry tracing for the plugin running on the daemonset
   otelTracing: {}
   #  otelServiceName: ebs-csi-node
@@ -490,4 +511,4 @@ nodeComponentOnly: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20241011-e8871c079d-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20241230-3006692a6f-master"

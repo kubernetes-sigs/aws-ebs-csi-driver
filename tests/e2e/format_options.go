@@ -16,6 +16,7 @@ package e2e
 
 import (
 	"fmt"
+
 	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
@@ -90,7 +91,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 
 		Context(fmt.Sprintf("using an %s filesystem", fsType), func() {
 			for testedParameter, formatOptionTestCase := range formatOptionTests {
-				formatOptionTestCase := formatOptionTestCase
 				if fsTypeDoesNotSupportFormatOptionParameter(fsType, testedParameter) {
 					continue
 				}

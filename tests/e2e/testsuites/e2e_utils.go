@@ -37,7 +37,7 @@ const (
 
 	DefaultModificationTimeout   = 3 * time.Minute
 	DefaultResizeTimout          = 1 * time.Minute
-	DefaultK8sApiPollingInterval = 5 * time.Second
+	DefaultK8sAPIPollingInterval = 5 * time.Second
 
 	Iops       = "iops"
 	Throughput = "throughput"
@@ -51,22 +51,22 @@ var DefaultGeneratedVolumeMount = VolumeMountDetails{
 	MountPathGenerate: "/mnt/test-",
 }
 
-// PodCmdWriteToVolume returns pod command that would write to mounted volume
+// PodCmdWriteToVolume returns pod command that would write to mounted volume.
 func PodCmdWriteToVolume(volumeMountPath string) string {
 	return fmt.Sprintf("echo 'hello world' >> %s/data && grep 'hello world' %s/data && sync", volumeMountPath, volumeMountPath)
 }
 
-// PodCmdContinuousWrite returns pod command that would continuously write to mounted volume
+// PodCmdContinuousWrite returns pod command that would continuously write to mounted volume.
 func PodCmdContinuousWrite(volumeMountPath string) string {
 	return fmt.Sprintf("while true; do echo \"$(date -u)\" >> /%s/out.txt; sleep 5; done", volumeMountPath)
 }
 
-// PodCmdGrepVolumeData returns pod command that would check that a volume was written to by PodCmdWriteToVolume
+// PodCmdGrepVolumeData returns pod command that would check that a volume was written to by PodCmdWriteToVolume.
 func PodCmdGrepVolumeData(volumeMountPath string) string {
 	return fmt.Sprintf("grep 'hello world' %s/data", volumeMountPath)
 }
 
-// IncreasePvcObjectStorage increases `storage` of a K8s PVC object by specified Gigabytes
+// IncreasePvcObjectStorage increases `storage` of a K8s PVC object by specified Gigabytes.
 func IncreasePvcObjectStorage(pvc *v1.PersistentVolumeClaim, sizeIncreaseGi int32) resource.Quantity {
 	pvcSize := pvc.Spec.Resources.Requests["storage"]
 	delta := resource.Quantity{}
@@ -76,7 +76,7 @@ func IncreasePvcObjectStorage(pvc *v1.PersistentVolumeClaim, sizeIncreaseGi int3
 	return pvcSize
 }
 
-// WaitForPvToResize waiting for pvc size to be resized to desired size
+// WaitForPvToResize waiting for pvc size to be resized to desired size.
 func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, desiredSize resource.Quantity, timeout time.Duration, interval time.Duration) error {
 	framework.Logf("waiting up to %v for pv resize in namespace %q to be complete", timeout, ns.Name)
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(interval) {
@@ -90,7 +90,7 @@ func WaitForPvToResize(c clientset.Interface, ns *v1.Namespace, pvName string, d
 	return fmt.Errorf("gave up after waiting %v for pv %q to complete resizing", timeout, pvName)
 }
 
-// ResizeTestPvc increases size of given `TestPersistentVolumeClaim` by specified Gigabytes
+// ResizeTestPvc increases size of given `TestPersistentVolumeClaim` by specified Gigabytes.
 func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc *TestPersistentVolumeClaim, sizeIncreaseGi int32) (updatedSize resource.Quantity) {
 	framework.Logf("getting pvc name: %v", testPvc.persistentVolumeClaim.Name)
 	pvc, _ := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), testPvc.persistentVolumeClaim.Name, metav1.GetOptions{})
@@ -105,19 +105,19 @@ func ResizeTestPvc(client clientset.Interface, namespace *v1.Namespace, testPvc 
 	updatedSize = updatedPvc.Spec.Resources.Requests["storage"]
 
 	framework.Logf("checking the resizing PV result")
-	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, DefaultResizeTimout, DefaultK8sApiPollingInterval)
+	err = WaitForPvToResize(client, namespace, updatedPvc.Spec.VolumeName, updatedSize, DefaultResizeTimout, DefaultK8sAPIPollingInterval)
 	framework.ExpectNoError(err)
 	return updatedSize
 }
 
-// AnnotatePvc annotates supplied k8s pvc object with supplied annotations
+// AnnotatePvc annotates supplied k8s pvc object with supplied annotations.
 func AnnotatePvc(pvc *v1.PersistentVolumeClaim, annotations map[string]string) {
 	for annotation, value := range annotations {
 		pvc.Annotations[annotation] = value
 	}
 }
 
-// CheckPvAnnotations checks whether supplied k8s pv object contains supplied annotations
+// CheckPvAnnotations checks whether supplied k8s pv object contains supplied annotations.
 func CheckPvAnnotations(pv *v1.PersistentVolume, annotations map[string]string) bool {
 	for annotation, value := range annotations {
 		if pv.Annotations[annotation] != value {
@@ -127,7 +127,7 @@ func CheckPvAnnotations(pv *v1.PersistentVolume, annotations map[string]string) 
 	return true
 }
 
-// WaitForPvToModify waiting for PV to be modified
+// WaitForPvToModify waiting for PV to be modified.
 func WaitForPvToModify(c clientset.Interface, ns *v1.Namespace, pvName string, expectedAnnotations map[string]string, timeout time.Duration, interval time.Duration) error {
 	framework.Logf("waiting up to %v for pv in namespace %q to be modified", timeout, ns.Name)
 
@@ -142,7 +142,7 @@ func WaitForPvToModify(c clientset.Interface, ns *v1.Namespace, pvName string, e
 	return fmt.Errorf("gave up after waiting %v for pv %q to complete modifying", timeout, pvName)
 }
 
-// WaitForVacToApplyToPv waits for a PV's VAC to match the PVC's VAC
+// WaitForVacToApplyToPv waits for a PV's VAC to match the PVC's VAC.
 func WaitForVacToApplyToPv(c clientset.Interface, ns *v1.Namespace, pvName string, expectedVac string, timeout time.Duration, interval time.Duration) error {
 	framework.Logf("waiting up to %v for pv in namespace %q to be modified via VAC", timeout, ns.Name)
 

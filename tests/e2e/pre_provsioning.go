@@ -22,15 +22,14 @@ import (
 	"strings"
 	"time"
 
-	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
-	k8srestclient "k8s.io/client-go/rest"
-
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
+	k8srestclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
 )
@@ -49,7 +48,7 @@ var (
 	defaultDiskSizeBytes int64 = defaultDiskSize * 1024 * 1024 * 1024
 )
 
-// Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set
+// Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set.
 var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
@@ -88,7 +87,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region, false, "", true)
+		cloud, err = awscloud.NewCloud(region, false, "", true, false)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
@@ -261,7 +260,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 			Tags:               map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud, err = awscloud.NewCloud(region, false, "", true)
+		cloud, err = awscloud.NewCloud(region, false, "", true, false)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

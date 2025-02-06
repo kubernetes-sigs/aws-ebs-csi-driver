@@ -40,7 +40,7 @@ func randomString(n int) string {
 
 func randomStringMap(n int) map[string]string {
 	result := map[string]string{}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		result[strconv.Itoa(i)] = randomString(10)
 	}
 	return result
@@ -64,61 +64,61 @@ func TestValidateExtraTags(t *testing.T) {
 			tags: map[string]string{
 				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength),
+			expErr: fmt.Errorf("tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength),
 		},
 		{
 			name: "invaid tag: key is empty",
 			tags: map[string]string{
 				"": "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Tag key cannot be empty (min: 1)"),
+			expErr: errors.New("tag key cannot be empty (min: 1)"),
 		},
 		{
 			name: "invalid tag: value too long",
 			tags: map[string]string{
 				"extra-tag-key": randomString(cloud.MaxTagValueLength + 1),
 			},
-			expErr: fmt.Errorf("Tag value too long (actual: %d, limit: %d)", cloud.MaxTagValueLength+1, cloud.MaxTagValueLength),
+			expErr: fmt.Errorf("tag value too long (actual: %d, limit: %d)", cloud.MaxTagValueLength+1, cloud.MaxTagValueLength),
 		},
 		{
 			name: "invalid tag: reserved CSI key",
 			tags: map[string]string{
 				cloud.VolumeNameTagKey: "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey),
+			expErr: fmt.Errorf("tag key '%s' is reserved", cloud.VolumeNameTagKey),
 		},
 		{
 			name: "invalid tag: reserved driver key",
 			tags: map[string]string{
 				cloud.AwsEbsDriverTagKey: "false",
 			},
-			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.AwsEbsDriverTagKey),
+			expErr: fmt.Errorf("tag key '%s' is reserved", cloud.AwsEbsDriverTagKey),
 		},
 		{
 			name: "invaid tag: reserved snapshot key",
 			tags: map[string]string{
 				cloud.SnapshotNameTagKey: "false",
 			},
-			expErr: fmt.Errorf("Tag key '%s' is reserved", cloud.SnapshotNameTagKey),
+			expErr: fmt.Errorf("tag key '%s' is reserved", cloud.SnapshotNameTagKey),
 		},
 		{
 			name: "invalid tag: reserved Kubernetes key prefix",
 			tags: map[string]string{
 				cloud.KubernetesTagKeyPrefix + "/cluster": "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix),
+			expErr: fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix),
 		},
 		{
 			name: "invalid tag: reserved AWS key prefix",
 			tags: map[string]string{
 				cloud.AWSTagKeyPrefix + "foo": "extra-tag-value",
 			},
-			expErr: fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix),
+			expErr: fmt.Errorf("tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix),
 		},
 		{
 			name:   "invalid tag: too many tags",
 			tags:   randomStringMap(cloud.MaxNumTagsPerResource + 1),
-			expErr: fmt.Errorf("Too many tags (actual: %d, limit: %d)", cloud.MaxNumTagsPerResource+1, cloud.MaxNumTagsPerResource),
+			expErr: fmt.Errorf("too many tags (actual: %d, limit: %d)", cloud.MaxNumTagsPerResource+1, cloud.MaxNumTagsPerResource),
 		},
 	}
 
@@ -156,7 +156,7 @@ func TestValidateMode(t *testing.T) {
 		{
 			name:   "invalid mode: unknown",
 			mode:   Mode("unknown"),
-			expErr: fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode}),
+			expErr: fmt.Errorf("mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode}),
 		},
 	}
 
@@ -188,7 +188,7 @@ func TestValidateDriverOptions(t *testing.T) {
 			name:                "fail because validateMode fails",
 			mode:                Mode("unknown"),
 			modifyVolumeTimeout: 5 * time.Second,
-			expErr:              fmt.Errorf("Invalid mode: %w", fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode})),
+			expErr:              fmt.Errorf("invalid mode: %w", fmt.Errorf("mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode})),
 		},
 		{
 			name: "fail because validateExtraVolumeTags fails",
@@ -197,13 +197,13 @@ func TestValidateDriverOptions(t *testing.T) {
 				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
 			},
 			modifyVolumeTimeout: 5 * time.Second,
-			expErr:              fmt.Errorf("Invalid extra tags: %w", fmt.Errorf("Tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
+			expErr:              fmt.Errorf("invalid extra tags: %w", fmt.Errorf("tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
 		},
 		{
 			name:                "fail because modifyVolumeRequestHandlerTimeout is zero",
 			mode:                AllMode,
 			modifyVolumeTimeout: 0,
-			expErr:              errors.New("Invalid modifyVolumeRequestHandlerTimeout: Timeout cannot be zero"),
+			expErr:              errors.New("invalid modifyVolumeRequestHandlerTimeout: timeout cannot be zero"),
 		},
 	}
 

@@ -52,7 +52,7 @@ const (
 	AwsRegionKey             = "topology." + DriverName + "/region"
 	AwsOutpostIDKey          = "topology." + DriverName + "/outpost-id"
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
-	// DEPRECATED Use the WellKnownZoneTopologyKey instead
+	// Deprecated: Use the WellKnownZoneTopologyKey instead.
 	ZoneTopologyKey = "topology." + DriverName + "/zone"
 	OSTopologyKey   = "kubernetes.io/os"
 )

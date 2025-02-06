@@ -1,0 +1,70 @@
+# Copyright 2025 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ebs-scale-test
+spec:
+  serviceName: "nginx"
+  podManagementPolicy: "Parallel"
+  replicas: 0
+  selector:
+    matchLabels:
+      app: ebs-scale-test
+  template:
+    metadata:
+      labels:
+        app: ebs-scale-test
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: vol
+              mountPath: /usr/share/nginx/html
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+{{- if eq ( getenv "CLUSTER_TYPE" ) "karpenter" }}
+      nodeSelector:
+        karpenter.sh/nodepool: ebs-scale-test
+{{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: vol
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "ebs-scale-test"
+        resources:
+          requests:
+            storage: 1Gi
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-scale-test
+provisioner: ebs.csi.aws.com
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  tagSpecification_1: "ebs-scale-test={{ .Env.SCALABILITY_TEST_RUN_NAME }}"

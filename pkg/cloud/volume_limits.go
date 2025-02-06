@@ -28,10 +28,11 @@ const (
 	nitroMaxAttachments                  = 28
 )
 
+//nolint:gochecknoinits // TODO Refactor to avoid using init function to prevent side-effects
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
-	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "g6", "g6e", "gr6"}
+	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "i7ie", "i8g"}
 	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
 
 	for _, family := range instanceFamilies {
@@ -159,7 +160,7 @@ func GetReservedSlotsForInstanceType(it string) int {
 
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-volumes.html
 // IMDS does not provide NVMe instance store data; we'll just list all instances here
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits
+// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
 var nvmeInstanceStoreVolumes = map[string]int{
 	"c1.medium":       1,
 	"c1.xlarge":       4,
@@ -308,6 +309,24 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"i4i.large":       1,
 	"i4i.metal":       8,
 	"i4i.xlarge":      1,
+	"i7ie.12xlarge":   4,
+	"i7ie.18xlarge":   6,
+	"i7ie.24xlarge":   8,
+	"i7ie.2xlarge":    2,
+	"i7ie.3xlarge":    1,
+	"i7ie.48xlarge":   16,
+	"i7ie.6xlarge":    2,
+	"i7ie.large":      1,
+	"i7ie.xlarge":     1,
+	"i8g.12xlarge":    3,
+	"i8g.16xlarge":    4,
+	"i8g.24xlarge":    6,
+	"i8g.2xlarge":     1,
+	"i8g.4xlarge":     1,
+	"i8g.8xlarge":     2,
+	"i8g.large":       1,
+	"i8g.metal-24xl":  6,
+	"i8g.xlarge":      1,
 	"im4gn.16xlarge":  4,
 	"im4gn.2xlarge":   1,
 	"im4gn.4xlarge":   1,
@@ -400,6 +419,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"p4de.24xlarge":   8,
 	"p5.48xlarge":     8,
 	"p5e.48xlarge":    8,
+	"p5en.48xlarge":   8,
 	"r3.2xlarge":      1,
 	"r3.4xlarge":      1,
 	"r3.8xlarge":      2,
@@ -512,7 +532,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 
 // https://aws.amazon.com/ec2/instance-types
 // Despite the dl1.24xlarge having Gaudi Accelerators describe instance types considers them GPUs as such that instance type is in this table
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits
+// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
 var gpuInstanceGpus = map[string]int{
 	"dl1.24xlarge":  8,
 	"g3.16xlarge":   4,
@@ -573,6 +593,7 @@ var gpuInstanceGpus = map[string]int{
 	"p4de.24xlarge": 8,
 	"p5.48xlarge":   8,
 	"p5e.48xlarge":  8,
+	"p5en.48xlarge": 8,
 }
 
 // Note this table is not a reflection of how many accelerators an instance has but of how many slots their combined accelerators take up

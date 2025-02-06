@@ -42,4 +42,4 @@ loudecho "Push manifest list containing amazon linux and windows based images to
 export IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver
 export TAG=$GIT_TAG
 export VERSION=$PULL_BASE_REF
-IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make -j $(nproc) all-push-with-a1compat
+IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make -j $(nproc) all-push

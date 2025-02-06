@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/mount-utils"
-
 	utilexec "k8s.io/utils/exec"
 	fakeexec "k8s.io/utils/exec/testing"
 )
@@ -138,7 +137,6 @@ func TestMakeFile(t *testing.T) {
 	if exists, err := mountObj.PathExists(targetPath); !exists {
 		t.Fatalf("Expect no error but got: %v", err)
 	}
-
 }
 
 func TestPathExists(t *testing.T) {
@@ -165,7 +163,6 @@ func TestPathExists(t *testing.T) {
 	if exists {
 		t.Fatalf("Expected file %s to not exist", targetPath)
 	}
-
 }
 
 func TestGetDeviceName(t *testing.T) {
@@ -186,7 +183,6 @@ func TestGetDeviceName(t *testing.T) {
 	if _, _, err := mountObj.GetDeviceNameFromMount(targetPath); err != nil {
 		t.Fatalf("Expect no error but got: %v", err)
 	}
-
 }
 
 func TestFindDevicePath(t *testing.T) {

@@ -1,4 +1,4 @@
-// Copyright 2024 The Kubernetes Authors.
+// Copyright 2025 The Kubernetes Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the 'License');
 // you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ import (
 	v1alpha12 "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
 	v1beta14 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	v16 "k8s.io/client-go/kubernetes/typed/coordination/v1"
-	v1alpha13 "k8s.io/client-go/kubernetes/typed/coordination/v1alpha1"
+	v1alpha2 "k8s.io/client-go/kubernetes/typed/coordination/v1alpha2"
 	v1beta15 "k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v17 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v18 "k8s.io/client-go/kubernetes/typed/discovery/v1"
@@ -58,24 +58,25 @@ import (
 	v1beta20 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta2"
 	v1beta3 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta3"
 	v111 "k8s.io/client-go/kubernetes/typed/networking/v1"
-	v1alpha14 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
+	v1alpha13 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
 	v1beta110 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 	v112 "k8s.io/client-go/kubernetes/typed/node/v1"
-	v1alpha15 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
+	v1alpha14 "k8s.io/client-go/kubernetes/typed/node/v1alpha1"
 	v1beta111 "k8s.io/client-go/kubernetes/typed/node/v1beta1"
 	v113 "k8s.io/client-go/kubernetes/typed/policy/v1"
 	v1beta112 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 	v114 "k8s.io/client-go/kubernetes/typed/rbac/v1"
-	v1alpha16 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
+	v1alpha15 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 	v1beta113 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	v1alpha3 "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
+	v1beta114 "k8s.io/client-go/kubernetes/typed/resource/v1beta1"
 	v115 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
-	v1alpha17 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
-	v1beta114 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
+	v1alpha16 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
+	v1beta115 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
 	v116 "k8s.io/client-go/kubernetes/typed/storage/v1"
-	v1alpha18 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
-	v1beta115 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
-	v1alpha19 "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
+	v1alpha17 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
+	v1beta116 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
+	v1alpha18 "k8s.io/client-go/kubernetes/typed/storagemigration/v1alpha1"
 )
 
 // MockKubernetesClient is a mock of Interface interface.
@@ -395,18 +396,18 @@ func (mr *MockKubernetesClientMockRecorder) CoordinationV1() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoordinationV1", reflect.TypeOf((*MockKubernetesClient)(nil).CoordinationV1))
 }
 
-// CoordinationV1alpha1 mocks base method.
-func (m *MockKubernetesClient) CoordinationV1alpha1() v1alpha13.CoordinationV1alpha1Interface {
+// CoordinationV1alpha2 mocks base method.
+func (m *MockKubernetesClient) CoordinationV1alpha2() v1alpha2.CoordinationV1alpha2Interface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CoordinationV1alpha1")
-	ret0, _ := ret[0].(v1alpha13.CoordinationV1alpha1Interface)
+	ret := m.ctrl.Call(m, "CoordinationV1alpha2")
+	ret0, _ := ret[0].(v1alpha2.CoordinationV1alpha2Interface)
 	return ret0
 }
 
-// CoordinationV1alpha1 indicates an expected call of CoordinationV1alpha1.
-func (mr *MockKubernetesClientMockRecorder) CoordinationV1alpha1() *gomock.Call {
+// CoordinationV1alpha2 indicates an expected call of CoordinationV1alpha2.
+func (mr *MockKubernetesClientMockRecorder) CoordinationV1alpha2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoordinationV1alpha1", reflect.TypeOf((*MockKubernetesClient)(nil).CoordinationV1alpha1))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoordinationV1alpha2", reflect.TypeOf((*MockKubernetesClient)(nil).CoordinationV1alpha2))
 }
 
 // CoordinationV1beta1 mocks base method.
@@ -606,10 +607,10 @@ func (mr *MockKubernetesClientMockRecorder) NetworkingV1() *gomock.Call {
 }
 
 // NetworkingV1alpha1 mocks base method.
-func (m *MockKubernetesClient) NetworkingV1alpha1() v1alpha14.NetworkingV1alpha1Interface {
+func (m *MockKubernetesClient) NetworkingV1alpha1() v1alpha13.NetworkingV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkingV1alpha1")
-	ret0, _ := ret[0].(v1alpha14.NetworkingV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha13.NetworkingV1alpha1Interface)
 	return ret0
 }
 
@@ -648,10 +649,10 @@ func (mr *MockKubernetesClientMockRecorder) NodeV1() *gomock.Call {
 }
 
 // NodeV1alpha1 mocks base method.
-func (m *MockKubernetesClient) NodeV1alpha1() v1alpha15.NodeV1alpha1Interface {
+func (m *MockKubernetesClient) NodeV1alpha1() v1alpha14.NodeV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NodeV1alpha1")
-	ret0, _ := ret[0].(v1alpha15.NodeV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha14.NodeV1alpha1Interface)
 	return ret0
 }
 
@@ -718,10 +719,10 @@ func (mr *MockKubernetesClientMockRecorder) RbacV1() *gomock.Call {
 }
 
 // RbacV1alpha1 mocks base method.
-func (m *MockKubernetesClient) RbacV1alpha1() v1alpha16.RbacV1alpha1Interface {
+func (m *MockKubernetesClient) RbacV1alpha1() v1alpha15.RbacV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RbacV1alpha1")
-	ret0, _ := ret[0].(v1alpha16.RbacV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha15.RbacV1alpha1Interface)
 	return ret0
 }
 
@@ -759,6 +760,20 @@ func (mr *MockKubernetesClientMockRecorder) ResourceV1alpha3() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceV1alpha3", reflect.TypeOf((*MockKubernetesClient)(nil).ResourceV1alpha3))
 }
 
+// ResourceV1beta1 mocks base method.
+func (m *MockKubernetesClient) ResourceV1beta1() v1beta114.ResourceV1beta1Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResourceV1beta1")
+	ret0, _ := ret[0].(v1beta114.ResourceV1beta1Interface)
+	return ret0
+}
+
+// ResourceV1beta1 indicates an expected call of ResourceV1beta1.
+func (mr *MockKubernetesClientMockRecorder) ResourceV1beta1() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceV1beta1", reflect.TypeOf((*MockKubernetesClient)(nil).ResourceV1beta1))
+}
+
 // SchedulingV1 mocks base method.
 func (m *MockKubernetesClient) SchedulingV1() v115.SchedulingV1Interface {
 	m.ctrl.T.Helper()
@@ -774,10 +789,10 @@ func (mr *MockKubernetesClientMockRecorder) SchedulingV1() *gomock.Call {
 }
 
 // SchedulingV1alpha1 mocks base method.
-func (m *MockKubernetesClient) SchedulingV1alpha1() v1alpha17.SchedulingV1alpha1Interface {
+func (m *MockKubernetesClient) SchedulingV1alpha1() v1alpha16.SchedulingV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SchedulingV1alpha1")
-	ret0, _ := ret[0].(v1alpha17.SchedulingV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha16.SchedulingV1alpha1Interface)
 	return ret0
 }
 
@@ -788,10 +803,10 @@ func (mr *MockKubernetesClientMockRecorder) SchedulingV1alpha1() *gomock.Call {
 }
 
 // SchedulingV1beta1 mocks base method.
-func (m *MockKubernetesClient) SchedulingV1beta1() v1beta114.SchedulingV1beta1Interface {
+func (m *MockKubernetesClient) SchedulingV1beta1() v1beta115.SchedulingV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SchedulingV1beta1")
-	ret0, _ := ret[0].(v1beta114.SchedulingV1beta1Interface)
+	ret0, _ := ret[0].(v1beta115.SchedulingV1beta1Interface)
 	return ret0
 }
 
@@ -816,10 +831,10 @@ func (mr *MockKubernetesClientMockRecorder) StorageV1() *gomock.Call {
 }
 
 // StorageV1alpha1 mocks base method.
-func (m *MockKubernetesClient) StorageV1alpha1() v1alpha18.StorageV1alpha1Interface {
+func (m *MockKubernetesClient) StorageV1alpha1() v1alpha17.StorageV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StorageV1alpha1")
-	ret0, _ := ret[0].(v1alpha18.StorageV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha17.StorageV1alpha1Interface)
 	return ret0
 }
 
@@ -830,10 +845,10 @@ func (mr *MockKubernetesClientMockRecorder) StorageV1alpha1() *gomock.Call {
 }
 
 // StorageV1beta1 mocks base method.
-func (m *MockKubernetesClient) StorageV1beta1() v1beta115.StorageV1beta1Interface {
+func (m *MockKubernetesClient) StorageV1beta1() v1beta116.StorageV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StorageV1beta1")
-	ret0, _ := ret[0].(v1beta115.StorageV1beta1Interface)
+	ret0, _ := ret[0].(v1beta116.StorageV1beta1Interface)
 	return ret0
 }
 
@@ -844,10 +859,10 @@ func (mr *MockKubernetesClientMockRecorder) StorageV1beta1() *gomock.Call {
 }
 
 // StoragemigrationV1alpha1 mocks base method.
-func (m *MockKubernetesClient) StoragemigrationV1alpha1() v1alpha19.StoragemigrationV1alpha1Interface {
+func (m *MockKubernetesClient) StoragemigrationV1alpha1() v1alpha18.StoragemigrationV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoragemigrationV1alpha1")
-	ret0, _ := ret[0].(v1alpha19.StoragemigrationV1alpha1Interface)
+	ret0, _ := ret[0].(v1alpha18.StoragemigrationV1alpha1Interface)
 	return ret0
 }
 

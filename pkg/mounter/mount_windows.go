@@ -20,6 +20,7 @@ limitations under the License.
 package mounter
 
 import (
+	"errors"
 	"fmt"
 
 	"regexp"
@@ -31,10 +32,10 @@ import (
 )
 
 var (
-	ErrUnsupportedMounter = fmt.Errorf("unsupported mounter type")
+	ErrUnsupportedMounter = errors.New("unsupported mounter type")
 )
 
-func (m NodeMounter) FindDevicePath(devicePath, volumeID, _, _ string) (string, error) {
+func (m *NodeMounter) FindDevicePath(devicePath, volumeID, _, _ string) (string, error) {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
 		return proxyMounter.FindDevicePath(devicePath, volumeID, "", "")
@@ -45,7 +46,7 @@ func (m NodeMounter) FindDevicePath(devicePath, volumeID, _, _ string) (string, 
 	}
 }
 
-func (m NodeMounter) PreparePublishTarget(target string) error {
+func (m *NodeMounter) PreparePublishTarget(target string) error {
 	// On Windows, Mount will create the parent of target and mklink (create a symbolic link) at target later, so don't create a
 	// directory at target now. Otherwise mklink will error: "Cannot create a file when that file already exists".
 	// Instead, delete the target if it already exists (like if it was created by kubelet <1.20)
@@ -78,12 +79,12 @@ func (m NodeMounter) PreparePublishTarget(target string) error {
 }
 
 // IsBlockDevice checks if the given path is a block device
-func (m NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
+func (m *NodeMounter) IsBlockDevice(fullPath string) (bool, error) {
 	return false, nil
 }
 
 // getBlockSizeBytes gets the size of the disk in bytes
-func (m NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
+func (m *NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
 		sizeInBytes, err := proxyMounter.GetDeviceSize(devicePath)
@@ -102,7 +103,7 @@ func (m NodeMounter) GetBlockSizeBytes(devicePath string) (int64, error) {
 	}
 }
 
-func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
+func (m *NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, target string, fstype string, options []string, sensitiveOptions []string, formatOptions []string) error {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
 		return proxyMounter.FormatAndMountSensitiveWithFormatOptions(source, target, fstype, options, sensitiveOptions, formatOptions)
@@ -121,7 +122,7 @@ func (m NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, tar
 // being >1 is just a warning.
 // Command to determine ref count would be something like:
 // Get-Volume -UniqueId "\\?\Volume{7c3da0c1-0000-0000-0000-010000000000}\" | Get-Partition | Select AccessPaths
-func (m NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
+func (m *NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	// HACK change csi-proxy behavior instead of relying on fragile internal
 	// implementation details!
@@ -161,7 +162,7 @@ func handleGetDeviceNameFromMountError(err error) (string, int, error) {
 }
 
 // IsCorruptedMnt return true if err is about corrupted mount point
-func (m NodeMounter) IsCorruptedMnt(err error) bool {
+func (m *NodeMounter) IsCorruptedMnt(err error) bool {
 	return mountutils.IsCorruptedMnt(err)
 }
 

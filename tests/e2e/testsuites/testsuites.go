@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -48,7 +47,7 @@ const (
 	execTimeout = 10 * time.Second
 	// Some pods can take much longer to get ready due to volume attach/detach latency.
 	slowPodStartTimeout = 15 * time.Minute
-	// Description that will printed during tests
+	// Description that will printed during tests.
 	failedConditionDescription = "Error status code"
 
 	volumeSnapshotNameStatic         = "volume-snapshot-tester"
@@ -151,8 +150,8 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshot(vsc *volumesnapshot
 	return snapshotObj
 }
 
-func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId string) *volumesnapshotv1.VolumeSnapshotContent {
-	By("creating a VolumeSnapshotContent from snapshotId: " + snapshotId)
+func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotID string) *volumesnapshotv1.VolumeSnapshotContent {
+	By("creating a VolumeSnapshotContent from snapshotID: " + snapshotID)
 	snapshotContent := &volumesnapshotv1.VolumeSnapshotContent{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       VolumeSnapshotContentKind,
@@ -172,7 +171,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotId s
 			},
 			Driver: "ebs.csi.aws.com",
 			Source: volumesnapshotv1.VolumeSnapshotContentSource{
-				SnapshotHandle: aws.String(snapshotId),
+				SnapshotHandle: aws.String(snapshotID),
 			},
 		},
 	}
@@ -185,7 +184,6 @@ func (t *TestVolumeSnapshotClass) UpdateStaticVolumeSnapshotContent(volumeSnapsh
 	volumeSnapshotContent.Spec.VolumeSnapshotRef.Name = volumeSnapshot.Name
 	_, err := snapshotclientset.New(t.client).SnapshotV1().VolumeSnapshotContents().Update(context.Background(), volumeSnapshotContent, metav1.UpdateOptions{})
 	framework.ExpectNoError(err)
-
 }
 func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *volumesnapshotv1.VolumeSnapshot) {
 	By("waiting for VolumeSnapshot to be ready to use - " + snapshot.Name)
@@ -345,11 +343,11 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 	framework.ExpectNoError(err)
 
 	// Check sizes
-	expectedCapacity := t.requestedPersistentVolumeClaim.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
-	claimCapacity := t.persistentVolumeClaim.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+	expectedCapacity := t.requestedPersistentVolumeClaim.Spec.Resources.Requests[v1.ResourceStorage]
+	claimCapacity := t.persistentVolumeClaim.Spec.Resources.Requests[v1.ResourceStorage]
 	Expect(claimCapacity.Value()).To(Equal(expectedCapacity.Value()), "claimCapacity is not equal to requestedCapacity")
 
-	pvCapacity := t.persistentVolume.Spec.Capacity[v1.ResourceName(v1.ResourceStorage)]
+	pvCapacity := t.persistentVolume.Spec.Capacity[v1.ResourceStorage]
 	Expect(pvCapacity.Value()).To(Equal(expectedCapacity.Value()), "pvCapacity is not equal to requestedCapacity")
 
 	// Check PV properties
@@ -389,7 +387,6 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values {
 				Expect(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values).To(ContainElement(v))
 			}
-
 		}
 	}
 }
@@ -425,7 +422,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 			},
 			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
-					v1.ResourceName(v1.ResourceStorage): resource.MustParse(claimSize),
+					v1.ResourceStorage: resource.MustParse(claimSize),
 				},
 			},
 			VolumeMode: &volumeMode,
@@ -604,16 +601,16 @@ func (t *TestDeployment) Logs() ([]byte, error) {
 }
 
 // waitForPersistentVolumeClaimDeleted waits for a PersistentVolumeClaim to be removed from the system until timeout occurs, whichever comes first.
-func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcName string, Poll, timeout time.Duration) error {
+func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcName string, poll, timeout time.Duration) error {
 	framework.Logf("Waiting up to %v for PersistentVolumeClaim %s to be removed", timeout, pvcName)
-	for start := time.Now(); time.Since(start) < timeout; time.Sleep(Poll) {
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(poll) {
 		_, err := c.CoreV1().PersistentVolumeClaims(ns).Get(context.Background(), pvcName, metav1.GetOptions{})
 		if err != nil {
 			if apierrs.IsNotFound(err) {
 				framework.Logf("Claim %q in namespace %q doesn't exist in the system", pvcName, ns)
 				return nil
 			}
-			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %v", pvcName, ns, Poll, err)
+			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %v", pvcName, ns, poll, err)
 		}
 	}
 	return fmt.Errorf("PersistentVolumeClaim %s is not removed from the system within %v", pvcName, timeout)
@@ -657,6 +654,10 @@ func (t *TestPod) Create() {
 	framework.ExpectNoError(err)
 }
 
+func (t *TestPod) GetName() string {
+	return t.pod.Name
+}
+
 func (t *TestPod) WaitForSuccess() {
 	err := e2epod.WaitForPodSuccessInNamespace(context.Background(), t.client, t.pod.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
@@ -668,7 +669,7 @@ func (t *TestPod) WaitForRunning() {
 }
 
 // Ideally this would be in "k8s.io/kubernetes/test/e2e/framework"
-// Similar to framework.WaitForPodSuccessInNamespace
+// Similar to framework.WaitForPodSuccessInNamespace.
 var podFailedCondition = func(pod *v1.Pod) (bool, error) {
 	switch pod.Status.Phase {
 	case v1.PodFailed:

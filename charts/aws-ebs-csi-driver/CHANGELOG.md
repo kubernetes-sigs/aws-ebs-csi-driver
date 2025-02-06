@@ -1,4 +1,51 @@
 # Helm chart
+
+## v2.39.3
+
+### Urgent Upgrade Notes
+
+Please upgrade from v2.39.2 directly to v2.39.3 to avoid upgrade failures if you are using this chart as a subchart.
+
+### Bug or Regression
+- Fix sub-charting by removing values schema ([#2322](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2322), [@ElijahQuinones]((https://github.com/ElijahQuinones)
+
+## v2.39.2
+
+### Urgent Upgrade Notes
+
+Please upgrade from v2.38.1 directly to v2.39.2 to avoid upgrade failures if you are relying on `a1CompatibilityDaemonSet`. 
+
+### Bug or Regression
+- Fix helm regression when `a1CompatibilityDaemonSet=true` ([#2316](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2316), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.39.1
+
+### Bug or Regression
+- Fix `node.selinux` to properly set SELinux-specific mounts as ReadOnly ([#2311](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2311), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+## v2.39.0
+
+### Feature
+
+- Add Helm parameter `node.selinux` to enable SELinux-specific mounts on the node DaemonSet ([#2253](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2253), [@ConnorJC3](https://github.com/ConnorJC3))
+- Add Helm FIPS parameter ([#2244](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2244), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## v2.38.1
+
+### Feature
+
+- Render templated controller service account parameters ([#2243](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2243), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Bug or Regression
+
+- Fix rendering failrue when `node.enableMetrics` is set to `true` ([#2250](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2250), [@mindw](https://github.com/mindw))
+- Remove duplicate 'enableMetrics' key ([#2256](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2256), [@sule26](https://github.com/sule26))
+
+## v2.37.0
+* Bump driver version to `v1.37.0`
+* Add init containers to node daemonset ([#2215](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2215), [@clbx](https://github.com/clbx))
+* Fix fetching test package version for kubetest in helm-tester ([#2203](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2203), [@torredil](https://github.com/torredil))
+
 ## v2.36.0
 * Bump driver version to `v1.36.0`
 * Add recommended autoscalar Tolerations to driver DaemonSet ([#2165](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2165), [@AndrewSirenko](https://github.com/AndrewSirenko))

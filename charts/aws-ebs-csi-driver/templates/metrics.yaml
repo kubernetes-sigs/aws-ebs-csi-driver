@@ -40,3 +40,21 @@ spec:
       interval: {{ .Values.controller.serviceMonitor.interval | default "15s"}}
 {{- end }}
 {{- end }}
+---
+{{- if .Values.node.enableMetrics }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ebs-csi-node
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ebs-csi-node
+spec:
+  selector:
+    app: ebs-csi-node
+  ports:
+    - name: metrics
+      port: 3302
+      targetPort: 3302
+  type: ClusterIP
+{{- end }}

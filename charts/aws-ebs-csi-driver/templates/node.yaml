@@ -12,6 +12,9 @@
 {{- include "node" (deepCopy $ | mustMerge $args) -}}
 {{- end }}
 {{- if .Values.a1CompatibilityDaemonSet }}
+{{- if .Values.fips -}}
+{{- fail "FIPS mode not supported for A1 instance family compatibility image" -}}
+{{- end -}}
 {{$args := dict
   "NodeName" "ebs-csi-node-a1compat"
   "Values" (dict
@@ -27,7 +30,7 @@
                 (dict
                   "key" "eks.amazonaws.com/compute-type"
                   "operator" "NotIn"
-                  "values" (list "fargate")
+                  "values" (list "fargate" "auto" "hybrid")
                 )
                 (dict
                   "key" "node.kubernetes.io/instance-type"

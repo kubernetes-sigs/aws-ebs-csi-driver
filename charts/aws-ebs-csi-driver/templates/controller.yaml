@@ -71,7 +71,7 @@ spec:
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - controller
@@ -149,6 +149,10 @@ spec:
               value: {{ .otelServiceName }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .otelExporterEndpoint }}
+            {{- end }}
+            {{- if .Values.fips }}
+            - name: AWS_USE_FIPS_ENDPOINT
+              value: "true"
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:

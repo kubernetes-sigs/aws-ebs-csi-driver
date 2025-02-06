@@ -17,6 +17,7 @@ limitations under the License.
 package devicemanager
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -43,7 +44,7 @@ func (d *Device) Release(force bool) {
 	}
 }
 
-// Taint marks the device as no longer reusable
+// Taint marks the device as no longer reusable.
 func (d *Device) Taint() {
 	d.isTainted = true
 }
@@ -108,7 +109,7 @@ func (d *deviceManager) NewDevice(instance *types.Instance, volumeID string, lik
 	defer d.mux.Unlock()
 
 	if instance == nil {
-		return nil, fmt.Errorf("instance is nil")
+		return nil, errors.New("instance is nil")
 	}
 
 	// Get device names being attached and already attached to this instance
@@ -193,7 +194,7 @@ func (d *deviceManager) release(device *Device) error {
 }
 
 // getDeviceNamesInUse returns the device to volume ID mapping
-// the mapping includes both already attached and being attached volumes
+// the mapping includes both already attached and being attached volumes.
 func (d *deviceManager) getDeviceNamesInUse(instance *types.Instance) map[string]string {
 	nodeID := aws.ToString(instance.InstanceId)
 	inUse := map[string]string{}
@@ -220,7 +221,7 @@ func (d *deviceManager) getPath(inUse map[string]string, volumeID string) string
 
 func getInstanceID(instance *types.Instance) (string, error) {
 	if instance == nil {
-		return "", fmt.Errorf("can't get ID from a nil instance")
+		return "", errors.New("can't get ID from a nil instance")
 	}
 	return aws.ToString(instance.InstanceId), nil
 }

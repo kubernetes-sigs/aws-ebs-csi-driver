@@ -17,14 +17,14 @@ limitations under the License.
 package metadata
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"k8s.io/klog/v2"
 )
 
-// Metadata is info about the ec2 instance on which the driver is running
+// Metadata is info about the ec2 instance on which the driver is running.
 type Metadata struct {
 	InstanceID             string
 	InstanceType           string
@@ -57,7 +57,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	}
 	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
 
-	return nil, fmt.Errorf("IMDS metadata and Kubernetes metadata are both unavailable")
+	return nil, errors.New("IMDS metadata and Kubernetes metadata are both unavailable")
 }
 
 func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
@@ -83,7 +83,7 @@ func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
 	return KubernetesAPIInstanceInfo(clientset)
 }
 
-// Override the region on a Metadata object if it is non-empty
+// Override the region on a Metadata object if it is non-empty.
 func (m *Metadata) overrideRegion(region string) *Metadata {
 	if region != "" {
 		m.Region = region

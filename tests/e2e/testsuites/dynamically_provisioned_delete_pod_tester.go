@@ -23,7 +23,7 @@ import (
 
 // DynamicallyProvisionedDeletePodTest will provision required StorageClass and Deployment
 // Testing if the Pod can write and read to mounted volumes
-// Deleting a pod, and again testing if the Pod can write and read to mounted volumes
+// Deleting a pod, and again testing if the Pod can write and read to mounted volumes.
 type DynamicallyProvisionedDeletePodTest struct {
 	CSIDriver driver.DynamicPVTestDriver
 	Pod       PodDetails

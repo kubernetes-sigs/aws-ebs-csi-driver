@@ -17,7 +17,7 @@ limitations under the License.
 package driver
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -34,10 +34,10 @@ type Options struct {
 
 	// #### Server options ####
 
-	//Endpoint is the endpoint for the CSI driver server
+	// Endpoint is the endpoint for the CSI driver server
 	Endpoint string
-	// HttpEndpoint is the TCP network address where the HTTP server for metrics will listen
-	HttpEndpoint string
+	// HTTPEndpoint is the TCP network address where the HTTP server for metrics will listen
+	HTTPEndpoint string
 	// MetricsCertFile is the location of the certificate for serving the metrics server over HTTPS
 	MetricsCertFile string
 	// MetricsKeyFile is the location of the key for serving the metrics server over HTTPS
@@ -52,7 +52,7 @@ type Options struct {
 	ExtraTags map[string]string
 	// ExtraVolumeTags is a map of tags that will be attached to each dynamically provisioned
 	// volume.
-	// DEPRECATED: Use ExtraTags instead.
+	// Deprecated: Use ExtraTags instead.
 	ExtraVolumeTags map[string]string
 	// ID of the kubernetes cluster.
 	KubernetesClusterID string
@@ -67,6 +67,8 @@ type Options struct {
 	// flag to set the timeout for volume modification requests to be coalesced into a single
 	// volume modification call to AWS.
 	ModifyVolumeRequestHandlerTimeout time.Duration
+	// flag to enable deprecated metrics
+	DeprecatedMetrics bool
 
 	// #### Node options #####
 
@@ -89,6 +91,8 @@ type Options struct {
 	WindowsHostProcess bool
 	// LegacyXFSProgs formats XFS volumes with `bigtime=0,inobtcount=0,reflink=0`, so that they can be mounted onto nodes with linux kernel ≤ v5.4. Volumes formatted with this option may experience issues after 2038, and will be unable to use some XFS features (for example, reflinks).
 	LegacyXFSProgs bool
+	// CsiMountPointPath is the path where CSI volumes are expected to be mounted on the node.
+	CsiMountPointPath string
 }
 
 func (o *Options) AddFlags(f *flag.FlagSet) {
@@ -96,7 +100,7 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 
 	// Server options
 	f.StringVar(&o.Endpoint, "endpoint", DefaultCSIEndpoint, "Endpoint for the CSI driver server")
-	f.StringVar(&o.HttpEndpoint, "http-endpoint", "", "The TCP network address where the HTTP server for metrics will listen (example: `:8080`). The default is empty string, which means the server is disabled.")
+	f.StringVar(&o.HTTPEndpoint, "http-endpoint", "", "The TCP network address where the HTTP server for metrics will listen (example: `:8080`). The default is empty string, which means the server is disabled.")
 	f.StringVar(&o.MetricsCertFile, "metrics-cert-file", "", "The path to a certificate to use for serving the metrics server over HTTPS. If the certificate is signed by a certificate authority, this file should be the concatenation of the server's certificate, any intermediates, and the CA's certificate. If this is non-empty, --http-endpoint and --metrics-key-file MUST also be non-empty.")
 	f.StringVar(&o.MetricsKeyFile, "metrics-key-file", "", "The path to a key to use for serving the metrics server over HTTPS. If this is non-empty, --http-endpoint and --metrics-cert-file MUST also be non-empty.")
 	f.BoolVar(&o.EnableOtelTracing, "enable-otel-tracing", false, "To enable opentelemetry tracing for the driver. The tracing is disabled by default. Configure the exporter endpoint with OTEL_EXPORTER_OTLP_ENDPOINT and other env variables, see https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration.")
@@ -111,6 +115,7 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 		f.StringVar(&o.UserAgentExtra, "user-agent-extra", "", "Extra string appended to user agent.")
 		f.BoolVar(&o.Batching, "batching", false, "To enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits.")
 		f.DurationVar(&o.ModifyVolumeRequestHandlerTimeout, "modify-volume-request-handler-timeout", DefaultModifyVolumeRequestHandlerTimeout, "Timeout for the window in which volume modification calls must be received in order for them to coalesce into a single volume modification call to AWS. This must be lower than the csi-resizer and volumemodifier timeouts")
+		f.BoolVar(&o.DeprecatedMetrics, "deprecated-metrics", true, "DEPRECATED: To enable deprecated metrics. This parameter is only for backward compatibility and may be removed in a future release.")
 	}
 	// Node options
 	if o.Mode == AllMode || o.Mode == NodeMode {
@@ -118,23 +123,25 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 		f.IntVar(&o.ReservedVolumeAttachments, "reserved-volume-attachments", -1, "Number of volume attachments reserved for system use. Not used when --volume-attach-limit is specified. The total amount of volume attachments for a node is computed as: <nr. of attachments for corresponding instance type> - <number of NICs, if relevant to the instance type> - <reserved-volume-attachments value>. When -1, the amount of reserved attachments is loaded from instance metadata that captured state at node boot and may include not only system disks but also CSI volumes.")
 		f.BoolVar(&o.WindowsHostProcess, "windows-host-process", false, "ALPHA: Indicates whether the driver is running in a Windows privileged container")
 		f.BoolVar(&o.LegacyXFSProgs, "legacy-xfs", false, "Warning: This option will be removed in a future version of EBS CSI Driver. Formats XFS volumes with `bigtime=0,inobtcount=0,reflink=0`, so that they can be mounted onto nodes with linux kernel ≤ v5.4. Volumes formatted with this option may experience issues after 2038, and will be unable to use some XFS features (for example, reflinks).")
+		f.StringVar(&o.CsiMountPointPath, "csi-mount-point-prefix", "", "A prefix of the mountpoints of all CSI-managed volumes. If this value is non-empty, all volumes mounted to a path beginning with the provided value are assumed to be CSI volumes owned by the EBS CSI Driver and safe to treat as such (for example, by exposing volume metrics).")
 	}
 }
 
 func (o *Options) Validate() error {
 	if o.Mode == AllMode || o.Mode == NodeMode {
 		if o.VolumeAttachLimit != -1 && o.ReservedVolumeAttachments != -1 {
-			return fmt.Errorf("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
+			return errors.New("only one of --volume-attach-limit and --reserved-volume-attachments may be specified")
 		}
 	}
 
 	if o.MetricsCertFile != "" || o.MetricsKeyFile != "" {
-		if o.HttpEndpoint == "" {
-			return fmt.Errorf("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
-		} else if o.MetricsCertFile == "" {
-			return fmt.Errorf("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
-		} else if o.MetricsKeyFile == "" {
-			return fmt.Errorf("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
+		switch {
+		case o.HTTPEndpoint == "":
+			return errors.New("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
+		case o.MetricsCertFile == "":
+			return errors.New("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
+		case o.MetricsKeyFile == "":
+			return errors.New("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
 		}
 	}
 

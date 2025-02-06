@@ -45,6 +45,8 @@ const (
 	expZone       = "us-west-2b"
 	expInstanceID = "i-123456789abcdef01"
 	expDevicePath = "/dev/xvda"
+
+	testOutpostARN = "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
 )
 
 func TestCreateVolume(t *testing.T) {
@@ -88,7 +90,7 @@ func TestCreateVolume(t *testing.T) {
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
 	stdParams := map[string]string{}
-	rawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	rawOutpostArn := testOutpostARN
 	strippedOutpostArn, _ := arn.Parse(strings.ReplaceAll(rawOutpostArn, "outpost/", ""))
 
 	testCases := []struct {
@@ -98,6 +100,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -137,6 +140,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success outposts",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				outpostArn := strippedOutpostArn
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
@@ -227,6 +231,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -283,6 +288,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot, volume already exists",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -339,6 +345,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "restore snapshot, volume already exists with different snapshot ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -374,6 +381,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "",
 					CapacityRange:      stdCapRange,
@@ -410,6 +418,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success same name and same capacity",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -497,6 +506,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail same name and different capacity",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -561,6 +571,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success no capacity range",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					VolumeCapabilities: stdVolCap,
@@ -621,6 +632,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with correct round up",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      &csi.CapacityRange{RequiredBytes: 1073741825},
@@ -675,6 +687,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type gp3",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				// iops 5000 requires at least 10GB
 				volSize := int64(20 * 1024 * 1024 * 1024)
 				capRange := &csi.CapacityRange{RequiredBytes: volSize}
@@ -721,6 +734,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io1 using iopsPerGB",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -763,6 +777,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io1 using iops",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -805,6 +820,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io2 using iopsPerGB",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -847,6 +863,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type io2 using iops",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -889,6 +906,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type sc1",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -930,6 +948,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume type standard",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -971,6 +990,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume encryption",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1012,6 +1032,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with volume encryption with KMS key",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1054,6 +1075,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with mutable parameters",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				volSize := int64(20 * 1024 * 1024 * 1024)
 				capRange := &csi.CapacityRange{RequiredBytes: volSize}
 				req := &csi.CreateVolumeRequest{
@@ -1103,6 +1125,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid volume parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1144,6 +1167,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid iops parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1184,6 +1208,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid throughput parameter",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1224,6 +1249,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success when volume exists and contains VolumeContext and AccessibleTopology",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "test-vol",
 					CapacityRange:      stdCapRange,
@@ -1321,6 +1347,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with extra tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName          = "random-vol-name"
 					extraVolumeTagKey   = "extra-tag-key"
@@ -1379,6 +1406,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName                        = "random-vol-name"
 					clusterID                         = "test-cluster-id"
@@ -1442,6 +1470,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success with legacy tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					volumeName              = "random-vol-name"
 					expectedPVCNameTag      = "kubernetes.io/created-for/pvc/name"
@@ -1506,6 +1535,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with invalid volume access modes",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1547,6 +1577,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail with in-flight request",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1579,6 +1610,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "Fail with IdempotentParameterMismatch error",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "vol-test",
 					CapacityRange:      stdCapRange,
@@ -1606,6 +1638,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "success multi-attach",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1645,6 +1678,7 @@ func TestCreateVolume(t *testing.T) {
 		{
 			name: "fail multi-attach - invalid mount capability",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
@@ -1870,6 +1904,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "vol-test",
 				}
@@ -1902,6 +1937,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "success invalid volume id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "invalid-volume-name",
 				}
@@ -1934,6 +1970,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "fail delete disk",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "test-vol",
 				}
@@ -1943,7 +1980,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(ctx), gomock.Eq(req.GetVolumeId())).Return(false, errors.New("DeleteDisk could not delete volume"))
 				awsDriver := ControllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
@@ -1970,6 +2007,7 @@ func TestDeleteVolume(t *testing.T) {
 		{
 			name: "fail another request already in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "vol-test",
 				}
@@ -2085,7 +2123,7 @@ func TestPickAvailabilityZone(t *testing.T) {
 }
 
 func TestGetOutpostArn(t *testing.T) {
-	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	expRawOutpostArn := testOutpostARN
 	outpostArn, _ := arn.Parse(strings.ReplaceAll(expRawOutpostArn, "outpost/", ""))
 	testCases := []struct {
 		name          string
@@ -2162,7 +2200,7 @@ func TestGetOutpostArn(t *testing.T) {
 }
 
 func TestBuildOutpostArn(t *testing.T) {
-	expRawOutpostArn := "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	expRawOutpostArn := testOutpostARN
 	testCases := []struct {
 		name         string
 		awsPartition string
@@ -2233,6 +2271,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2274,6 +2313,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success outpost",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name: "test-snapshot",
 					Parameters: map[string]string{
@@ -2317,6 +2357,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName          = "test-snapshot"
 					clusterID             = "test-cluster-id"
@@ -2376,6 +2417,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with extra tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName        = "test-snapshot"
 					extraVolumeTagKey   = "extra-tag-key"
@@ -2433,6 +2475,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Parameters:     nil,
 					SourceVolumeId: "vol-test",
@@ -2464,6 +2507,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail outpost arn not valid",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name: "test-snapshot",
 					Parameters: map[string]string{
@@ -2487,12 +2531,12 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 				_, err := awsDriver.CreateSnapshot(context.Background(), req)
 				checkExpectedErrorCode(t, err, codes.InvalidArgument)
-
 			},
 		},
 		{
 			name: "fail same name different volume ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2560,6 +2604,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success same name same volume ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2612,6 +2657,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with another request in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.CreateSnapshotRequest{
 					Name:           "test-snapshot",
 					Parameters:     nil,
@@ -2640,6 +2686,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with VolumeSnapshotClass tags",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName  = "test-snapshot"
 					extraTagKey   = "test-key"
@@ -2697,10 +2744,11 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with VolumeSnapshotClass with Name tag and cluster id",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 					nameTagValue = "test-name-tag-value"
-					clusterId    = "test-cluster-id"
+					clusterID    = "test-cluster-id"
 				)
 
 				req := &csi.CreateSnapshotRequest{
@@ -2729,7 +2777,7 @@ func TestCreateSnapshot(t *testing.T) {
 						cloud.SnapshotNameTagKey:               snapshotName,
 						cloud.AwsEbsDriverTagKey:               isManagedByDriver,
 						NameTag:                                nameTagValue,
-						ResourceLifecycleTagPrefix + clusterId: ResourceLifecycleOwned,
+						ResourceLifecycleTagPrefix + clusterID: ResourceLifecycleOwned,
 					},
 				}
 
@@ -2740,7 +2788,7 @@ func TestCreateSnapshot(t *testing.T) {
 				awsDriver := ControllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
-					options:  &Options{KubernetesClusterID: clusterId},
+					options:  &Options{KubernetesClusterID: clusterID},
 				}
 				resp, err := awsDriver.CreateSnapshot(context.Background(), req)
 				if err != nil {
@@ -2755,6 +2803,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with EnableFastSnapshotRestore - normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2820,6 +2869,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "success with EnableFastSnapshotRestore - failed to get availability zones",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2861,7 +2911,7 @@ func TestCreateSnapshot(t *testing.T) {
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
-				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, fmt.Errorf("error describing availability zones")).AnyTimes()
+				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, errors.New("error describing availability zones")).AnyTimes()
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).Return(expOutput, nil).AnyTimes()
 
@@ -2884,6 +2934,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore - call to enable FSR failed",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2928,10 +2979,10 @@ func TestCreateSnapshot(t *testing.T) {
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
-				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, fmt.Errorf("error describing availability zones")).AnyTimes()
+				mockCloud.EXPECT().AvailabilityZones(gomock.Eq(ctx)).Return(nil, errors.New("error describing availability zones")).AnyTimes()
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-west-1a", "us-east-1f"}), gomock.Eq(mockSnapshot.SnapshotID)).
-					Return(expOutput, fmt.Errorf("Failed to create Fast Snapshot Restores")).AnyTimes()
+					Return(expOutput, errors.New("Failed to create Fast Snapshot Restores")).AnyTimes()
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
 
 				awsDriver := ControllerService{
@@ -2949,6 +3000,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore - invalid availability zones",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -2985,6 +3037,7 @@ func TestCreateSnapshot(t *testing.T) {
 		{
 			name: "fail with EnableFastSnapshotRestore",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				const (
 					snapshotName = "test-snapshot"
 				)
@@ -3020,7 +3073,7 @@ func TestCreateSnapshot(t *testing.T) {
 					"us-east-1a": {}, "us-east-1f": {}}, nil).AnyTimes()
 				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(mockSnapshot, nil).AnyTimes()
 				mockCloud.EXPECT().EnableFastSnapshotRestores(gomock.Eq(ctx), gomock.Eq([]string{"us-east-1a", "us-east-1f"}),
-					gomock.Eq(mockSnapshot.SnapshotID)).Return(nil, fmt.Errorf("error")).AnyTimes()
+					gomock.Eq(mockSnapshot.SnapshotID)).Return(nil, errors.New("error")).AnyTimes()
 				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil).AnyTimes()
 
 				awsDriver := ControllerService{
@@ -3050,6 +3103,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3075,6 +3129,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "success not found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3100,6 +3155,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		{
 			name: "fail with another request in-flight",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				ctx := context.Background()
 
 				mockCtl := gomock.NewController(t)
@@ -3140,6 +3196,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success normal",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{}
 				mockCloudSnapshotsResponse := &cloud.ListSnapshotsResponse{
 					Snapshots: []*cloud.Snapshot{
@@ -3185,6 +3242,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success no snapshots",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{}
 				ctx := context.Background()
 				mockCtl := gomock.NewController(t)
@@ -3212,6 +3270,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success snapshot ID",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3248,6 +3307,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "success snapshot ID not found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3278,6 +3338,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail snapshot ID multiple found",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					SnapshotId: "snapshot-1",
 				}
@@ -3311,6 +3372,7 @@ func TestListSnapshots(t *testing.T) {
 		{
 			name: "fail 0 < MaxEntries < 5",
 			testFunc: func(t *testing.T) {
+				t.Helper()
 				req := &csi.ListSnapshotsRequest{
 					MaxEntries: 4,
 				}
@@ -3359,21 +3421,21 @@ func TestControllerPublishVolume(t *testing.T) {
 
 	testCases := []struct {
 		name             string
-		volumeId         string
-		nodeId           string
+		volumeID         string
+		nodeID           string
 		volumeCapability *csi.VolumeCapability
-		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
+		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string)
 		expResp          *csi.ControllerPublishVolumeResponse
 		errorCode        codes.Code
 		setupFunc        func(ControllerService *ControllerService)
 	}{
 		{
 			name:             "AttachDisk successfully with valid volume ID, node ID, and volume capability",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), volumeId, gomock.Eq(nodeId)).Return(expDevicePath, nil)
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), volumeID, gomock.Eq(nodeID)).Return(expDevicePath, nil)
 			},
 			expResp: &csi.ControllerPublishVolumeResponse{
 				PublishContext: map[string]string{DevicePathKey: expDevicePath},
@@ -3382,11 +3444,11 @@ func TestControllerPublishVolume(t *testing.T) {
 		},
 		{
 			name:             "AttachDisk when volume is already attached to the node",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
 			},
 			expResp: &csi.ControllerPublishVolumeResponse{
 				PublishContext: map[string]string{DevicePathKey: expDevicePath},
@@ -3396,28 +3458,28 @@ func TestControllerPublishVolume(t *testing.T) {
 
 		{
 			name:             "Invalid argument error when no VolumeId provided",
-			volumeId:         "",
-			nodeId:           expInstanceID,
+			volumeID:         "",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
 			errorCode:        codes.InvalidArgument,
 		},
 		{
 			name:             "Invalid argument error when no NodeId provided",
-			volumeId:         "vol-test",
-			nodeId:           "",
+			volumeID:         "vol-test",
+			nodeID:           "",
 			volumeCapability: stdVolCap,
 			errorCode:        codes.InvalidArgument,
 		},
 		{
 			name:      "Invalid argument error when no VolumeCapability provided",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:     "Invalid argument error when invalid VolumeCapability provided",
-			volumeId: "vol-test",
-			nodeId:   expInstanceID,
+			volumeID: "vol-test",
+			nodeID:   expInstanceID,
 			volumeCapability: &csi.VolumeCapability{
 				AccessMode: &csi.VolumeCapability_AccessMode{
 					Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
@@ -3427,40 +3489,40 @@ func TestControllerPublishVolume(t *testing.T) {
 		},
 		{
 			name:             "Internal error when AttachDisk fails",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "test error"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "test error"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Fail when node does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(nodeId)).Return("", status.Error(codes.Internal, "test error"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(nodeID)).Return("", status.Error(codes.Internal, "test error"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Fail when volume does not exist",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeId), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "volume not found"))
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", status.Error(codes.Internal, "volume not found"))
 			},
 			errorCode: codes.Internal,
 		},
 		{
 			name:             "Aborted error when AttachDisk operation already in-flight",
-			volumeId:         "vol-test",
-			nodeId:           expInstanceID,
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
-			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
 			},
 			errorCode: codes.Aborted,
 			setupFunc: func(ControllerService *ControllerService) {
@@ -3472,9 +3534,9 @@ func TestControllerPublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &csi.ControllerPublishVolumeRequest{
-				NodeId:           tc.nodeId,
+				NodeId:           tc.nodeID,
 				VolumeCapability: tc.volumeCapability,
-				VolumeId:         tc.volumeId,
+				VolumeId:         tc.volumeID,
 			}
 			ctx := context.Background()
 
@@ -3505,59 +3567,58 @@ func TestControllerPublishVolume(t *testing.T) {
 func TestControllerUnpublishVolume(t *testing.T) {
 	testCases := []struct {
 		name       string
-		volumeId   string
-		nodeId     string
+		volumeID   string
+		nodeID     string
 		errorCode  codes.Code
-		mockDetach func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string)
+		mockDetach func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string)
 		expResp    *csi.ControllerUnpublishVolumeResponse
 		setupFunc  func(driver *ControllerService)
 	}{
 		{
 			name:      "DetachDisk successfully with valid volume ID and node ID",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(nil)
-
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(nil)
 			},
 			expResp: &csi.ControllerUnpublishVolumeResponse{},
 		},
 		{
 			name:      "Return success when volume not found during DetachDisk operation",
-			volumeId:  "vol-not-found",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-not-found",
+			nodeID:    expInstanceID,
 			errorCode: codes.OK,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(cloud.ErrNotFound)
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(cloud.ErrNotFound)
 			},
 			expResp: &csi.ControllerUnpublishVolumeResponse{},
 		},
 		{
 			name:      "Invalid argument error when no VolumeId provided",
-			volumeId:  "",
-			nodeId:    expInstanceID,
+			volumeID:  "",
+			nodeID:    expInstanceID,
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:      "Invalid argument error when no NodeId provided",
-			volumeId:  "vol-test",
-			nodeId:    "",
+			volumeID:  "vol-test",
+			nodeID:    "",
 			errorCode: codes.InvalidArgument,
 		},
 		{
 			name:      "Internal error when DetachDisk operation fails",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.Internal,
-			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeId string, nodeId string) {
-				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeId, nodeId).Return(errors.New("test error"))
+			mockDetach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().DetachDisk(gomock.Eq(ctx), volumeID, nodeID).Return(errors.New("test error"))
 			},
 		},
 		{
 			name:      "Aborted error when operation already in-flight",
-			volumeId:  "vol-test",
-			nodeId:    expInstanceID,
+			volumeID:  "vol-test",
+			nodeID:    expInstanceID,
 			errorCode: codes.Aborted,
 			setupFunc: func(driver *ControllerService) {
 				driver.inFlight.Insert("vol-test" + expInstanceID)
@@ -3568,8 +3629,8 @@ func TestControllerUnpublishVolume(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := &csi.ControllerUnpublishVolumeRequest{
-				NodeId:   tc.nodeId,
-				VolumeId: tc.volumeId,
+				NodeId:   tc.nodeID,
+				VolumeId: tc.volumeID,
 			}
 
 			ctx := context.Background()
@@ -3668,10 +3729,8 @@ func TestControllerExpandVolume(t *testing.T) {
 				if !tc.expError {
 					t.Fatalf("Unexpected error: %v", err)
 				}
-			} else {
-				if tc.expError {
-					t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
-				}
+			} else if tc.expError {
+				t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
 			}
 
 			sizeGiB := util.BytesToGiB(resp.GetCapacityBytes())
@@ -3684,6 +3743,7 @@ func TestControllerExpandVolume(t *testing.T) {
 }
 
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
+	t.Helper()
 	if err == nil {
 		t.Fatalf("Expected operation to fail but got no error")
 	}

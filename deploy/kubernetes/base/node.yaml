@@ -31,6 +31,8 @@ spec:
                 operator: NotIn
                 values:
                 - fargate
+                - auto
+                - hybrid
               - key: node.kubernetes.io/instance-type
                 operator: NotIn
                 values:
@@ -54,11 +56,12 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.36.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.39.0
           imagePullPolicy: IfNotPresent
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
+            - --csi-mount-point-prefix=/var/lib/kubelet/plugins/kubernetes.io/csi/ebs.csi.aws.com/
             - --logging-format=text
             - --v=2
           env:
@@ -102,7 +105,7 @@ spec:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.12.0-eks-1-31-5
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.13.0-eks-1-31-12
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -139,7 +142,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-31-5
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.14.0-eks-1-31-12
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
