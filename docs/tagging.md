@@ -97,7 +97,9 @@ billingID=ABCDEF
 ```
 
 # Adding, Modifying, and Deleting Tags Of Existing Volumes
-The AWS EBS CSI Driver supports the modifying of tags of existing volumes through `VolumeAttributesClass.parameters` the examples below show the syntax for addition, modification, and deletion of tags within the `VolumeAttributesClass.parameters`. For a walkthrough on how to apply these modifications to a volume follow the [walkthrough for Volume Modification via VolumeAttributeClass](../examples/kubernetes/modify-volume)
+The AWS EBS CSI Driver supports the modifying of tags of existing volumes through `VolumeAttributesClass.parameters` the examples below show the syntax for addition, modification, and deletion of tags within the `VolumeAttributesClass.parameters`. The driver (in v1.39.0 and later) also supports runtime string interpolation on tag values for a volume upon modification, which allows the specification of placeholder values for the PVC namespace, PVC name, and PV name, which will then be dynamically computed at runtime. **Note: Interpolated tags require the `--extra-modify-metadata` flag to be enabled on the `external-resizer` sidecar.** 
+
+For a walkthrough on how to apply these modifications to a volume follow the [walkthrough for Volume Modification via VolumeAttributeClass](../examples/kubernetes/modify-volume)
 
 **Syntax for Adding or Modifying a Tag**
 
@@ -111,6 +113,12 @@ driverName: ebs.csi.aws.com
 parameters:
   tagSpecification_1: "location=Seattle"
   tagSpecification_2: "cost-center=" // If the value is left blank, tag is created with an empty value
+  # Interpolated tag
+  tagSpecification_3: "PVC-Name={{ .PVCName }}"
+  tagSpecification_4: "PVC-Namespace={{ .PVCNamespace }}"
+  tagSpecification_5: "PV-Name={{ .PVName }}"
+  # Interpolated tag w/ function
+  tagSpecification_6: "key6={{ .PVCNamespace | contains "prod" }}"
 ```
 **Syntax for Deleting a Tag**
 
