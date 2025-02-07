@@ -19,7 +19,7 @@ images:
     newTag: v8.2.0
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newName: registry.k8s.io/sig-storage/csi-resizer
-    newTag: v1.13.0
+    newTag: v1.13.1
   - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
     newName: registry.k8s.io/sig-storage/csi-node-driver-registrar
     newTag: v2.13.0

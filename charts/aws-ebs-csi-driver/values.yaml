@@ -106,7 +106,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.13.1-eks-1-31-13"
+      tag: "v1.13.1-eks-1-32-5"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
