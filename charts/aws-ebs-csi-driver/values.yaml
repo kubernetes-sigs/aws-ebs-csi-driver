@@ -222,6 +222,8 @@ controller:
   envFrom: []
   # If set, add pv/pvc metadata to plugin create requests as parameters.
   extraCreateMetadata: true
+  # If set, add pv/pvc metadata to plugin modify requests as parameters.
+  extraModifyMetadata: true
   # Extra volume tags to attach to each dynamically provisioned volume.
   # ---
   # extraVolumeTags:

@@ -429,6 +429,9 @@ spec:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
             - --timeout=60s
             {{- end }}
+            {{- if .Values.controller.extraCreateMetadata }}
+            - --extra-modify-metadata
+            {{- end}}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.resizer.logLevel }}
             - --handle-volume-inuse-error=false

@@ -230,6 +230,7 @@ spec:
             - --timeout=60s
             - --csi-address=$(ADDRESS)
             - --v=2
+            - --extra-modify-metadata
             - --handle-volume-inuse-error=false
             - --leader-election=true
             - --kube-api-qps=20
