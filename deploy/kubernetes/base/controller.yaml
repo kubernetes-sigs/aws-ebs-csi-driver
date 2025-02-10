@@ -228,9 +228,9 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
+            - --extra-modify-metadata
             - --csi-address=$(ADDRESS)
             - --v=2
-            - --extra-modify-metadata
             - --handle-volume-inuse-error=false
             - --leader-election=true
             - --kube-api-qps=20
