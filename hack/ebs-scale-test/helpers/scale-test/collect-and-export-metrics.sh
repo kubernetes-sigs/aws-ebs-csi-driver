@@ -41,9 +41,13 @@ collect-and-export-metrics() {
 collect_metrics() {
   echo "Port-forwarding ebs-csi-controller containers"
   kubectl port-forward "$CONTROLLER_POD_NAME" 3301:3301 -n kube-system &
+  PID_3301=$!
   kubectl port-forward "$CONTROLLER_POD_NAME" 8081:8081 -n kube-system &
+  PID_8081=$!
   kubectl port-forward "$CONTROLLER_POD_NAME" 8082:8082 -n kube-system &
+  PID_8082=$!
   kubectl port-forward "$CONTROLLER_POD_NAME" 8084:8084 -n kube-system &
+  PID_8084=$!
 
   echo "Collecting metrics"
   for port in 3301 8081 8082 8084; do
@@ -58,6 +62,8 @@ collect_metrics() {
     sleep 20
     echo "WARNING: Could not collect metrics from port ${port}. Something may be wrong in cluster."
   done
+  # Stop forwarding ports after metrics collected.
+  kill $PID_3301 $PID_8081 $PID_8082 $PID_8084
 }
 
 clean_metrics() {

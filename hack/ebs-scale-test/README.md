@@ -64,7 +64,8 @@ Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run d
   - 'pre-allocated': Additional worker nodes are created during cluster setup. By default, we pre-allocate 1 `m7a.48xlarge` EC2 instance for every 100 StatefulSet replicas.
 
 - `TEST_TYPE` dictates what type of scalability test we want to run. Options include: 
-  - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes. 
+  - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes.
+  - 'expand-and-modify': Creates `$REPLICAS` block volumes. Patches PVC capacity and VACName at rate of 5 PVCs per second. Ensures PVCs are expanded and modified before deleting them. Exercises ControllerExpandVolume & ControllerModifyVolume. Set `MODIFY_ONLY` or `EXPAND_ONLY` to 'true' to test solely volume modification/expansion.
 
 You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
 

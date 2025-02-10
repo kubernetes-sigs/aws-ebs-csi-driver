@@ -25,7 +25,8 @@ pre_test_validation() {
     exit 1
   fi
 
-  echo "Updating kubeconfig and restarting ebs-csi-controller pod"
+  echo "Updating kubeconfig and restarting ebs-csi-controller Deployment"
   aws eks update-kubeconfig --name "$CLUSTER_NAME"
-  kubectl delete pod -n kube-system -l app=ebs-csi-controller
+  kubectl rollout restart deployment/ebs-csi-controller -n kube-system
+  kubectl rollout status deployment/ebs-csi-controller -n kube-system --timeout=30s
 }
