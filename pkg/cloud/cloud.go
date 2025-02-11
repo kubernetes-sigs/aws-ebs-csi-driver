@@ -1431,7 +1431,13 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 		return nil, err
 	}
 	if len(response.Unsuccessful) > 0 {
-		return response, fmt.Errorf("failed to create fast snapshot restores for snapshot %s: %v", snapshotID, response.Unsuccessful)
+		var errDetails []string
+		for _, r := range response.Unsuccessful {
+			for _, e := range r.FastSnapshotRestoreStateErrors {
+				errDetails = append(errDetails, fmt.Sprintf("Error Code: %s, Error Message: %s", aws.ToString(e.Error.Code), aws.ToString(e.Error.Message)))
+			}
+		}
+		return nil, errors.New(strings.Join(errDetails, "; "))
 	}
 	return response, nil
 }
