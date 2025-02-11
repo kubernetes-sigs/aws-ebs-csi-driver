@@ -258,12 +258,7 @@
         },
         "extraCreateMetadata": {
           "type": "boolean",
-          "description": "If set, add pv/pvc metadata to plugin create requests as parameters.",
-          "default": true
-        },
-        "extraModifyMetadata": {
-          "type": "boolean",
-          "description": "If set, add pv/pvc metadata to plugin modify requests as parameters.",
+          "description": "If set, add pv/pvc metadata to plugin create and modify requests as parameters.",
           "default": true
         },
         "k8sTagClusterId": {

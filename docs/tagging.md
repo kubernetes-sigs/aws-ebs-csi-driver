@@ -11,7 +11,7 @@ To help manage volumes in the aws account, CSI driver will automatically add tag
 
 # StorageClass Tagging
 
-The AWS EBS CSI Driver supports tagging through `StorageClass.parameters` (in v1.6.0 and later). 
+The AWS EBS CSI Driver supports tagging through `StorageClass.parameters`. 
 
 If a key has the prefix `tagSpecification`, the CSI driver will treat the value as a key-value pair to be applied to the dynamically provisioned volume as tags.
 
@@ -97,7 +97,9 @@ billingID=ABCDEF
 ```
 
 # Adding, Modifying, and Deleting Tags Of Existing Volumes
-The AWS EBS CSI Driver supports the modifying of tags of existing volumes through `VolumeAttributesClass.parameters` the examples below show the syntax for addition, modification, and deletion of tags within the `VolumeAttributesClass.parameters`. The driver (in v1.40.0 and later) also supports runtime string interpolation on tag values for a volume upon modification, which allows the specification of placeholder values for the PVC namespace, PVC name, and PV name, which will then be dynamically computed at runtime. **Note: Interpolated tags require the `--extra-modify-metadata` flag to be enabled on the `external-resizer` sidecar. To modify Amazon EBS resource tags through VACs, ensure that you attach the following IAM Policy to the role used by your Amazon EBS CSI driver:** 
+The AWS EBS CSI Driver supports the modifying of tags of existing volumes through `VolumeAttributesClass.parameters` the examples below show the syntax for addition, modification, and deletion of tags within the `VolumeAttributesClass.parameters`. The driver also supports runtime string interpolation on tag values for a volume upon modification, which allows the specification of placeholder values for the PVC namespace, PVC name, and PV name, which will then be dynamically computed at runtime. 
+
+**Note: Interpolated tags require the `--extra-modify-metadata` flag to be enabled on the `external-resizer` sidecar. To modify Amazon EBS resource tags through VACs, ensure that you attach the following IAM Policy to the role used by your Amazon EBS CSI driver:** 
 ``` 
 {
   "Version": "2012-10-17",

@@ -220,10 +220,8 @@ controller:
   env: []
   # Use envFrom to reference ConfigMaps and Secrets across all containers in the deployment
   envFrom: []
-  # If set, add pv/pvc metadata to plugin create requests as parameters.
+  # If set, add pv/pvc metadata to plugin create and modify requests as parameters.
   extraCreateMetadata: true
-  # If set, add pv/pvc metadata to plugin modify requests as parameters.
-  extraModifyMetadata: true
   # Extra volume tags to attach to each dynamically provisioned volume.
   # ---
   # extraVolumeTags:
