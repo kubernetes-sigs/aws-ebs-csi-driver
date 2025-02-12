@@ -1,7 +1,7 @@
 # Volume Modification
 
 The EBS CSI Driver (starting from v1.19.0) supports volume modification through two methods:
-- Via the standardized CSI RPC `ControllerModifyVolume` (on Kubernetes, this is done via [`VolumeAttributesClass`](https://github.com/awslabs/volume-modifier-for-k8s))
+- Via the standardized CSI RPC `ControllerModifyVolume` (on Kubernetes, this is done via [`VolumeAttributesClass`](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/))
 - Volume annotations via [`volume-modifier-for-k8s`](https://github.com/awslabs/volume-modifier-for-k8s)
 
 ## Installation
