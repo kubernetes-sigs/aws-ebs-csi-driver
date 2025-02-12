@@ -17,7 +17,7 @@ spec:
       app: {{ .NodeName }}
       {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   updateStrategy:
-    {{ toYaml .Values.node.updateStrategy | nindent 4 }}
+    {{- toYaml .Values.node.updateStrategy | nindent 4 }}
   template:
     metadata:
       labels:
