@@ -42,17 +42,27 @@ type MetadataServiceConfig struct {
 
 var _ MetadataService = &Metadata{}
 
+// NewMetadataService retrieves instance Metadata from one of the client in MetadataServiceConfig.
+// It prefers EC2MetadataClient (IMDS) in order to get an accurate number of attached devices.
 func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataService, error) {
-	metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
-	if err == nil {
-		klog.InfoS("Retrieved metadata from IMDS")
-		return metadata.overrideRegion(region), nil
+	// Don't make an IMDS call if we know it's disabled
+	imdsDisabled := os.Getenv("AWS_EC2_METADATA_DISABLED")
+	if imdsDisabled == "true" {
+		klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
+	} else {
+		klog.V(4).InfoS("Attempting to retrieve instance metadata from IMDS")
+		metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
+		if err == nil {
+			klog.V(4).InfoS("Retrieved metadata from IMDS")
+			return metadata.overrideRegion(region), nil
+		}
+		klog.ErrorS(err, "Retrieving IMDS metadata failed, falling back to Kubernetes metadata")
 	}
-	klog.ErrorS(err, "Retrieving IMDS metadata failed, falling back to Kubernetes metadata")
 
-	metadata, err = retrieveK8sMetadata(cfg.K8sAPIClient)
+	klog.V(4).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
+	metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient)
 	if err == nil {
-		klog.InfoS("Retrieved metadata from Kubernetes")
+		klog.V(4).InfoS("Retrieved metadata from Kubernetes")
 		return metadata.overrideRegion(region), nil
 	}
 	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
@@ -61,11 +71,6 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 }
 
 func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
-	envValue := os.Getenv("AWS_EC2_METADATA_DISABLED")
-	if envValue != "" {
-		klog.InfoS("The AWS_EC2_METADATA_DISABLED environment variable disables access to EC2 IMDS", "enabled", envValue)
-	}
-
 	svc, err := ec2MetadataClient()
 	if err != nil {
 		klog.ErrorS(err, "failed to initialize EC2 Metadata client")

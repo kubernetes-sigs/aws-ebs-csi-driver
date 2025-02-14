@@ -39,15 +39,14 @@ func TestNewMetadataService(t *testing.T) {
 
 	testCases := []struct {
 		name             string
-		region           string
+		imdsDisabled     bool
 		ec2MetadataError error
 		k8sAPIError      error
 		expectedMetadata *Metadata
 		expectedError    error
 	}{
 		{
-			name:   "TestNewMetadataService: EC2 metadata available",
-			region: "us-west-2",
+			name: "TestNewMetadataService: EC2 metadata available",
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
 				InstanceType:           "c5.xlarge",
@@ -58,8 +57,19 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
+			name:         "TestNewMetadataService: AWS_EC2_METADATA_DISABLED=true, K8s API available",
+			imdsDisabled: true,
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
+			},
+		},
+		{
 			name:             "TestNewMetadataService: EC2 metadata error, K8s API available",
-			region:           "us-west-2",
 			ec2MetadataError: errors.New("EC2 metadata error"),
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
@@ -72,7 +82,6 @@ func TestNewMetadataService(t *testing.T) {
 		},
 		{
 			name:             "TestNewMetadataService: EC2 metadata error, K8s API error",
-			region:           "us-west-2",
 			ec2MetadataError: errors.New("EC2 metadata error"),
 			k8sAPIError:      errors.New("K8s API error"),
 			expectedError:    errors.New("IMDS metadata and Kubernetes metadata are both unavailable"),
@@ -103,8 +112,13 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			t.Setenv("CSI_NODE_NAME", "test-node")
+			if tc.imdsDisabled {
+				t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+			} else {
+				t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
+			}
 
-			if tc.ec2MetadataError == nil {
+			if tc.ec2MetadataError == nil && !tc.imdsDisabled {
 				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
@@ -132,7 +146,7 @@ func TestNewMetadataService(t *testing.T) {
 				K8sAPIClient: mockK8sClient,
 			}
 
-			metadata, err := NewMetadataService(cfg, tc.region)
+			metadata, err := NewMetadataService(cfg, "us-west-2")
 
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
