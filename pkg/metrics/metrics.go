@@ -29,8 +29,21 @@ const (
 )
 
 var (
-	r    *metricRecorder // singleton instance of metricRecorder
-	once sync.Once
+	r          *metricRecorder // singleton instance of metricRecorder
+	once       sync.Once
+	operations = []string{
+		"CreateVolume",
+		"DeleteVolume",
+		"AttachVolume",
+		"DetachVolume",
+		"ModifyVolume",
+		"DescribeVolumes",
+		"DescribeVolumesModifications",
+		"CreateSnapshot",
+		"DeleteSnapshot",
+		"DescribeSnapshots",
+		"DescribeInstances",
+	}
 )
 
 type metricRecorder struct {
@@ -51,6 +64,7 @@ func InitializeRecorder() *metricRecorder {
 			registry: prometheus.NewRegistry(),
 			metrics:  make(map[string]interface{}),
 		}
+		r.InitializeAPIMetrics()
 	})
 	return r
 }
@@ -138,9 +152,13 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFi
 	}()
 }
 
-func (m *metricRecorder) registerHistogramVec(name, help string, labels []string, buckets []float64) {
-	if _, exists := m.metrics[name]; exists {
-		return
+func (m *metricRecorder) registerHistogramVec(name, help string, labels []string, buckets []float64) *prometheus.HistogramVec {
+	if metric, exists := m.metrics[name]; exists {
+		if histogramVec, ok := metric.(*prometheus.HistogramVec); ok {
+			return histogramVec
+		}
+		klog.ErrorS(nil, "Metric exists but is not a HistogramVec", "name", name)
+		return nil
 	}
 	histogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -152,11 +170,16 @@ func (m *metricRecorder) registerHistogramVec(name, help string, labels []string
 	)
 	m.metrics[name] = histogram
 	m.registry.MustRegister(histogram)
+	return histogram
 }
 
-func (m *metricRecorder) registerCounterVec(name, help string, labels []string) {
-	if _, exists := m.metrics[name]; exists {
-		return
+func (m *metricRecorder) registerCounterVec(name, help string, labels []string) *prometheus.CounterVec {
+	if metric, exists := m.metrics[name]; exists {
+		if counterVec, ok := metric.(*prometheus.CounterVec); ok {
+			return counterVec
+		}
+		klog.ErrorS(nil, "Metric exists but is not a CounterVec", "name", name)
+		return nil
 	}
 	counter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -167,6 +190,7 @@ func (m *metricRecorder) registerCounterVec(name, help string, labels []string) 
 	)
 	m.metrics[name] = counter
 	m.registry.MustRegister(counter)
+	return counter
 }
 
 func getLabelNames(labels map[string]string) []string {
@@ -175,4 +199,48 @@ func getLabelNames(labels map[string]string) []string {
 		names = append(names, n)
 	}
 	return names
+}
+
+func (m *metricRecorder) initializeMetricWithOperations(name, help string, labelNames []string, isHistogram bool) {
+	if _, exists := m.metrics[name]; !exists {
+		var metric interface{}
+		if isHistogram {
+			metric = m.registerHistogramVec(name, help, labelNames, nil)
+		} else {
+			metric = m.registerCounterVec(name, help, labelNames)
+		}
+		switch v := metric.(type) {
+		case *prometheus.HistogramVec:
+			for _, op := range operations {
+				v.WithLabelValues(op)
+			}
+		case *prometheus.CounterVec:
+			for _, op := range operations {
+				v.WithLabelValues(op)
+			}
+		}
+	}
+}
+
+func (m *metricRecorder) InitializeAPIMetrics() {
+	labelNames := []string{"request"}
+	help := "ebs_csi_aws_com metric"
+	m.initializeMetricWithOperations(
+		"cloudprovider_aws_api_request_duration_seconds",
+		help,
+		labelNames,
+		true,
+	)
+	m.initializeMetricWithOperations(
+		"aws_ebs_csi_api_request_errors_total",
+		help,
+		labelNames,
+		false,
+	)
+	m.initializeMetricWithOperations(
+		"aws_ebs_csi_api_request_throttles_total",
+		help,
+		labelNames,
+		false,
+	)
 }
