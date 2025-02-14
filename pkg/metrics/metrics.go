@@ -29,8 +29,26 @@ const (
 )
 
 var (
-	r    *metricRecorder // singleton instance of metricRecorder
-	once sync.Once
+	r          *metricRecorder // singleton instance of metricRecorder
+	once       sync.Once
+	operations = []string{
+		"CreateVolume",
+		"DeleteVolume",
+		"AttachVolume",
+		"DetachVolume",
+		"ModifyVolume",
+		"DescribeVolumes",
+		"DescribeVolumesModifications",
+		"CreateSnapshot",
+		"DeleteSnapshot",
+		"DescribeSnapshots",
+		"DescribeInstances",
+		"DescribeAvailabilityZones",
+		"DescribeTags",
+		"CreateTags",
+		"DeleteTags",
+		"EnableFastSnapshotRestores",
+	}
 )
 
 type metricRecorder struct {
@@ -45,12 +63,13 @@ func Recorder() *metricRecorder {
 }
 
 // InitializeRecorder initializes a new metricRecorder instance if it hasn't been initialized.
-func InitializeRecorder() *metricRecorder {
+func InitializeRecorder(deprecatedMetrics bool) *metricRecorder {
 	once.Do(func() {
 		r = &metricRecorder{
 			registry: prometheus.NewRegistry(),
 			metrics:  make(map[string]interface{}),
 		}
+		r.initializeAPIMetrics(deprecatedMetrics)
 	})
 	return r
 }
@@ -138,9 +157,13 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFi
 	}()
 }
 
-func (m *metricRecorder) registerHistogramVec(name, help string, labels []string, buckets []float64) {
-	if _, exists := m.metrics[name]; exists {
-		return
+func (m *metricRecorder) registerHistogramVec(name, help string, labels []string, buckets []float64) *prometheus.HistogramVec {
+	if metric, exists := m.metrics[name]; exists {
+		if histogramVec, ok := metric.(*prometheus.HistogramVec); ok {
+			return histogramVec
+		}
+		klog.ErrorS(nil, "Metric exists but is not a HistogramVec", "name", name)
+		return nil
 	}
 	histogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -152,6 +175,7 @@ func (m *metricRecorder) registerHistogramVec(name, help string, labels []string
 	)
 	m.metrics[name] = histogram
 	m.registry.MustRegister(histogram)
+	return histogram
 }
 
 func (m *metricRecorder) registerCounterVec(name, help string, labels []string) {
@@ -175,4 +199,31 @@ func getLabelNames(labels map[string]string) []string {
 		names = append(names, n)
 	}
 	return names
+}
+
+func (m *metricRecorder) initializeMetricWithOperations(name, help string, labelNames []string) {
+	if _, exists := m.metrics[name]; !exists {
+		metric := m.registerHistogramVec(name, help, labelNames, nil)
+		for _, op := range operations {
+			metric.WithLabelValues(op)
+		}
+	}
+}
+
+func (m *metricRecorder) initializeAPIMetrics(deprecatedMetrics bool) {
+	labelNames := []string{"request"}
+	help := HelpText
+	m.initializeMetricWithOperations(
+		APIRequestDuration,
+		help,
+		labelNames,
+	)
+	if deprecatedMetrics {
+		help = DeprecatedHelpText
+		m.initializeMetricWithOperations(
+			DeprecatedAPIRequestDuration,
+			help,
+			labelNames,
+		)
+	}
 }

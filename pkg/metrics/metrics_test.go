@@ -78,7 +78,7 @@ test_re_register_total{key="value2"} 1
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.recorder {
-				InitializeRecorder()
+				InitializeRecorder(false)
 			}
 			m := Recorder()
 
