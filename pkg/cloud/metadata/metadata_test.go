@@ -119,7 +119,7 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			if tc.ec2MetadataError == nil && !tc.imdsDisabled {
-				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -172,14 +172,14 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Error getting instance identity document",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(nil, errors.New("failed to get instance identity document"))
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(nil, errors.New("failed to get instance identity document"))
 			},
 			expectedError: errors.New("could not get EC2 instance identity metadata: failed to get instance identity document"),
 		},
 		{
 			name: "TestEC2MetadataInstanceInfo: Empty instance ID",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID: "",
 					},
@@ -190,7 +190,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Empty instance type",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:   "i-1234567890abcdef0",
 						InstanceType: "",
@@ -202,7 +202,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Empty region and invalid region from session",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:   "i-1234567890abcdef0",
 						InstanceType: "c5.xlarge",
@@ -215,7 +215,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Empty availability zone and invalid region from session",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -229,7 +229,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Error getting ENIs metadata",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -244,7 +244,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Error reading ENIs metadata content",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -261,7 +261,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Error getting block device mappings metadata",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -279,7 +279,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Error reading block device mappings metadata content",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -299,7 +299,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Valid metadata with outpost ARN",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -336,7 +336,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 		{
 			name: "TestEC2MetadataInstanceInfo: Valid metadata without outpost ARN",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -366,7 +366,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 			name:              "TestEC2MetadataInstanceInfo: Valid metadata retrieving snow region/AZ from session",
 			regionFromSession: "snow",
 			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}, gomock.Any()).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",

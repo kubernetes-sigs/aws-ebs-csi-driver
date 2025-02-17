@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -32,10 +34,10 @@ const (
 	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn.
 	OutpostArnEndpoint string = "outpost-arn"
 
-	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
+	// EnisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
 	EnisEndpoint string = "network/interfaces/macs"
 
-	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
+	// BlockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
 	BlockDevicesEndpoint string = "block-device-mapping"
 )
 
@@ -51,7 +53,15 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 }
 
 func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
-	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
+	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{}, func(o *imds.Options) {
+		// Default sdk behavior times out IMDS calls after 5s and doesn't retry. This isn't always enough time.
+		// We override this default for the first IMDS call to avoid falling back to other metadata sources.
+		o.DisableDefaultTimeout = true
+		o.Retryer = retry.NewStandard(func(so *retry.StandardOptions) {
+			so.MaxAttempts = 20
+			so.MaxBackoff = 1 * time.Second
+		})
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
 	}
@@ -115,7 +125,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	outpostArnOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: OutpostArnEndpoint})
-	// "outpust-arn" returns 404 for non-outpost instances. note that the request is made to a link-local address.
+	// "outpost-arn" returns 404 for non-outpost instances. Note that the request is made to a link-local address.
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
 	if err != nil {

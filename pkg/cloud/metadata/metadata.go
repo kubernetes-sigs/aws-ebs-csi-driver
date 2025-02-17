@@ -46,23 +46,22 @@ var _ MetadataService = &Metadata{}
 // It prefers EC2MetadataClient (IMDS) in order to get an accurate number of attached devices.
 func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataService, error) {
 	// Don't make an IMDS call if we know it's disabled
-	imdsDisabled := os.Getenv("AWS_EC2_METADATA_DISABLED")
-	if imdsDisabled == "true" {
+	if os.Getenv("AWS_EC2_METADATA_DISABLED") == "true" {
 		klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
 	} else {
-		klog.V(4).InfoS("Attempting to retrieve instance metadata from IMDS")
+		klog.V(2).InfoS("Attempting to retrieve instance metadata from IMDS")
 		metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
 		if err == nil {
-			klog.V(4).InfoS("Retrieved metadata from IMDS")
+			klog.V(2).InfoS("Retrieved metadata from IMDS")
 			return metadata.overrideRegion(region), nil
 		}
-		klog.ErrorS(err, "Retrieving IMDS metadata failed, falling back to Kubernetes metadata")
+		klog.ErrorS(err, "Retrieving IMDS metadata failed. Can this container reach IMDS and is hop limit set to 2? Falling back to Kubernetes metadata")
 	}
 
-	klog.V(4).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
+	klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
 	metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient)
 	if err == nil {
-		klog.V(4).InfoS("Retrieved metadata from Kubernetes")
+		klog.V(2).InfoS("Retrieved metadata from Kubernetes")
 		return metadata.overrideRegion(region), nil
 	}
 	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
