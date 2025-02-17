@@ -18,7 +18,8 @@ This example will only work on a cluster with the `VolumeAttributesClass` featur
 2. Wait for the `PersistentVolumeClaim` to bind and the pod to reach the `Running` state
     ```sh
     $ kubectl get pvc ebs-claim
-    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGEebs-claim   Bound    pvc-076b2d14-b643-47d4-a2ce-fbf9cd36572b   100Gi      RWO            ebs-sc         <unset>                 2m51s
+    NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+    ebs-claim   Bound    pvc-076b2d14-b643-47d4-a2ce-fbf9cd36572b   100Gi      RWO            ebs-sc         <unset>                 2m51s
     
     $ kubectl get pod app
     NAME   READY   STATUS    RESTARTS   AGE
