@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -32,11 +33,14 @@ const (
 	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn.
 	OutpostArnEndpoint string = "outpost-arn"
 
-	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
+	// EnisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
 	EnisEndpoint string = "network/interfaces/macs"
 
-	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
+	// BlockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
 	BlockDevicesEndpoint string = "block-device-mapping"
+
+	// imdsTimeoutDuration is maximum time driver waits for IMDS before falling back to another Metadata source.
+	imdsTimeoutDuration time.Duration = 15 * time.Second
 )
 
 type EC2MetadataClient func() (EC2Metadata, error)
@@ -50,8 +54,18 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 	return svc, nil
 }
 
+// EC2MetadataInstanceInfo retrieves driver Metadata via EC2 Instance Metadata Service (IMDS).
 func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
-	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
+	// By default, SDK IMDS calls timeout after 5s. This isn't always enough time for IMDS to be ready on Node.
+	// We extend this timeout on our first IMDS call to delay falling back to other metadata sources.
+	imdsCtx, cancel := context.WithTimeout(context.Background(), imdsTimeoutDuration)
+	defer cancel()
+	docOutput, err := svc.GetInstanceIdentityDocument(imdsCtx, &imds.GetInstanceIdentityDocumentInput{}, func(o *imds.Options) {
+		o.DisableDefaultTimeout = true
+	})
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, fmt.Errorf("unable to reach IMDS within %s, please ensure that the container can reach IMDS and that the hop limit for IMDS is set to 2 or greater", time.Duration.Round(imdsTimeoutDuration, time.Second))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
 	}
@@ -115,7 +129,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	outpostArnOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: OutpostArnEndpoint})
-	// "outpust-arn" returns 404 for non-outpost instances. note that the request is made to a link-local address.
+	// "outpost-arn" returns 404 for non-outpost instances. Note that the request is made to a link-local address.
 	// it's guaranteed to be in the form `arn:<partition>:outposts:<region>:<account>:outpost/<outpost-id>`
 	// There's a case to be made here to ignore the error so a failure here wouldn't affect non-outpost calls.
 	if err != nil {
