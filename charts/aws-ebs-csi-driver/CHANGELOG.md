@@ -1,5 +1,16 @@
 # Helm chart
 
+## v2.40.0
+
+### Feature
+
+- Add values.schema.json to validate changes in values.yaml make it to the add-on schema. ([#2286](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2286), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Bug or Regression
+
+- Fix helm regression with values.schema.yaml. ([#2322](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2322), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- `global` has been added to the values schema, allowing aws-ebs-csi-driver to be used in a Helm sub chart ([#2321](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2321), [@kejne](https://github.com/kejne))
+
 ## v2.39.3
 
 ### Urgent Upgrade Notes
