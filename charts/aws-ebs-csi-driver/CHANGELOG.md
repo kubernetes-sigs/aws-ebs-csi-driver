@@ -2,6 +2,10 @@
 
 ## v2.40.0
 
+#### Default for enable windows changed
+
+The default value for enableWindows has been changed from false to true. This change makes it so the node damemonset will be scheduled on windows nodes by default. If you wish to not have the node daemonset scheduled on your windows nodes you will need to change enableWindows to false.
+
 ### Feature
 
 - Add values.schema.json to validate changes in values.yaml. ([#2286](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2286), [@ElijahQuinones](https://github.com/ElijahQuinones))
