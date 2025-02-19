@@ -4,6 +4,10 @@
 
 If you are not using the AmazonEBSCSIDriverPolicy managed policy, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). As of 2025-01-13: AWS updated the `AmazonEBSCSIDriverPolicy` managed policy in all AWS partitions. Any driver installation referencing this managed policy has been updated automatically and no action is needed on your part. This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded. This will be the last release with this warning message.
 
+### Feature
+
+Support String Interpolation for Modifying Tags On Existing Volumes Through VAC ([#2093](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2093), [@mdzraf](https://github.com/mdzraf))
+
 ### Bug or Regression
 
 Fix raw pointer log in `EnableFastSnapshotRestores` ([#2334](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2334), [@torredil](https://github.com/torredil))
