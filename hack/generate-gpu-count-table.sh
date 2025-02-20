@@ -35,4 +35,4 @@ function get_all_gpus() {
   done
 }
 
-get_all_gpus | sort | uniq | grep -v "g5.48xlarge"
+get_all_gpus | sort | uniq | grep -v -E "g5.48xlarge|p4d.24xlarge"

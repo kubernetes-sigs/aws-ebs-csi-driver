@@ -37,4 +37,4 @@ function get_all_instance_stores() {
   done
 }
 
-get_all_instance_stores | sort | uniq | grep -v "g5.48xlarge"
+get_all_instance_stores | sort | uniq | grep -v -E "g5.48xlarge|p4d.24xlarge"
