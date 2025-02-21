@@ -49,6 +49,7 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestThrottles, labels)
 						}
 					} else {
+						labels["code"] = apiErr.ErrorCode()
 						metrics.Recorder().IncreaseCount(metrics.APIRequestErrors, labels)
 						if deprecatedMetrics {
 							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestErrors, labels)
