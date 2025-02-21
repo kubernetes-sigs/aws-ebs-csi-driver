@@ -41,11 +41,12 @@ aws_ebs_csi_api_request_duration_seconds_sum{request="AttachVolume"} 0.547694574
 aws_ebs_csi_api_request_duration_seconds_count{request="AttachVolume"} 1
 ...
 ```
+By default, the driver deploys 2 replicas of the controller pod. However, each CSI sidecar (such as the attacher and resizer) uses a leader election mechanism to designate one leader pod per sidecar.
 
-To manually scrape AWS metrics: 
+To manually scrape metrics for specific operations, you must identify and target the leader pod for the relevant sidecar. As an example, to manually scrape metrics for AttachVolume operations (handled by the external attacher), follow these steps:
 ```sh
-$ export ebs_csi_controller=$(kubectl get lease -n kube-system ebs-csi-aws-com -o=jsonpath="{.spec.holderIdentity}")
-$ kubectl port-forward $ebs_csi_controller 3301:3301 -n kube-system
+$ export ebs_csi_attacher_leader=$(kubectl get lease external-attacher-leader-ebs-csi-aws-com -n kube-system -o=jsonpath='{.spec.holderIdentity}')
+$ kubectl port-forward $ebs_csi_attacher_leader 3301:3301 -n kube-system &
 $ curl 127.0.0.1:3301/metrics
 ```
 
