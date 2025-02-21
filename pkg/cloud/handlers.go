@@ -49,6 +49,7 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
 						}
 					} else {
+						labels["code"] = apiErr.ErrorCode()
 						metrics.Recorder().IncreaseCount("aws_ebs_csi_api_request_errors_total", labels)
 						if deprecatedMetrics {
 							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
