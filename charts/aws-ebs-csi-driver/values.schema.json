@@ -4,6 +4,10 @@
   "additionalProperties": false,
   "description": "Configurable parameters of the AWS EBS CSI Driver",
   "properties": {
+    "enabled": {
+      "description": "Usually used when using AWS EBS CSI Driver as a subchart.",
+      "type": "boolean"
+    },
     "global": {
       "type": "object",
       "additionalProperties": true,
