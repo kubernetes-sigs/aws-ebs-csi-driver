@@ -1,5 +1,15 @@
 # Helm chart
 
+## v2.40.1
+
+### Urgent Upgrade Notes
+
+Please upgrade from v2.39.3 directly to v2.40.1 to prevent potential issues when using the enabled flag with AWS EBS CSI Driver as a subchart.
+
+### Bug or Regression
+
+Fix issue with enabled flag handling when used as a subchart ([#2286](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2359), [@sm43](https://github.com/sm43))
+
 ## v2.40.0
 
 #### Default for enable windows changed
