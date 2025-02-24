@@ -1,5 +1,12 @@
 # Helm chart
 
+## v2.40.1
+
+### Bug or Regression
+
+- Prevent null deref when enableWindows and otelTracing enabled on node ([#2357](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2357), [@ConnorJC3](https://github.com/ConnorJC3)) 
+- Fix incorrect properties validation in Helm schema ([#2356](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2356), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## v2.40.0
 
 #### Default for enable windows changed
