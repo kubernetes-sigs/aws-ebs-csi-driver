@@ -30,7 +30,9 @@ if ! make -C "${TEST_DIR}" update >/dev/null; then
   exit 1
 fi
 
-if ! diff -x bin -r "${TEST_DIR}" "${ROOT}"; then
+# Ignore copyright year changes
+COPYRIGHT_REGEX="Copyright [0-9]\{4\} The Kubernetes Authors.$"
+if ! diff -x bin -I "${COPYRIGHT_REGEX}" -r "${TEST_DIR}" "${ROOT}"; then
   echo "Auto-generation/formatting needs to run!"
   echo "Run \`make update\` to fix!"
   exit 1
