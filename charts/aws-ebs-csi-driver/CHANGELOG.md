@@ -1,5 +1,11 @@
 # Helm chart
 
+## v2.40.2
+
+### Bug or Regression
+
+- Add enabled flag to schema for sub-charting ([#2359](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2359), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## v2.40.1
 
 ### Bug or Regression
