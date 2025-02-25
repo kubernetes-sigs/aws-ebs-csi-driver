@@ -1,5 +1,9 @@
 # v1.40.0
 
+#### [Deprecation announcement] AWS Snow Family device support for the EBS CSI Driver
+
+Support for the EBS CSI Driver on [AWS Snow Family devices](https://aws.amazon.com/snowball/) is deprecated, effective immediately. No further Snow-specific bugfixes or feature requests will be merged. The existing functionality for Snow devices will be removed in the 1.43 release of the EBS CSI Driver. This announcement does not affect the support of the EBS CSI Driver on other platforms, such as [Amazon EC2](https://aws.amazon.com/ec2/) or EC2 on [AWS Outposts](https://aws.amazon.com/outposts/). For any questions related to this announcement, please comment on this issue [#2365](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2365) or open a new issue.
+
 #### Update to the EBS CSI Driver IAM Policy
 
 If you are not using the AmazonEBSCSIDriverPolicy managed policy, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190). As of 2025-01-13: AWS updated the `AmazonEBSCSIDriverPolicy` managed policy in all AWS partitions. Any driver installation referencing this managed policy has been updated automatically and no action is needed on your part. This change affects all versions of the EBS CSI Driver and action may be required even on clusters where the driver is not upgraded. This will be the last release with this warning message.
