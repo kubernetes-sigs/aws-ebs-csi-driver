@@ -47,6 +47,9 @@ kind: Service
 metadata:
   name: ebs-csi-node
   namespace: {{ .Release.Namespace }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3302"
   labels:
     app: ebs-csi-node
 spec:
