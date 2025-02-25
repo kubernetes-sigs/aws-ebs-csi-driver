@@ -9,6 +9,10 @@
       "additionalProperties": true,
       "description": "Allowing global parameters for sub-charting"
     },
+    "enabled": {
+      "type": ["boolean", "null"],
+      "description": "No effect - reserved for use in sub-charting"
+    },
     "a1CompatibilityDaemonSet": {
       "type": "boolean",
       "description": "Enable compatibility for the A1 instance family via use of an AL2-based image in a separate DaemonSet",
