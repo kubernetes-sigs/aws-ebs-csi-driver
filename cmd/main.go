@@ -155,7 +155,7 @@ func main() {
 	}
 
 	if options.HTTPEndpoint != "" {
-		r := metrics.InitializeRecorder()
+		r := metrics.InitializeRecorder(options.DeprecatedMetrics)
 		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 
 		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {

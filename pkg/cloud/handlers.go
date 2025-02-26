@@ -44,22 +44,22 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 						labels = map[string]string{
 							"operation_name": operationName,
 						}
-						metrics.Recorder().IncreaseCount("aws_ebs_csi_api_request_throttles_total", labels)
+						metrics.Recorder().IncreaseCount(metrics.APIRequestThrottles, labels)
 						if deprecatedMetrics {
-							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_throttled_requests_total", labels)
+							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestThrottles, labels)
 						}
 					} else {
-						metrics.Recorder().IncreaseCount("aws_ebs_csi_api_request_errors_total", labels)
+						metrics.Recorder().IncreaseCount(metrics.APIRequestErrors, labels)
 						if deprecatedMetrics {
-							metrics.Recorder().IncreaseCount("cloudprovider_aws_api_request_errors", labels)
+							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestErrors, labels)
 						}
 					}
 				}
 			} else {
 				duration := time.Since(start).Seconds()
-				metrics.Recorder().ObserveHistogram("aws_ebs_csi_api_request_duration_seconds", duration, labels, nil)
+				metrics.Recorder().ObserveHistogram(metrics.APIRequestDuration, duration, labels, nil)
 				if deprecatedMetrics {
-					metrics.Recorder().ObserveHistogram("cloudprovider_aws_api_request_duration_seconds", duration, labels, nil)
+					metrics.Recorder().ObserveHistogram(metrics.DeprecatedAPIRequestDuration, duration, labels, nil)
 				}
 			}
 			return output, metadata, err
