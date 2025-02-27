@@ -47,9 +47,9 @@ sidecars:
   attacher:
     env: []
     image:
-      pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.8.0-eks-1-32-6"
+      pullPolicy: Always
+      repository: public.ecr.aws/x5x2x9k4/test
+      tag: "external-attacher-a5f7"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -76,9 +76,9 @@ sidecars:
     forceEnable: false
     env: []
     image:
-      pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.2.0-eks-1-32-6"
+      pullPolicy: Always
+      repository: public.ecr.aws/x5x2x9k4/test
+      tag: "external-snapshotter-012b"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -104,9 +104,9 @@ sidecars:
   resizer:
     env: []
     image:
-      pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.13.1-eks-1-32-6"
+      pullPolicy: Always
+      repository: public.ecr.aws/x5x2x9k4/test
+      tag: "external-resizer-1189"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
