@@ -34,6 +34,7 @@ func init() {
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
 	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "i7ie", "i8g", "p5", "p5e", "p5en"}
 	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
+	dedicatedVolumeLimits["p4d.24xlarge"] = 28
 
 	for _, family := range instanceFamilies {
 		for _, size := range commonInstanceSizes {
@@ -160,7 +161,7 @@ func GetReservedSlotsForInstanceType(it string) int {
 
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-volumes.html
 // IMDS does not provide NVMe instance store data; we'll just list all instances here
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
+// g5.48xlarge and p4d.24xlarge are not added to this table as they are in the maxVolumeLimits.
 var nvmeInstanceStoreVolumes = map[string]int{
 	"c1.medium":       1,
 	"c1.xlarge":       4,
@@ -415,7 +416,6 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"m7gd.metal":      2,
 	"m7gd.xlarge":     1,
 	"p3dn.24xlarge":   2,
-	"p4d.24xlarge":    8,
 	"p4de.24xlarge":   8,
 	"p5.48xlarge":     8,
 	"p5e.48xlarge":    8,
@@ -532,7 +532,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 
 // https://aws.amazon.com/ec2/instance-types
 // Despite the dl1.24xlarge having Gaudi Accelerators describe instance types considers them GPUs as such that instance type is in this table
-// g5.48xlarge is not added to this table as it is in the maxVolumeLimits.
+// g5.48xlarge and p4d.24xlarge are not added to this table as they are in the maxVolumeLimits.
 var gpuInstanceGpus = map[string]int{
 	"dl1.24xlarge":  8,
 	"g3.16xlarge":   4,
@@ -589,7 +589,6 @@ var gpuInstanceGpus = map[string]int{
 	"p3.2xlarge":    1,
 	"p3.8xlarge":    4,
 	"p3dn.24xlarge": 8,
-	"p4d.24xlarge":  8,
 	"p4de.24xlarge": 8,
 	"p5.48xlarge":   8,
 	"p5e.48xlarge":  8,
