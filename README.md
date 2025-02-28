@@ -3,8 +3,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/kubernetes-sigs/aws-ebs-csi-driver)](https://goreportcard.com/report/github.com/kubernetes-sigs/aws-ebs-csi-driver)
 
 > [!CAUTION]
-> ## [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
-> Due to an upcoming change in handling of IAM polices for the CreateVolume API when creating a volume from an EBS snapshot, a change to your EBS CSI Driver policy may be needed. For more information and remediation steps, see [GitHub issue #2190](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2190).
+> ## [Deprecation announcement] AWS Snow Family device support for the EBS CSI Driver
+> Support for the EBS CSI Driver on [AWS Snow Family devices](https://aws.amazon.com/snowball/) is deprecated, effective immediately. No further Snow-specific bugfixes or feature requests will be merged. The existing functionality for Snow devices will be removed in the 1.43 release of the EBS CSI Driver. This announcement does not affect the support of the EBS CSI Driver on other platforms, such as [Amazon EC2](https://aws.amazon.com/ec2/) or EC2 on [AWS Outposts](https://aws.amazon.com/outposts/). For any questions related to this announcement, please comment on this issue [#2365](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2365) or open a new issue.
 
 
 ## Overview
