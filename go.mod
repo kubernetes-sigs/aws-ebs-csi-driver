@@ -172,7 +172,6 @@ require (
 )
 
 replace (
-	github.com/containerd/errdefs => github.com/containerd/errdefs v0.1.0 // Mitigate errdefs breaking change (Remove after all depdendencies upgrade to v1.0.0)
 	k8s.io/api => k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.32.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.32.2
