@@ -90,7 +90,6 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		return nil, fmt.Errorf("could not read ENIs metadata content: %w", err)
 	}
 	attachedENIs := util.CountMACAddresses(string(enis))
-	klog.V(4).InfoS("Number of attached ENIs", "attachedENIs", attachedENIs)
 
 	blockDevMappings := 0
 	if !util.IsSBE(doc.Region) {
