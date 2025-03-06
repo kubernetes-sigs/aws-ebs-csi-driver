@@ -197,7 +197,8 @@ sub-push-fips:
 	$(MAKE) FIPS=true TAG=$(TAG)-fips sub-push
 
 .PHONY: sub-push-a1compat
-sub-push-a1compat: sub-image-linux-arm64-al2
+sub-push-a1compat:
+	$(MAKE) DOCKER_EXTRA_ARGS="-t=$(IMAGE):$(TAG)-a1compat" sub-image-linux-arm64-al2
 
 .PHONY: all-push
 all-push: sub-push sub-push-fips sub-push-a1compat
@@ -234,6 +235,7 @@ image:
 		--build-arg=VERSION=$(VERSION) \
 		$(FIPS_DOCKER_ARGS) \
 		`./hack/provenance.sh` \
+		$(DOCKER_EXTRA_ARGS) \
 		.
 
 .PHONY: create-manifest
