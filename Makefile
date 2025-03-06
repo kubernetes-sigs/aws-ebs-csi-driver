@@ -39,6 +39,10 @@ ifeq ($(FIPS),true)
 	FIPS_DOCKER_ARGS=--build-arg=GOEXPERIMENT=boringcrypto
 endif
 
+ifdef ARTIFACTS
+	GINKGO_ARTIFACTS_ARGS=--junit-report="$(ARTIFACTS)/junit.xml"
+endif
+
 GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
 ALL_OS?=linux windows
@@ -72,8 +76,8 @@ clean:
 	rm -rf bin/
 
 .PHONY: test
-test:
-	go test -v -race ./cmd/... ./pkg/... ./tests/sanity/...
+test: bin/ginkgo
+	./bin/ginkgo run --race -p $(GINKGO_ARTIFACTS_ARGS) ./cmd/... ./pkg/... ./tests/sanity/...
 
 .PHONY: test/coverage
 test/coverage:
