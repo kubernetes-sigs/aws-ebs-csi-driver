@@ -209,6 +209,10 @@ test-e2e-%:
 test-helm-chart:
 	./hack/prow-e2e.sh test-helm-chart
 
+.PHONY: test-images 
+test-images: bin/aws 
+	./hack/e2e/test-images.sh 
+
 ## Builds
 
 bin:
