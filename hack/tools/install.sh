@@ -27,7 +27,7 @@ EKSCTL_VERSION="v0.197.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.22.2"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.63.4"
+GOLANGCI_LINT_VERSION="v1.64.5"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.3.0"
 # https://github.com/helm/helm
