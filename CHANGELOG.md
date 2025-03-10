@@ -1,3 +1,13 @@
+# v1.39.1
+
+### Feature
+
+- Error `code` label is now supported EBS CSI API request error metrics ([#2355](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2355), [@engedaam](https://github.com/engedaam))
+
+### Dependencies
+
+- Upgrade dependencies ([#2355](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2355), [@engedaam](https://github.com/engedaam))
+
 # v1.39.0
 
 #### [ACTION REQUIRED] Update to the EBS CSI Driver IAM Policy
