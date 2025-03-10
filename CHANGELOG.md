@@ -1,3 +1,13 @@
+# v1.40.1
+
+### Feature
+
+- Error `code` label is now supported EBS CSI API request error metrics ([#2355](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2355), [@engedaam](https://github.com/engedaam))
+
+### Dependencies
+
+- Fix vuln GO-2025-3487 ([#2382](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2382), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
 # v1.40.0
 
 #### [Deprecation announcement] AWS Snow Family device support for the EBS CSI Driver

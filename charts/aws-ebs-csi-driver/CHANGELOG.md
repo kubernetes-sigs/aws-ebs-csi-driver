@@ -1,5 +1,15 @@
 # Helm chart
 
+## v2.40.3
+
+### Feature
+
+- Upgrade csi-attacher to v4.8.1, csi-snapshotter to v8.2.1, csi-resizer to v1.13.2
+
+### Bug or regression
+
+- Fix incorrect schema entry for controller.podDisruptionBudget.unhealthyPodEvictionPolicy ([#2389](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2389),[@jamesalford](https://github.com/jamesalford))
+
 ## v2.40.2
 
 ### Bug or Regression
