@@ -285,7 +285,7 @@
               "default": true
             },
             "unhealthyPodEvictionPolicy": {
-              "type": ["object", "null"],
+              "type": ["string", "null"],
               "description": "Unhealthy pod eviction policy for the EBS CSI Controller Pod's PodDisruptionBudget",
               "default": null
             }
