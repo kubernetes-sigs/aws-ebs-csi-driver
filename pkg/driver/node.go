@@ -593,10 +593,11 @@ func (d *NodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	}
 
 	topology := &csi.Topology{Segments: segments}
-
+	maxVolumesPerNode := d.getVolumesLimit()
+	klog.V(4).InfoS("NodeGetInfo:", "maxVolumesPerNode", maxVolumesPerNode)
 	return &csi.NodeGetInfoResponse{
 		NodeId:             d.metadata.GetInstanceID(),
-		MaxVolumesPerNode:  d.getVolumesLimit(),
+		MaxVolumesPerNode:  maxVolumesPerNode,
 		AccessibleTopology: topology,
 	}, nil
 }
@@ -765,6 +766,7 @@ func (d *NodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 // getVolumesLimit returns the limit of volumes that the node supports.
 func (d *NodeService) getVolumesLimit() int64 {
 	if d.options.VolumeAttachLimit >= 0 {
+		klog.V(4).InfoS("getVolumesLimit: VolumeAttachLimit manually set to", d.options.VolumeAttachLimit, "overriding the default value")
 		return d.options.VolumeAttachLimit
 	}
 	if util.IsSBE(d.metadata.GetRegion()) {
@@ -772,14 +774,18 @@ func (d *NodeService) getVolumesLimit() int64 {
 	}
 
 	instanceType := d.metadata.GetInstanceType()
+	klog.V(4).InfoS("getVolumesLimit:", "instanceType", instanceType)
 
 	isNitro := cloud.IsNitroInstanceType(instanceType)
 	availableAttachments := cloud.GetMaxAttachments(isNitro)
+	klog.V(4).InfoS("getVolumesLimit:", "availableAttachments", availableAttachments)
 
 	reservedVolumeAttachments := d.options.ReservedVolumeAttachments
 	if reservedVolumeAttachments == -1 {
 		reservedVolumeAttachments = d.metadata.GetNumBlockDeviceMappings() + 1 // +1 for the root device
+		klog.V(4).InfoS("getVolumesLimit:", "numBlockDevices", (reservedVolumeAttachments - 1))
 	}
+	klog.V(4).InfoS("getVolumesLimit:", "reservedVolumeAttachments", reservedVolumeAttachments)
 
 	dedicatedLimit := cloud.GetDedicatedLimitForInstanceType(instanceType)
 	maxEBSAttachments, hasMaxVolumeLimit := cloud.GetEBSLimitForInstanceType(instanceType)
@@ -790,9 +796,12 @@ func (d *NodeService) getVolumesLimit() int64 {
 	// For (all other) Nitro instances, attachments are shared between EBS volumes, ENIs and NVMe instance stores
 	if dedicatedLimit != 0 {
 		availableAttachments = dedicatedLimit
+		klog.V(4).InfoS("getVolumesLimit:", "dedicatedLimit", dedicatedLimit)
 	} else if isNitro {
 		enis := d.metadata.GetNumAttachedENIs()
+		klog.V(4).InfoS("getVolumesLimit:", "ENIs", enis)
 		reservedSlots := cloud.GetReservedSlotsForInstanceType(instanceType)
+		klog.V(4).InfoS("getVolumesLimit:", "reservedSlots", reservedSlots)
 		if hasMaxVolumeLimit {
 			availableAttachments = availableAttachments - (enis - 1) - reservedSlots
 		} else {
