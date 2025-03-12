@@ -19,7 +19,7 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.24.21"
+AWSCLI_VERSION="2.24.22"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.12.0"
 # https://github.com/eksctl-io/eksctl
@@ -27,9 +27,9 @@ EKSCTL_VERSION="v0.205.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.23.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.64.6"
+GOLANGCI_LINT_VERSION="v1.64.7"
 # https://github.com/hairyhenderson/gomplate
-GOMPLATE_VERSION="v4.3.0"
+GOMPLATE_VERSION="v4.3.1"
 # https://github.com/helm/helm
 HELM_VERSION="v3.17.1"
 # https://github.com/kubernetes/kops
