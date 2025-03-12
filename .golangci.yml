@@ -37,6 +37,9 @@ linters-settings:
     dot-import-whitelist:
       - "github.com/onsi/gomega"
       - "github.com/onsi/ginkgo/v2"
+  usetesting:
+    # Turning check for os.MkdirTemp() off as t.TempDir() is not sufficient for mounter and sanity tests in their current state.
+    os-mkdir-temp: false 
 linters:
   enable-all: true
   disable:
@@ -68,4 +71,3 @@ linters:
     - godox # Do not allow TODOs
     - nonamedreturns # Need to nolint/refactor a few places our code
     - paralleltest # There are many tests that aren't parallelized
-    - usetesting # TODO consider adding usetesting linter
