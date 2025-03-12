@@ -115,7 +115,7 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 		f.StringVar(&o.UserAgentExtra, "user-agent-extra", "", "Extra string appended to user agent.")
 		f.BoolVar(&o.Batching, "batching", false, "To enable batching of API calls. This is especially helpful for improving performance in workloads that are sensitive to EC2 rate limits.")
 		f.DurationVar(&o.ModifyVolumeRequestHandlerTimeout, "modify-volume-request-handler-timeout", DefaultModifyVolumeRequestHandlerTimeout, "Timeout for the window in which volume modification calls must be received in order for them to coalesce into a single volume modification call to AWS. This must be lower than the csi-resizer and volumemodifier timeouts")
-		f.BoolVar(&o.DeprecatedMetrics, "deprecated-metrics", true, "DEPRECATED: To enable deprecated metrics. This parameter is only for backward compatibility and may be removed in a future release.")
+		f.BoolVar(&o.DeprecatedMetrics, "deprecated-metrics", false, "DEPRECATED: To enable deprecated metrics. This parameter is only for backward compatibility and may be removed in a future release.")
 	}
 	// Node options
 	if o.Mode == AllMode || o.Mode == NodeMode {
