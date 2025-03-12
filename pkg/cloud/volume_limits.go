@@ -32,9 +32,15 @@ const (
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
-	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "i7ie", "i8g", "p5", "p5e", "p5en"}
-	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "8xlarge", "12xlarge"}
+	instanceFamilies := []string{"m8g", "m7i", "m7i-flex", "m7a", "c8g", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "i7ie", "i8g", "p5", "p5e", "p5en", "u7i-6tb", "u7i-8tb", "u7i-12tb", "u7in-16tb", "u7in-24tb", "u7in-32tb", "u7inh-32tb", "f2", "trn2", "trn2u"}
+	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "6xlarge", "8xlarge", "12xlarge"}
 	dedicatedVolumeLimits["p4d.24xlarge"] = 28
+	dedicatedVolumeLimits["trn2.48xlarge"] = 64
+	dedicatedVolumeLimits["trn2u.48xlarge"] = 64
+	dedicatedVolumeLimits["hpc7a.12xlarge"] = 27
+	dedicatedVolumeLimits["hpc7a.24xlarge"] = 27
+	dedicatedVolumeLimits["hpc7a.48xlarge"] = 27
+	dedicatedVolumeLimits["hpc7a.96xlarge"] = 27
 
 	for _, family := range instanceFamilies {
 		for _, size := range commonInstanceSizes {
@@ -48,6 +54,9 @@ func init() {
 		dedicatedVolumeLimits[family+".metal-48xl"] = 79
 		dedicatedVolumeLimits[family+".32xlarge"] = 88
 		dedicatedVolumeLimits[family+".48xlarge"] = 128
+		dedicatedVolumeLimits[family+".112xlarge"] = 128
+		dedicatedVolumeLimits[family+".224xlarge"] = 128
+		dedicatedVolumeLimits[family+".480xlarge"] = 128
 	}
 }
 
@@ -233,6 +242,9 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"f1.16xlarge":     4,
 	"f1.2xlarge":      1,
 	"f1.4xlarge":      1,
+	"f2.12xlarge":     2,
+	"f2.48xlarge":     8,
+	"f2.6xlarge":      1,
 	"g4ad.16xlarge":   2,
 	"g4ad.2xlarge":    1,
 	"g4ad.4xlarge":    1,
@@ -268,6 +280,7 @@ var nvmeInstanceStoreVolumes = map[string]int{
 	"g6e.8xlarge":     2,
 	"g6e.xlarge":      1,
 	"g6.xlarge":       1,
+	"gd.12xlarge":     2,
 	"gr6.4xlarge":     1,
 	"gr6.8xlarge":     2,
 	"h1.16xlarge":     8,

@@ -19,32 +19,32 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.24.5"
+AWSCLI_VERSION="2.24.22"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.12.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.204.0"
+EKSCTL_VERSION="v0.205.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.22.2"
+GINKGO_VERSION="v2.23.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.64.5"
+GOLANGCI_LINT_VERSION="v1.64.7"
 # https://github.com/hairyhenderson/gomplate
-GOMPLATE_VERSION="v4.3.0"
+GOMPLATE_VERSION="v4.3.1"
 # https://github.com/helm/helm
 HELM_VERSION="v3.17.1"
 # https://github.com/kubernetes/kops
 # NOTE: We pin kops to a commit instead of a release to support newer versions of k8s earlier
-KOPS_COMMIT="99ba10e2d554876aa4d5096f34ab03e092e9b16b"
+KOPS_COMMIT="0789af746b4e5beb6eab4b9a4b42b88f3c072d19"
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20241216131453-22d5b1410bef"
+KUBETEST2_VERSION="v0.0.0-20250219121027-1cc02edeb0b6"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
-SHFMT_VERSION="v3.10.0"
+SHFMT_VERSION="v3.11.0"
 # https://pypi.org/project/yamale/
 YAMALE_VERSION="6.0.0"
 # https://pypi.org/project/yamllint/
-YAMLLINT_VERSION="1.35.1"
+YAMLLINT_VERSION="1.36.0"
 
 OS="$(go env GOHOSTOS)"
 ARCH="$(go env GOHOSTARCH)"
