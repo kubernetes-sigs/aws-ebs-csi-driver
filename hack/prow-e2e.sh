@@ -25,6 +25,7 @@ case ${1} in
 test-e2e-single-az)
   TEST="single-az"
   export AWS_AVAILABILITY_ZONES="us-west-2a"
+  aws elbv2 describe-target-groups --region us-west-2 --query "TargetGroups[].TargetGroupArn" | jq '.[]' --raw-output  | grep ebs | grep csi | xargs -n1 aws elbv2 delete-target-group --region us-west-2 --target-group-arn
   ;;
 test-e2e-multi-az)
   TEST="multi-az"
@@ -65,6 +66,8 @@ test-helm-chart)
   exit 1
   ;;
 esac
+
+exit 2
 
 export CLUSTER_NAME="e2e-${BUILD_ID:-${RANDOM}}.k8s.local"
 # Use S3 bucket created for CI
