@@ -1,3 +1,140 @@
+# v1.41.0
+
+### Note on Deprecated Metrics
+
+- Prior to this release, disabled metrics (prefixed with `cloudprovider_aws_`) were on by default, they are now disabled by default. Equivalent metrics are emitted with the prefix `aws_ebs_csi_`. The old metric names may be re-enabled via the CLI parameter `--deprecated-metrics=true` on the controller (on Helm via the `controller.additionalArgs` parameter). The old metric names are deprecated and the CLI parameter will be removed in a future version of the EBS CSI Driver.
+
+### Feature
+
+- Error `code` label is now supported EBS CSI API request error metrics ([#2355](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2355), [@engedaam](https://github.com/engedaam))
+
+### Documentation
+
+- Fix metrics.md To Show How to Export Leader Pods for Sidecars ([#2362](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2362), [@mdzraf](https://github.com/mdzraf))
+
+### Bug or Regression
+
+- Fix p4d.24xlarge reporting wrong volume limit ([#2353](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2353), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- Skip IMDS call if AWS_EC2_METADATA_DISABLED=true ([#2342](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2342), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Other
+
+- Add Logs On How We Calculate CSINode.allocatables in NodeGetInfo ([#2372](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2372), [@mdzraf](https://github.com/mdzraf))
+- Sets `deprecatedMetrics` to false by default ([#2390](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2390), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+- github.com/containerd/errdefs/pkg: [v0.3.0](https://github.com/containerd/errdefs/tree/pkg/v0.3.0)
+- github.com/envoyproxy/go-control-plane/envoy: [v1.32.4](https://github.com/envoyproxy/go-control-plane/tree/envoy/v1.32.4)
+- github.com/envoyproxy/go-control-plane/ratelimit: [v0.1.0](https://github.com/envoyproxy/go-control-plane/tree/ratelimit/v0.1.0)
+- github.com/opencontainers/cgroups: [v0.0.1](https://github.com/opencontainers/cgroups/tree/v0.0.1)
+- github.com/santhosh-tekuri/jsonschema/v5: [v5.3.1](https://github.com/santhosh-tekuri/jsonschema/tree/v5.3.1)
+- sigs.k8s.io/randfill: v1.0.0
+
+### Changed
+- cel.dev/expr: v0.20.0 → v0.22.0
+- cloud.google.com/go/compute/metadata: v0.5.2 → v0.6.0
+- github.com/aws/aws-sdk-go-v2/config: [v1.29.6 → v1.29.9](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.29.6...config/v1.29.9)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.17.59 → v1.17.62](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.17.59...credentials/v1.17.62)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.16.28 → v1.16.30](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.16.28...feature/ec2/imds/v1.16.30)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.3.32 → v1.3.34](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.3.32...internal/configsources/v1.3.34)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.6.32 → v2.6.34](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.6.32...internal/endpoints/v2/v2.6.34)
+- github.com/aws/aws-sdk-go-v2/internal/ini: [v1.8.2 → v1.8.3](https://github.com/aws/aws-sdk-go-v2/compare/internal/ini/v1.8.2...internal/ini/v1.8.3)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.203.0 → v1.209.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.203.0...service/ec2/v1.209.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.12.2 → v1.12.3](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.12.2...service/internal/accept-encoding/v1.12.3)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.12.13 → v1.12.15](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.12.13...service/internal/presigned-url/v1.12.15)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.24.15 → v1.25.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.24.15...service/sso/v1.25.1)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.28.14 → v1.29.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.28.14...service/ssooidc/v1.29.1)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.33.14 → v1.33.17](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.33.14...service/sts/v1.33.17)
+- github.com/aws/aws-sdk-go-v2: [v1.36.1 → v1.36.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.36.1...v1.36.3)
+- github.com/aws/smithy-go: [v1.22.2 → v1.22.3](https://github.com/aws/smithy-go/compare/v1.22.2...v1.22.3)
+- github.com/census-instrumentation/opencensus-proto: [v0.4.1 → v0.2.1](https://github.com/census-instrumentation/opencensus-proto/compare/v0.4.1...v0.2.1)
+- github.com/cilium/ebpf: [v0.16.0 → v0.17.3](https://github.com/cilium/ebpf/compare/v0.16.0...v0.17.3)
+- github.com/cncf/xds/go: [b4127c9 → cff3c89](https://github.com/cncf/xds/compare/b4127c9...cff3c89)
+- github.com/containerd/errdefs: [v0.1.0 → v1.0.0](https://github.com/containerd/errdefs/compare/v0.1.0...v1.0.0)
+- github.com/containerd/typeurl/v2: [v2.2.0 → v2.2.3](https://github.com/containerd/typeurl/compare/v2.2.0...v2.2.3)
+- github.com/emicklei/go-restful/v3: [v3.12.1 → v3.12.2](https://github.com/emicklei/go-restful/compare/v3.12.1...v3.12.2)
+- github.com/envoyproxy/go-control-plane: [v0.13.1 → v0.13.4](https://github.com/envoyproxy/go-control-plane/compare/v0.13.1...v0.13.4)
+- github.com/envoyproxy/protoc-gen-validate: [v1.1.0 → v1.2.1](https://github.com/envoyproxy/protoc-gen-validate/compare/v1.1.0...v1.2.1)
+- github.com/golang/glog: [v1.2.3 → v1.2.4](https://github.com/golang/glog/compare/v1.2.3...v1.2.4)
+- github.com/google/cadvisor: [v0.51.0 → v0.52.1](https://github.com/google/cadvisor/compare/v0.51.0...v0.52.1)
+- github.com/google/go-cmp: [v0.6.0 → v0.7.0](https://github.com/google/go-cmp/compare/v0.6.0...v0.7.0)
+- github.com/google/pprof: [d0013a5 → 9094ed2](https://github.com/google/pprof/compare/d0013a5...9094ed2)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.26.1 → v2.26.3](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.26.1...v2.26.3)
+- github.com/klauspost/compress: [v1.17.11 → v1.18.0](https://github.com/klauspost/compress/compare/v1.17.11...v1.18.0)
+- github.com/matttproud/golang_protobuf_extensions: [v1.0.2 → v1.0.1](https://github.com/matttproud/golang_protobuf_extensions/compare/v1.0.2...v1.0.1)
+- github.com/onsi/ginkgo/v2: [v2.22.2 → v2.23.0](https://github.com/onsi/ginkgo/compare/v2.22.2...v2.23.0)
+- github.com/opencontainers/image-spec: [v1.1.0 → v1.1.1](https://github.com/opencontainers/image-spec/compare/v1.1.0...v1.1.1)
+- github.com/opencontainers/runtime-spec: [v1.2.0 → v1.2.1](https://github.com/opencontainers/runtime-spec/compare/v1.2.0...v1.2.1)
+- github.com/prometheus/client_golang: [v1.20.5 → v1.21.1](https://github.com/prometheus/client_golang/compare/v1.20.5...v1.21.1)
+- github.com/vishvananda/netlink: [b1ce50c → 62fb240](https://github.com/vishvananda/netlink/compare/b1ce50c...62fb240)
+- go.etcd.io/etcd/api/v3: v3.5.18 → v3.5.19
+- go.etcd.io/etcd/client/pkg/v3: v3.5.18 → v3.5.19
+- go.etcd.io/etcd/client/v3: v3.5.18 → v3.5.19
+- go.opentelemetry.io/contrib/detectors/gcp: v1.32.0 → v1.34.0
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.59.0 → v0.60.0
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.59.0 → v0.60.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.34.0 → v1.35.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.34.0 → v1.35.0
+- go.opentelemetry.io/otel/metric: v1.34.0 → v1.35.0
+- go.opentelemetry.io/otel/sdk/metric: v1.32.0 → v1.35.0
+- go.opentelemetry.io/otel/sdk: v1.34.0 → v1.35.0
+- go.opentelemetry.io/otel/trace: v1.34.0 → v1.35.0
+- go.opentelemetry.io/otel: v1.34.0 → v1.35.0
+- golang.org/x/crypto: v0.33.0 → v0.36.0
+- golang.org/x/exp: eff6e97 → 054e65f
+- golang.org/x/mod: v0.23.0 → v0.24.0
+- golang.org/x/net: v0.35.0 → v0.37.0
+- golang.org/x/oauth2: v0.26.0 → v0.28.0
+- golang.org/x/sync: v0.11.0 → v0.12.0
+- golang.org/x/sys: v0.30.0 → v0.31.0
+- golang.org/x/term: v0.29.0 → v0.30.0
+- golang.org/x/text: v0.22.0 → v0.23.0
+- golang.org/x/time: v0.10.0 → v0.11.0
+- golang.org/x/tools: v0.30.0 → v0.31.0
+- google.golang.org/genproto/googleapis/api: 5a70512 → 81fb87f
+- google.golang.org/genproto/googleapis/rpc: 5a70512 → 81fb87f
+- google.golang.org/grpc: v1.70.0 → v1.71.0
+- k8s.io/api: v0.32.2 → v0.32.3
+- k8s.io/apiextensions-apiserver: v0.32.2 → v0.32.3
+- k8s.io/apimachinery: v0.32.2 → v0.32.3
+- k8s.io/apiserver: v0.32.2 → v0.32.3
+- k8s.io/cli-runtime: v0.32.2 → v0.32.3
+- k8s.io/client-go: v0.32.2 → v0.32.3
+- k8s.io/cloud-provider: v0.32.2 → v0.32.3
+- k8s.io/cluster-bootstrap: v0.32.2 → v0.32.3
+- k8s.io/code-generator: v0.32.2 → v0.32.3
+- k8s.io/component-base: v0.32.2 → v0.32.3
+- k8s.io/component-helpers: v0.32.2 → v0.32.3
+- k8s.io/controller-manager: v0.32.2 → v0.32.3
+- k8s.io/cri-api: v0.32.2 → v0.32.3
+- k8s.io/cri-client: v0.32.2 → v0.32.3
+- k8s.io/csi-translation-lib: v0.32.2 → v0.32.3
+- k8s.io/dynamic-resource-allocation: v0.32.2 → v0.32.3
+- k8s.io/endpointslice: v0.32.2 → v0.32.3
+- k8s.io/externaljwt: v0.32.2 → v0.32.3
+- k8s.io/kms: v0.32.2 → v0.32.3
+- k8s.io/kube-aggregator: v0.32.2 → v0.32.3
+- k8s.io/kube-controller-manager: v0.32.2 → v0.32.3
+- k8s.io/kube-openapi: 2c72e55 → e5f78fe
+- k8s.io/kube-proxy: v0.32.2 → v0.32.3
+- k8s.io/kube-scheduler: v0.32.2 → v0.32.3
+- k8s.io/kubectl: v0.32.2 → v0.32.3
+- k8s.io/kubelet: v0.32.2 → v0.32.3
+- k8s.io/kubernetes: v1.32.2 → v1.32.3
+- k8s.io/metrics: v0.32.2 → v0.32.3
+- k8s.io/mount-utils: v0.32.2 → v0.32.3
+- k8s.io/pod-security-admission: v0.32.2 → v0.32.3
+- k8s.io/sample-apiserver: v0.32.2 → v0.32.3
+- sigs.k8s.io/apiserver-network-proxy/konnectivity-client: v0.31.2 → v0.32.0
+- sigs.k8s.io/structured-merge-diff/v4: v4.5.0 → v4.6.0
+
+### Removed
+- cloud.google.com/go/compute: v1.25.1
+- github.com/xeipuuv/gojsonpointer: [4e3ac27](https://github.com/xeipuuv/gojsonpointer/tree/4e3ac27)
+- github.com/xeipuuv/gojsonreference: [bd5ef7b](https://github.com/xeipuuv/gojsonreference/tree/bd5ef7b)
+- github.com/xeipuuv/gojsonschema: [v1.2.0](https://github.com/xeipuuv/gojsonschema/tree/v1.2.0)
 # v1.40.1
 
 ### Feature
