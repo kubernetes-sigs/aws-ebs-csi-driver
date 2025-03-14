@@ -18,7 +18,6 @@ limitations under the License.
 package driver
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -1034,7 +1033,7 @@ func TestNodeStageVolume(t *testing.T) {
 				driver.inFlight.Insert("vol-test")
 			}
 
-			_, err := driver.NodeStageVolume(context.Background(), tc.req)
+			_, err := driver.NodeStageVolume(t.Context(), tc.req)
 			if !reflect.DeepEqual(err, tc.expectedErr) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr, err)
 			}
@@ -1771,7 +1770,7 @@ func TestNodePublishVolume(t *testing.T) {
 				driver.inFlight.Insert("vol-test")
 			}
 
-			_, err := driver.NodePublishVolume(context.Background(), tc.req)
+			_, err := driver.NodePublishVolume(t.Context(), tc.req)
 			if !reflect.DeepEqual(err, tc.expectedErr) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr, err)
 			}
@@ -1896,7 +1895,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 				driver.inFlight.Insert("vol-test")
 			}
 
-			_, err := driver.NodeUnstageVolume(context.Background(), tc.req)
+			_, err := driver.NodeUnstageVolume(t.Context(), tc.req)
 			if !reflect.DeepEqual(err, tc.expectedErr) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr, err)
 			}
@@ -1932,7 +1931,7 @@ func TestNodeGetCapabilities(t *testing.T) {
 
 	driver := &NodeService{}
 
-	resp, err := driver.NodeGetCapabilities(context.Background(), req)
+	resp, err := driver.NodeGetCapabilities(t.Context(), req)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -2021,7 +2020,7 @@ func TestNodeGetInfo(t *testing.T) {
 				options:  &Options{},
 			}
 
-			resp, err := driver.NodeGetInfo(context.Background(), &csi.NodeGetInfoRequest{})
+			resp, err := driver.NodeGetInfo(t.Context(), &csi.NodeGetInfoRequest{})
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -2110,7 +2109,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				driver.inFlight.Insert("vol-test")
 			}
 
-			_, err := driver.NodeUnpublishVolume(context.Background(), tc.req)
+			_, err := driver.NodeUnpublishVolume(t.Context(), tc.req)
 			if !reflect.DeepEqual(err, tc.expectedErr) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr, err)
 			}
@@ -2340,7 +2339,7 @@ func TestNodeExpandVolume(t *testing.T) {
 				metadata: metadata,
 			}
 
-			resp, err := driver.NodeExpandVolume(context.Background(), tc.req)
+			resp, err := driver.NodeExpandVolume(t.Context(), tc.req)
 			if !reflect.DeepEqual(err, tc.expectedErr) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr, err)
 			}
@@ -2491,7 +2490,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				req.VolumePath = "fake-path"
 			}
 
-			_, err := driver.NodeGetVolumeStats(context.TODO(), req)
+			_, err := driver.NodeGetVolumeStats(t.Context(), req)
 
 			if !reflect.DeepEqual(err, tc.expectedErr(dir)) {
 				t.Fatalf("Expected error '%v' but got '%v'", tc.expectedErr(dir), err)
