@@ -1,5 +1,16 @@
 # Helm chart
 
+## v2.41.0
+
+### Feature
+
+- Add `enabled` flag to schema for use in sub-charting ([#2361](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2361), [@ConnorJC3](https://github.com/ConnorJC3))
+- Add Prometheus Annotations to the Node Service ([#2363](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2363), [@mdzraf](https://github.com/mdzraf))
+
+### Bug or regression
+
+- Prevent nil pointer deref in Helm chart when `node.enableWindows` and `node.otelTracing` are both set ([#2357](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2357), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## v2.40.3
 
 ### Feature
