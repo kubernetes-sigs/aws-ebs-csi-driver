@@ -194,7 +194,7 @@ sub-push: all-image-registry push-manifest
 
 .PHONY: sub-push-fips
 sub-push-fips:
-	$(MAKE) FIPS=true TAG=$(TAG)-fips sub-push
+	$(MAKE) FIPS=true sub-push
 
 .PHONY: sub-push-a1compat
 sub-push-a1compat:

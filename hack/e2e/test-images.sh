@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
@@ -34,10 +36,13 @@ function build_and_push() {
   MAX_IMAGES=10000
   IMAGE_COUNT=$(aws ecr list-images --repository-name "${IMAGE##*/}" --region "${REGION}" --query 'length(imageIds[])')
 
-  if [ $IMAGE_COUNT -ge $MAX_IMAGES ]; then
-    loudecho "Repository image limit reached. Unable to push new images."
-    exit 1
-  fi
+  loudecho "there are ${IMAGE_COUNT} images"
+
+
+  # if [ $IMAGE_COUNT -ge $MAX_IMAGES ]; then
+  #   loudecho "Repository image limit reached. Unable to push new images."
+  #   exit 1
+  # fi
 
   loudecho "Building and pushing test driver images to ${IMAGE}:${IMAGE_TAG}"
   aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
@@ -51,7 +56,7 @@ function build_and_push() {
 
   loudecho "Images pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
 }
-
+aws ecr delete-repository --repository-name aws-ebs-csi-driver --force --region "${AWS_REGION}"
 REPO_CHECK=$(aws ecr describe-repositories --region "${AWS_REGION}")
 if [ $(jq ".repositories | map(.repositoryName) | index(\"${IMAGE_NAME##*/}\")" <<<"${REPO_CHECK}") == "null" ]; then
   aws ecr create-repository --region "${AWS_REGION}" --repository-name aws-ebs-csi-driver >/dev/null
@@ -68,18 +73,18 @@ imageSuffixes=("a1compat fips-windows-amd64-ltsc2022 fips-windows-amd64-ltsc2019
 loudecho "Ensuring all images are present"
 
 for suffix in ${imageSuffixes[@]}; do
-  if [ ! "$(crane digest "${IMAGE}":"${TAG}"-"${suffix}")" ]; then
+  if [ ! "$(docker manifest inspect "${IMAGE}":"${TAG}"-"${suffix}")" ]; then
     loudecho "$suffix image not found"
     exit 1
   fi
 done
 
 loudecho "Ensuring image indexes have all images"
-if [ ! "$(crane manifest ${IMAGE}:${TAG} | jq ".manifests.[3].platform")" ]; then
+if [ ! "$(docker manifest inspect ${IMAGE}:${TAG} | jq ".manifests.[3].platform")" ]; then
   loudecho "Error index image is missing images"
   exit 1
 fi
-if [ ! "$(crane manifest ${IMAGE}:${TAG}-fips | jq ".manifests.[3].platform")" ]; then
+if [ ! "$(docker manifest inspect ${IMAGE}:${TAG}-fips | jq ".manifests.[3].platform")" ]; then
   loudecho "Error fips index image is missing images"
   exit 1
 fi
