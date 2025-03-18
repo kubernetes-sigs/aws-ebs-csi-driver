@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
@@ -68,18 +70,18 @@ imageSuffixes=("a1compat fips-windows-amd64-ltsc2022 fips-windows-amd64-ltsc2019
 loudecho "Ensuring all images are present"
 
 for suffix in ${imageSuffixes[@]}; do
-  if [ ! "$(crane digest "${IMAGE}":"${TAG}"-"${suffix}")" ]; then
+  if [ ! "$(docker manifest inspect "${IMAGE}":"${TAG}"-"${suffix}")" ]; then
     loudecho "$suffix image not found"
     exit 1
   fi
 done
 
 loudecho "Ensuring image indexes have all images"
-if [ ! "$(crane manifest ${IMAGE}:${TAG} | jq ".manifests.[3].platform")" ]; then
+if [ ! "$(docker manifest inspect ${IMAGE}:${TAG} | jq ".manifests[3].platform")" ]; then
   loudecho "Error index image is missing images"
   exit 1
 fi
-if [ ! "$(crane manifest ${IMAGE}:${TAG}-fips | jq ".manifests.[3].platform")" ]; then
+if [ ! "$(docker manifest inspect ${IMAGE}:${TAG}-fips | jq ".manifests[3].platform")" ]; then
   loudecho "Error fips index image is missing images"
   exit 1
 fi
