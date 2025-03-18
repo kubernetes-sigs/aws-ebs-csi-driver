@@ -41,7 +41,7 @@ metadata:
 spec:
   containers:
   - name: app
-    image: centos
+    image: public.ecr.aws/amazonlinux/amazonlinux
     command: ["/bin/sh"]
     args: ["-c", "while true; do echo $(date -u) | tee /data/out.txt; sleep 5; done"]
     volumeMounts:
