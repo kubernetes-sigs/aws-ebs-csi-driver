@@ -337,7 +337,7 @@ controller:
   # Example:
   #
   # - name: wait
-  #   image: busybox
+  #   image: public.ecr.aws/amazonlinux/amazonlinux
   #   command: [ 'sh', '-c', "sleep 20" ]
   # Enable opentelemetry tracing for the plugin running on the daemonset
   otelTracing: {}
@@ -454,7 +454,7 @@ node:
   # Example:
   #
   # - name: wait
-  #   image: busybox
+  #   image: public.ecr.aws/amazonlinux/amazonlinux
   #   command: [ 'sh', '-c', "sleep 20" ]
   # Enable opentelemetry tracing for the plugin running on the daemonset
   otelTracing: {}
