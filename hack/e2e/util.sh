@@ -27,8 +27,6 @@ function install_driver() {
     HELM_ARGS=(upgrade --install aws-ebs-csi-driver
       "${BASE_DIR}/../../charts/aws-ebs-csi-driver"
       --namespace kube-system
-      --set image.repository="${IMAGE_NAME}"
-      --set image.tag="${IMAGE_TAG}"
       --set node.enableWindows="${WINDOWS}"
       --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
       --set controller.k8sTagClusterId="${CLUSTER_NAME}"
@@ -38,6 +36,10 @@ function install_driver() {
       --kubeconfig "${KUBECONFIG}")
     if [ -n "${HELM_VALUES_FILE:-}" ]; then
       HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
+    fi
+    if [ -z "${HELM_USE_DEFAULT_IMAGE+x}" ]; then
+      HELM_ARGS+=(--set image.repository="${IMAGE_NAME}")
+      HELM_ARGS+=(--set image.tag="${IMAGE_TAG}")
     fi
     eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
     if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then

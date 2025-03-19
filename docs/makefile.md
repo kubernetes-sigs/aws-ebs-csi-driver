@@ -158,7 +158,18 @@ Install the EBS CSI Driver to the cluster via Helm. You must have already run `m
 #### Example: Install the EBS CSI Driver to a cluster for testing
 
 ```bash
+make cluster/image
 make cluster/install
+```
+
+### `make cluster/install`
+
+Install the EBS CSI Driver to the cluster via Helm using the default (release) image. This is useful for testing Helm-only changes.
+
+#### Example: Install the EBS CSI Driver to a cluster for testing a Helm-only change
+
+```bash
+make cluster/helm
 ```
 
 ### `make cluster/uninstall`

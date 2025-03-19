@@ -51,10 +51,14 @@ eval "$(make cluster/kubeconfig)"
 To test a change, build the driver image and then install it:
 ```bash
 make cluster/image
-# If testing a Helm-based change, you can use HELM_EXTRA_FLAGS
-# to set your new paremeters for testing, for example:
-# export HELM_EXTRA_FLAGS="--set=controller.newParameter=true"
 make cluster/install
+```
+
+If you are testing a Helm-only change, `make cluster/helm` installs using the default (release) image:
+```bash
+# Use HELM_EXTRA_FLAGS for testing parameters, for example:
+# export HELM_EXTRA_FLAGS="--set=controller.newParameter=true"
+make cluster/helm
 ```
 
 When you are finished manually testing, uninstall the driver:
