@@ -42,7 +42,10 @@ function build_and_push() {
   fi
 
   loudecho "Building and pushing test driver image to ${IMAGE_NAME}:${IMAGE_TAG}"
-  aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+  # Ignore login failures, could be caused by having https://github.com/awslabs/amazon-ecr-credential-helper installed or other similar special cases
+  # We're about to try to push the image, so any credential issue will be revealed at that time
+  aws ecr get-login-password --region "${REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com" ||
+    echo "Ignoring ECR login failure, image push may fail if this is unexpected"
 
   # Only setup buildx builder on Prow, allow local users to use docker cache
   if [ -n "${PROW_JOB_ID:-}" ]; then
