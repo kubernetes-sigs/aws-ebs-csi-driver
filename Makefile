@@ -167,7 +167,7 @@ e2e/external-windows-fips: bin/helm bin/kubetest2
 	GINKGO_SKIP=$(GINKGO_WINDOWS_SKIP) \
 	GINKGO_PARALLEL=15 \
 	EBS_INSTALL_SNAPSHOT="false" \
-	HELM_EXTRA_FLAGS="--set=fips=true"
+	HELM_EXTRA_FLAGS="--set=fips=true" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows-hostprocess
