@@ -16,12 +16,16 @@ package metrics
 
 // constants for prometheus metrics use.
 const (
-	APIRequestDuration            = "aws_ebs_csi_api_request_duration_seconds"
-	APIRequestErrors              = "aws_ebs_csi_api_request_errors_total"
-	APIRequestThrottles           = "aws_ebs_csi_api_request_throttles_total"
-	HelpText                      = "ebs_csi_aws_com metric"
-	DeprecatedHelpText            = "cloudprovider_aws_api metric"
-	DeprecatedAPIRequestDuration  = "cloudprovider_aws_api_request_duration_seconds"
-	DeprecatedAPIRequestErrors    = "cloudprovider_aws_api_request_errors"
-	DeprecatedAPIRequestThrottles = "cloudprovider_aws_api_throttled_requests_total"
+	APIRequestDuration                    = "aws_ebs_csi_api_request_duration_seconds"
+	APIRequestErrors                      = "aws_ebs_csi_api_request_errors_total"
+	APIRequestThrottles                   = "aws_ebs_csi_api_request_throttles_total"
+	APIRequestDurationHelpText            = "AWS SDK API request duration by request type in seconds"
+	APIRequestErrorsHelpText              = "Total number of AWS SDK API errors by error code and request type"
+	APIRequestThrottlesHelpText           = "Total number of throttled AWS SDK API requests per request type"
+	DeprecatedAPIRequestDurationHelpText  = APIRequestDurationHelpText + " (deprecated)"
+	DeprecatedAPIRequestErrorsHelpText    = APIRequestErrorsHelpText + " (deprecated)"
+	DeprecatedAPIRequestThrottlesHelpText = APIRequestThrottlesHelpText + " (deprecated)"
+	DeprecatedAPIRequestDuration          = "cloudprovider_aws_api_request_duration_seconds"
+	DeprecatedAPIRequestErrors            = "cloudprovider_aws_api_request_errors"
+	DeprecatedAPIRequestThrottles         = "cloudprovider_aws_api_throttled_requests_total"
 )

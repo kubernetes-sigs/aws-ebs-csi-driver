@@ -79,7 +79,7 @@ func InitializeNVME(r *metricRecorder, csiMountPointPath, instanceID string) {
 }
 
 // IncreaseCount increases the counter metric by 1.
-func (m *metricRecorder) IncreaseCount(name string, labels map[string]string) {
+func (m *metricRecorder) IncreaseCount(name string, helpText string, labels map[string]string) {
 	if m == nil {
 		return // recorder is not initialized
 	}
@@ -88,8 +88,8 @@ func (m *metricRecorder) IncreaseCount(name string, labels map[string]string) {
 
 	if !ok {
 		klog.V(4).InfoS("Metric not found, registering", "name", name, "labels", labels)
-		m.registerCounterVec(name, "ebs_csi_aws_com metric", getLabelNames(labels))
-		m.IncreaseCount(name, labels)
+		m.registerCounterVec(name, helpText, getLabelNames(labels))
+		m.IncreaseCount(name, helpText, labels)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (m *metricRecorder) IncreaseCount(name string, labels map[string]string) {
 }
 
 // ObserveHistogram records the given value in the histogram metric.
-func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map[string]string, buckets []float64) {
+func (m *metricRecorder) ObserveHistogram(name string, helpText string, value float64, labels map[string]string, buckets []float64) {
 	if m == nil {
 		return // recorder is not initialized
 	}
@@ -110,8 +110,8 @@ func (m *metricRecorder) ObserveHistogram(name string, value float64, labels map
 
 	if !ok {
 		klog.V(4).InfoS("Metric not found, registering", "name", name, "labels", labels, "buckets", buckets)
-		m.registerHistogramVec(name, "ebs_csi_aws_com metric", getLabelNames(labels), buckets)
-		m.ObserveHistogram(name, value, labels, buckets)
+		m.registerHistogramVec(name, helpText, getLabelNames(labels), buckets)
+		m.ObserveHistogram(name, helpText, value, labels, buckets)
 		return
 	}
 
@@ -212,17 +212,15 @@ func (m *metricRecorder) initializeMetricWithOperations(name, help string, label
 // InitializeAPIMetrics registers and initializes any `aws_ebs_csi` metric that has known label values on driver startup. Setting deprecatedMetrics to true also initializes deprecated metrics.
 func (m *metricRecorder) InitializeAPIMetrics(deprecatedMetrics bool) {
 	labelNames := []string{"request"}
-	help := HelpText
 	m.initializeMetricWithOperations(
 		APIRequestDuration,
-		help,
+		APIRequestDurationHelpText,
 		labelNames,
 	)
 	if deprecatedMetrics {
-		help = DeprecatedHelpText
 		m.initializeMetricWithOperations(
 			DeprecatedAPIRequestDuration,
-			help,
+			DeprecatedAPIRequestDurationHelpText,
 			labelNames,
 		)
 	}

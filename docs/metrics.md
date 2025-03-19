@@ -23,6 +23,14 @@ Installing the Prometheus Operator and enabling metrics will deploy a [Service](
 
 The EBS CSI Driver will emit [AWS API](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/OperationList-query.html) metrics to the following TCP endpoint: `0.0.0.0:3301/metrics` if `controller.enableMetrics: true` has been configured in the Helm chart.
 
+The following metrics are currently supported:
+
+| Metric name | Metric type | Description | Labels |
+|-------------|-------------|-------------|-------------|
+|aws_ebs_csi_api_request_duration_seconds|Histogram|Duration by request type in seconds|request=\<AWS SDK API Request Type\> <br/> le=\<Time In Seconds\>| 
+|aws_ebs_csi_api_request_errors_total|Counter|Total number of errors by error code and request type|request=\<AWS SDK API Request Type\> <br/> error=\<Error Code\>| 
+|aws_ebs_csi_api_request_throttles_total|Counter|Total number of throttled requests per request type|request=\<AWS SDK API Request Type\>|
+
 The metrics will appear in the following format: 
 ```sh
 aws_ebs_csi_api_request_duration_seconds_bucket{request="AttachVolume",le="0.005"} 0
