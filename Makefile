@@ -54,6 +54,8 @@ ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
 CLUSTER_NAME?=ebs-csi-e2e.k8s.local
 CLUSTER_TYPE?=kops
 
+GINKGO_WINDOWS_SKIP?="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)"
+
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
 
@@ -141,19 +143,38 @@ e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
+.PHONY: e2e/external-a1
+e2e/external-a1: bin/helm bin/kubetest2
+	HELM_EXTRA_FLAGS="--set=a1CompatibilityDaemonSet=true" \
+	./hack/e2e/run.sh
+
+.PHONY: e2e/external-fips
+e2e/external-fips: bin/helm bin/kubetest2
+	HELM_EXTRA_FLAGS="--set=fips=true" \
+	./hack/e2e/run.sh
+
 .PHONY: e2e/external-windows
 e2e/external-windows: bin/helm bin/kubetest2
 	WINDOWS=true \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
+	GINKGO_SKIP=$(GINKGO_WINDOWS_SKIP) \
 	GINKGO_PARALLEL=15 \
 	EBS_INSTALL_SNAPSHOT="false" \
+	./hack/e2e/run.sh
+
+.PHONY: e2e/external-windows-fips
+e2e/external-windows-fips: bin/helm bin/kubetest2
+	WINDOWS=true \
+	GINKGO_SKIP=$(GINKGO_WINDOWS_SKIP) \
+	GINKGO_PARALLEL=15 \
+	EBS_INSTALL_SNAPSHOT="false" \
+	HELM_EXTRA_FLAGS="--set=fips=true"
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows-hostprocess
 e2e/external-windows-hostprocess: bin/helm bin/kubetest2
 	WINDOWS_HOSTPROCESS=true \
 	WINDOWS=true \
-	GINKGO_SKIP="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)" \
+	GINKGO_SKIP=$(GINKGO_WINDOWS_SKIP) \
 	GINKGO_PARALLEL=15 \
 	EBS_INSTALL_SNAPSHOT="false" \
 	./hack/e2e/run.sh
