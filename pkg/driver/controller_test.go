@@ -208,7 +208,6 @@ func TestCreateVolume(t *testing.T) {
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 
-				// mockCloud.EXPECT().GetDiskByName(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(stdVolSize)).Return(mockDisk, nil)
 				vol := resp.GetVolume()
 				if vol == nil {
 					t.Fatalf("Expected volume %v, got nil", expVol)
