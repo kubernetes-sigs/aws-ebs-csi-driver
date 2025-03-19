@@ -31,10 +31,10 @@ func TestMetricRecorder(t *testing.T) {
 		{
 			name: "TestMetricRecorder: IncreaseCounterMetric",
 			exec: func(m *metricRecorder) {
-				m.IncreaseCount("test_total", map[string]string{"key": "value"})
+				m.IncreaseCount("test_total", "help text", map[string]string{"key": "value"})
 			},
 			expected: `
-# HELP test_total ebs_csi_aws_com metric
+# HELP test_total help text
 # TYPE test_total counter
 test_total{key="value"} 1
 			`,
@@ -43,10 +43,10 @@ test_total{key="value"} 1
 		{
 			name: "TestMetricRecorder: ObserveHistogramMetric",
 			exec: func(m *metricRecorder) {
-				m.ObserveHistogram("test", 1.5, map[string]string{"key": "value"}, []float64{1, 2, 3})
+				m.ObserveHistogram("test", "help text", 1.5, map[string]string{"key": "value"}, []float64{1, 2, 3})
 			},
 			expected: `
-# HELP test ebs_csi_aws_com metric
+# HELP test help text
 # TYPE test histogram
 test{key="value",le="1"} 0
 test{key="value",le="2"} 1
@@ -60,13 +60,13 @@ test_count{key="value"} 1
 		{
 			name: "TestMetricRecorder: Re-register metric",
 			exec: func(m *metricRecorder) {
-				m.IncreaseCount("test_re_register_total", map[string]string{"key": "value1"})
-				m.registerCounterVec("test_re_register_total", "ebs_csi_aws_com metric", []string{"key"})
-				m.IncreaseCount("test_re_register_total", map[string]string{"key": "value1"})
-				m.IncreaseCount("test_re_register_total", map[string]string{"key": "value2"})
+				m.IncreaseCount("test_re_register_total", "help text", map[string]string{"key": "value1"})
+				m.registerCounterVec("test_re_register_total", "help text", []string{"key"})
+				m.IncreaseCount("test_re_register_total", "help text", map[string]string{"key": "value1"})
+				m.IncreaseCount("test_re_register_total", "help text", map[string]string{"key": "value2"})
 			},
 			expected: `
-# HELP test_re_register_total ebs_csi_aws_com metric
+# HELP test_re_register_total help text
 # TYPE test_re_register_total counter
 test_re_register_total{key="value1"} 2
 test_re_register_total{key="value2"} 1
