@@ -115,6 +115,11 @@ cluster/delete: bin/kops bin/eksctl
 cluster/install: bin/helm bin/aws
 	./hack/e2e/install.sh
 
+.PHONY: cluster/helm
+cluster/helm: bin/helm bin/aws
+	HELM_USE_DEFAULT_IMAGE="true" \
+	./hack/e2e/install.sh
+
 .PHONY: cluster/uninstall
 cluster/uninstall: bin/helm bin/aws
 	./hack/e2e/uninstall.sh
