@@ -29,6 +29,8 @@ source "${BASE_DIR}/util.sh"
 source "${BASE_DIR}/kops/kops.sh"
 source "${BASE_DIR}/eksctl/eksctl.sh"
 
+loudecho " The AMI ID is ${AMI_ID}"
+
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   BUCKET_CHECK=$("${BIN}/aws" s3api head-bucket --region us-east-1 --bucket "${KOPS_BUCKET}" 2>&1 || true)
   if grep -q "Forbidden" <<<"${BUCKET_CHECK}"; then
