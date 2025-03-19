@@ -158,6 +158,9 @@ func main() {
 		r := metrics.InitializeRecorder(options.DeprecatedMetrics)
 		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 
+		if options.Mode == driver.ControllerMode || options.Mode == driver.AllMode {
+			r.InitializeAPIMetrics(options.DeprecatedMetrics)
+		}
 		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
 			metrics.InitializeNVME(r, options.CsiMountPointPath, md.GetInstanceID())
 		}
