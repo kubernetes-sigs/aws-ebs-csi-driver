@@ -689,7 +689,7 @@ func TestCheckDesiredState(t *testing.T) {
 				},
 			},
 		}, nil)
-		_, err := cloudInstance.checkDesiredState(context.Background(), tc.volumeID, tc.desiredSizeGiB, tc.options)
+		_, err := cloudInstance.checkDesiredState(t.Context(), tc.volumeID, tc.desiredSizeGiB, tc.options)
 		if err != nil {
 			if tc.expErr == nil {
 				t.Fatalf("Did not expect to get an error but got %q", err)
@@ -1385,7 +1385,7 @@ func TestCreateDisk(t *testing.T) {
 				VolumeId:   aws.String("snap-test-volume"),
 				State:      types.SnapshotStateCompleted,
 			}
-			ctx, ctxCancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+			ctx, ctxCancel := context.WithDeadline(t.Context(), time.Now().Add(defaultCreateDiskDeadline))
 			defer ctxCancel()
 
 			if tc.expCreateVolumeInput != nil {
@@ -1506,7 +1506,7 @@ func TestCreateDiskClientToken(t *testing.T) {
 		}, nil).AnyTimes(),
 	)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+	ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(defaultCreateDiskDeadline))
 	defer cancel()
 	for i := range 3 {
 		_, err := c.CreateDisk(ctx, volumeName, diskOptions)
@@ -1551,7 +1551,7 @@ func TestDeleteDisk(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mockEC2.EXPECT().DeleteVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
 
 			ok, err := c.DeleteDisk(ctx, tc.volumeID)
@@ -1759,7 +1759,7 @@ func TestAttachDisk(t *testing.T) {
 				t.Fatalf("could not assert c as type cloud, %v", c)
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			deviceManager := cloudInstance.dm
 
 			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID, tc.nodeID2, tc.path, deviceManager)
@@ -1848,7 +1848,7 @@ func TestDetachDisk(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			tc.mockFunc(mockEC2, ctx, tc.volumeID, tc.nodeID)
 
 			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
@@ -1916,7 +1916,7 @@ func TestGetDiskByName(t *testing.T) {
 				},
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{vol}}, tc.expErr)
 
 			disk, err := c.GetDiskByName(ctx, tc.volumeName, tc.volumeCapacity)
@@ -2010,7 +2010,7 @@ func TestGetDiskByID(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(
 				&ec2.DescribeVolumesOutput{
@@ -2110,7 +2110,7 @@ func TestCreateSnapshot(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mockEC2.EXPECT().CreateSnapshot(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 				func(ctx context.Context, input *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
@@ -2227,7 +2227,7 @@ func TestEnableFastSnapshotRestores(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mockEC2.EXPECT().EnableFastSnapshotRestores(gomock.Any(), gomock.Any(), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
 
 			response, err := c.EnableFastSnapshotRestores(ctx, tc.availabilityZones, tc.snapshotID)
@@ -2290,7 +2290,7 @@ func TestAvailabilityZones(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
 
 			az, err := c.AvailabilityZones(ctx)
@@ -2344,7 +2344,7 @@ func TestDeleteSnapshot(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			mockEC2.EXPECT().DeleteSnapshot(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.DeleteSnapshotOutput{}, tc.expErr)
 
 			_, err := c.DeleteSnapshot(ctx, tc.snapshotName)
@@ -2633,7 +2633,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			if tc.existingVolume != nil || tc.existingVolumeError != nil {
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(
 					&ec2.DescribeVolumesOutput{
@@ -2767,7 +2767,7 @@ func TestModifyTags(t *testing.T) {
 			mockEC2 := NewMockEC2API(mockCtrl)
 			c := newCloud(mockEC2)
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			if len(tc.modifyTagsOptions.TagsToAdd) > 0 {
 				if tc.negativeCase {
@@ -2857,7 +2857,7 @@ func TestGetSnapshotByName(t *testing.T) {
 				},
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
 
@@ -2930,7 +2930,7 @@ func TestGetSnapshotByID(t *testing.T) {
 				State:      types.SnapshotStateCompleted,
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
 
@@ -3014,7 +3014,7 @@ func TestListSnapshots(t *testing.T) {
 				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
-				ctx := context.Background()
+				ctx := t.Context()
 
 				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
 
@@ -3089,7 +3089,7 @@ func TestListSnapshots(t *testing.T) {
 				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
-				ctx := context.Background()
+				ctx := t.Context()
 
 				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
 
@@ -3153,7 +3153,7 @@ func TestListSnapshots(t *testing.T) {
 				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
-				ctx := context.Background()
+				ctx := t.Context()
 
 				firstCall := mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
 					Snapshots: ec2Snapshots[:maxResults],
@@ -3203,7 +3203,7 @@ func TestListSnapshots(t *testing.T) {
 				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
-				ctx := context.Background()
+				ctx := t.Context()
 
 				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, errors.New("test error"))
 
@@ -3221,7 +3221,7 @@ func TestListSnapshots(t *testing.T) {
 				mockEC2 := NewMockEC2API(mockCtl)
 				c := newCloud(mockEC2)
 
-				ctx := context.Background()
+				ctx := t.Context()
 
 				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{}, nil)
 
@@ -3371,7 +3371,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 				MultiAttachEnabled: aws.Bool(false),
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
 			switch tc.name {

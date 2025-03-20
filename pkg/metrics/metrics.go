@@ -69,7 +69,6 @@ func InitializeRecorder(deprecatedMetrics bool) *metricRecorder {
 			registry: prometheus.NewRegistry(),
 			metrics:  make(map[string]interface{}),
 		}
-		r.initializeAPIMetrics(deprecatedMetrics)
 	})
 	return r
 }
@@ -210,7 +209,8 @@ func (m *metricRecorder) initializeMetricWithOperations(name, help string, label
 	}
 }
 
-func (m *metricRecorder) initializeAPIMetrics(deprecatedMetrics bool) {
+// InitializeAPIMetrics registers and initializes any `aws_ebs_csi` metric that has known label values on driver startup. Setting deprecatedMetrics to true also initializes deprecated metrics.
+func (m *metricRecorder) InitializeAPIMetrics(deprecatedMetrics bool) {
 	labelNames := []string{"request"}
 	help := HelpText
 	m.initializeMetricWithOperations(

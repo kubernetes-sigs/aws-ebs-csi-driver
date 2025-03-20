@@ -1,7 +1,7 @@
 # Default values for aws-ebs-csi-driver.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-
+#Test
 image:
   repository: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
   # Overrides the image tag whose default is v{{ .Chart.AppVersion }}
@@ -337,7 +337,7 @@ controller:
   # Example:
   #
   # - name: wait
-  #   image: busybox
+  #   image: public.ecr.aws/amazonlinux/amazonlinux
   #   command: [ 'sh', '-c', "sleep 20" ]
   # Enable opentelemetry tracing for the plugin running on the daemonset
   otelTracing: {}
@@ -454,7 +454,7 @@ node:
   # Example:
   #
   # - name: wait
-  #   image: busybox
+  #   image: public.ecr.aws/amazonlinux/amazonlinux
   #   command: [ 'sh', '-c', "sleep 20" ]
   # Enable opentelemetry tracing for the plugin running on the daemonset
   otelTracing: {}

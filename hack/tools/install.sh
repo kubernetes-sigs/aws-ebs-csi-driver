@@ -33,8 +33,10 @@ GOMPLATE_VERSION="v4.3.1"
 # https://github.com/helm/helm
 HELM_VERSION="v3.17.1"
 # https://github.com/kubernetes/kops
-# NOTE: We pin kops to a commit instead of a release to support newer versions of k8s earlier
-KOPS_COMMIT="0789af746b4e5beb6eab4b9a4b42b88f3c072d19"
+# Commit is preferred over version if non-empty, and can
+# be used to test new Kubernetes releases earlier
+KOPS_VERSION="v1.32.0-beta.1"
+KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20250219121027-1cc02edeb0b6"
 # https://github.com/golang/mock
@@ -153,11 +155,16 @@ function install_helm() {
 }
 
 function install_kops() {
-  # Build from source so we can test latest Kubernetes version earlier.
   INSTALL_PATH="${1}"
 
-  # Lower max processes to avoid oom-killed
-  GOMAXPROCS=1 install_go "${INSTALL_PATH}" "k8s.io/kops/cmd/kops@${KOPS_COMMIT}"
+  # If KOPS_COMMIT is set and non-empty, install from source using the commit
+  # Otherwise, install using pre-built binary from GitHub releases
+  if [ -z "${KOPS_COMMIT:+x}" ]; then
+    install_binary "${INSTALL_PATH}" "https://github.com/kubernetes/kops/releases/download/${KOPS_VERSION}/kops-${OS}-${ARCH}" "kops"
+  else
+    # Lower max processes to avoid being OOM-killed
+    GOMAXPROCS=1 install_go "${INSTALL_PATH}" "k8s.io/kops/cmd/kops@${KOPS_COMMIT}"
+  fi
 }
 
 function install_kubetest2() {
