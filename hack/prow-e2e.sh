@@ -21,6 +21,11 @@
 # TODO: Find a way to lock pip installs to prevent pip concurrency bugs from hurting us
 make bin/aws
 
+echo "STARTSTART #################################################################################################################"
+aws ec2 describe-instance-types --region us-east-1 | cat
+echo "ENDEND #################################################################################################################"
+exit 1
+
 case ${1} in
 test-e2e-single-az)
   TEST="single-az"
