@@ -19,7 +19,7 @@ metadata:
 spec:
   containers:
   - name: app 
-    image: busybox 
+    image: public.ecr.aws/amazonlinux/amazonlinux
     command: ["/bin/sh", "-c"]
     args: ["tail -f /dev/null"]
     volumeDevices:

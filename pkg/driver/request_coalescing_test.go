@@ -130,7 +130,7 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 	wg.Add(2)
 
 	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+		_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 			VolumeId: volumeID,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: NewSize,
@@ -143,7 +143,7 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 		wg.Done()
 	})
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType,
 		})
 
@@ -186,7 +186,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Add(2)
 
 	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+		_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 			VolumeId: volumeID,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: NewSize,
@@ -199,7 +199,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 		wg.Done()
 	})
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType,
 		})
 
@@ -259,7 +259,7 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 	volumeType1Err, volumeType2Error := false, false
 
 	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+		_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 			VolumeId: volumeID,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: NewSize,
@@ -272,14 +272,14 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 		wg.Done()
 	})
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType1, // gp3
 		})
 		volumeType1Err = err != nil
 		wg.Done()
 	})
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType2, // io2
 		})
 		if err != nil {
@@ -340,7 +340,7 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Add(2)
 
 	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+		_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 			VolumeId: volumeID,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: NewSize,
@@ -357,7 +357,7 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 	time.Sleep(5 * time.Second)
 
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType,
 		})
 
@@ -401,7 +401,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 
 	for range num {
 		go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-			_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+			_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 				VolumeId: volumeID,
 				CapacityRange: &csi.CapacityRange{
 					RequiredBytes: NewSize,
@@ -413,7 +413,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 			wg.Done()
 		})
 		go wrapTimeout(t, "Modify timed out", func() {
-			err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+			err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 				ModificationKeyVolumeType: "io2",
 			})
 			if err != nil {
@@ -462,7 +462,7 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	wg.Add(2)
 
 	go wrapTimeout(t, "ControllerExpandVolume timed out", func() {
-		_, err := awsDriver.ControllerExpandVolume(context.Background(), &csi.ControllerExpandVolumeRequest{
+		_, err := awsDriver.ControllerExpandVolume(t.Context(), &csi.ControllerExpandVolumeRequest{
 			VolumeId: volumeID,
 			CapacityRange: &csi.CapacityRange{
 				RequiredBytes: NewSize,
@@ -478,7 +478,7 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 		wg.Done()
 	})
 	go wrapTimeout(t, "Modify timed out", func() {
-		err := executor(context.Background(), awsDriver, volumeID, map[string]string{
+		err := executor(t.Context(), awsDriver, volumeID, map[string]string{
 			ModificationKeyVolumeType: NewVolumeType,
 		})
 

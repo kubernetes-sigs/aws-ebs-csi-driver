@@ -32,6 +32,17 @@ test-e2e-multi-az)
 test-e2e-external)
   TEST="external"
   ;;
+test-e2e-external-a1)
+  TEST="external-a1"
+  export K8S_VERSION_EKSCTL="1.28"
+  export INSTANCE_TYPE="a1.large"
+  export IMAGE_ARCH="arm64"
+  export CLUSTER_TYPE="eksctl"
+  ;;
+test-e2e-external-fips)
+  TEST="external-fips"
+  export FIPS_TEST="true"
+  ;;
 test-e2e-external-arm64)
   TEST="external"
   export IMAGE_ARCH="arm64"
@@ -44,6 +55,12 @@ test-e2e-external-eks)
   ;;
 test-e2e-external-eks-windows)
   TEST="external-windows"
+  export CLUSTER_TYPE="eksctl"
+  export WINDOWS="true"
+  ;;
+test-e2e-external-eks-windows-fips)
+  TEST="external-windows-fips"
+  export FIPS_TEST="true"
   export CLUSTER_TYPE="eksctl"
   export WINDOWS="true"
   ;;
