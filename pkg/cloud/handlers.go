@@ -44,23 +44,23 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 						labels = map[string]string{
 							"operation_name": operationName,
 						}
-						metrics.Recorder().IncreaseCount(metrics.APIRequestThrottles, labels)
+						metrics.Recorder().IncreaseCount(metrics.APIRequestThrottles, metrics.APIRequestThrottlesHelpText, labels)
 						if deprecatedMetrics {
-							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestThrottles, labels)
+							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestThrottles, metrics.DeprecatedAPIRequestThrottlesHelpText, labels)
 						}
 					} else {
 						labels["code"] = apiErr.ErrorCode()
-						metrics.Recorder().IncreaseCount(metrics.APIRequestErrors, labels)
+						metrics.Recorder().IncreaseCount(metrics.APIRequestErrors, metrics.APIRequestErrorsHelpText, labels)
 						if deprecatedMetrics {
-							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestErrors, labels)
+							metrics.Recorder().IncreaseCount(metrics.DeprecatedAPIRequestErrors, metrics.DeprecatedAPIRequestErrorsHelpText, labels)
 						}
 					}
 				}
 			} else {
 				duration := time.Since(start).Seconds()
-				metrics.Recorder().ObserveHistogram(metrics.APIRequestDuration, duration, labels, nil)
+				metrics.Recorder().ObserveHistogram(metrics.APIRequestDuration, metrics.APIRequestDurationHelpText, duration, labels, nil)
 				if deprecatedMetrics {
-					metrics.Recorder().ObserveHistogram(metrics.DeprecatedAPIRequestDuration, duration, labels, nil)
+					metrics.Recorder().ObserveHistogram(metrics.DeprecatedAPIRequestDuration, metrics.DeprecatedAPIRequestDurationHelpText, duration, labels, nil)
 				}
 			}
 			return output, metadata, err
