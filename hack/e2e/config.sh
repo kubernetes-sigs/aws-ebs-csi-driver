@@ -18,6 +18,8 @@ set -euo pipefail
 
 BASE_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 TEST_DIR="${BASE_DIR}/csi-test-artifacts"
+# On Prow, $ARTIFACTS indicates where to put the artifacts for skylens upload
+REPORT_DIR="${ARTIFACTS:-${TEST_DIR}/artifacts}"
 mkdir -p "${TEST_DIR}"
 CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.yaml
 KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
