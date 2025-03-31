@@ -152,10 +152,10 @@ else
     "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
       --focus="${GINKGO_FOCUS}" \
       --skip="${GINKGO_SKIP}" \
+      --junit-report="${REPORT_DIR}/junit.xml" \
       "${TEST_PATH}" \
       -- \
       -kubeconfig="${KUBECONFIG}" \
-      -report-dir="${TEST_DIR}/artifacts" \
       -gce-zone="${FIRST_ZONE}"
     TEST_PASSED=$?
     set -e
