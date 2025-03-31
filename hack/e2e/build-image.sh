@@ -67,7 +67,18 @@ function build_and_push() {
     export ALL_OS="linux"
     export ALL_ARCH_linux="${IMAGE_ARCH}"
   fi
-  make -j $(nproc) sub-push
+
+  PUSH_TYPE="sub-push"
+
+  if [[ "$INSTANCE_TYPE" == "a1.large" ]]; then
+    # In the case of a1compat image we need both controller image and a1 compat node image
+    PUSH_TYPE="sub-push sub-push-a1compat"
+  fi
+  if [[ "${FIPS_TEST}" == "true" ]]; then
+    PUSH_TYPE="sub-push-fips"
+  fi
+
+  make -j $(nproc) ${PUSH_TYPE}
 
   loudecho "Image pushed to ${IMAGE_NAME}:${IMAGE_TAG}"
 }
