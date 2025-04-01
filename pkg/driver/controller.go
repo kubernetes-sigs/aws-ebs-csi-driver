@@ -329,6 +329,12 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)
+	// If the error is a an idempotency error, retry one time so that we get at least one "real" attempt at creation
+	// Otherwise, we end up flapping between real attempts, and idempotency failures, doubling the delay between
+	// when an async creation error is fixed and a successful retry
+	if errors.Is(err, cloud.ErrIdempotentParameterMismatch) {
+		disk, err = d.cloud.CreateDisk(ctx, volName, opts)
+	}
 	if err != nil {
 		var errCode codes.Code
 		switch {
