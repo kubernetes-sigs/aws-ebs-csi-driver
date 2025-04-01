@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-// +build windows
+//go:build !linux
 
 package metrics
 
 import "k8s.io/klog/v2"
 
 func registerNVMECollector(_ *metricRecorder, _, _ string) {
-	klog.InfoS("NVMe metric collection is not supported on windows")
+	klog.InfoS("NVMe metric collection is not supported on this platform")
 }
