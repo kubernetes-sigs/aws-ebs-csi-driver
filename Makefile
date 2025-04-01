@@ -88,7 +88,7 @@ test/coverage:
 tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
 
 .PHONY: update
-update: update/gofmt update/kustomize update/mockgen update/gomod update/shfmt update/generate-license-header
+update: update/gofix update/gofmt update/kustomize update/mockgen update/gomod update/shfmt update/generate-license-header
 	@echo "All updates succeeded!"
 
 .PHONY: verify
@@ -287,6 +287,10 @@ bin/%: hack/tools/install.sh hack/tools/python-runner.sh
 
 ## Updaters
 # Automatic generators/formatters for code
+
+.PHONY: update/gofix
+update/gofix:
+	go fix ./...
 
 .PHONY: update/gofmt
 update/gofmt:
