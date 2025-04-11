@@ -1959,6 +1959,29 @@ func TestNodeGetInfo(t *testing.T) {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
 				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
+				m.EXPECT().UpdateMetadata().Return(nil)
+				m.EXPECT().GetOutpostArn().Return(arn.ARN{})
+				return m
+			},
+			expectedResp: &csi.NodeGetInfoResponse{
+				NodeId: "i-1234567890abcdef0",
+				AccessibleTopology: &csi.Topology{
+					Segments: map[string]string{
+						ZoneTopologyKey:          "us-west-2a",
+						WellKnownZoneTopologyKey: "us-west-2a",
+						OSTopologyKey:            runtime.GOOS,
+					},
+				},
+			},
+		},
+		{
+			name: "update_metadata_error",
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				// When UpdateMedata returns an error, NodeGetInfo should continue execution.
+				m.EXPECT().UpdateMetadata().Return(errors.New("metadata update failed"))
+				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
+				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
 				m.EXPECT().GetOutpostArn().Return(arn.ARN{})
 				return m
 			},
@@ -1979,6 +2002,7 @@ func TestNodeGetInfo(t *testing.T) {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
 				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
+				m.EXPECT().UpdateMetadata().Return(nil)
 				m.EXPECT().GetOutpostArn().Return(arn.ARN{
 					Partition: "aws",
 					Service:   "outposts",
