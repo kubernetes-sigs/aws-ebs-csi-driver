@@ -152,7 +152,13 @@ func TestNewMetadataService(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedMetadata, metadata)
+				assert.Equal(t, tc.expectedMetadata.InstanceID, metadata.GetInstanceID())
+				assert.Equal(t, tc.expectedMetadata.InstanceType, metadata.GetInstanceType())
+				assert.Equal(t, tc.expectedMetadata.Region, metadata.GetRegion())
+				assert.Equal(t, tc.expectedMetadata.AvailabilityZone, metadata.GetAvailabilityZone())
+				assert.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.GetNumAttachedENIs())
+				assert.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.GetNumBlockDeviceMappings())
+				assert.Equal(t, tc.expectedMetadata.OutpostArn, metadata.GetOutpostArn())
 			}
 		})
 	}
@@ -406,7 +412,13 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 				require.Nil(t, metadata)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedMetadata, metadata)
+				assert.Equal(t, tc.expectedMetadata.InstanceID, metadata.GetInstanceID())
+				assert.Equal(t, tc.expectedMetadata.InstanceType, metadata.GetInstanceType())
+				assert.Equal(t, tc.expectedMetadata.Region, metadata.GetRegion())
+				assert.Equal(t, tc.expectedMetadata.AvailabilityZone, metadata.GetAvailabilityZone())
+				assert.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.GetNumAttachedENIs())
+				assert.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.GetNumBlockDeviceMappings())
+				assert.Equal(t, tc.expectedMetadata.OutpostArn, metadata.GetOutpostArn())
 			}
 		})
 	}

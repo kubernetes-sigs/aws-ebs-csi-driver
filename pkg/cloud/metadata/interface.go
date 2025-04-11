@@ -30,6 +30,7 @@ type MetadataService interface {
 	GetNumAttachedENIs() int
 	GetNumBlockDeviceMappings() int
 	GetOutpostArn() arn.ARN
+	UpdateMetadata() error
 }
 
 type EC2Metadata interface {

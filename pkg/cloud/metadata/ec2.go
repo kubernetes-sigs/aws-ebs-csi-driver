@@ -81,15 +81,10 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		}
 	}
 
-	enisOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: EnisEndpoint})
+	attachedENIs, err := getAttachedENIs(svc)
 	if err != nil {
-		return nil, fmt.Errorf("could not get metadata for ENIs: %w", err)
+		return nil, err
 	}
-	enis, err := io.ReadAll(enisOutput.Content)
-	if err != nil {
-		return nil, fmt.Errorf("could not read ENIs metadata content: %w", err)
-	}
-	attachedENIs := util.CountMACAddresses(string(enis))
 
 	blockDevMappings := 0
 	if !util.IsSBE(doc.Region) {
@@ -111,6 +106,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		AvailabilityZone:       doc.AvailabilityZone,
 		NumAttachedENIs:        attachedENIs,
 		NumBlockDeviceMappings: blockDevMappings,
+		EC2MetadataClient:      svc,
 	}
 
 	outpostArnOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: OutpostArnEndpoint})
@@ -138,4 +134,17 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	return &instanceInfo, nil
+}
+
+func getAttachedENIs(svc EC2Metadata) (int, error) {
+	enisOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: EnisEndpoint})
+	if err != nil {
+		return -1, fmt.Errorf("could not get metadata for ENIs: %w", err)
+	}
+	enis, err := io.ReadAll(enisOutput.Content)
+	if err != nil {
+		return -1, fmt.Errorf("could not read ENIs metadata content: %w", err)
+	}
+	attachedENIs := util.CountMACAddresses(string(enis))
+	return attachedENIs, nil
 }
