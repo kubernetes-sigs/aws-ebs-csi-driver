@@ -260,16 +260,16 @@ func (mr *MockCloudMockRecorder) ResizeOrModifyDisk(ctx, volumeID, newSizeBytes,
 }
 
 // WaitForAttachmentState mocks base method.
-func (m *MockCloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState, expectedInstance, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
+func (m *MockCloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID, expectedInstance, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForAttachmentState", ctx, volumeID, expectedState, expectedInstance, expectedDevice, alreadyAssigned)
+	ret := m.ctrl.Call(m, "WaitForAttachmentState", ctx, expectedState, volumeID, expectedInstance, expectedDevice, alreadyAssigned)
 	ret0, _ := ret[0].(*types.VolumeAttachment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WaitForAttachmentState indicates an expected call of WaitForAttachmentState.
-func (mr *MockCloudMockRecorder) WaitForAttachmentState(ctx, volumeID, expectedState, expectedInstance, expectedDevice, alreadyAssigned interface{}) *gomock.Call {
+func (mr *MockCloudMockRecorder) WaitForAttachmentState(ctx, expectedState, volumeID, expectedInstance, expectedDevice, alreadyAssigned interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAttachmentState", reflect.TypeOf((*MockCloud)(nil).WaitForAttachmentState), ctx, volumeID, expectedState, expectedInstance, expectedDevice, alreadyAssigned)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForAttachmentState", reflect.TypeOf((*MockCloud)(nil).WaitForAttachmentState), ctx, expectedState, volumeID, expectedInstance, expectedDevice, alreadyAssigned)
 }
