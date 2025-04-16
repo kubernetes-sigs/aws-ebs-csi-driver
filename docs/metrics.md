@@ -25,11 +25,12 @@ The EBS CSI Driver will emit [AWS API](https://docs.aws.amazon.com/AWSEC2/latest
 
 The following metrics are currently supported:
 
-| Metric name | Metric type | Description | Labels |
-|-------------|-------------|-------------|-------------|
-|aws_ebs_csi_api_request_duration_seconds|Histogram|Duration by request type in seconds|request=\<AWS SDK API Request Type\> <br/> le=\<Time In Seconds\>| 
-|aws_ebs_csi_api_request_errors_total|Counter|Total number of errors by error code and request type|request=\<AWS SDK API Request Type\> <br/> error=\<Error Code\>| 
-|aws_ebs_csi_api_request_throttles_total|Counter|Total number of throttled requests per request type|request=\<AWS SDK API Request Type\>|
+| Metric name | Metric type | Description | Labels                                                                                                                                                                     |
+|-------------|-------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|aws_ebs_csi_api_request_duration_seconds|Histogram|Duration by request type in seconds| request=\<AWS SDK API Request Type\> <br/> le=\<Time In Seconds\>                                                                                                          | 
+|aws_ebs_csi_api_request_errors_total|Counter|Total number of errors by error code and request type| request=\<AWS SDK API Request Type\> <br/> error=\<Error Code\>                                                                                                            | 
+|aws_ebs_csi_api_request_throttles_total|Counter|Total number of throttled requests per request type| request=\<AWS SDK API Request Type\>                                                                                                                                       |
+|aws_ebs_csi_ec2_detach_pending_seconds|Counter|Number of seconds csi driver has been waiting for volume to be detached from instance| attachment_state=<Last observed attachment state\><br/>volume_id=<EBS Volume ID of associated volume\><br/>instance_id=<EC2 Instance ID associated with detaching volume\> |
 
 The metrics will appear in the following format: 
 ```sh
