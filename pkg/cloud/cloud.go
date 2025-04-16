@@ -91,9 +91,7 @@ var (
 )
 
 const (
-	volumeDetachedState = "detached"
-	volumeAttachedState = "attached"
-	cacheForgetDelay    = 1 * time.Hour
+	cacheForgetDelay = 1 * time.Hour
 )
 
 // AWS provisioning limits.
@@ -959,7 +957,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
-	_, err = c.WaitForAttachmentState(ctx, volumeID, volumeAttachedState, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
+	_, err = c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateAttached, volumeID, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
 
 	// This is the only situation where we taint the device
 	if err != nil {
@@ -1007,7 +1005,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
 	}
 
-	attachment, err := c.WaitForAttachmentState(ctx, volumeID, volumeDetachedState, *instance.InstanceId, "", false)
+	attachment, err := c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateDetached, volumeID, *instance.InstanceId, "", false)
 	if err != nil {
 		return err
 	}
@@ -1020,7 +1018,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 }
 
 // WaitForAttachmentState polls until the attachment status is the expected value.
-func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedState string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
+func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
@@ -1032,12 +1030,12 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		if err != nil {
 			// The VolumeNotFound error is special -- we don't need to wait for it to repeat
 			if isAWSErrorVolumeNotFound(err) {
-				if expectedState == volumeDetachedState {
+				if expectedState == types.VolumeAttachmentStateDetached {
 					// The disk doesn't exist, assume it's detached, log warning and stop waiting
 					klog.InfoS("Waiting for volume to be detached but the volume does not exist", "volumeID", volumeID)
 					return true, nil
 				}
-				if expectedState == volumeAttachedState {
+				if expectedState == types.VolumeAttachmentStateAttached {
 					// The disk doesn't exist, complain, give up waiting and report error
 					klog.InfoS("Waiting for volume to be attached but the volume does not exist", "volumeID", volumeID)
 					return false, err
@@ -1053,22 +1051,22 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 			return false, fmt.Errorf("volume %q has multiple attachments", volumeID)
 		}
 
-		attachmentState := ""
+		var attachmentState types.VolumeAttachmentState
 
 		for _, a := range volume.Attachments {
 			if a.InstanceId != nil {
 				if aws.ToString(a.InstanceId) == expectedInstance {
-					attachmentState = string(a.State)
+					attachmentState = a.State
 					attachment = &a
 				}
 			}
 		}
 
 		if attachmentState == "" {
-			attachmentState = volumeDetachedState
+			attachmentState = types.VolumeAttachmentStateDetached
 		}
 
-		if attachment != nil && attachment.Device != nil && expectedState == volumeAttachedState {
+		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached {
 			device := aws.ToString(attachment.Device)
 			if device != expectedDevice {
 				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
@@ -1079,7 +1077,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		// if we expected volume to be attached and it was reported as already attached via DescribeInstance call
 		// but DescribeVolume told us volume is detached, we will short-circuit this long wait loop and return error
 		// so as AttachDisk can be retried without waiting for 20 minutes.
-		if (expectedState == volumeAttachedState) && alreadyAssigned && (attachmentState == volumeDetachedState) {
+		if (expectedState == types.VolumeAttachmentStateAttached) && alreadyAssigned && (attachmentState == types.VolumeAttachmentStateDetached) {
 			request := &ec2.AttachVolumeInput{
 				Device:     aws.String(expectedDevice),
 				InstanceId: aws.String(expectedInstance),
@@ -1096,7 +1094,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, volumeID, expectedSt
 		if attachmentState == expectedState {
 			// But first, reset attachment to nil if expectedState equals volumeDetachedState.
 			// Caller will not expect an attachment to be returned for a detached volume if we're not also returning an error.
-			if expectedState == volumeDetachedState {
+			if expectedState == types.VolumeAttachmentStateDetached {
 				attachment = nil
 			}
 			return true, nil
@@ -1917,7 +1915,7 @@ func volumeModificationDone(state string) bool {
 func getVolumeAttachmentsList(volume types.Volume) []string {
 	var volumeAttachmentList []string
 	for _, attachment := range volume.Attachments {
-		if attachment.State == volumeAttachedState {
+		if attachment.State == types.VolumeAttachmentStateAttached {
 			volumeAttachmentList = append(volumeAttachmentList, aws.ToString(attachment.InstanceId))
 		}
 	}
