@@ -1,3 +1,53 @@
+# 1.42.0
+
+## Changes by Kind
+
+### Other
+
+- Remove controller metrics from the node service. ([#2409](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2409), [@mdzraf](https://github.com/mdzraf))
+- Add more descriptive Prometheus `HELP` texts to each metric from the controller. ([#2418](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2418), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+- github.com/prashantv/gostub: [v1.1.0](https://github.com/prashantv/gostub/tree/v1.1.0)
+- go.uber.org/automaxprocs: v1.6.0
+
+### Changed
+- cel.dev/expr: v0.22.0 → v0.23.1
+- github.com/aws/aws-sdk-go-v2/config: [v1.29.9 → v1.29.13](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.29.9...config/v1.29.13)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.17.62 → v1.17.66](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.17.62...credentials/v1.17.66)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.209.0 → v1.211.2](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.209.0...service/ec2/v1.211.2)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.25.1 → v1.25.3](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.25.1...service/sso/v1.25.3)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.29.1 → v1.30.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.29.1...service/ssooidc/v1.30.1)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.33.17 → v1.33.18](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.33.17...service/sts/v1.33.18)
+- github.com/fsnotify/fsnotify: [v1.8.0 → v1.9.0](https://github.com/fsnotify/fsnotify/compare/v1.8.0...v1.9.0)
+- github.com/fxamacker/cbor/v2: [v2.7.0 → v2.8.0](https://github.com/fxamacker/cbor/compare/v2.7.0...v2.8.0)
+- github.com/go-openapi/jsonpointer: [v0.21.0 → v0.21.1](https://github.com/go-openapi/jsonpointer/compare/v0.21.0...v0.21.1)
+- github.com/go-openapi/swag: [v0.23.0 → v0.23.1](https://github.com/go-openapi/swag/compare/v0.23.0...v0.23.1)
+- github.com/google/pprof: [9094ed2 → 27863c8](https://github.com/google/pprof/compare/9094ed2...27863c8)
+- github.com/kubernetes-csi/csi-proxy/client: [v1.2.0 → v1.2.1](https://github.com/kubernetes-csi/csi-proxy/compare/client/v1.2.0...client/v1.2.1)
+- github.com/onsi/ginkgo/v2: [v2.23.0 → v2.23.4](https://github.com/onsi/ginkgo/compare/v2.23.0...v2.23.4)
+- github.com/onsi/gomega: [v1.36.2 → v1.37.0](https://github.com/onsi/gomega/compare/v1.36.2...v1.37.0)
+- github.com/opencontainers/runc: [v1.2.5 → v1.2.6](https://github.com/opencontainers/runc/compare/v1.2.5...v1.2.6)
+- github.com/opencontainers/selinux: [v1.11.1 → v1.12.0](https://github.com/opencontainers/selinux/compare/v1.11.1...v1.12.0)
+- github.com/prometheus/client_golang: [v1.21.1 → v1.22.0](https://github.com/prometheus/client_golang/compare/v1.21.1...v1.22.0)
+- github.com/prometheus/common: [v0.62.0 → v0.63.0](https://github.com/prometheus/common/compare/v0.62.0...v0.63.0)
+- github.com/prometheus/procfs: [v0.15.1 → v0.16.0](https://github.com/prometheus/procfs/compare/v0.15.1...v0.16.0)
+- go.etcd.io/etcd/api/v3: v3.5.19 → v3.5.21
+- go.etcd.io/etcd/client/pkg/v3: v3.5.19 → v3.5.21
+- go.etcd.io/etcd/client/v3: v3.5.19 → v3.5.21
+- golang.org/x/crypto: v0.36.0 → v0.37.0
+- golang.org/x/net: v0.37.0 → v0.39.0
+- golang.org/x/oauth2: v0.28.0 → v0.29.0
+- golang.org/x/sync: v0.12.0 → v0.13.0
+- golang.org/x/sys: v0.31.0 → v0.32.0
+- golang.org/x/term: v0.30.0 → v0.31.0
+- golang.org/x/text: v0.23.0 → v0.24.0
+- golang.org/x/tools: v0.31.0 → v0.32.0
+- google.golang.org/grpc: v1.71.0 → v1.71.1
+- google.golang.org/protobuf: v1.36.5 → v1.36.6
+
 # v1.41.0
 
 ### Note on Deprecated Metrics
