@@ -3246,7 +3246,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 	testCases := []struct {
 		name             string
 		volumeID         string
-		expectedState    string
+		expectedState    types.VolumeAttachmentState
 		expectedInstance string
 		expectedDevice   string
 		alreadyAssigned  bool
@@ -3255,7 +3255,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "success: attached",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3264,7 +3264,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "success: detached",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeDetachedState,
+			expectedState:    types.VolumeAttachmentStateDetached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3273,7 +3273,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "success: disk not found, assumed detached",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeDetachedState,
+			expectedState:    types.VolumeAttachmentStateDetached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3282,7 +3282,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "success: multiple attachments with Multi-Attach enabled",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3291,7 +3291,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: disk not found, expected attached",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3300,7 +3300,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: unexpected device",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   "/dev/xvdab",
 			alreadyAssigned:  false,
@@ -3309,7 +3309,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: unexpected instance",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1235",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3318,7 +3318,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: already assigned but detached state",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  true,
@@ -3327,7 +3327,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: already assigned but attaching state",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  true,
@@ -3336,7 +3336,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		{
 			name:             "failure: multiple attachments with Multi-Attach disabled",
 			volumeID:         "vol-test-1234",
-			expectedState:    volumeAttachedState,
+			expectedState:    types.VolumeAttachmentStateAttached,
 			expectedInstance: "1234",
 			expectedDevice:   defaultPath,
 			alreadyAssigned:  false,
@@ -3402,7 +3402,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil).AnyTimes()
 			}
 
-			attachment, err := c.WaitForAttachmentState(ctx, tc.volumeID, tc.expectedState, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
+			attachment, err := c.WaitForAttachmentState(ctx, tc.expectedState, tc.volumeID, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
 
 			if tc.expectError {
 				if err == nil {
@@ -3413,7 +3413,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 					t.Fatalf("WaitForAttachmentState() failed: expected no error, got %v", err)
 				}
 
-				if tc.expectedState == volumeAttachedState {
+				if tc.expectedState == types.VolumeAttachmentStateAttached {
 					if attachment == nil {
 						t.Fatal("WaiForAttachmentState() failed: expected attachment, got nothing")
 					}
