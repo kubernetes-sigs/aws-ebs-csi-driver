@@ -52,8 +52,9 @@ var (
 )
 
 type metricRecorder struct {
-	registry *prometheus.Registry
-	metrics  map[string]interface{}
+	registry        *prometheus.Registry
+	metrics         map[string]interface{}
+	asyncEC2Metrics *AsyncEC2Collector
 }
 
 // Recorder returns the singleton instance of metricRecorder.
@@ -76,6 +77,46 @@ func InitializeRecorder(deprecatedMetrics bool) *metricRecorder {
 // InitializeNVME registers the NVMe collector for gathering metrics from NVMe devices.
 func (m *metricRecorder) InitializeNVME(csiMountPointPath, instanceID string) {
 	registerNVMECollector(r, csiMountPointPath, instanceID)
+}
+
+// InitializeAsyncEC2Metrics initializes and registers AsyncEC2Collector for gathering metrics on async EC2 operations.
+func (m *metricRecorder) InitializeAsyncEC2Metrics(minimumEmissionThreshold time.Duration) {
+	variableLabels := []string{"volume_id", "instance_id", "attachment_state"}
+	cacheCleanupInterval := 15 * time.Minute
+
+	r.asyncEC2Metrics = &AsyncEC2Collector{
+		detachingDuration: prometheus.NewDesc(metricAsyncDetachSeconds, "Number of seconds spent in given attachment_state after EC2 DetachVolume succeeded.", variableLabels, nil),
+		collectionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Name:    asyncCollectorDuration,
+			Help:    "Histogram of async EC2 collector scrape duration in seconds.",
+			Buckets: []float64{0.01, 0.1, 0.5, 1, 2.5, 5, 10},
+		}),
+		scrapesTotal: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: asyncCollectorScrapes,
+			Help: "Total number of async EC2 collector scrapes.",
+		}),
+		detachingVolumes:     make(map[attachment]detachingVolume),
+		minDurationThreshold: minimumEmissionThreshold,
+		lastCacheUpdate:      time.Now(),
+		ticker:               time.NewTicker(cacheCleanupInterval),
+	}
+	r.registry.MustRegister(r.asyncEC2Metrics)
+
+	// Prevent leaked memory in case of leader change by clearing cache if no detaches have been tracked in a while
+	go func() {
+		for {
+			<-r.asyncEC2Metrics.ticker.C
+			r.asyncEC2Metrics.CleanupCache(cacheCleanupInterval)
+		}
+	}()
+}
+
+// AsyncEC2Metrics returns AsyncEC2Collector if metrics enabled.
+func AsyncEC2Metrics() *AsyncEC2Collector {
+	if r == nil {
+		return nil
+	}
+	return r.asyncEC2Metrics
 }
 
 // IncreaseCount increases the counter metric by 1.
