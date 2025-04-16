@@ -37,26 +37,26 @@ import (
 
 const (
 	// Counter metrics.
-	metricReadOps          = namespace + "read_ops_total"
-	metricWriteOps         = namespace + "write_ops_total"
-	metricReadBytes        = namespace + "read_bytes_total"
-	metricWriteBytes       = namespace + "write_bytes_total"
-	metricReadOpsSeconds   = namespace + "read_seconds_total"
-	metricWriteOpsSeconds  = namespace + "write_seconds_total"
-	metricExceededIOPS     = namespace + "exceeded_iops_seconds_total"
-	metricExceededTP       = namespace + "exceeded_tp_seconds_total"
-	metricEC2ExceededIOPS  = namespace + "ec2_exceeded_iops_seconds_total"
-	metricEC2ExceededTP    = namespace + "ec2_exceeded_tp_seconds_total"
-	metricCollectorScrapes = namespace + "nvme_collector_scrapes_total"
-	metricCollectorErrors  = namespace + "nvme_collector_errors_total"
+	metricReadOps         = namespace + "read_ops_total"
+	metricWriteOps        = namespace + "write_ops_total"
+	metricReadBytes       = namespace + "read_bytes_total"
+	metricWriteBytes      = namespace + "write_bytes_total"
+	metricReadOpsSeconds  = namespace + "read_seconds_total"
+	metricWriteOpsSeconds = namespace + "write_seconds_total"
+	metricExceededIOPS    = namespace + "exceeded_iops_seconds_total"
+	metricExceededTP      = namespace + "exceeded_tp_seconds_total"
+	metricEC2ExceededIOPS = namespace + "ec2_exceeded_iops_seconds_total"
+	metricEC2ExceededTP   = namespace + "ec2_exceeded_tp_seconds_total"
+	nvmeCollectorScrapes  = namespace + "nvme_collector_scrapes_total"
+	nvmeCollectorErrors   = namespace + "nvme_collector_errors_total"
 
 	// Gauge metrics.
 	metricVolumeQueueLength = namespace + "volume_queue_length"
 
 	// Histogram metrics.
-	metricReadLatency       = namespace + "read_io_latency_seconds"
-	metricWriteLatency      = namespace + "write_io_latency_seconds"
-	metricCollectorDuration = namespace + "nvme_collector_duration_seconds"
+	metricReadLatency     = namespace + "read_io_latency_seconds"
+	metricWriteLatency    = namespace + "write_io_latency_seconds"
+	nvmeCollectorDuration = namespace + "nvme_collector_duration_seconds"
 
 	// Conversion factor.
 	microsecondsInSeconds = 1e6
@@ -154,18 +154,18 @@ func NewNVMECollector(path, instanceID string) *NVMECollector {
 		csiMountPointPath: filepath.Clean(path) + "/",
 		instanceID:        instanceID,
 		collectionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name:        metricCollectorDuration,
+			Name:        nvmeCollectorDuration,
 			Help:        "Histogram of NVMe collector scrape duration in seconds.",
 			Buckets:     []float64{0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 			ConstLabels: constLabels,
 		}),
 		scrapesTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name:        metricCollectorScrapes,
+			Name:        nvmeCollectorScrapes,
 			Help:        "Total number of NVMe collector scrapes.",
 			ConstLabels: constLabels,
 		}),
 		scrapeErrorsTotal: prometheus.NewCounter(prometheus.CounterOpts{
-			Name:        metricCollectorErrors,
+			Name:        nvmeCollectorErrors,
 			Help:        "Total number of NVMe collector scrape errors.",
 			ConstLabels: constLabels,
 		}),

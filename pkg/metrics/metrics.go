@@ -74,7 +74,7 @@ func InitializeRecorder(deprecatedMetrics bool) *metricRecorder {
 }
 
 // InitializeNVME registers the NVMe collector for gathering metrics from NVMe devices.
-func InitializeNVME(r *metricRecorder, csiMountPointPath, instanceID string) {
+func (m *metricRecorder) InitializeNVME(csiMountPointPath, instanceID string) {
 	registerNVMECollector(r, csiMountPointPath, instanceID)
 }
 
