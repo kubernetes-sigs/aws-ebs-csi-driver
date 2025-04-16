@@ -36,6 +36,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -1000,6 +1001,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		if isAWSErrorIncorrectState(err) ||
 			isAWSErrorInvalidAttachmentNotFound(err) ||
 			isAWSErrorVolumeNotFound(err) {
+			metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
 			return ErrNotFound
 		}
 		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
@@ -1013,6 +1015,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		// We expect it to be nil, it is (maybe) interesting if it is not
 		klog.V(2).InfoS("waitForAttachmentState returned non-nil attachment with state=detached", "attachment", attachment)
 	}
+	metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
 
 	return nil
 }
@@ -1101,6 +1104,10 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 		}
 		// continue waiting
 		klog.InfoS("Waiting for volume state", "volumeID", volumeID, "actual", attachmentState, "desired", expectedState)
+
+		if expectedState == types.VolumeAttachmentStateDetached {
+			metrics.AsyncEC2Metrics().TrackDetachment(volumeID, expectedInstance, attachmentState)
+		}
 		return false, nil
 	}
 
