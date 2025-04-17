@@ -33,6 +33,11 @@ func newFakeMetadataService(id string, r string, az string, oa arn.ARN) *fakeMet
 		outpostArn:       oa,
 	}
 }
+
+func (m *fakeMetadataService) UpdateMetadata() error {
+	return nil
+}
+
 func (m *fakeMetadataService) GetInstanceID() string {
 	return m.instanceID
 }

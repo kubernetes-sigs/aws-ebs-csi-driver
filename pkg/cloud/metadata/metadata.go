@@ -18,6 +18,7 @@ package metadata
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
@@ -33,6 +34,7 @@ type Metadata struct {
 	NumAttachedENIs        int
 	NumBlockDeviceMappings int
 	OutpostArn             arn.ARN
+	EC2MetadataClient      EC2Metadata
 }
 
 type MetadataServiceConfig struct {
@@ -67,6 +69,23 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
 
 	return nil, errors.New("IMDS metadata and Kubernetes metadata are both unavailable")
+}
+
+// UpdateMetadata refreshes ENI information.
+// We do not refresh blockDeviceMappings because IMDS only reports data from when instance starts (As of April 2025).
+func (m *Metadata) UpdateMetadata() error {
+	if m.EC2MetadataClient == nil {
+		// EC2 Metadata not available, skip updates
+		return nil
+	}
+
+	attachedENIs, err := getAttachedENIs(m.EC2MetadataClient)
+	if err != nil {
+		return fmt.Errorf("failed to update ENI count: %w", err)
+	}
+	m.NumAttachedENIs = attachedENIs
+
+	return nil
 }
 
 func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
