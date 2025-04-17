@@ -1,5 +1,11 @@
 # Helm chart
 
+## v2.42.0
+
+### Feature
+
+- Set internal traffic policy to local for node metric service ([#2432](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2432), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
 ## v2.41.0
 
 ### Feature
