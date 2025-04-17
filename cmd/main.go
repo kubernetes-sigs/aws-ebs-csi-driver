@@ -159,10 +159,12 @@ func main() {
 		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 
 		if options.Mode == driver.ControllerMode || options.Mode == driver.AllMode {
+			// TODO inject metrics in cloud for clean unit tests
 			r.InitializeAPIMetrics(options.DeprecatedMetrics)
+			r.InitializeAsyncEC2Metrics(60 * time.Second /* Don't emit metrics for detaches that take < 60s */)
 		}
 		if options.Mode == driver.NodeMode || options.Mode == driver.AllMode {
-			metrics.InitializeNVME(r, options.CsiMountPointPath, md.GetInstanceID())
+			r.InitializeNVME(options.CsiMountPointPath, md.GetInstanceID())
 		}
 	}
 
