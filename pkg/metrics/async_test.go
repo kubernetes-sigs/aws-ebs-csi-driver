@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build linux
-
 package metrics
 
 import (
@@ -46,7 +44,7 @@ func TestAsyncCollector(t *testing.T) {
 	// Validate metrics
 	metrics, err := testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, metricAsyncDetachSeconds)
 	req.NoError(err)
-	splitmetrics := strings.Split(string(metrics), "\n")
+	splitmetrics := strings.Split(strings.ReplaceAll(string(metrics), "\r\n", "\n"), "\n") // Windows...
 
 	a.Equal(3, testutil.CollectAndCount(reg, metricAsyncDetachSeconds))
 	assertSomeMetricHasLabels(a, splitmetrics, []string{"vol-a", "i-a", string(types.VolumeAttachmentStateDetaching)})
@@ -68,7 +66,7 @@ func TestAsyncCollector(t *testing.T) {
 	// Validate metrics
 	metrics, err = testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, metricAsyncDetachSeconds)
 	req.NoError(err)
-	splitmetrics = strings.Split(string(metrics), "\n")
+	splitmetrics = strings.Split(strings.ReplaceAll(string(metrics), "\r\n", "\n"), "\n") // Windows...
 
 	a.Equal(2, testutil.CollectAndCount(reg, metricAsyncDetachSeconds))
 	assertSomeMetricHasLabels(a, splitmetrics, []string{"vol-a", "i-a", string(types.VolumeAttachmentStateBusy)})
@@ -77,7 +75,7 @@ func TestAsyncCollector(t *testing.T) {
 	assertNoMetricHasLabels(a, splitmetrics, []string{"vol-b", "i-b"})
 
 	// Test cleanup helper
-	AsyncEC2Metrics().CleanupCache(0)
+	AsyncEC2Metrics().cleanupCache(0)
 	a.Empty(AsyncEC2Metrics().detachingVolumes)
 	a.Equal(0, testutil.CollectAndCount(reg, metricAsyncDetachSeconds))
 

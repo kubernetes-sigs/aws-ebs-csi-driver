@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	metricAsyncDetachSeconds = namespace + "async_ec2_still_detaching_seconds"
-	asyncCollectorScrapes    = namespace + "async_collector_scrapes_total"
-	asyncCollectorDuration   = namespace + "async_collector_duration_seconds"
+	metricAsyncDetachSeconds = namespace + "ec2_detach_pending_seconds_total"
+	asyncCollectorScrapes    = namespace + "ec2_collector_scrapes_total"
+	asyncCollectorDuration   = namespace + "ec2_collector_duration_seconds"
 )
 
 type attachment struct {
@@ -34,8 +34,9 @@ type attachment struct {
 }
 
 type detachingVolume struct {
-	detachStart     time.Time
-	attachmentState types.VolumeAttachmentState
+	detachStart          time.Time
+	lastDetachStateCheck time.Time
+	attachmentState      types.VolumeAttachmentState
 }
 
 // AsyncEC2Collector contains metrics related to async EC2 operations and utilities for tracking what metrics should be emitted.
@@ -46,6 +47,9 @@ type AsyncEC2Collector struct {
 	scrapesTotal       prometheus.Counter
 
 	// Utilities
+	// detachingVolumes holds any attachment that the controller service expects to be detached but is not.
+	// We manage concurrency and memory safety within the struct through mutex and ticker instead of relying
+	// on an ExpiringCache because we require that getting a cached value doesn't reset expiration timer.
 	detachingVolumes map[attachment]detachingVolume
 	mutex            sync.Mutex
 	ticker           *time.Ticker
@@ -81,7 +85,7 @@ func (c *AsyncEC2Collector) Collect(ch chan<- prometheus.Metric) {
 	for k, v := range c.detachingVolumes {
 		if time.Since(v.detachStart) > c.minDurationThreshold {
 			if v.attachmentState != types.VolumeAttachmentStateDetached {
-				ch <- prometheus.MustNewConstMetric(c.detachingDuration, prometheus.GaugeValue, time.Since(v.detachStart).Seconds(), k.volumeID, k.instanceID, string(v.attachmentState))
+				ch <- prometheus.MustNewConstMetric(c.detachingDuration, prometheus.CounterValue, time.Since(v.detachStart).Seconds(), k.volumeID, k.instanceID, string(v.attachmentState))
 			}
 		}
 	}
@@ -96,7 +100,6 @@ func (c *AsyncEC2Collector) TrackDetachment(volumeID, instanceID string, attachm
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.lastCacheUpdate = time.Now()
 	a := attachment{volumeID: volumeID, instanceID: instanceID}
 
 	// Clear if detached
@@ -106,16 +109,18 @@ func (c *AsyncEC2Collector) TrackDetachment(volumeID, instanceID string, attachm
 
 	// Check if first time tracking this attachment
 	var detachStart time.Time
+	now := time.Now()
 	dv, ok := c.detachingVolumes[a]
 	if ok {
 		detachStart = dv.detachStart
 	} else {
-		detachStart = time.Now()
+		detachStart = now
 	}
 
 	c.detachingVolumes[a] = detachingVolume{
-		detachStart:     detachStart,
-		attachmentState: attachmentState,
+		detachStart:          detachStart,
+		lastDetachStateCheck: now,
+		attachmentState:      attachmentState,
 	}
 }
 
@@ -132,8 +137,8 @@ func (c *AsyncEC2Collector) ClearDetachMetric(volumeID, instanceID string) {
 	delete(c.detachingVolumes, a)
 }
 
-// CleanupCache clears the detachingVolumes cache if no update has been made since minTimeSinceLastUpdate ago.
-func (c *AsyncEC2Collector) CleanupCache(minTimeSinceLastUpdate time.Duration) {
+// cleanupCache clears the detachingVolumes cache if no update has been made since minTimeSinceLastUpdate ago.
+func (c *AsyncEC2Collector) cleanupCache(minTimeSinceLastUpdate time.Duration) {
 	if c == nil {
 		return
 	}
@@ -141,7 +146,9 @@ func (c *AsyncEC2Collector) CleanupCache(minTimeSinceLastUpdate time.Duration) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if time.Since(c.lastCacheUpdate) > minTimeSinceLastUpdate {
-		clear(c.detachingVolumes)
+	for k, v := range c.detachingVolumes {
+		if time.Since(v.lastDetachStateCheck) > minTimeSinceLastUpdate {
+			delete(c.detachingVolumes, k)
+		}
 	}
 }

@@ -85,7 +85,7 @@ func (m *metricRecorder) InitializeAsyncEC2Metrics(minimumEmissionThreshold time
 	cacheCleanupInterval := 15 * time.Minute
 
 	r.asyncEC2Metrics = &AsyncEC2Collector{
-		detachingDuration: prometheus.NewDesc(metricAsyncDetachSeconds, "Number of seconds spent in given attachment_state after EC2 DetachVolume succeeded.", variableLabels, nil),
+		detachingDuration: prometheus.NewDesc(metricAsyncDetachSeconds, "Number of seconds csi driver has been waiting for volume to be detached from instance. Label attachment_state shows last seen state for attachment associated with volume_id and instance_id.", variableLabels, nil), // FIXME add extra note about leader election?
 		collectionDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Name:    asyncCollectorDuration,
 			Help:    "Histogram of async EC2 collector scrape duration in seconds.",
@@ -106,12 +106,12 @@ func (m *metricRecorder) InitializeAsyncEC2Metrics(minimumEmissionThreshold time
 	go func() {
 		for {
 			<-r.asyncEC2Metrics.ticker.C
-			r.asyncEC2Metrics.CleanupCache(cacheCleanupInterval)
+			r.asyncEC2Metrics.cleanupCache(cacheCleanupInterval)
 		}
 	}()
 }
 
-// AsyncEC2Metrics returns AsyncEC2Collector if metrics enabled.
+// AsyncEC2Metrics returns AsyncEC2Collector if metrics are enabled.
 func AsyncEC2Metrics() *AsyncEC2Collector {
 	if r == nil {
 		return nil
