@@ -134,6 +134,20 @@ func (mr *MockMetadataServiceMockRecorder) GetRegion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockMetadataService)(nil).GetRegion))
 }
 
+// UpdateMetadata mocks base method.
+func (m *MockMetadataService) UpdateMetadata() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMetadata")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMetadata indicates an expected call of UpdateMetadata.
+func (mr *MockMetadataServiceMockRecorder) UpdateMetadata() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetadata", reflect.TypeOf((*MockMetadataService)(nil).UpdateMetadata))
+}
+
 // MockEC2Metadata is a mock of EC2Metadata interface.
 type MockEC2Metadata struct {
 	ctrl     *gomock.Controller
