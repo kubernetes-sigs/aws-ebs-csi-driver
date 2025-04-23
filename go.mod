@@ -33,7 +33,7 @@ require (
 	k8s.io/client-go v1.5.2
 	k8s.io/component-base v0.32.3
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.32.3
+	k8s.io/kubernetes v1.32.4
 	k8s.io/mount-utils v0.32.3
 	k8s.io/pod-security-admission v0.32.3
 	k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
@@ -160,7 +160,7 @@ require (
 	k8s.io/cri-client v0.32.3 // indirect
 	k8s.io/csi-translation-lib v0.32.3 // indirect
 	k8s.io/dynamic-resource-allocation v0.32.3 // indirect
-	k8s.io/kms v0.32.3 // indirect
+	k8s.io/kms v0.32.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kube-scheduler v0.32.3 // indirect
 	k8s.io/kubectl v0.32.3 // indirect
