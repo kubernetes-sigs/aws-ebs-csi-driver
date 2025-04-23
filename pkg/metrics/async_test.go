@@ -17,6 +17,7 @@ package metrics
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -25,7 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: Replace sleep with time-based tests once Go testing/synctest stable in Go 1.25
+const windowsRequiredSleepDuration = time.Millisecond * 75
+
 func TestAsyncCollector(t *testing.T) {
+	t.Parallel()
+
 	// Setup env
 	recorder := InitializeRecorder(false)
 	recorder.InitializeAsyncEC2Metrics(0)
@@ -40,6 +46,7 @@ func TestAsyncCollector(t *testing.T) {
 	AsyncEC2Metrics().TrackDetachment("vol-a", "i-a", types.VolumeAttachmentStateDetaching)
 	AsyncEC2Metrics().TrackDetachment("vol-b", "i-b", types.VolumeAttachmentStateDetaching)
 	AsyncEC2Metrics().TrackDetachment("vol-c", "i-a", types.VolumeAttachmentStateDetaching)
+	time.Sleep(windowsRequiredSleepDuration)
 
 	// Validate metrics
 	metrics, err := testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, metricAsyncDetachSeconds)
@@ -62,6 +69,7 @@ func TestAsyncCollector(t *testing.T) {
 
 	// Clear 1 detachment
 	AsyncEC2Metrics().ClearDetachMetric("vol-b", "i-b")
+	time.Sleep(windowsRequiredSleepDuration)
 
 	// Validate metrics
 	metrics, err = testutil.CollectAndFormat(reg, expfmt.TypeTextPlain, metricAsyncDetachSeconds)
@@ -76,10 +84,10 @@ func TestAsyncCollector(t *testing.T) {
 
 	// Test cleanup helper
 	AsyncEC2Metrics().cleanupCache(0)
+	time.Sleep(windowsRequiredSleepDuration)
+
 	a.Empty(AsyncEC2Metrics().detachingVolumes)
 	a.Equal(0, testutil.CollectAndCount(reg, metricAsyncDetachSeconds))
-
-	// TODO: Consider adding time-based tests once Go testing/synctest stable in Go 1.25
 }
 
 func assertSomeMetricHasLabels(assert *assert.Assertions, metrics, labels []string) {
