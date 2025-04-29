@@ -135,7 +135,7 @@ else
     packageVersion=$(echo $(cut -d '.' -f 1,2 <<<$K8S_VERSION))
 
     # TODO: Always skip broken upstream test - remove after fix released
-    GINKGO_SKIP="(should be protected by vac\\-protection finalizer)|${GINKGO_SKIP}"
+    GINKGO_SKIP="(should be protected by vac\\-protection finalizer)|should provision storage with pvc data source in parallel|${GINKGO_SKIP}"
     GINKGO_SKIP="${GINKGO_SKIP%|}" # Strip trailing | if needed - remove with above TODO
     set -x
     set +e

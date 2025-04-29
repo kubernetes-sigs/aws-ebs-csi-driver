@@ -47,7 +47,8 @@ const (
 	expInstanceID = "i-123456789abcdef01"
 	expDevicePath = "/dev/xvda"
 
-	testOutpostARN = "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	testOutpostARN  = "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0"
+	testSourceVolID = "source-volume-id"
 )
 
 func TestCreateVolume(t *testing.T) {
@@ -225,6 +226,368 @@ func TestCreateVolume(t *testing.T) {
 					if !reflect.DeepEqual(expVol.GetAccessibleTopology(), vol.GetAccessibleTopology()) {
 						t.Fatalf("Expected AccessibleTopology to be %+v, got: %+v", expVol.GetAccessibleTopology(), vol.GetAccessibleTopology())
 					}
+				}
+			},
+		},
+		{
+			name: "clone success KMS key id",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						EncryptedKey: "true",
+						KmsKeyIDKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SourceVolumeID:   testSourceVolID,
+					KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				}
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: expZone,
+					OutpostArn:       "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+					KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				rsp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				sourceVolumeID := ""
+				if rsp.GetVolume() != nil && rsp.GetVolume().GetContentSource() != nil && rsp.GetVolume().GetContentSource().GetVolume() != nil {
+					sourceVolumeID = rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId()
+				}
+				if rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId() != testSourceVolID {
+					t.Errorf("Unexpected source volume: %q", sourceVolumeID)
+				}
+			},
+		},
+		{
+			name: "clone success",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SourceVolumeID:   testSourceVolID,
+				}
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: expZone,
+					OutpostArn:       "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				rsp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				sourceVolumeID := ""
+				if rsp.GetVolume() != nil && rsp.GetVolume().GetContentSource() != nil && rsp.GetVolume().GetContentSource().GetVolume() != nil {
+					sourceVolumeID = rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId()
+				}
+				if rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId() != testSourceVolID {
+					t.Errorf("Unexpected source volume: %q", sourceVolumeID)
+				}
+			},
+		},
+		{
+			name: "clone success AZ and ARN",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Preferred: []*csi.Topology{{}},
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									ZoneTopologyKey:          expZone,
+									WellKnownZoneTopologyKey: expZone,
+									AwsAccountIDKey:          "222222222222",
+									AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+									AwsRegionKey:             "us-west-2",
+									AwsPartitionKey:          "aws",
+								},
+							},
+						},
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SourceVolumeID:   testSourceVolID,
+				}
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: expZone,
+					OutpostArn:       "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				rsp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				sourceVolumeID := ""
+				if rsp.GetVolume() != nil && rsp.GetVolume().GetContentSource() != nil && rsp.GetVolume().GetContentSource().GetVolume() != nil {
+					sourceVolumeID = rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId()
+				}
+				if rsp.GetVolume().GetContentSource().GetVolume().GetVolumeId() != testSourceVolID {
+					t.Errorf("Unexpected source volume: %q", sourceVolumeID)
+				}
+			},
+		},
+		{
+			name: "clone fail: different AZ than source",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Preferred: []*csi.Topology{{}},
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{ZoneTopologyKey: "us-west-1c", WellKnownZoneTopologyKey: "us-west-1b"},
+							},
+						},
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: "us-east-1a",
+					OutpostArn:       "arn:aws:outposts:us-east-1:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if status.Code(err) != codes.ResourceExhausted {
+					t.Fatalf("failed expected ResourceExhausted error but got %v", err)
+				}
+			},
+		},
+		{
+			name: "clone fail: correct AZ different outpost",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Preferred: []*csi.Topology{{}},
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									ZoneTopologyKey:          expZone,
+									WellKnownZoneTopologyKey: expZone,
+									AwsAccountIDKey:          "222222222222",
+									AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+									AwsRegionKey:             "us-west-2",
+									AwsPartitionKey:          "diff",
+								},
+							},
+						},
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: expZone,
+					OutpostArn:       "arn:aws:outposts:us-east-1:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if status.Code(err) != codes.ResourceExhausted {
+					t.Fatalf("failed expected ResourceExhausted error but got %v", err)
+				}
+			},
+		},
+		{
+			name: "clone fail: different KMS key than source",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						EncryptedKey: "true",
+						KmsKeyIDKey:  "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Volume{
+							Volume: &csi.VolumeContentSource_VolumeSource{
+								VolumeId: "volume-id",
+							},
+						},
+					},
+				}
+
+				ctx := t.Context()
+
+				mockSourceDisk := &cloud.Disk{
+					VolumeID:         testSourceVolID,
+					AvailabilityZone: expZone,
+					OutpostArn:       "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+					KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cddiff",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Any()).Return(mockSourceDisk, nil)
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("failed expected InvalidArgument error but got %v", err)
 				}
 			},
 		},
@@ -2518,6 +2881,263 @@ func TestDeleteVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestCheckSourceTopology(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		requirement            *csi.TopologyRequirement
+		sourceVolumeZone       string
+		sourceVolumeOutpostArn string
+		sourceVolumeZoneID     string
+		expErr                 bool
+	}{
+		{
+			name:                   "no requirement",
+			requirement:            &csi.TopologyRequirement{},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ and outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          expZone,
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ matching outpostARN only on WellKnownZoneTopologyKey",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          "us-east-1b",
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ matching outpostARN only on ZoneTopologyKey",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          expZone,
+							WellKnownZoneTopologyKey: "us-east-1a",
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ wrong outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          expZone,
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "diff",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+		{
+			name: "wrong AZ matching outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          "us-east-1b",
+							WellKnownZoneTopologyKey: "us-east-1a",
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+		{
+			name: "wrong AZ wrong outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          "us-east-1b",
+							WellKnownZoneTopologyKey: "us-east-1a",
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "diff",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+		{
+			name: "matching AZ wrong outpostARN but only preferred",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          expZone,
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "diff",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZone,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ-ID and outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneIDTopologyKey: expZoneID,
+							AwsAccountIDKey:   "222222222222",
+							AwsOutpostIDKey:   "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:      "us-west-2",
+							AwsPartitionKey:   "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZoneID:     expZoneID,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 false,
+		},
+		{
+			name: "matching AZ-ID wrong outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneIDTopologyKey: expZoneID,
+							AwsAccountIDKey:   "222222222222",
+							AwsOutpostIDKey:   "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:      "us-west-2",
+							AwsPartitionKey:   "diff",
+						},
+					},
+				},
+			},
+			sourceVolumeZoneID:     expZoneID,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+		{
+			name: "wrong AZ-ID matching outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneIDTopologyKey: "usw2-az1",
+							AwsAccountIDKey:   "222222222222",
+							AwsOutpostIDKey:   "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:      "us-west-2",
+							AwsPartitionKey:   "aws",
+						},
+					},
+				},
+			},
+			sourceVolumeZone:       expZoneID,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+		{
+			name: "wrong AZ-ID wrong outpostARN",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{{}},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneIDTopologyKey:        "usw2-az1",
+							WellKnownZoneTopologyKey: "us-east-1a",
+							AwsAccountIDKey:          "222222222222",
+							AwsOutpostIDKey:          "aa-aaaaaaaaaaaaaaaaa",
+							AwsRegionKey:             "us-west-2",
+							AwsPartitionKey:          "diff",
+						},
+					},
+				},
+			},
+			sourceVolumeZoneID:     expZoneID,
+			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
+			expErr:                 true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkSourceTopology(tc.requirement, tc.sourceVolumeZone, tc.sourceVolumeOutpostArn, tc.sourceVolumeZoneID)
+			if err != nil && !tc.expErr {
+				t.Fatalf("Unexpected error: %v", err)
+			} else if tc.expErr && status.Code(err) != codes.ResourceExhausted {
+				t.Fatalf("Incorrect error code expected ResourceExhausted (8) but got : %v", err)
+			}
+		})
 	}
 }
 

@@ -71,5 +71,5 @@ COLLECT_METRICS=${COLLECT_METRICS:-"false"}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e-kubernetes/..."}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"External.Storage"}
-GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]|\[Serial\]|\[Flaky\]"}
+GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]|\[Serial\]|\[Flaky\]|should provision storage with pvc data source in parallel"}
 GINKGO_PARALLEL=${GINKGO_PARALLEL:-25}

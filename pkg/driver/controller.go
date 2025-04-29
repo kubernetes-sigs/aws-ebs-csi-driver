@@ -47,6 +47,7 @@ var (
 	// controllerCaps represents the capability of controller service.
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
@@ -113,6 +114,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		throughput               int32
 		volumeInitializationRate int32
 		isEncrypted              bool
+		encryptedKey             string
 		kmsKeyID                 string
 		tagsToEvaluate           = make([]string, 0)
 		volumeTags               = map[string]string{
@@ -164,6 +166,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
 			isEncrypted = isTrue(value)
+			encryptedKey = value
 		case KmsKeyIDKey:
 			kmsKeyID = value
 		case PVCNameKey:
@@ -324,22 +327,58 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	snapshotID := ""
+	volumeID := ""
 	volumeSource := req.GetVolumeContentSource()
 	if volumeSource != nil {
-		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
+		sourceSnapshot := volumeSource.GetSnapshot()
+		sourceVolume := volumeSource.GetVolume()
+
+		if sourceSnapshot != nil && sourceVolume != nil {
+			return nil, status.Error(codes.InvalidArgument, "Cannot have more than one volume source")
+		}
+
+		if sourceSnapshot == nil && sourceVolume == nil {
 			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
 		}
-		sourceSnapshot := volumeSource.GetSnapshot()
-		if sourceSnapshot == nil {
-			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
-		}
-		snapshotID = sourceSnapshot.GetSnapshotId()
-	}
 
-	// create a new volume
-	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
-	zoneID := pickAvailabilityZoneID(req.GetAccessibilityRequirements())
-	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
+		if sourceSnapshot != nil {
+			snapshotID = sourceSnapshot.GetSnapshotId()
+		}
+
+		if sourceVolume != nil {
+			if encryptedKey != "" && !isEncrypted {
+				return nil, status.Error(codes.InvalidArgument, "Cannot make an unencrypted clone")
+			}
+			volumeID = sourceVolume.GetVolumeId()
+		}
+	}
+	var zone string
+	var zoneID string
+	var outpostArn string
+	// create or clone a new volume
+	if volumeID != "" {
+		sourceVolume, err := d.cloud.GetDiskByID(ctx, volumeID)
+
+		if kmsKeyID != "" && sourceVolume.KmsKeyID != kmsKeyID {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot provision clone with different KMS key than source volume")
+		}
+
+		if err != nil {
+			return nil, status.Errorf(codes.NotFound, "Error source volume with volumeID %v not found: %v", volumeID, err)
+		}
+
+		err = checkSourceTopology(req.GetAccessibilityRequirements(), sourceVolume.AvailabilityZone, sourceVolume.OutpostArn, sourceVolume.AvailabilityZoneID)
+		if err != nil {
+			return nil, err
+		}
+		zone = sourceVolume.AvailabilityZone
+		zoneID = sourceVolume.AvailabilityZoneID
+		outpostArn = sourceVolume.OutpostArn
+	} else {
+		zone = pickAvailabilityZone(req.GetAccessibilityRequirements())
+		zoneID = pickAvailabilityZoneID(req.GetAccessibilityRequirements())
+		outpostArn = getOutpostArn(req.GetAccessibilityRequirements())
+	}
 
 	opts := &cloud.DiskOptions{
 		CapacityBytes:            volSizeBytes,
@@ -355,6 +394,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		Encrypted:                isEncrypted,
 		KmsKeyID:                 kmsKeyID,
 		SnapshotID:               snapshotID,
+		SourceVolumeID:           volumeID,
 		MultiAttachEnabled:       multiAttach,
 		VolumeInitializationRate: volumeInitializationRate,
 	}
@@ -990,6 +1030,51 @@ func getOutpostArn(requirement *csi.TopologyRequirement) string {
 	return ""
 }
 
+// Check if source volumes topology matches with clones requisite topology requirements.
+func checkSourceTopology(requirement *csi.TopologyRequirement, sourceVolumeZone string, sourceVolumeOutpostArn string, sourceVolumeZoneID string) error {
+	if requirement.GetRequisite() == nil || requirement == nil {
+		return nil
+	}
+	for _, toplogy := range requirement.GetRequisite() {
+		zone, hasZone := toplogy.GetSegments()[WellKnownZoneTopologyKey]
+		if hasZone && zone == sourceVolumeZone {
+			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
+			if hasOutpost {
+				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
+					return nil
+				}
+			} else {
+				return nil
+			}
+		}
+
+		zone, hasZone = toplogy.GetSegments()[ZoneTopologyKey]
+		if hasZone && zone == sourceVolumeZone {
+			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
+			if hasOutpost {
+				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
+					return nil
+				}
+			} else {
+				return nil
+			}
+		}
+
+		zoneid, hasZoneID := toplogy.GetSegments()[ZoneIDTopologyKey]
+		if hasZoneID && zoneid == sourceVolumeZoneID {
+			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
+			if hasOutpost {
+				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
+					return nil
+				}
+			} else {
+				return nil
+			}
+		}
+	}
+	return status.Errorf(codes.ResourceExhausted, "Cannot provision clone with the specified topology constraints")
+}
+
 func newCreateVolumeResponse(disk *cloud.Disk, ctx map[string]string) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
 	if disk.SnapshotID != "" {
@@ -997,6 +1082,16 @@ func newCreateVolumeResponse(disk *cloud.Disk, ctx map[string]string) *csi.Creat
 			Type: &csi.VolumeContentSource_Snapshot{
 				Snapshot: &csi.VolumeContentSource_SnapshotSource{
 					SnapshotId: disk.SnapshotID,
+				},
+			},
+		}
+	}
+
+	if disk.SourceVolumeID != "" {
+		src = &csi.VolumeContentSource{
+			Type: &csi.VolumeContentSource_Volume{
+				Volume: &csi.VolumeContentSource_VolumeSource{
+					VolumeId: disk.SourceVolumeID,
 				},
 			},
 		}

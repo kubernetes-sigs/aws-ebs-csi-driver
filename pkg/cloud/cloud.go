@@ -219,8 +219,10 @@ type Disk struct {
 	CapacityGiB        int32
 	AvailabilityZone   string
 	AvailabilityZoneID string
+	SourceVolumeID     string
 	SnapshotID         string
 	OutpostArn         string
+	KmsKeyID           string
 	Attachments        []string
 }
 
@@ -242,6 +244,7 @@ type DiskOptions struct {
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
 	KmsKeyID                 string
 	SnapshotID               string
+	SourceVolumeID           string
 	VolumeInitializationRate int32
 }
 
@@ -605,7 +608,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		throughput    int32
 		err           error
 		requestedIops int32
+		size          int32
+		outpostArn    string
+		volumeID      string
 	)
+
+	isClone := diskOptions.SourceVolumeID != ""
 
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
@@ -659,26 +667,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	// We use a sha256 hash to guarantee the token that is less than or equal to 64 characters
 	clientToken := sha256.Sum256([]byte(tokenBase))
 
-	requestInput := &ec2.CreateVolumeInput{
-		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
-		Size:               aws.Int32(capacityGiB),
-		VolumeType:         types.VolumeType(createType),
-		Encrypted:          aws.Bool(diskOptions.Encrypted),
-		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
-		TagSpecifications:  []types.TagSpecification{tagSpec},
-	}
-
-	if len(zone) > 0 {
-		requestInput.AvailabilityZone = aws.String(zone)
-	}
-	if len(zoneID) > 0 {
-		requestInput.AvailabilityZoneId = aws.String(zoneID)
-	}
-	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
-	if len(diskOptions.OutpostArn) > 0 {
-		requestInput.OutpostArn = aws.String(diskOptions.OutpostArn)
-	}
-
 	azParams := getVolumeLimitsParams{
 		availabilityZone:   zone,
 		availabilityZoneId: zoneID,
@@ -699,27 +687,27 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		iops = capIOPS(createType, capacityGiB, requestedIops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
-	if len(diskOptions.KmsKeyID) > 0 {
-		requestInput.KmsKeyId = aws.String(diskOptions.KmsKeyID)
-		requestInput.Encrypted = aws.Bool(true)
+	if isClone {
+		copyRequestInput := &ec2.CopyVolumesInput{
+			SourceVolumeId:     aws.String(diskOptions.SourceVolumeID),
+			ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
+			Size:               aws.Int32(capacityGiB),
+			VolumeType:         types.VolumeType(createType),
+			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
+			TagSpecifications:  []types.TagSpecification{tagSpec},
+		}
+		size, outpostArn, volumeID, err = c.createCloneHelper(ctx, copyRequestInput, iops, throughput)
+	} else {
+		createRequestInput := &ec2.CreateVolumeInput{
+			ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
+			Size:               aws.Int32(capacityGiB),
+			VolumeType:         types.VolumeType(createType),
+			Encrypted:          aws.Bool(diskOptions.Encrypted),
+			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
+			TagSpecifications:  []types.TagSpecification{tagSpec},
+		}
+		size, outpostArn, volumeID, err = c.createVolumeHelper(ctx, diskOptions, createRequestInput, iops, throughput, zone, zoneID)
 	}
-	if iops > 0 {
-		requestInput.Iops = aws.Int32(iops)
-	}
-	if throughput > 0 {
-		requestInput.Throughput = aws.Int32(throughput)
-	}
-	snapshotID := diskOptions.SnapshotID
-	if len(snapshotID) > 0 {
-		requestInput.SnapshotId = aws.String(snapshotID)
-	}
-	if diskOptions.VolumeInitializationRate > 0 {
-		requestInput.VolumeInitializationRate = aws.Int32(diskOptions.VolumeInitializationRate)
-	}
-
-	response, err := c.ec2.CreateVolume(ctx, requestInput, func(o *ec2.Options) {
-		o.Retryer = c.rm.createVolumeRetryer
-	})
 	if err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
 			return nil, ErrNotFound
@@ -732,11 +720,11 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
 		}
-		if isAWSErrorInvalidParameterCombination(err) {
-			return nil, ErrInvalidArgument
-		}
 		if isAWSErrorVolumeLimitExceeded(err) {
 			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
+		if isAWSErrorInvalidParameterCombination(err) {
+			return nil, ErrInvalidArgument
 		}
 		if isAwsErrorMaxIOPSLimitExceeded(err) {
 			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
@@ -744,12 +732,10 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
 
-	volumeID := aws.ToString(response.VolumeId)
 	if len(volumeID) == 0 {
 		return nil, errors.New("volume ID was not returned by CreateVolume")
 	}
 
-	size := *response.Size
 	if size == 0 {
 		return nil, errors.New("disk size was not returned by CreateVolume")
 	}
@@ -757,8 +743,66 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if err := c.waitForVolume(ctx, volumeID); err != nil {
 		return nil, fmt.Errorf("timed out waiting for volume to create: %w", err)
 	}
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: diskOptions.SnapshotID, SourceVolumeID: diskOptions.SourceVolumeID, OutpostArn: outpostArn}, nil
+}
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: aws.ToString(response.OutpostArn)}, nil
+func (c *cloud) createCloneHelper(ctx context.Context, input *ec2.CopyVolumesInput, iops int32, throughput int32) (int32, string, string, error) {
+	if iops > 0 {
+		input.Iops = aws.Int32(iops)
+	}
+	if throughput > 0 {
+		input.Throughput = aws.Int32(throughput)
+	}
+	copyResponse, err := c.ec2.CopyVolumes(ctx, input, func(o *ec2.Options) {
+		o.Retryer = c.rm.copyVolumeRetryer
+	})
+	if err != nil {
+		return 0, "", "", err
+	}
+	if len(copyResponse.Volumes) != 1 {
+		return 0, "", "", errors.New("copyResponse does not contain volume information")
+	}
+	return *copyResponse.Volumes[0].Size, aws.ToString(copyResponse.Volumes[0].OutpostArn), aws.ToString(copyResponse.Volumes[0].VolumeId), nil
+}
+
+func (c *cloud) createVolumeHelper(ctx context.Context, diskOptions *DiskOptions, input *ec2.CreateVolumeInput, iops int32, throughput int32, zone string, zoneID string) (int32, string, string, error) {
+	if len(zone) > 0 {
+		input.AvailabilityZone = aws.String(zone)
+	}
+	if len(zoneID) > 0 {
+		input.AvailabilityZoneId = aws.String(zoneID)
+	}
+	if len(diskOptions.OutpostArn) > 0 {
+		input.OutpostArn = aws.String(diskOptions.OutpostArn)
+	}
+
+	if len(diskOptions.KmsKeyID) > 0 {
+		input.KmsKeyId = aws.String(diskOptions.KmsKeyID)
+		input.Encrypted = aws.Bool(true)
+	}
+
+	if iops > 0 {
+		input.Iops = aws.Int32(iops)
+	}
+
+	if diskOptions.Throughput > 0 {
+		input.Throughput = aws.Int32(throughput)
+	}
+	snapshotID := diskOptions.SnapshotID
+	if len(snapshotID) > 0 {
+		input.SnapshotId = aws.String(snapshotID)
+	}
+	if diskOptions.VolumeInitializationRate > 0 {
+		input.VolumeInitializationRate = aws.Int32(diskOptions.VolumeInitializationRate)
+	}
+
+	createResponse, err := c.ec2.CreateVolume(ctx, input, func(o *ec2.Options) {
+		o.Retryer = c.rm.createVolumeRetryer
+	})
+	if err != nil {
+		return 0, "", "", err
+	}
+	return *createResponse.Size, aws.ToString(createResponse.OutpostArn), aws.ToString(createResponse.VolumeId), nil
 }
 
 // execBatchDescribeVolumesModifications executes a batched DescribeVolumesModifications API call.
@@ -1488,6 +1532,7 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 		AvailabilityZone: aws.ToString(volume.AvailabilityZone),
 		OutpostArn:       aws.ToString(volume.OutpostArn),
 		Attachments:      getVolumeAttachmentsList(*volume),
+		KmsKeyID:         aws.ToString(volume.KmsKeyId),
 	}
 
 	if volume.Size != nil {

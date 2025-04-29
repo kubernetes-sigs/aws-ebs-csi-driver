@@ -41,7 +41,7 @@ DriverInfo:
     block: true
     exec: true
     snapshotDataSource: true
-    pvcDataSource: false
+    pvcDataSource: true
     multipods: true
     controllerExpansion: true
     nodeExpansion: true

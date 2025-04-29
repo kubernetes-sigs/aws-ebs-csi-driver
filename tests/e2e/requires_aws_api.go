@@ -351,6 +351,163 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 		}
 		test.Run(cs, snapshotrcs, ns)
 	})
+	It("should copy a volume with different volume parameters", func() {
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.EncryptedKey:  "true",
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		clonedPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.EncryptedKey:  "true",
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeIO2,
+						ebscsidriver.IopsKey:       testsuites.DefaultIopsIoVolumes,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCopyVolumeTest{
+			CSIDriver: ebsDriver,
+			Pod:       pod,
+			ClonedPod: clonedPod,
+			ValidateFunc: func() {
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume: %v", err))
+				}
+
+				if len(result.Volumes) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
+				}
+
+				if result.Volumes[0].VolumeType != awscloud.VolumeTypeIO1 {
+					Fail(fmt.Sprintf("expected volume type %s, got %s", awscloud.VolumeTypeIO1, result.Volumes[0].VolumeType))
+				}
+			},
+		}
+		test.Run(cs, ns)
+	})
+	// This is a test to ensure driver logic is handled correctly when all params are omitted.
+	It("should copy a volume with all omitted params and not get same IOPS as source ", func() {
+		sourceIops := "3012"
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.EncryptedKey:  "true",
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+						ebscsidriver.IopsKey:       sourceIops,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		clonedPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCopyVolumeTest{
+			CSIDriver: ebsDriver,
+			Pod:       pod,
+			ClonedPod: clonedPod,
+			ValidateFunc: func() {
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume: %v", err))
+				}
+
+				if len(result.Volumes) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
+				}
+
+				if fmt.Sprintf("%d", result.Volumes[0].Iops) == sourceIops {
+					Fail(fmt.Sprintf("expected volume iops %d, to not be same as source %s", result.Volumes[0].Iops, sourceIops))
+				}
+			},
+		}
+		test.Run(cs, ns)
+	})
+	It("should copy a volume to a bigger volume", func() {
+		cloneClaimSize := "3Gi"
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.EncryptedKey:  "true",
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		clonedPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   cloneClaimSize,
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCopyVolumeTest{
+			CSIDriver: ebsDriver,
+			Pod:       pod,
+			ClonedPod: clonedPod,
+			ValidateFunc: func() {
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume: %v", err))
+				}
+
+				if len(result.Volumes) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
+				}
+
+				if fmt.Sprintf("%dGi", result.Volumes[0].Size) != cloneClaimSize {
+					Fail(fmt.Sprintf("expected volume size to be %s, got %d", cloneClaimSize, result.Volumes[0].Size))
+				}
+			},
+		}
+		test.Run(cs, ns)
+	})
 
 	It("should validate GP3 volume IOPS are not capped at 16000 when requesting 16001", func() {
 		testTag := generateTagName()

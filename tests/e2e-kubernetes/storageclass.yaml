@@ -18,3 +18,5 @@ metadata:
   name: ebs.csi.aws.com
 provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
+parameters:
+  encrypted: "true"
