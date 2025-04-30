@@ -311,6 +311,27 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[k] = v
 	}
 
+	if modifyOptions.modifyTagsOptions.TagsToAdd != nil {
+		var vacTags []string
+		for key, value := range req.GetMutableParameters() {
+			if strings.HasPrefix(key, TagKeyPrefix) {
+				vacTags = append(vacTags, value)
+			}
+		}
+		vacTagsMap, err := template.Evaluate(vacTags, tProps, d.options.WarnOnInvalidTag)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+		}
+
+		if err = validateExtraTags(vacTagsMap, d.options.WarnOnInvalidTag); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+		}
+
+		for k, v := range vacTagsMap {
+			volumeTags[k] = v
+		}
+	}
+
 	opts := &cloud.DiskOptions{
 		CapacityBytes:          volSizeBytes,
 		Tags:                   volumeTags,
