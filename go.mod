@@ -160,7 +160,7 @@ require (
 	k8s.io/cri-client v0.32.3 // indirect
 	k8s.io/csi-translation-lib v0.32.3 // indirect
 	k8s.io/dynamic-resource-allocation v0.32.3 // indirect
-	k8s.io/kms v0.32.4 // indirect
+	k8s.io/kms v0.33.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kube-scheduler v0.32.3 // indirect
 	k8s.io/kubectl v0.32.3 // indirect
