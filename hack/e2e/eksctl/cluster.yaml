@@ -32,6 +32,8 @@ managedNodeGroups:
   - name: ng-linux
     amiFamily: AmazonLinux2
     desiredCapacity: 3
+    # Test against no-IMDS environment to test k8s metadata
+    # and IRSA/Pod Identity support
     disablePodIMDS: true
     instanceTypes: [{{ .Env.INSTANCE_TYPE }}]
     ssh:
