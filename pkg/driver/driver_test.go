@@ -30,6 +30,7 @@ func TestNewDriver(t *testing.T) {
 	mockCloud := cloud.NewMockCloud(ctrl)
 	mockMetadataService := metadata.NewMockMetadataService(ctrl)
 	mockMounter := mounter.NewMockMounter(ctrl)
+
 	mockKubernetesClient := NewMockKubernetesClient(ctrl)
 	testCases := []struct {
 		name          string
