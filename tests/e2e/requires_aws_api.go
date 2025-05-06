@@ -17,6 +17,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -172,6 +173,79 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 						},
 					},
 				})
+			},
+		}
+		test.Run(cs, snapshotrcs, ns)
+	})
+
+	It("should create a volume from a snapshot with initialization rate", func() {
+		restoredTagKey := generateTagName()
+		restoredTagVal := "volume-init-rate-test"
+		initRate := "200"
+
+		originalPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+
+		restoredPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdGrepVolumeData("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey:               awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:                   ebscsidriver.FSTypeExt4,
+						ebscsidriver.VolumeInitializationRateKey: initRate,
+						ebscsidriver.TagKeyPrefix:                fmt.Sprintf("%s=%s", restoredTagKey, restoredTagVal),
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         originalPod,
+			RestoredPod: restoredPod,
+
+			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
+				intInitRate, err := strconv.Atoi(initRate)
+				if err != nil {
+					Fail(fmt.Sprintf("failed to parse initRate: %v", err))
+				}
+
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + restoredTagKey),
+							Values: []string{restoredTagVal},
+						},
+					},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume: %v", err))
+				}
+				if len(result.Volumes) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
+				}
+
+				vol := result.Volumes[0]
+				if vol.VolumeInitializationRate == nil {
+					Fail("VolumeInitializationRate is unexpectedly nil")
+				}
+				if *vol.VolumeInitializationRate != int32(intInitRate) {
+					Fail(fmt.Sprintf("VolumeInitializationRate mismatch: got %d, expected %d", *vol.VolumeInitializationRate, intInitRate))
+				}
 			},
 		}
 		test.Run(cs, snapshotrcs, ns)

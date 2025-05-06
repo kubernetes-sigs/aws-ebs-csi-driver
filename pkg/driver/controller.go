@@ -106,16 +106,17 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	defer d.inFlight.Delete(volName)
 
 	var (
-		volumeType             string
-		iopsPerGB              int32
-		allowIOPSPerGBIncrease bool
-		iops                   int32
-		throughput             int32
-		isEncrypted            bool
-		blockExpress           bool
-		kmsKeyID               string
-		scTags                 []string
-		volumeTags             = map[string]string{
+		volumeType               string
+		iopsPerGB                int32
+		allowIOPSPerGBIncrease   bool
+		iops                     int32
+		throughput               int32
+		volumeInitializationRate int32
+		isEncrypted              bool
+		blockExpress             bool
+		kmsKeyID                 string
+		scTags                   []string
+		volumeTags               = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
@@ -149,6 +150,12 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", err)
 			}
 			iops = int32(parseIopsKey)
+		case VolumeInitializationRateKey:
+			parseInitRate, parseInitRateErr := strconv.ParseInt(value, 10, 32)
+			if parseInitRateErr != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid volumeInitializationRate: %v", err)
+			}
+			volumeInitializationRate = int32(parseInitRate)
 		case ThroughputKey:
 			parseThroughput, parseThroughputErr := strconv.ParseInt(value, 10, 32)
 			if parseThroughputErr != nil {
@@ -312,20 +319,21 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		CapacityBytes:          volSizeBytes,
-		Tags:                   volumeTags,
-		VolumeType:             volumeType,
-		IOPSPerGB:              iopsPerGB,
-		AllowIOPSPerGBIncrease: allowIOPSPerGBIncrease,
-		IOPS:                   iops,
-		Throughput:             throughput,
-		AvailabilityZone:       zone,
-		OutpostArn:             outpostArn,
-		Encrypted:              isEncrypted,
-		BlockExpress:           blockExpress,
-		KmsKeyID:               kmsKeyID,
-		SnapshotID:             snapshotID,
-		MultiAttachEnabled:     multiAttach,
+		CapacityBytes:            volSizeBytes,
+		Tags:                     volumeTags,
+		VolumeType:               volumeType,
+		IOPSPerGB:                iopsPerGB,
+		AllowIOPSPerGBIncrease:   allowIOPSPerGBIncrease,
+		IOPS:                     iops,
+		Throughput:               throughput,
+		AvailabilityZone:         zone,
+		OutpostArn:               outpostArn,
+		Encrypted:                isEncrypted,
+		BlockExpress:             blockExpress,
+		KmsKeyID:                 kmsKeyID,
+		SnapshotID:               snapshotID,
+		MultiAttachEnabled:       multiAttach,
+		VolumeInitializationRate: volumeInitializationRate,
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)

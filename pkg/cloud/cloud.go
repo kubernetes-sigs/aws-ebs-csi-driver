@@ -217,8 +217,9 @@ type DiskOptions struct {
 	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
-	KmsKeyID   string
-	SnapshotID string
+	KmsKeyID                 string
+	SnapshotID               string
+	VolumeInitializationRate int32
 }
 
 // ModifyDiskOptions represents parameters to modify an EBS volume.
@@ -647,6 +648,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
 		requestInput.SnapshotId = aws.String(snapshotID)
+	}
+	if diskOptions.VolumeInitializationRate > 0 {
+		requestInput.VolumeInitializationRate = aws.Int32(diskOptions.VolumeInitializationRate)
 	}
 
 	response, err := c.ec2.CreateVolume(ctx, requestInput, func(o *ec2.Options) {
