@@ -1337,6 +1337,40 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: create volume from snapshot with initialization rate",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:            util.GiBToBytes(1),
+				Tags:                     map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SnapshotID:               "snapshot-test",
+				VolumeInitializationRate: 200,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				VolumeInitializationRate: aws.Int32(200),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "failure: create volume from snapshot with initialization rate when snapshotID is missing",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:            util.GiBToBytes(1),
+				Tags:                     map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeInitializationRate: 200,
+			},
+			expDisk: nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				VolumeInitializationRate: aws.Int32(200),
+			},
+			expCreateVolumeErr: errors.New("InvalidParameterCombination"),
+			expErr:             fmt.Errorf("could not create volume in EC2: %w", errors.New("InvalidParameterCombination")),
+		},
+		{
 			name:       "failure: multi-attach with GP3",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
