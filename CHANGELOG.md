@@ -1,3 +1,84 @@
+# 1.43.0
+
+## Changes by Kind
+
+### Feature
+
+- Add `aws_ebs_csi_ec2_detach_pending_seconds_total` controller metric for detecting if volume is not detaching as expected ([#2445](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2445), [@AndrewSirenko](https://github.com/AndrewSirenko))
+- Introduced new StorageClass parameter: volumeInitializationRate - when creating a volume from a snapshot, this parameter can be used to request a provisioned initialization rate, in MiB/s. ([#2463](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2463), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+- github.com/go-jose/go-jose/v4: [v4.0.4](https://github.com/go-jose/go-jose/tree/v4.0.4)
+- github.com/spiffe/go-spiffe/v2: [v2.5.0](https://github.com/spiffe/go-spiffe/tree/v2.5.0)
+- github.com/zeebo/errs: [v1.4.0](https://github.com/zeebo/errs/tree/v1.4.0)
+- gopkg.in/go-jose/go-jose.v2: v2.6.3
+
+### Changed
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.25.0 → v1.26.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/detectors/gcp/v1.25.0...detectors/gcp/v1.26.0)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.211.3 → v1.215.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.211.3...service/ec2/v1.215.0)
+- github.com/cncf/xds/go: [cff3c89 → 2f00578](https://github.com/cncf/xds/compare/cff3c89...2f00578)
+- github.com/coredns/corefile-migration: [v1.0.24 → v1.0.25](https://github.com/coredns/corefile-migration/compare/v1.0.24...v1.0.25)
+- github.com/coreos/go-oidc: [v2.2.1+incompatible → v2.3.0+incompatible](https://github.com/coreos/go-oidc/compare/v2.2.1...v2.3.0)
+- github.com/golang-jwt/jwt/v4: [v4.5.0 → v4.5.2](https://github.com/golang-jwt/jwt/compare/v4.5.0...v4.5.2)
+- github.com/google/cel-go: [v0.22.1 → v0.23.2](https://github.com/google/cel-go/compare/v0.22.1...v0.23.2)
+- github.com/gorilla/websocket: [v1.5.3 → e064f32](https://github.com/gorilla/websocket/compare/v1.5.3...e064f32)
+- github.com/opencontainers/runc: [v1.2.6 → v1.2.5](https://github.com/opencontainers/runc/compare/v1.2.6...v1.2.5)
+- github.com/prometheus/procfs: [v0.16.0 → v0.16.1](https://github.com/prometheus/procfs/compare/v0.16.0...v0.16.1)
+- go.etcd.io/etcd/client/v2: v2.305.16 → v2.305.21
+- go.etcd.io/etcd/pkg/v3: v3.5.16 → v3.5.21
+- go.etcd.io/etcd/raft/v3: v3.5.16 → v3.5.21
+- go.etcd.io/etcd/server/v3: v3.5.16 → v3.5.21
+- golang.org/x/sys: v0.32.0 → v0.33.0
+- google.golang.org/grpc: v1.71.1 → v1.72.0
+- k8s.io/api: v0.32.3 → v0.33.0
+- k8s.io/apiextensions-apiserver: v0.32.3 → v0.33.0
+- k8s.io/apimachinery: v0.32.3 → v0.33.0
+- k8s.io/apiserver: v0.32.3 → v0.33.0
+- k8s.io/cli-runtime: v0.32.3 → v0.33.0
+- k8s.io/client-go: v0.32.3 → v0.33.0
+- k8s.io/cloud-provider: v0.32.3 → v0.33.0
+- k8s.io/cluster-bootstrap: v0.32.3 → v0.33.0
+- k8s.io/code-generator: v0.32.3 → v0.33.0
+- k8s.io/component-base: v0.32.3 → v0.33.0
+- k8s.io/component-helpers: v0.32.3 → v0.33.0
+- k8s.io/controller-manager: v0.32.3 → v0.33.0
+- k8s.io/cri-api: v0.32.3 → v0.33.0
+- k8s.io/cri-client: v0.32.3 → v0.33.0
+- k8s.io/csi-translation-lib: v0.32.3 → v0.33.0
+- k8s.io/dynamic-resource-allocation: v0.32.3 → v0.33.0
+- k8s.io/endpointslice: v0.32.3 → v0.33.0
+- k8s.io/externaljwt: v0.32.3 → v0.33.0
+- k8s.io/gengo/v2: 2b36238 → 1244d31
+- k8s.io/kms: v0.32.3 → v0.33.0
+- k8s.io/kube-aggregator: v0.32.3 → v0.33.0
+- k8s.io/kube-controller-manager: v0.32.3 → v0.33.0
+- k8s.io/kube-proxy: v0.32.3 → v0.33.0
+- k8s.io/kube-scheduler: v0.32.3 → v0.33.0
+- k8s.io/kubectl: v0.32.3 → v0.33.0
+- k8s.io/kubelet: v0.32.3 → v0.33.0
+- k8s.io/kubernetes: v1.32.3 → v1.33.0
+- k8s.io/metrics: v0.32.3 → v0.33.0
+- k8s.io/mount-utils: v0.32.3 → v0.33.0
+- k8s.io/pod-security-admission: v0.32.3 → v0.33.0
+- k8s.io/sample-apiserver: v0.32.3 → v0.33.0
+- k8s.io/utils: 1f6e0b7 → 0f33e8f
+- sigs.k8s.io/kustomize/api: v0.18.0 → v0.19.0
+- sigs.k8s.io/kustomize/kustomize/v5: v5.5.0 → v5.6.0
+- sigs.k8s.io/kustomize/kyaml: v0.18.1 → v0.19.0
+
+### Removed
+- github.com/asaskevich/govalidator: [a9d515a](https://github.com/asaskevich/govalidator/tree/a9d515a)
+- github.com/checkpoint-restore/go-criu/v6: [v6.3.0](https://github.com/checkpoint-restore/go-criu/tree/v6.3.0)
+- github.com/containerd/console: [v1.0.4](https://github.com/containerd/console/tree/v1.0.4)
+- github.com/moby/sys/user: [v0.3.0](https://github.com/moby/sys/tree/user/v0.3.0)
+- github.com/seccomp/libseccomp-golang: [v0.10.0](https://github.com/seccomp/libseccomp-golang/tree/v0.10.0)
+- github.com/syndtr/gocapability: [42c35b4](https://github.com/syndtr/gocapability/tree/42c35b4)
+- github.com/urfave/cli: [v1.22.14](https://github.com/urfave/cli/tree/v1.22.14)
+- go.uber.org/atomic: v1.7.0
+- gopkg.in/square/go-jose.v2: v2.6.0
+
 # 1.42.0
 
 ## Changes by Kind
