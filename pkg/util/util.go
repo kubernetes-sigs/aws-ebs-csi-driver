@@ -132,10 +132,6 @@ func GetAccessModes(caps []*csi.VolumeCapability) *[]string {
 	return &modes
 }
 
-func IsSBE(region string) bool {
-	return region == "snow"
-}
-
 // StringIsAlphanumeric returns true if a given string contains only English letters or numbers.
 func StringIsAlphanumeric(s string) bool {
 	return isAlphanumericRegex(s)

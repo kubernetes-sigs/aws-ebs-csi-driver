@@ -49,9 +49,6 @@ const (
 
 	// VolumeOperationAlreadyExists is message fmt returned to CO when there is another in-flight call on the given volumeID.
 	VolumeOperationAlreadyExists = "An operation with the given volume=%q is already in progress"
-
-	// sbeDeviceVolumeAttachmentLimit refers to the maximum number of volumes that can be attached to an instance on snow.
-	sbeDeviceVolumeAttachmentLimit = 10
 )
 
 var (
@@ -772,9 +769,6 @@ func (d *NodeService) getVolumesLimit() int64 {
 	if d.options.VolumeAttachLimit >= 0 {
 		klog.V(4).InfoS("getVolumesLimit: VolumeAttachLimit manually set to", d.options.VolumeAttachLimit, "overriding the default value")
 		return d.options.VolumeAttachLimit
-	}
-	if util.IsSBE(d.metadata.GetRegion()) {
-		return sbeDeviceVolumeAttachmentLimit
 	}
 
 	instanceType := d.metadata.GetInstanceType()

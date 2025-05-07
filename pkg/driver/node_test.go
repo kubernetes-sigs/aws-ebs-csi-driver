@@ -1058,18 +1058,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 10,
 		},
 		{
-			name: "sbeDeviceVolumeAttachmentLimit",
-			options: &Options{
-				VolumeAttachLimit: -1,
-			},
-			expectedVal: sbeDeviceVolumeAttachmentLimit,
-			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
-				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("snow")
-				return m
-			},
-		},
-		{
 			name: "t2.medium_volume_attach_limit",
 			options: &Options{
 				VolumeAttachLimit:         -1,
@@ -1078,7 +1066,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 38,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetInstanceType().Return("t2.medium")
 				return m
@@ -1093,7 +1080,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 36,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("t2.medium")
 				return m
 			},
@@ -1107,7 +1093,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 23,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("m5d.large")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(3)
@@ -1123,7 +1108,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 1,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("d3en.12xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1139,7 +1123,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 1,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("d3.8xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1155,7 +1138,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 127,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("m7i.48xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				return m
@@ -1169,7 +1151,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 1,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("t3.xlarge")
 				m.EXPECT().GetNumAttachedENIs().Return(40)
 				return m
@@ -1184,7 +1165,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 15,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("mac1.metal")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1200,7 +1180,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 18,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("u-12tb1.metal")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1216,7 +1195,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 24,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("g4dn.xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1232,7 +1210,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 24,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("g4ad.xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1248,7 +1225,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 21,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("g4dn.12xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1264,7 +1240,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 14,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("dl1.24xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1281,7 +1256,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 8,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("g5.48xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1298,7 +1272,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 25,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("inf1.xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1315,7 +1288,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 25,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("inf1.2xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1332,7 +1304,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 22,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("inf1.6xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
@@ -1349,7 +1320,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			expectedVal: 10,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetRegion().Return("us-west-2")
 				m.EXPECT().GetInstanceType().Return("inf1.24xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)

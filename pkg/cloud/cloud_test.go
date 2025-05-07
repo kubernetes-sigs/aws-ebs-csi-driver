@@ -42,7 +42,6 @@ import (
 const (
 	defaultZone     = "test-az"
 	expZone         = "us-west-2b"
-	snowZone        = "snow"
 	defaultVolumeID = "vol-test-1234"
 	defaultNodeID   = "node-1234"
 	defaultPath     = "/dev/xvdaa"
@@ -1264,41 +1263,6 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:       "success: create volume when zone is snow and add tags",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				AvailabilityZone: snowZone,
-				VolumeType:       "sbp1",
-			},
-			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: snowZone,
-			},
-			expErr: nil,
-		},
-		{
-			name:       "fail: zone is snow and add tags throws error",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes:    util.GiBToBytes(1),
-				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				AvailabilityZone: snowZone,
-				VolumeType:       "sbg1",
-			},
-			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expCreateTagsErr:     errors.New("CreateTags generic error"),
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: snowZone,
-			},
-			expErr: errors.New("could not attach tags to volume: vol-test. CreateTags generic error"),
-		},
-		{
 			name:       "success: create default volume with throughput",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1439,10 +1403,6 @@ func TestCreateDisk(t *testing.T) {
 						},
 					},
 				}, tc.expDescVolumeErr).AnyTimes()
-				if tc.diskOptions.AvailabilityZone == "snow" {
-					mockEC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).Return(&ec2.CreateTagsOutput{}, tc.expCreateTagsErr)
-					mockEC2.EXPECT().DeleteVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, nil).AnyTimes()
-				}
 				if len(tc.diskOptions.SnapshotID) > 0 {
 					mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
 				}

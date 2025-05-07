@@ -56,10 +56,6 @@ const (
 	VolumeTypeSC1 = "sc1"
 	// VolumeTypeST1 represents a throughput-optimized HDD type of volume.
 	VolumeTypeST1 = "st1"
-	// VolumeTypeSBG1 represents a capacity-optimized HDD type of volume. Only for SBE devices.
-	VolumeTypeSBG1 = "sbg1"
-	// VolumeTypeSBP1 represents a performance-optimized SSD type of volume. Only for SBE devices.
-	VolumeTypeSBP1 = "sbp1"
 	// VolumeTypeStandard represents a previous type of  volume.
 	VolumeTypeStandard = "standard"
 )
@@ -547,7 +543,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	switch createType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeSBG1, VolumeTypeSBP1, VolumeTypeStandard:
+	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 	case VolumeTypeIO1:
 		maxIops = io1MaxTotalIOPS
 		minIops = io1MinTotalIOPS
@@ -624,10 +620,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		VolumeType:         types.VolumeType(createType),
 		Encrypted:          aws.Bool(diskOptions.Encrypted),
 		MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
-	}
-
-	if !util.IsSBE(zone) {
-		requestInput.TagSpecifications = []types.TagSpecification{tagSpec}
+		TagSpecifications:  []types.TagSpecification{tagSpec},
 	}
 
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
@@ -685,26 +678,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("timed out waiting for volume to create: %w", err)
 	}
 
-	outpostArn := aws.ToString(response.OutpostArn)
-	var resources []string
-	if util.IsSBE(zone) {
-		requestTagsInput := &ec2.CreateTagsInput{
-			Resources: append(resources, volumeID),
-			Tags:      tags,
-		}
-		_, err := c.ec2.CreateTags(ctx, requestTagsInput)
-		if err != nil {
-			// To avoid leaking volume, we should delete the volume just created
-			// TODO: Need to figure out how to handle DeleteDisk failed scenario instead of just log the error
-			if _, deleteDiskErr := c.DeleteDisk(ctx, volumeID); deleteDiskErr != nil {
-				klog.ErrorS(deleteDiskErr, "failed to be deleted, this may cause volume leak", "volumeID", volumeID)
-			} else {
-				klog.V(5).InfoS("volume is deleted because there was an error while attaching the tags", "volumeID", volumeID)
-			}
-			return nil, fmt.Errorf("could not attach tags to volume: %v. %w", volumeID, err)
-		}
-	}
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: outpostArn}, nil
+	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: snapshotID, OutpostArn: aws.ToString(response.OutpostArn)}, nil
 }
 
 // execBatchDescribeVolumesModifications executes a batched DescribeVolumesModifications API call.
