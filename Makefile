@@ -75,7 +75,7 @@ clean:
 
 .PHONY: test
 test:
-	go test -v -race ./cmd/... ./pkg/... ./tests/sanity/...
+	go test -race ./cmd/... ./pkg/... ./tests/sanity/...
 
 .PHONY: test/coverage
 test/coverage:

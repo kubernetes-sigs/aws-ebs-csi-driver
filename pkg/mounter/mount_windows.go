@@ -21,10 +21,13 @@ package mounter
 import (
 	"errors"
 	"fmt"
-
+	"path/filepath"
 	"regexp"
+	"syscall"
+	"unsafe"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"golang.org/x/sys/windows"
 
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -281,4 +284,44 @@ func (m *NodeMounter) Unstage(target string) error {
 	}
 
 	return nil
+}
+
+var (
+	modkernel32            = windows.NewLazySystemDLL("kernel32.dll")
+	procGetDiskFreeSpaceEx = modkernel32.NewProc("GetDiskFreeSpaceExW")
+)
+
+type UsageInfo struct {
+	Bytes  int64
+	Inodes int64
+}
+
+// GetVolumeStats acquires byte statistics of filesystem at volumePath.
+// Source: https://github.com/kubernetes/kubernetes/blob/a3097010faac734fb4956dbc91ae9034d0a9f840/pkg/volume/util/fs/fs_windows.go#L43
+func (m *NodeMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	stats := VolumeStats{}
+	var totalFreeBytes int64
+
+	// The equivalent linux call supports calls against files but the syscall for windows
+	// fails for files with error code: The directory name is invalid. (#99173)
+	// https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
+	// By always ensuring the directory path we meet all uses cases of this function
+	volumePath = filepath.Dir(volumePath)
+	ret, _, err := syscall.Syscall6(
+		procGetDiskFreeSpaceEx.Addr(),
+		4,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(volumePath))),
+		uintptr(unsafe.Pointer(&stats.AvailableBytes)),
+		uintptr(unsafe.Pointer(&stats.TotalBytes)),
+		uintptr(unsafe.Pointer(&totalFreeBytes)),
+		0,
+		0,
+	)
+	if ret == 0 {
+		return VolumeStats{}, err
+	}
+
+	stats.UsedBytes = stats.TotalBytes - totalFreeBytes
+
+	return stats, nil
 }
