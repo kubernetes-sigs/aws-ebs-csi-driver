@@ -28,7 +28,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"golang.org/x/sys/unix"
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -111,15 +110,6 @@ func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region str
 		return m.appendPartition(canonicalDevicePath, partition), nil
 	} else {
 		klog.V(5).InfoS("[Debug] error searching for nvme path", "nvmeName", nvmeName, "err", err)
-	}
-
-	if util.IsSBE(region) {
-		klog.V(5).InfoS("[Debug] Falling back to snow volume lookup", "devicePath", devicePath)
-		// Snow completely ignores the requested device path and mounts volumes starting at /dev/vda .. /dev/vdb .. etc
-		// Morph the device path to the snow form by chopping off the last letter and prefixing with /dev/vd
-		// VMs on snow devices are currently limited to 10 block devices each - if that ever exceeds 26 this will need
-		// to be adapted
-		canonicalDevicePath = "/dev/vd" + devicePath[len(devicePath)-1:]
 	}
 
 	if canonicalDevicePath == "" {

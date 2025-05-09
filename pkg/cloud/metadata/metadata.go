@@ -52,7 +52,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 		klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
 	} else {
 		klog.V(2).InfoS("Attempting to retrieve instance metadata from IMDS")
-		metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient, region)
+		metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient)
 		if err == nil {
 			klog.V(2).InfoS("Retrieved metadata from IMDS")
 			return metadata.overrideRegion(region), nil
@@ -88,13 +88,13 @@ func (m *Metadata) UpdateMetadata() error {
 	return nil
 }
 
-func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient, region string) (*Metadata, error) {
+func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient) (*Metadata, error) {
 	svc, err := ec2MetadataClient()
 	if err != nil {
 		klog.ErrorS(err, "failed to initialize EC2 Metadata client")
 		return nil, err
 	}
-	return EC2MetadataInstanceInfo(svc, region)
+	return EC2MetadataInstanceInfo(svc)
 }
 
 func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {

@@ -219,18 +219,6 @@ func TestFindDevicePath(t *testing.T) {
 			cmdOutputFsType: "ext4",
 			expectedErr:     fmt.Errorf("no device path for device %q volume %q found", "/temp/vol-1234567890abcdef0", "vol-1234567890abcdef0"),
 		},
-		{
-			name:            "SBE region fallback",
-			volumeID:        "vol-1234567890abcdef0",
-			partition:       "1",
-			region:          "snow",
-			createTempDir:   false,
-			symlink:         false,
-			verifyErr:       nil,
-			deviceSize:      "1024",
-			cmdOutputFsType: "ext4",
-			expectedErr:     nil,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -286,10 +274,6 @@ func TestFindDevicePath(t *testing.T) {
 			}
 
 			result, err := fakeMounter.FindDevicePath(devicePath, tc.volumeID, tc.partition, tc.region)
-
-			if tc.region == "snow" {
-				expectedResult = "/dev/vd" + tc.volumeID[len(tc.volumeID)-1:] + tc.partition
-			}
 
 			if tc.expectedErr == nil {
 				assert.Equal(t, expectedResult, result)

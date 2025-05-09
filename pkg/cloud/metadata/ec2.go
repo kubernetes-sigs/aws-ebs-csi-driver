@@ -50,7 +50,7 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 	return svc, nil
 }
 
-func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metadata, error) {
+func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
@@ -66,19 +66,11 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 	}
 
 	if len(doc.Region) == 0 {
-		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
-			doc.Region = regionFromSession
-		} else {
-			return nil, errors.New("could not get valid EC2 region")
-		}
+		return nil, errors.New("could not get valid EC2 region")
 	}
 
 	if len(doc.AvailabilityZone) == 0 {
-		if len(regionFromSession) != 0 && util.IsSBE(regionFromSession) {
-			doc.AvailabilityZone = regionFromSession
-		} else {
-			return nil, errors.New("could not get valid EC2 availability zone")
-		}
+		return nil, errors.New("could not get valid EC2 availability zone")
 	}
 
 	attachedENIs, err := getAttachedENIs(svc)
@@ -86,18 +78,15 @@ func EC2MetadataInstanceInfo(svc EC2Metadata, regionFromSession string) (*Metada
 		return nil, err
 	}
 
-	blockDevMappings := 0
-	if !util.IsSBE(doc.Region) {
-		mappingsOutput, mappingsOutputErr := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint})
-		if mappingsOutputErr != nil {
-			return nil, fmt.Errorf("could not get metadata for block device mappings: %w", mappingsOutputErr)
-		}
-		mappings, mappingsErr := io.ReadAll(mappingsOutput.Content)
-		if mappingsErr != nil {
-			return nil, fmt.Errorf("could not read block device mappings metadata content: %w", mappingsErr)
-		}
-		blockDevMappings = strings.Count(string(mappings), "ebs")
+	mappingsOutput, mappingsOutputErr := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint})
+	if mappingsOutputErr != nil {
+		return nil, fmt.Errorf("could not get metadata for block device mappings: %w", mappingsOutputErr)
 	}
+	mappings, mappingsErr := io.ReadAll(mappingsOutput.Content)
+	if mappingsErr != nil {
+		return nil, fmt.Errorf("could not read block device mappings metadata content: %w", mappingsErr)
+	}
+	blockDevMappings := strings.Count(string(mappings), "ebs")
 
 	instanceInfo := Metadata{
 		InstanceID:             doc.InstanceID,

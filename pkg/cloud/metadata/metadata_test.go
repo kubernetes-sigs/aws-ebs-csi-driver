@@ -169,11 +169,10 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := []struct {
-		name              string
-		regionFromSession string
-		mockEC2Metadata   func(m *MockEC2Metadata)
-		expectedMetadata  *Metadata
-		expectedError     error
+		name             string
+		mockEC2Metadata  func(m *MockEC2Metadata)
+		expectedMetadata *Metadata
+		expectedError    error
 	}{
 		{
 			name: "TestEC2MetadataInstanceInfo: Error getting instance identity document",
@@ -368,33 +367,6 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 				OutpostArn:             arn.ARN{},
 			},
 		},
-		{
-			name:              "TestEC2MetadataInstanceInfo: Valid metadata retrieving snow region/AZ from session",
-			regionFromSession: "snow",
-			mockEC2Metadata: func(m *MockEC2Metadata) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "",
-						AvailabilityZone: "",
-					},
-				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
-					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
-				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
-			},
-			expectedMetadata: &Metadata{
-				InstanceID:             "i-1234567890abcdef0",
-				InstanceType:           "c5.xlarge",
-				Region:                 "snow",
-				AvailabilityZone:       "snow",
-				NumAttachedENIs:        2,
-				NumBlockDeviceMappings: 0,
-				OutpostArn:             arn.ARN{},
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -405,7 +377,7 @@ func TestEC2MetadataInstanceInfo(t *testing.T) {
 			mockEC2Metadata := NewMockEC2Metadata(mockCtrl)
 			tc.mockEC2Metadata(mockEC2Metadata)
 
-			metadata, err := EC2MetadataInstanceInfo(mockEC2Metadata, tc.regionFromSession)
+			metadata, err := EC2MetadataInstanceInfo(mockEC2Metadata)
 
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
