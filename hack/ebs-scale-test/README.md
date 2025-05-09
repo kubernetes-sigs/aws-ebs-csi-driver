@@ -44,7 +44,7 @@ Note: The environment variables set when you run `scale-test setup` must remain 
 # Affect test
 CLUSTER_TYPE              # Type of scalability cluster to create.
 TEST_TYPE                 # Type of scale test to run.
-REPLICAS                  # Number of StatefulSet replicas to create.
+REPLICAS                  # Number of StatefulSet replicas or snapshots to create.
 DRIVER_VALUES_FILEPATH    # Custom values file passed to EBS CSI Driver Helm chart.
 
 # Names
@@ -52,6 +52,9 @@ CLUSTER_NAME              # Base name used by `eksctl` to create AWS resources.
 EXPORT_DIR                # Where to export scale test metrics/logs locally.
 S3_BUCKET                 # Name of S3 bucket used for holding scalability run results.
 SCALABILITY_TEST_RUN_NAME # Name of test run. Used as name of directory for adding run results in $S3_BUCKET.
+
+# Snapshot
+SNAPSHOTS_PER_VOLUME # How many snapshots per volume
 
 # Find default values at top of `scale-test` script. 
 ```
@@ -66,6 +69,7 @@ Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run d
 - `TEST_TYPE` dictates what type of scalability test we want to run. Options include: 
   - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes.
   - 'expand-and-modify': Creates `$REPLICAS` block volumes. Patches PVC capacity and VACName at rate of 5 PVCs per second. Ensures PVCs are expanded and modified before deleting them. Exercises ControllerExpandVolume & ControllerModifyVolume. Set `MODIFY_ONLY` or `EXPAND_ONLY` to 'true' to test solely volume modification/expansion.
+  - 'snapshot-volume-scale': Creates `$REPLICAS` number of volumes. Takes `$SNAPSHOTS_PER_VOLUME` snapshots of each volume.
 
 You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
 

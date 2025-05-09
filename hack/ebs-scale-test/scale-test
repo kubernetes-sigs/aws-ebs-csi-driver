@@ -31,6 +31,7 @@ export SCALABILITY_TEST_RUN_NAME
 CLUSTER_TYPE=${CLUSTER_TYPE:="pre-allocated"}
 TEST_TYPE=${TEST_TYPE:="scale-sts"}
 REPLICAS=${REPLICAS:=1000}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v8.2.1"}
 DRIVER_VALUES_FILEPATH=${DRIVER_VALUES_FILEPATH:="$BASE_DIR/helpers/cluster-setup/scale-driver-values.yaml"}
 
 CLUSTER_NAME=${CLUSTER_NAME:="ebs-scale-$CLUSTER_TYPE"}
@@ -57,6 +58,7 @@ source "${BASE_DIR}/helpers/scale-test/pre_test_validation.sh"
 
 source "${BASE_DIR}/helpers/scale-test/scale-sts-test/scale-sts.sh"
 source "${BASE_DIR}/helpers/scale-test/expand-and-modify-test/expand-and-modify.sh"
+source "${BASE_DIR}/helpers/scale-test/snapshot-volume-scale-test/snapshot-volume-scale.sh"
 
 usage() {
   echo "Usage: $0 [base-cmd]"
@@ -80,6 +82,7 @@ check_dependencies_helper() {
 # Functions sourced from helpers/cluster-setup/manage-cluster.sh
 setup_scale() {
   create_cluster
+  deploy_snapshot_controller
   deploy_ebs_csi_driver
 }
 
@@ -90,8 +93,9 @@ run_scale() {
   case "$TEST_TYPE" in
   *scale-sts*) sts_scale_test ;;
   *expand-and-modify*) expand_and_modify_test ;;
+  *snapshot-volume-scale*) snapshot_scale_test ;;
   *)
-    echo "Invalid TEST_TYPE '$TEST_TYPE'. Please set to 'scale-sts' or 'expand-and-modify'"
+    echo "Invalid TEST_TYPE '$TEST_TYPE'."
     exit 1
     ;;
   esac
@@ -103,6 +107,7 @@ run_scale() {
 clean_scale() {
   cleanup_cluster
   check_lingering_volumes
+  check_lingering_snapshots
 }
 
 main() {
