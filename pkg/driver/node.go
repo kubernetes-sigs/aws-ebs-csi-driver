@@ -40,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/volume"
 )
 
 const (
@@ -526,28 +525,30 @@ func (d *NodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 		}, nil
 	}
 
-	metricsProvider := volume.NewMetricsStatFS(req.GetVolumePath())
-
-	metrics, err := metricsProvider.GetMetrics()
+	stats, err := d.mounter.GetVolumeStats(req.GetVolumePath())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get fs info on path %s: %v", req.GetVolumePath(), err)
 	}
 
-	return &csi.NodeGetVolumeStatsResponse{
-		Usage: []*csi.VolumeUsage{
-			{
-				Unit:      csi.VolumeUsage_BYTES,
-				Available: metrics.Available.AsDec().UnscaledBig().Int64(),
-				Total:     metrics.Capacity.AsDec().UnscaledBig().Int64(),
-				Used:      metrics.Used.AsDec().UnscaledBig().Int64(),
-			},
-			{
-				Unit:      csi.VolumeUsage_INODES,
-				Available: metrics.InodesFree.AsDec().UnscaledBig().Int64(),
-				Total:     metrics.Inodes.AsDec().UnscaledBig().Int64(),
-				Used:      metrics.InodesUsed.AsDec().UnscaledBig().Int64(),
-			},
+	usage := []*csi.VolumeUsage{
+		{
+			Unit:      csi.VolumeUsage_BYTES,
+			Available: stats.AvailableBytes,
+			Total:     stats.TotalBytes,
+			Used:      stats.UsedBytes,
 		},
+	}
+	if stats.TotalInodes != 0 {
+		usage = append(usage, &csi.VolumeUsage{
+			Unit:      csi.VolumeUsage_INODES,
+			Available: stats.AvailableInodes,
+			Total:     stats.TotalInodes,
+			Used:      stats.UsedInodes,
+		})
+	}
+
+	return &csi.NodeGetVolumeStatsResponse{
+		Usage: usage,
 	}, nil
 }
 

@@ -2362,6 +2362,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				m := mounter.NewMockMounter(ctrl)
 				m.EXPECT().PathExists(dir).Return(true, nil)
 				m.EXPECT().IsBlockDevice(gomock.Eq(dir)).Return(false, nil)
+				m.EXPECT().GetVolumeStats(gomock.Eq(dir)).Return(mounter.VolumeStats{}, nil)
 				return m
 			},
 			expectedErr: func(dir string) error {
