@@ -213,7 +213,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
-	modifyOptions, err := parseModifyVolumeParameters(req.GetMutableParameters())
+	modifyOptions, err := parseCreateRequestMutableParameters(req.GetMutableParameters(), d.options.ExtraTags, *tProps)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter: %v", err)
 	}
@@ -301,9 +301,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
 		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
 	}
-	for k, v := range d.options.ExtraTags {
-		volumeTags[k] = v
-	}
 
 	addTags, err := template.Evaluate(scTags, tProps, d.options.WarnOnInvalidTag)
 	if err != nil {
@@ -315,6 +312,10 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	for k, v := range addTags {
+		volumeTags[k] = v
+	}
+
+	for k, v := range modifyOptions.modifyTagsOptions.TagsToAdd {
 		volumeTags[k] = v
 	}
 
@@ -350,6 +351,63 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
 	return newCreateVolumeResponse(disk, responseCtx), nil
+}
+
+func parseCreateRequestMutableParameters(params map[string]string, extraTags map[string]string, tProps template.PVProps) (*modifyVolumeRequest, error) {
+	options := modifyVolumeRequest{
+		modifyTagsOptions: cloud.ModifyTagsOptions{
+			TagsToAdd:    make(map[string]string),
+			TagsToDelete: make([]string, 0),
+		},
+	}
+
+	rawTagsToAdd := []string{}
+	for key, value := range params {
+		switch key {
+		case ModificationKeyIOPS:
+			iops, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
+			}
+			options.modifyDiskOptions.IOPS = int32(iops)
+		case ModificationKeyThroughput:
+			throughput, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
+			}
+			options.modifyDiskOptions.Throughput = int32(throughput)
+		case DeprecatedModificationKeyVolumeType:
+			if _, ok := params[ModificationKeyVolumeType]; ok {
+				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")
+				continue
+			}
+			klog.InfoS("Key `volumeType` is deprecated, please use `type` instead")
+			options.modifyDiskOptions.VolumeType = value
+		case ModificationKeyVolumeType:
+			options.modifyDiskOptions.VolumeType = value
+		default:
+			switch {
+			case strings.HasPrefix(key, ModificationAddTag):
+				rawTagsToAdd = append(rawTagsToAdd, value)
+			default:
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter key: %s", key)
+			}
+		}
+	}
+
+	for k, v := range extraTags {
+		rawTagsToAdd = append(rawTagsToAdd, k+"="+v)
+	}
+
+	addTags, err := template.Evaluate(rawTagsToAdd, tProps, false)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+	}
+	if err := validateExtraTags(addTags, false); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+	options.modifyTagsOptions.TagsToAdd = addTags
+	return &options, nil
 }
 
 func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
