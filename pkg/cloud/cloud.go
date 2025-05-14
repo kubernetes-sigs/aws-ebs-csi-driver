@@ -69,7 +69,7 @@ const (
 	io2MinTotalIOPS             = 100
 	io2MaxTotalIOPS             = 64000
 	io2BlockExpressMaxTotalIOPS = 256000
-	io2MaxIOPSPerGB             = 500
+	io2MaxIOPSPerGB             = 1000
 	gp3MaxTotalIOPS             = 16000
 	gp3MinTotalIOPS             = 3000
 	gp3MaxIOPSPerGB             = 500
