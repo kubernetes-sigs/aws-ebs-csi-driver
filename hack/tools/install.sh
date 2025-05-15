@@ -32,6 +32,8 @@ GOLANGCI_LINT_VERSION="v1.64.5"
 GOMPLATE_VERSION="v4.3.0"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
 GOVULNCHECK_VERSION="v1.1.4"
+# https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
+GOVULNCHECK_VERSION="v1.1.4"
 # https://github.com/helm/helm
 HELM_VERSION="v3.17.0"
 # https://github.com/kubernetes/kops
