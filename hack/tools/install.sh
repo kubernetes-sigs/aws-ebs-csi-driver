@@ -30,6 +30,8 @@ GINKGO_VERSION="v2.23.4"
 GOLANGCI_LINT_VERSION="v1.64.8"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.3.1"
+# https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
+GOVULNCHECK_VERSION="v1.1.4"
 # https://github.com/helm/helm
 HELM_VERSION="v3.17.3"
 # https://github.com/kubernetes/kops
@@ -145,6 +147,12 @@ function install_gomplate() {
   # gomplate includes library from no longer existing domain inet.af, and thus cannot be installed via go install
   # install the released binary from GitHub releases instead
   install_binary "${INSTALL_PATH}" "https://github.com/hairyhenderson/gomplate/releases/download/${GOMPLATE_VERSION}/gomplate_${OS}-${ARCH}" "gomplate"
+}
+
+function install_govulncheck() {
+  INSTALL_PATH="${1}"
+
+  install_go "${INSTALL_PATH}" "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
 }
 
 function install_helm() {
