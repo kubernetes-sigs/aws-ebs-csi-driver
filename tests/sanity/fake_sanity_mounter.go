@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	"k8s.io/mount-utils"
 )
 
@@ -144,4 +145,8 @@ func (m *fakeMounter) MountSensitiveWithoutSystemdWithMountFlags(source, target,
 
 func (m *fakeMounter) Unmount(target string) error {
 	return nil
+}
+
+func (m *fakeMounter) GetVolumeStats(volumePath string) (mounter.VolumeStats, error) {
+	return mounter.VolumeStats{}, nil
 }
