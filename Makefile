@@ -307,6 +307,7 @@ update/mockgen: bin/mockgen
 .PHONY: update/gomod
 update/gomod:
 	go mod tidy
+	go mod tidy -C tests/e2e/
 
 .PHONY: update/shfmt
 update/shfmt: bin/shfmt
