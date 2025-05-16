@@ -11,7 +11,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v1.5.2
+	k8s.io/client-go v0.33.0
 	k8s.io/kubernetes v1.33.0
 	k8s.io/pod-security-admission v0.32.0
 )
@@ -32,7 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
 	github.com/aws/smithy-go v1.22.3 // indirect
-	github.com/awslabs/volume-modifier-for-k8s v0.5.1 // indirect
+	github.com/awslabs/volume-modifier-for-k8s v0.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect

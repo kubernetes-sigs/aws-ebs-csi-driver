@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.216.0
 	github.com/aws/smithy-go v1.22.3
-	github.com/awslabs/volume-modifier-for-k8s v0.5.1
+	github.com/awslabs/volume-modifier-for-k8s v0.5.0
 	github.com/container-storage-interface/spec v1.11.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
@@ -27,7 +27,7 @@ require (
 	google.golang.org/protobuf v1.36.6
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
-	k8s.io/client-go v1.5.2
+	k8s.io/client-go v0.33.0
 	k8s.io/component-base v0.33.0
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/mount-utils v0.33.0
