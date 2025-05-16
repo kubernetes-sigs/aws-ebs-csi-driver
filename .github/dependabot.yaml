@@ -40,6 +40,7 @@ updates:
   labels:
     - "area/dependency"
     - "ok-to-test"
+    - "release-note-none"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
@@ -55,3 +56,4 @@ updates:
   labels:
     - "area/dependency"
     - "ok-to-test"
+    - "release-note-none"
