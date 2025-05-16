@@ -21,4 +21,4 @@ set -euo pipefail
 BASE_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 ROOT_DIR="$BASE_DIR/../.."
 BIN="${ROOT_DIR}/bin"
-"$BIN/govulncheck" -C "$ROOT_DIR" "./cmd/..." "./pkg/..."
+GOMAXPROCS=1 GOMEMLIMIT=3000000000 "$BIN/govulncheck" -C "$ROOT_DIR" "./cmd/..." "./pkg/..."
