@@ -16,7 +16,7 @@ version: 2
 enable-beta-ecosystems: true
 updates:
 - package-ecosystem: gomod
-  directory: "/"
+  directories: ["/", "/tests/e2e/"]
   allow:
   - dependency-type: "all"
   schedule:
