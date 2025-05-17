@@ -27,3 +27,6 @@ sidecars:
     additionalArgs: ["--http-endpoint=:8082"]
   attacher:
     additionalArgs: ["--http-endpoint=:8084"]
+  snapshotter:
+    additionalArgs: ["--http-endpoint=:8085"]
+  
