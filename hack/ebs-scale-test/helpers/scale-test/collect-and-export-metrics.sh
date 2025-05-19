@@ -48,9 +48,11 @@ collect_metrics() {
   PID_8082=$!
   kubectl port-forward "$CONTROLLER_POD_NAME" 8084:8084 -n kube-system &
   PID_8084=$!
+  kubectl port-forward "$CONTROLLER_POD_NAME" 8085:8085 -n kube-system &
+  PID_8085=$!
 
   echo "Collecting metrics"
-  for port in 3301 8081 8082 8084; do
+  for port in 3301 8081 8082 8084 8085; do
     curl "http://localhost:${port}/metrics" >>"$METRICS_FILEPATH" && continue
     echo "Failed to collect metrics from port ${port}, retrying after 5s..."
     sleep 5
@@ -63,7 +65,7 @@ collect_metrics() {
     echo "WARNING: Could not collect metrics from port ${port}. Something may be wrong in cluster."
   done
   # Stop forwarding ports after metrics collected.
-  kill $PID_3301 $PID_8081 $PID_8082 $PID_8084
+  kill $PID_3301 $PID_8081 $PID_8082 $PID_8084 $PID_8085
 }
 
 clean_metrics() {
