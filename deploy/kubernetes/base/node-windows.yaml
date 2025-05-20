@@ -102,7 +102,7 @@ spec:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.13.0-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar:v2.13.0-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -136,7 +136,7 @@ spec:
               cpu: 10m
               memory: 40Mi
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.15.0-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.15.0-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=unix:/csi/csi.sock

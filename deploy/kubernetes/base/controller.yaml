@@ -133,7 +133,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-provisioner
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v5.2.0-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v5.2.0-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -166,7 +166,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-attacher
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.8.1-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.8.1-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -195,7 +195,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.2.1-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.2.1-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -224,7 +224,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-resizer
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.13.2-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.13.2-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -256,7 +256,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.15.0-eks-1-33-1
+          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.15.0-eks-1-33-3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
