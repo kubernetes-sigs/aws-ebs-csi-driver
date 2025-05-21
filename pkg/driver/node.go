@@ -38,7 +38,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
 
@@ -66,15 +68,11 @@ var (
 		csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
 		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 	}
+)
 
-	// taintRemovalInitialDelay is the initial delay for node taint removal.
-	taintRemovalInitialDelay = 1 * time.Second
-	// taintRemovalBackoff is the exponential backoff configuration for node taint removal.
-	taintRemovalBackoff = wait.Backoff{
-		Duration: 500 * time.Millisecond,
-		Factor:   2,
-		Steps:    10, // Max delay = 0.5 * 2^9 = ~4 minutes
-	}
+const (
+	// taintWatcherDuration is the maximum duration for the not-ready taint watcher to run.
+	taintWatcherDuration = 1 * time.Minute
 )
 
 // NodeService represents the node service of CSI driver.
@@ -89,11 +87,9 @@ type NodeService struct {
 // NewNodeService creates a new node service.
 func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, k kubernetes.Interface) *NodeService {
 	if k != nil {
-		// Remove taint from node to indicate driver startup success
-		// This is done at the last possible moment to prevent race conditions or false positive removals
-		time.AfterFunc(taintRemovalInitialDelay, func() {
-			removeTaintInBackground(k, taintRemovalBackoff, removeNotReadyTaint)
-		})
+		// Watch for the agent‑not‑ready taint for up to one minute and remove it
+		// as soon as allocatable is available.
+		startNotReadyTaintWatcher(k, taintWatcherDuration)
 	}
 
 	return &NodeService{
@@ -848,6 +844,99 @@ func collectMountOptions(fsType string, mntFlags []string) []string {
 	return options
 }
 
+// startNotReadyTaintWatcher launches a short‑lived Node informer that removes the
+// ebs.csi.aws.com/agent‑not‑ready taint. The informer is stopped after maxWatchDuration.
+func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration time.Duration) {
+	nodeName := os.Getenv("CSI_NODE_NAME")
+	if nodeName == "" {
+		klog.V(4).InfoS("CSI_NODE_NAME missing, skipping taint watcher")
+		return
+	}
+
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		clientset,
+		0, // No resync
+		informers.WithTweakListOptions(func(lo *metav1.ListOptions) {
+			lo.FieldSelector = "metadata.name=" + nodeName
+		}),
+	)
+	informer := factory.Core().V1().Nodes().Informer()
+
+	attemptTaintRemoval := func(n *corev1.Node) {
+		if !hasNotReadyTaint(n) {
+			return
+		}
+
+		backoff := wait.Backoff{
+			Duration: 2 * time.Second,
+			Factor:   1.5,
+			Steps:    5,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), maxWatchDuration)
+		defer cancel()
+
+		err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
+			if err := removeNotReadyTaint(ctx, clientset, n); err != nil {
+				klog.ErrorS(err, "Failed to remove agent-not-ready taint, retrying", "node", n.Name)
+				return false, nil // Continue retrying
+			}
+			klog.V(2).InfoS("Successfully removed agent-not-ready taint", "node", n.Name)
+			return true, nil
+		})
+
+		if err != nil {
+			klog.ErrorS(err, "Timed out trying to remove agent-not-ready taint", "node", n.Name)
+		}
+	}
+
+	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if n, ok := obj.(*corev1.Node); ok {
+				attemptTaintRemoval(n)
+			}
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			if n, ok := newObj.(*corev1.Node); ok {
+				attemptTaintRemoval(n)
+			}
+		},
+	}); err != nil {
+		klog.ErrorS(err, "Taint‑watcher: failed to add event handler")
+		return
+	}
+
+	stopCh := make(chan struct{})
+
+	go func() {
+		factory.Start(stopCh)
+
+		if ok := cache.WaitForCacheSync(stopCh, informer.HasSynced); !ok {
+			klog.ErrorS(nil, "Taint-watcher: cache sync failed")
+		}
+
+		// Immediate scan in case the taint is already present and no event fires.
+		if obj, exists, err := informer.GetStore().GetByKey(nodeName); err == nil && exists {
+			if n, ok := obj.(*corev1.Node); ok {
+				attemptTaintRemoval(n)
+			}
+		}
+
+		<-time.After(maxWatchDuration)
+		klog.V(8).InfoS("Taint-watcher timeout reached; stopping")
+		close(stopCh)
+	}()
+}
+
+func hasNotReadyTaint(n *corev1.Node) bool {
+	for _, t := range n.Spec.Taints {
+		if t.Key == AgentNotReadyNodeTaintKey {
+			return true
+		}
+	}
+	return false
+}
+
 // Struct for JSON patch operations.
 type JSONPatch struct {
 	OP    string      `json:"op,omitempty"`
@@ -855,38 +944,11 @@ type JSONPatch struct {
 	Value interface{} `json:"value"`
 }
 
-// removeTaintInBackground is a goroutine that retries removeNotReadyTaint with exponential backoff.
-func removeTaintInBackground(k8sClient kubernetes.Interface, backoff wait.Backoff, removalFunc func(kubernetes.Interface) error) {
-	backoffErr := wait.ExponentialBackoff(backoff, func() (bool, error) {
-		err := removalFunc(k8sClient)
-		if err != nil {
-			klog.ErrorS(err, "Unexpected failure when attempting to remove node taint(s)")
-			return false, nil
-		}
-		return true, nil
-	})
-
-	if backoffErr != nil {
-		klog.ErrorS(backoffErr, "Retries exhausted, giving up attempting to remove node taint(s)")
-	}
-}
-
 // removeNotReadyTaint removes the taint ebs.csi.aws.com/agent-not-ready from the local node
 // This taint can be optionally applied by users to prevent startup race conditions such as
 // https://github.com/kubernetes/kubernetes/issues/95911
-func removeNotReadyTaint(clientset kubernetes.Interface) error {
-	nodeName := os.Getenv("CSI_NODE_NAME")
-	if nodeName == "" {
-		klog.V(4).InfoS("CSI_NODE_NAME missing, skipping taint removal")
-		return nil
-	}
-
-	node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	err = checkAllocatable(clientset, nodeName)
+func removeNotReadyTaint(ctx context.Context, clientset kubernetes.Interface, node *corev1.Node) error {
+	err := checkAllocatable(ctx, clientset, node.Name)
 	if err != nil {
 		return err
 	}
@@ -923,16 +985,16 @@ func removeNotReadyTaint(clientset kubernetes.Interface) error {
 		return err
 	}
 
-	_, err = clientset.CoreV1().Nodes().Patch(context.Background(), nodeName, k8stypes.JSONPatchType, patch, metav1.PatchOptions{})
+	_, err = clientset.CoreV1().Nodes().Patch(ctx, node.Name, k8stypes.JSONPatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
-	klog.InfoS("Removed taint(s) from local node", "node", nodeName)
+	klog.InfoS("Removed taint(s) from local node", "node", node.Name)
 	return nil
 }
 
-func checkAllocatable(clientset kubernetes.Interface, nodeName string) error {
-	csiNode, err := clientset.StorageV1().CSINodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+func checkAllocatable(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
+	csiNode, err := clientset.StorageV1().CSINodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: %w", nodeName, err)
 	}
