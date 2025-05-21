@@ -3537,6 +3537,16 @@ func TestControllerPublishVolume(t *testing.T) {
 			errorCode: codes.OK,
 		},
 		{
+			name:             "ResourceExhausted error when attachment limit is exceeded",
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", cloud.ErrAttachmentLimitExceeded)
+			},
+			errorCode: codes.ResourceExhausted,
+		},
+		{
 			name:             "AttachDisk when volume is already attached to the node",
 			volumeID:         "vol-test",
 			nodeID:           expInstanceID,

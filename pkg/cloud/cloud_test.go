@@ -1686,6 +1686,30 @@ func TestAttachDisk(t *testing.T) {
 			},
 		},
 		{
+			name:     "fail: AttachVolume returned attachment limit exceeded error",
+			volumeID: defaultVolumeID,
+			nodeID:   defaultNodeID,
+			path:     defaultPath,
+			expErr: fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, &smithy.GenericAPIError{
+				Code:    "AttachmentLimitExceeded",
+				Message: "Volume attachment limit exceeded",
+			}),
+			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, nodeID2, path string, dm dm.DeviceManager) {
+				instanceRequest := createInstanceRequest(nodeID)
+				attachRequest := createAttachRequest(volumeID, nodeID, path)
+				attachLimitErr := &smithy.GenericAPIError{
+					Code:    "AttachmentLimitExceeded",
+					Message: "Volume attachment limit exceeded",
+				}
+
+				gomock.InOrder(
+					mockEC2.EXPECT().DescribeInstances(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolume(ctx, attachRequest, gomock.Any()).Return(nil, attachLimitErr),
+				)
+			},
+		},
+
+		{
 			name:     "success: AttachVolume multi-attach",
 			volumeID: defaultVolumeID,
 			nodeID:   defaultNodeID,
