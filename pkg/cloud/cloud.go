@@ -171,6 +171,9 @@ var (
 
 	// ErrInvalidRequest is returned if parameters were rejected by driver.
 	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrAttachmentLimitExceeded is returned if the attachment limit is exceeded.
+	ErrAttachmentLimitExceeded = errors.New("attachment limit exceeded")
 )
 
 // Set during build time via -ldflags.
@@ -930,6 +933,9 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 				// Store such bad names in the "likely bad" map to be considered last in future attempts
 				likelyBadDeviceNames.Store(device.Path, struct{}{})
 			}
+			if isAWSErrorAttachmentLimitExceeded(attachErr) {
+				return "", fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, attachErr)
+			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
 		likelyBadDeviceNames.Delete(device.Path)
@@ -1660,6 +1666,12 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 		}
 	}
 	return false
+}
+
+// isAWSErrorAttachmentLimitExceeded checks if the error is an AttachmentLimitExceeded error.
+// This error is reported when the maximum number of attachments for an instance is exceeded.
+func isAWSErrorAttachmentLimitExceeded(err error) bool {
+	return isAWSError(err, "AttachmentLimitExceeded")
 }
 
 // isAWSErrorInvalidParameter returns a boolean indicating whether the

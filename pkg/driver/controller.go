@@ -422,6 +422,9 @@ func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 			klog.InfoS("ControllerPublishVolume: volume not found", "volumeID", volumeID, "nodeID", nodeID)
 			return nil, status.Errorf(codes.NotFound, "Volume %q not found", volumeID)
 		}
+		if errors.Is(err, cloud.ErrAttachmentLimitExceeded) {
+			return nil, status.Errorf(codes.ResourceExhausted, "Attachment limit exceeded for volume %q on node %q: %v", volumeID, nodeID, err)
+		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
