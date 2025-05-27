@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: windows-server-iis
-          image: mcr.microsoft.com/windows/servercore:1809
+          image: mcr.microsoft.com/windows/server:ltsc2022
           ports:
             - name: http
               containerPort: 80

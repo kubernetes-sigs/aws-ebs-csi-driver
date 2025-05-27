@@ -45,6 +45,18 @@ type Mounter interface {
 	PreparePublishTarget(target string) error
 	IsBlockDevice(fullPath string) (bool, error)
 	GetBlockSizeBytes(devicePath string) (int64, error)
+	GetVolumeStats(volumePath string) (VolumeStats, error)
+}
+
+// VolumeStats holds volume stats returned by GetVolumeStats.
+type VolumeStats struct {
+	AvailableBytes int64
+	TotalBytes     int64
+	UsedBytes      int64
+
+	AvailableInodes int64
+	TotalInodes     int64
+	UsedInodes      int64
 }
 
 // NodeMounter implements Mounter.

@@ -18,7 +18,7 @@
 
 ## Variables/Functions
 
-VERSION?=v1.43.0
+VERSION?=v1.44.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -54,7 +54,7 @@ ALL_OS_ARCH_OSVERSION=$(foreach os, $(ALL_OS), ${ALL_OS_ARCH_OSVERSION_${os}})
 CLUSTER_NAME?=ebs-csi-e2e.k8s.local
 CLUSTER_TYPE?=kops
 
-GINKGO_WINDOWS_SKIP?="\[Disruptive\]|\[Serial\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)"
+GINKGO_WINDOWS_SKIP?="\[Disruptive\]|\[Serial\]|\[Flaky\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)"
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
@@ -212,6 +212,10 @@ update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/
 update-image-dependencies: update-sidecar-dependencies
 	./hack/release-scripts/update-e2e-images
 
+.PHONY: security
+security: bin/govulncheck
+	./hack/tools/check-security.sh
+
 ## CI aliases
 # Targets intended to be executed mostly or only by CI jobs
 
@@ -307,6 +311,7 @@ update/mockgen: bin/mockgen
 .PHONY: update/gomod
 update/gomod:
 	go mod tidy
+	go mod tidy -C tests/e2e/
 
 .PHONY: update/shfmt
 update/shfmt: bin/shfmt

@@ -41,11 +41,20 @@ cleanup_cluster() {
 
 check_lingering_volumes() {
   lingering_vol_count=$(aws ec2 describe-volumes \
-    --filters "Name=tag-key,Values=ebs-scale-test" \
+    --filters "Name=tag:ebs-scale-test,Values=${SCALABILITY_TEST_RUN_NAME}" \
     --query 'length(Volumes[*])' \
     --output text)
 
   [[ lingering_vol_count -ne 0 ]] && echo "WARNING: detected $lingering_vol_count lingering ebs-scale-test EBS volumes in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-volumes --filters 'Name=tag-key,Values=ebs-scale-test'\` and audit their AWS resource tags. Note these volumes may belong to a different scalability run than $SCALABILITY_TEST_RUN_NAME"
+}
+
+check_lingering_snapshots() {
+  lingering_snap_count=$(aws ec2 describe-snapshots \
+    --filters "Name=tag:ebs-scale-test,Values=${SCALABILITY_TEST_RUN_NAME}" \
+    --query 'length(Snapshots[*])' \
+    --output text)
+
+  [[ lingering_snap_count -ne 0 ]] && echo "WARNING: detected $lingering_snap_count lingering ebs-scale-test EBS snapshots from run ${SCALABILITY_TEST_RUN_NAME} in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-snapshots --filters 'Name=tag:ebs-scale-test,Values=${SCALABILITY_TEST_RUN_NAME}'\` and audit their AWS resource tags."
 }
 
 ## EBS CSI Driver
@@ -67,3 +76,12 @@ deploy_ebs_csi_driver() {
   echo "This script is not meant to be run directly, only sourced as a helper!"
   exit 1
 )
+
+deploy_snapshot_controller() {
+  echo "Deploying snapshot controller and CRDs"
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+}

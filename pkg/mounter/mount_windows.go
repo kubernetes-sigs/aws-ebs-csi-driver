@@ -21,10 +21,9 @@ package mounter
 import (
 	"errors"
 	"fmt"
-
-	"regexp"
-
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"golang.org/x/sys/windows"
+	"regexp"
 
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -281,4 +280,29 @@ func (m *NodeMounter) Unstage(target string) error {
 	}
 
 	return nil
+}
+
+// GetVolumeStats acquires byte statistics of filesystem at volumePath.
+func (m *NodeMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	stats := VolumeStats{}
+	var availableBytes, totalBytes, totalFreeBytes uint64
+
+	// Need to ensure directory path to prevent error code: The directory name is invalid. (#99173)
+	// See https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
+	err := windows.GetDiskFreeSpaceEx(
+		windows.StringToUTF16Ptr(volumePath),
+		&availableBytes,
+		&totalBytes,
+		&totalFreeBytes,
+	)
+	if err != nil {
+		return VolumeStats{}, err
+	}
+
+	stats.AvailableBytes = int64(availableBytes)
+	stats.TotalBytes = int64(totalBytes)
+
+	stats.UsedBytes = int64(totalBytes - totalFreeBytes)
+
+	return stats, nil
 }

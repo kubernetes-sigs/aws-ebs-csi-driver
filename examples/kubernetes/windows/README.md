@@ -13,7 +13,7 @@ This example shows how to create a EBS volume and consume it from a Windows cont
 
 1. Create a sample app along with the StorageClass and the PersistentVolumeClaim:
 ```
-kubectl apply -f specs/
+kubectl apply -f manifests/
 ```
 
 2. Validate the volume was created and `volumeHandle` contains an EBS volumeID:
@@ -66,6 +66,6 @@ ginkgo -nodes=1 -v --focus="External.Storage.*default.fs.*should.store.data" ./t
 
 6. Cleanup resources:
 ```
-kubectl delete -f specs/
+kubectl delete -f manifests/
 kubectl uncordon -l kubernetes.io/os=linux
 ```

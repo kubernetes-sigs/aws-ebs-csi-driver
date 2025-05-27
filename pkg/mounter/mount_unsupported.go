@@ -92,3 +92,7 @@ func (m *NodeMounter) Unpublish(path string) error {
 func (m *NodeMounter) Unstage(path string) error {
 	return errors.New(stubMessage)
 }
+
+func (m *NodeMounter) GetVolumeStats(volumePath string) (VolumeStats, error) {
+	return VolumeStats{}, errors.New(stubMessage)
+}

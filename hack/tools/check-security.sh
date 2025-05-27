@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Default values.yaml for ebs-scale-test installation of aws-ebs-csi-driver
-image:
-  pullPolicy: Always
-controller:
-  logLevel: 7
-  # Having one controller simplifies metrics collection and helps track restarts
-  replicaCount: 1
-  enableMetrics: true
-sidecars:
-  provisioner:
-    additionalArgs: ["--http-endpoint=:8081"]
-  resizer:
-    additionalArgs: ["--http-endpoint=:8082"]
-  attacher:
-    additionalArgs: ["--http-endpoint=:8084"]
-  snapshotter:
-    additionalArgs: ["--http-endpoint=:8085"]
-  
+set -euo pipefail
+
+# Script that runs a few security tools to ensure we have no vulnerabilities.
+
+BASE_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+ROOT_DIR="$BASE_DIR/../.."
+BIN="${ROOT_DIR}/bin"
+echo "Will run $BIN/govulncheck -C $ROOT_DIR ./cmd/... ./pkg/..."
+# Set GOMAXPROCS=1 GOMEMLIMIT=3000000000 to prevent CI running forever due to memory limitations
+GOMAXPROCS=1 GOMEMLIMIT=3000000000 "$BIN/govulncheck" -C "$ROOT_DIR" "./cmd/..." "./pkg/..."
