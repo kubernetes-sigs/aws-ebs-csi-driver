@@ -11,4 +11,7 @@ spec:
   {{- if not .Values.useOldCSIDriver }}
   fsGroupPolicy: File
   {{- end }}
+  {{- if .Values.node.selinux }}
+  seLinuxMount: true
+  {{- end }}
 {{- end }}
