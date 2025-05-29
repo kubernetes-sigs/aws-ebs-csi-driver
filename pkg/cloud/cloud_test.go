@@ -46,6 +46,7 @@ import (
 const (
 	defaultZone     = "test-az"
 	expZone         = "us-west-2b"
+	expZoneID       = "use2-az2"
 	defaultVolumeID = "vol-test-1234"
 	defaultNodeID   = "node-1234"
 	defaultPath     = "/dev/xvdaa"
@@ -984,6 +985,22 @@ func TestCreateDisk(t *testing.T) {
 			expErr:               nil,
 		},
 		{
+			name:       "success: normal with provided zone-id",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(1),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZoneID: expZoneID,
+			},
+			expDisk: &Disk{
+				VolumeID:           "vol-test",
+				CapacityGiB:        1,
+				AvailabilityZoneID: expZoneID,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
+		},
+		{
 			name:       "success: normal with encrypted volume",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1438,7 +1455,7 @@ func TestCreateDisk(t *testing.T) {
 				if len(tc.diskOptions.SnapshotID) > 0 {
 					mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
 				}
-				if len(tc.diskOptions.AvailabilityZone) == 0 {
+				if len(tc.diskOptions.AvailabilityZone) == 0 && len(tc.diskOptions.AvailabilityZoneID) == 0 {
 					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
 						AvailabilityZones: []types.AvailabilityZone{
 							{ZoneName: aws.String(defaultZone)},

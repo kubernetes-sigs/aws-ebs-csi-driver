@@ -193,12 +193,13 @@ var invalidParameterErrorCodes = map[string]struct{}{
 
 // Disk represents a EBS volume.
 type Disk struct {
-	VolumeID         string
-	CapacityGiB      int32
-	AvailabilityZone string
-	SnapshotID       string
-	OutpostArn       string
-	Attachments      []string
+	VolumeID           string
+	CapacityGiB        int32
+	AvailabilityZone   string
+	AvailabilityZoneID string
+	SnapshotID         string
+	OutpostArn         string
+	Attachments        []string
 }
 
 // DiskOptions represents parameters to create an EBS volume.
@@ -211,6 +212,7 @@ type DiskOptions struct {
 	IOPS                   int32
 	Throughput             int32
 	AvailabilityZone       string
+	AvailabilityZoneID     string
 	OutpostArn             string
 	Encrypted              bool
 	MultiAttachEnabled     bool
@@ -612,7 +614,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	zone := diskOptions.AvailabilityZone
-	if zone == "" {
+	zoneID := diskOptions.AvailabilityZoneID
+	if zone == "" && zoneID == "" {
 		zone, err = c.randomAvailabilityZone(ctx)
 		klog.V(5).InfoS("[Debug] AZ is not provided. Using node AZ", "zone", zone)
 		if err != nil {
@@ -638,7 +641,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(tokenBase))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone:   aws.String(zone),
 		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
 		Size:               aws.Int32(capacityGiB),
 		VolumeType:         types.VolumeType(createType),
@@ -647,6 +649,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		TagSpecifications:  []types.TagSpecification{tagSpec},
 	}
 
+	if len(zone) > 0 {
+		requestInput.AvailabilityZone = aws.String(zone)
+	}
+	if len(zoneID) > 0 {
+		requestInput.AvailabilityZoneId = aws.String(zoneID)
+	}
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
 	if len(diskOptions.OutpostArn) > 0 {
 		requestInput.OutpostArn = aws.String(diskOptions.OutpostArn)
@@ -684,6 +692,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			}
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
+		}
+		if isAWSErrorInvalidParameterCombination(err) {
+			return nil, ErrInvalidArgument
 		}
 		if isAWSErrorVolumeLimitExceeded(err) {
 			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
@@ -1975,6 +1986,13 @@ func isAWSErrorSnapshotNotFound(err error) bool {
 // This error is reported when the two request contains same client-token but different parameters.
 func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
+}
+
+// isAWSErrorInvalidParameterCombination returns a boolean indicating whether the
+// given error is an AWS InvalidParameterCombination error.
+// This error is reported when the combination of parameters passed to ec2 makes the request invalid.
+func isAWSErrorInvalidParameterCombination(err error) bool {
+	return isAWSError(err, "InvalidParameterCombination")
 }
 
 // isAWSErrorBlockDeviceInUse returns a boolean indicating whether the
