@@ -1498,6 +1498,83 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with string interpolation in tags",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					volumeName        = "test-vol-name"
+					pvcName           = "test-pvc"
+					pvcNamespace      = "test-namespace"
+					pvName            = "test-pv"
+					tagKey1           = "PVCNameTag"
+					tagKey2           = "PVCNamespaceTag"
+					tagKey3           = "PVNameTag"
+					cliTagKey         = "cliPVNameKey"
+					tagTemplateValue1 = "PVCNameTag={{.PVCName}}"
+					tagTemplateValue2 = "PVCNamespaceTag={{.PVCNamespace}}"
+					tagTemplateValue3 = "PVNameTag={{.PVName}}"
+				)
+
+				req := &csi.CreateVolumeRequest{
+					Name:               volumeName,
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						"csi.storage.k8s.io/pvc/name":      pvcName,
+						"csi.storage.k8s.io/pvc/namespace": pvcNamespace,
+						"csi.storage.k8s.io/pv/name":       pvName,
+						"tagSpecification_1":               tagTemplateValue1,
+						"tagSpecification_2":               tagTemplateValue2,
+						"tagSpecification_3":               tagTemplateValue3,
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				diskOptions := &cloud.DiskOptions{
+					CapacityBytes: stdVolSize,
+					Tags: map[string]string{
+						cloud.VolumeNameTagKey:                    volumeName,
+						cloud.AwsEbsDriverTagKey:                  "true",
+						"kubernetes.io/created-for/pvc/name":      pvcName,
+						"kubernetes.io/created-for/pvc/namespace": pvcNamespace,
+						"kubernetes.io/created-for/pv/name":       pvName,
+						tagKey1:                                   pvcName,
+						tagKey2:                                   pvcNamespace,
+						tagKey3:                                   pvName,
+						cliTagKey:                                 pvName,
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{ExtraTags: map[string]string{"cliPVNameKey": "{{.PVName}}"}},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
 			name: "success with cluster-id",
 			testFunc: func(t *testing.T) {
 				t.Helper()
