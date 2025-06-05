@@ -134,7 +134,6 @@ spec:
             {{- if .Values.node.selinux }}
             - name: selinux-sysfs
               mountPath: /sys/fs/selinux
-              readOnly: true
             - name: selinux-config
               mountPath: /etc/selinux/config
               readOnly: true
