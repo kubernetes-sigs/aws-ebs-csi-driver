@@ -115,7 +115,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		isEncrypted              bool
 		blockExpress             bool
 		kmsKeyID                 string
-		scTags                   []string
+		tagsToEvaluate           = make([]string, 0)
 		volumeTags               = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
@@ -206,28 +206,65 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			ext4ClusterSize = value
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
-				scTags = append(scTags, value)
+				tagsToEvaluate = append(tagsToEvaluate, value)
 			} else {
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 			}
 		}
 	}
 
-	modifyOptions, err := parseModifyVolumeParameters(req.GetMutableParameters())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter: %v", err)
-	}
+	mutableParameters := req.GetMutableParameters()
 
 	// "Values specified in mutable_parameters MUST take precedence over the values from parameters."
 	// https://github.com/container-storage-interface/spec/blob/master/spec.md#createvolume
-	if modifyOptions.modifyDiskOptions.VolumeType != "" {
-		volumeType = modifyOptions.modifyDiskOptions.VolumeType
+	for key, value := range mutableParameters {
+		switch key {
+		case IopsKey:
+			vacIops, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
+			}
+			iops = int32(vacIops)
+		case ThroughputKey:
+			vacThroughput, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
+			}
+			throughput = int32(vacThroughput)
+		case DeprecatedModificationKeyVolumeType:
+			if _, ok := mutableParameters[ModificationKeyVolumeType]; ok {
+				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")
+				continue
+			}
+			klog.InfoS("Key `volumeType` is deprecated, please use `type` instead")
+			volumeType = value
+		case VolumeTypeKey:
+			volumeType = value
+		default:
+			switch {
+			case strings.HasPrefix(key, ModificationAddTag):
+				tagsToEvaluate = append(tagsToEvaluate, value)
+			default:
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter key: %s", key)
+			}
+		}
 	}
-	if modifyOptions.modifyDiskOptions.IOPS != 0 {
-		iops = modifyOptions.modifyDiskOptions.IOPS
+
+	for key, value := range d.options.ExtraTags {
+		tagsToEvaluate = append(tagsToEvaluate, key+"="+value)
 	}
-	if modifyOptions.modifyDiskOptions.Throughput != 0 {
-		throughput = modifyOptions.modifyDiskOptions.Throughput
+
+	addTags, err := template.Evaluate(tagsToEvaluate, tProps, d.options.WarnOnInvalidTag)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating tag value: %v", err)
+	}
+
+	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+
+	for k, v := range addTags {
+		volumeTags[k] = v
 	}
 
 	responseCtx := map[string]string{}
@@ -300,22 +337,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
 		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
 		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
-	}
-	for k, v := range d.options.ExtraTags {
-		volumeTags[k] = v
-	}
-
-	addTags, err := template.Evaluate(scTags, tProps, d.options.WarnOnInvalidTag)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
-	}
-
-	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
-	}
-
-	for k, v := range addTags {
-		volumeTags[k] = v
 	}
 
 	opts := &cloud.DiskOptions{
@@ -733,7 +754,7 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	addTags, err := template.Evaluate(vscTags, vsProps, d.options.WarnOnInvalidTag)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating tag value: %v", err)
 	}
 
 	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
