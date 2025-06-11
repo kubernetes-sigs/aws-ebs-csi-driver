@@ -29,19 +29,19 @@ import (
 )
 
 const (
-	// OutpostArnEndpoint is the ec2 instance metadata endpoint to query to get the outpost arn.
+	// OutpostArnEndpoint is the IMDS endpoint to query to get the outpost arn.
 	OutpostArnEndpoint string = "outpost-arn"
 
-	// enisEndpoint is the ec2 instance metadata endpoint to query the number of attached ENIs.
+	// EnisEndpoint is the IMDS endpoint to query the number of attached ENIs.
 	EnisEndpoint string = "network/interfaces/macs"
 
-	// blockDevicesEndpoint is the ec2 instance metadata endpoint to query the number of attached block devices.
+	// BlockDevicesEndpoint is the IMDS endpoint to query the number of attached block devices.
 	BlockDevicesEndpoint string = "block-device-mapping"
 )
 
-type EC2MetadataClient func() (EC2Metadata, error)
+type IMDSClient func() (IMDS, error)
 
-var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
+var DefaultIMDSClient = func() (IMDS, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		return nil, err
@@ -50,10 +50,10 @@ var DefaultEC2MetadataClient = func() (EC2Metadata, error) {
 	return svc, nil
 }
 
-func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
+func IMDSInstanceInfo(svc IMDS) (*Metadata, error) {
 	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		return nil, fmt.Errorf("could not get EC2 instance identity metadata: %w", err)
+		return nil, fmt.Errorf("could not get IMDS identity metadata: %w", err)
 	}
 	doc := docOutput.InstanceIdentityDocument
 
@@ -95,7 +95,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 		AvailabilityZone:       doc.AvailabilityZone,
 		NumAttachedENIs:        attachedENIs,
 		NumBlockDeviceMappings: blockDevMappings,
-		EC2MetadataClient:      svc,
+		IMDSClient:             svc,
 	}
 
 	outpostArnOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: OutpostArnEndpoint})
@@ -125,7 +125,7 @@ func EC2MetadataInstanceInfo(svc EC2Metadata) (*Metadata, error) {
 	return &instanceInfo, nil
 }
 
-func getAttachedENIs(svc EC2Metadata) (int, error) {
+func getAttachedENIs(svc IMDS) (int, error) {
 	enisOutput, err := svc.GetMetadata(context.Background(), &imds.GetMetadataInput{Path: EnisEndpoint})
 	if err != nil {
 		return -1, fmt.Errorf("could not get metadata for ENIs: %w", err)

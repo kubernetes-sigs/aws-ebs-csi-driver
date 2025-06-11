@@ -137,6 +137,8 @@ func main() {
 	cfg := metadata.MetadataServiceConfig{
 		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
 		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
+		IMDSClient:      metadata.DefaultIMDSClient,
+		K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
 	}
 
 	region := os.Getenv("AWS_REGION")

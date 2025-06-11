@@ -34,12 +34,14 @@ type Metadata struct {
 	NumAttachedENIs        int
 	NumBlockDeviceMappings int
 	OutpostArn             arn.ARN
-	EC2MetadataClient      EC2Metadata
+	IMDSClient             IMDS
 }
 
 type MetadataServiceConfig struct {
 	EC2MetadataClient EC2MetadataClient
 	K8sAPIClient      KubernetesAPIClient
+	IMDSClient      IMDSClient
+	K8sAPIClient    KubernetesAPIClient
 }
 
 var _ MetadataService = &Metadata{}
@@ -74,12 +76,12 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 // UpdateMetadata refreshes ENI information.
 // We do not refresh blockDeviceMappings because IMDS only reports data from when instance starts (As of April 2025).
 func (m *Metadata) UpdateMetadata() error {
-	if m.EC2MetadataClient == nil {
-		// EC2 Metadata not available, skip updates
+	if m.IMDSClient == nil {
+		// IMDS not available, skip updates
 		return nil
 	}
 
-	attachedENIs, err := getAttachedENIs(m.EC2MetadataClient)
+	attachedENIs, err := getAttachedENIs(m.IMDSClient)
 	if err != nil {
 		return fmt.Errorf("failed to update ENI count: %w", err)
 	}
@@ -88,13 +90,13 @@ func (m *Metadata) UpdateMetadata() error {
 	return nil
 }
 
-func retrieveEC2Metadata(ec2MetadataClient EC2MetadataClient) (*Metadata, error) {
-	svc, err := ec2MetadataClient()
+func retrieveIMDSMetadata(imdsClient IMDSClient) (*Metadata, error) {
+	svc, err := imdsClient()
 	if err != nil {
-		klog.ErrorS(err, "failed to initialize EC2 Metadata client")
+		klog.ErrorS(err, "failed to initialize IMDS client")
 		return nil, err
 	}
-	return EC2MetadataInstanceInfo(svc)
+	return IMDSInstanceInfo(svc)
 }
 
 func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
