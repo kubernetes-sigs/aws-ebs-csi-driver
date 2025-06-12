@@ -155,6 +155,7 @@ require (
 replace (
 	github.com/containerd/errdefs => github.com/containerd/errdefs v1.0.0 // Mitigate errdefs breaking change (Remove after all depdendencies upgrade to v1.0.0)
 	github.com/kubernetes-sigs/aws-ebs-csi-driver => ../../
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0 // TODO: Remove after https://github.com/kubernetes/kubernetes/pull/131951 is released in k8s.io/cri-client
 	k8s.io/api => k8s.io/api v0.33.1
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.33.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.33.1
