@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	flag "github.com/spf13/pflag"
 )
 
@@ -159,11 +160,16 @@ func TestValidateAttachmentLimits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &Options{
-				Mode:                      NodeMode,
-				VolumeAttachLimit:         tt.volumeAttachLimit,
-				ReservedVolumeAttachments: tt.reservedAttachments,
-			}
+			// FIXME TEAM Q: This fine? Or should we break out o.Validate into unit-testable helpers
+			// Add default flags
+			o := &Options{}
+			o.Mode = NodeMode
+			f := flag.NewFlagSet("test", flag.ExitOnError)
+			o.AddFlags(f)
+
+			// Override with test flags
+			o.VolumeAttachLimit = tt.volumeAttachLimit
+			o.ReservedVolumeAttachments = tt.reservedAttachments
 
 			err := o.Validate()
 			if (err != nil) != tt.expectedErr {
@@ -220,12 +226,69 @@ func TestValidateMetricsHTTPS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &Options{
-				Mode:            ControllerMode,
-				HTTPEndpoint:    tt.httpEndpoint,
-				MetricsCertFile: tt.metricsCertFile,
-				MetricsKeyFile:  tt.metricsKeyFile,
+			// Add default flags
+			o := &Options{}
+			o.Mode = ControllerMode
+			f := flag.NewFlagSet("test", flag.ExitOnError)
+			o.AddFlags(f)
+
+			// Override with test flags
+			o.HTTPEndpoint = tt.httpEndpoint
+			o.MetricsCertFile = tt.metricsCertFile
+			o.MetricsKeyFile = tt.metricsKeyFile
+
+			err := o.Validate()
+			if (err != nil) != tt.expectError {
+				t.Errorf("Options.Validate() error = %v, wantErr %v", err, tt.expectError)
 			}
+		})
+	}
+}
+
+func TestValidateMetadataSources(t *testing.T) {
+	tests := []struct {
+		name            string
+		metadataSources string
+		expectError     bool
+	}{
+		{
+			name:            "success: default",
+			metadataSources: metadata.DefaultMetadataSources,
+		},
+		{
+			name:            "success: imds",
+			metadataSources: metadata.SourceIMDS,
+		},
+		{
+			name:            "success: kubernetes",
+			metadataSources: metadata.SourceK8s,
+		},
+		{
+			name:            "success: all sources reversed",
+			metadataSources: "kubernetes,imds",
+		},
+		{
+			name:            "fail: invalid source",
+			metadataSources: "invalid",
+			expectError:     true,
+		},
+		{
+			name:            "fail: no source",
+			metadataSources: "",
+			expectError:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Add default flags
+			o := &Options{}
+			o.Mode = NodeMode
+			f := flag.NewFlagSet("test", flag.ExitOnError)
+			o.AddFlags(f)
+
+			// Override with test flags
+			o.MetadataSources = tt.metadataSources
 
 			err := o.Validate()
 			if (err != nil) != tt.expectError {

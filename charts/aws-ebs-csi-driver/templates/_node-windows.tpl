@@ -76,6 +76,9 @@ spec:
             {{- with .Values.node.reservedVolumeAttachments }}
             - --reserved-volume-attachments={{ . }}
             {{- end }}
+            {{- with .Values.node.metadataSources }}
+            - --metadata-sources={{ . }}
+            {{- end }}
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}

@@ -148,31 +148,31 @@ func (mr *MockMetadataServiceMockRecorder) UpdateMetadata() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetadata", reflect.TypeOf((*MockMetadataService)(nil).UpdateMetadata))
 }
 
-// MockEC2Metadata is a mock of EC2Metadata interface.
-type MockEC2Metadata struct {
+// MockIMDS is a mock of IMDS interface.
+type MockIMDS struct {
 	ctrl     *gomock.Controller
-	recorder *MockEC2MetadataMockRecorder
+	recorder *MockIMDSMockRecorder
 }
 
-// MockEC2MetadataMockRecorder is the mock recorder for MockEC2Metadata.
-type MockEC2MetadataMockRecorder struct {
-	mock *MockEC2Metadata
+// MockIMDSMockRecorder is the mock recorder for MockIMDS.
+type MockIMDSMockRecorder struct {
+	mock *MockIMDS
 }
 
-// NewMockEC2Metadata creates a new mock instance.
-func NewMockEC2Metadata(ctrl *gomock.Controller) *MockEC2Metadata {
-	mock := &MockEC2Metadata{ctrl: ctrl}
-	mock.recorder = &MockEC2MetadataMockRecorder{mock}
+// NewMockIMDS creates a new mock instance.
+func NewMockIMDS(ctrl *gomock.Controller) *MockIMDS {
+	mock := &MockIMDS{ctrl: ctrl}
+	mock.recorder = &MockIMDSMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockEC2Metadata) EXPECT() *MockEC2MetadataMockRecorder {
+func (m *MockIMDS) EXPECT() *MockIMDSMockRecorder {
 	return m.recorder
 }
 
 // GetDynamicData mocks base method.
-func (m *MockEC2Metadata) GetDynamicData(ctx context.Context, params *imds.GetDynamicDataInput, optFns ...func(*imds.Options)) (*imds.GetDynamicDataOutput, error) {
+func (m *MockIMDS) GetDynamicData(ctx context.Context, params *imds.GetDynamicDataInput, optFns ...func(*imds.Options)) (*imds.GetDynamicDataOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -185,14 +185,14 @@ func (m *MockEC2Metadata) GetDynamicData(ctx context.Context, params *imds.GetDy
 }
 
 // GetDynamicData indicates an expected call of GetDynamicData.
-func (mr *MockEC2MetadataMockRecorder) GetDynamicData(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetDynamicData(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicData", reflect.TypeOf((*MockEC2Metadata)(nil).GetDynamicData), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicData", reflect.TypeOf((*MockIMDS)(nil).GetDynamicData), varargs...)
 }
 
 // GetIAMInfo mocks base method.
-func (m *MockEC2Metadata) GetIAMInfo(ctx context.Context, params *imds.GetIAMInfoInput, optFns ...func(*imds.Options)) (*imds.GetIAMInfoOutput, error) {
+func (m *MockIMDS) GetIAMInfo(ctx context.Context, params *imds.GetIAMInfoInput, optFns ...func(*imds.Options)) (*imds.GetIAMInfoOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -205,14 +205,14 @@ func (m *MockEC2Metadata) GetIAMInfo(ctx context.Context, params *imds.GetIAMInf
 }
 
 // GetIAMInfo indicates an expected call of GetIAMInfo.
-func (mr *MockEC2MetadataMockRecorder) GetIAMInfo(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetIAMInfo(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIAMInfo", reflect.TypeOf((*MockEC2Metadata)(nil).GetIAMInfo), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIAMInfo", reflect.TypeOf((*MockIMDS)(nil).GetIAMInfo), varargs...)
 }
 
 // GetInstanceIdentityDocument mocks base method.
-func (m *MockEC2Metadata) GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, optFns ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error) {
+func (m *MockIMDS) GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, optFns ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -225,14 +225,14 @@ func (m *MockEC2Metadata) GetInstanceIdentityDocument(ctx context.Context, param
 }
 
 // GetInstanceIdentityDocument indicates an expected call of GetInstanceIdentityDocument.
-func (mr *MockEC2MetadataMockRecorder) GetInstanceIdentityDocument(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetInstanceIdentityDocument(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIdentityDocument", reflect.TypeOf((*MockEC2Metadata)(nil).GetInstanceIdentityDocument), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIdentityDocument", reflect.TypeOf((*MockIMDS)(nil).GetInstanceIdentityDocument), varargs...)
 }
 
 // GetMetadata mocks base method.
-func (m *MockEC2Metadata) GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error) {
+func (m *MockIMDS) GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -245,14 +245,14 @@ func (m *MockEC2Metadata) GetMetadata(ctx context.Context, params *imds.GetMetad
 }
 
 // GetMetadata indicates an expected call of GetMetadata.
-func (mr *MockEC2MetadataMockRecorder) GetMetadata(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetMetadata(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockEC2Metadata)(nil).GetMetadata), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockIMDS)(nil).GetMetadata), varargs...)
 }
 
 // GetRegion mocks base method.
-func (m *MockEC2Metadata) GetRegion(ctx context.Context, params *imds.GetRegionInput, optFns ...func(*imds.Options)) (*imds.GetRegionOutput, error) {
+func (m *MockIMDS) GetRegion(ctx context.Context, params *imds.GetRegionInput, optFns ...func(*imds.Options)) (*imds.GetRegionOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -265,14 +265,14 @@ func (m *MockEC2Metadata) GetRegion(ctx context.Context, params *imds.GetRegionI
 }
 
 // GetRegion indicates an expected call of GetRegion.
-func (mr *MockEC2MetadataMockRecorder) GetRegion(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetRegion(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockEC2Metadata)(nil).GetRegion), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockIMDS)(nil).GetRegion), varargs...)
 }
 
 // GetUserData mocks base method.
-func (m *MockEC2Metadata) GetUserData(ctx context.Context, params *imds.GetUserDataInput, optFns ...func(*imds.Options)) (*imds.GetUserDataOutput, error) {
+func (m *MockIMDS) GetUserData(ctx context.Context, params *imds.GetUserDataInput, optFns ...func(*imds.Options)) (*imds.GetUserDataOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, params}
 	for _, a := range optFns {
@@ -285,8 +285,8 @@ func (m *MockEC2Metadata) GetUserData(ctx context.Context, params *imds.GetUserD
 }
 
 // GetUserData indicates an expected call of GetUserData.
-func (mr *MockEC2MetadataMockRecorder) GetUserData(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+func (mr *MockIMDSMockRecorder) GetUserData(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, params}, optFns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserData", reflect.TypeOf((*MockEC2Metadata)(nil).GetUserData), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserData", reflect.TypeOf((*MockIMDS)(nil).GetUserData), varargs...)
 }
