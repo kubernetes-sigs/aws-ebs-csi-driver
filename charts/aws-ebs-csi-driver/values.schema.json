@@ -1147,15 +1147,13 @@
       "propertyNames": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 128,
-        "pattern": "^[a-zA-Z0-9 _\\.:\\/=+\\-@]*$"
+        "maxLength": 128
       },
       "patternProperties": {
         "^.*$": {
           "type": "string",
           "minLength": 0,
-          "maxLength": 256,
-          "pattern": "^[a-zA-Z0-9 _\\.:\\/=+\\-@]*$"
+          "maxLength": 256
         }
       }
     }
