@@ -11,7 +11,7 @@ images:
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-attacher
   - name: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/livenessprobe
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+  - name: public.ecr.aws/eks-distro/kubernetes-csi/csi-snapshotter
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
   - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
