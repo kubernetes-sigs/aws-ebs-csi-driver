@@ -14,28 +14,28 @@
 
 sidecars:
   snapshotter:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
+    image: public.ecr.aws/csi-components/csi-snapshotter
     repo: https://github.com/kubernetes-csi/external-snapshotter
     rbacSource: deploy/kubernetes/csi-snapshotter/rbac-csi-snapshotter.yaml
     rbacDestination: clusterrole-snapshotter.yaml
   attacher:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
+    image: public.ecr.aws/csi-components/csi-attacher
     repo: https://github.com/kubernetes-csi/external-attacher
     rbacSource: deploy/kubernetes/rbac.yaml
     rbacDestination: clusterrole-attacher.yaml
   provisioner:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
+    image: public.ecr.aws/csi-components/csi-provisioner
     repo: https://github.com/kubernetes-csi/external-provisioner
     rbacSource: deploy/kubernetes/rbac.yaml
     rbacDestination: clusterrole-provisioner.yaml
   resizer:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+    image: public.ecr.aws/csi-components/csi-resizer
     repo: https://github.com/kubernetes-csi/external-resizer
     rbacSource: deploy/kubernetes/rbac.yaml
     rbacDestination: clusterrole-resizer.yaml
   livenessProbe:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
+    image: public.ecr.aws/csi-components/livenessprobe
   nodeDriverRegistrar:
-    image: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
+    image: public.ecr.aws/csi-components/csi-node-driver-registrar
   volumemodifier:
     image: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
