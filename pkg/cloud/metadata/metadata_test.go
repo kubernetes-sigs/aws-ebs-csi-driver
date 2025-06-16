@@ -19,6 +19,7 @@ package metadata
 import (
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -39,6 +40,7 @@ func TestNewMetadataService(t *testing.T) {
 
 	testCases := []struct {
 		name             string
+		metadataSources  []string
 		imdsDisabled     bool
 		IMDSError        error
 		k8sAPIError      error
@@ -46,7 +48,8 @@ func TestNewMetadataService(t *testing.T) {
 		expectedError    error
 	}{
 		{
-			name: "TestNewMetadataService: EC2 metadata available",
+			name:            "TestNewMetadataService: Default MetadataSources, IMDS available",
+			metadataSources: DefaultMetadataSources,
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
 				InstanceType:           "c5.xlarge",
@@ -57,8 +60,9 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
-			name:         "TestNewMetadataService: AWS_EC2_METADATA_DISABLED=true, K8s API available",
-			imdsDisabled: true,
+			name:            "TestNewMetadataService: Default MetadataSources, AWS_EC2_METADATA_DISABLED=true, K8s API available",
+			metadataSources: DefaultMetadataSources,
+			imdsDisabled:    true,
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
 				InstanceType:           "c5.xlarge",
@@ -69,9 +73,9 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
-			name:             "TestNewMetadataService: EC2 metadata error, K8s API available",
-			ec2MetadataError: errors.New("EC2 metadata error"),
-			IMDSError: errors.New("IMDS error"),
+			name:            "TestNewMetadataService: Default MetadataSources, IMDS error, K8s API available",
+			metadataSources: DefaultMetadataSources,
+			IMDSError:       errors.New("IMDS error"),
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
 				InstanceType:           "c5.xlarge",
@@ -82,10 +86,34 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
-			name:             "TestNewMetadataService: EC2 metadata error, K8s API error",
-			ec2MetadataError: errors.New("EC2 metadata error"),
-			k8sAPIError:      errors.New("K8s API error"),
-			expectedError:    errors.New("IMDS metadata and Kubernetes metadata are both unavailable"),
+			name:            "TestNewMetadataService: Default MetadataSources, IMDS error, K8s API error",
+			metadataSources: DefaultMetadataSources,
+			IMDSError:       errors.New("IMDS error"),
+			k8sAPIError:     errors.New("K8s API error"),
+			expectedError:   sourcesUnavailableErr(DefaultMetadataSources),
+		},
+		{
+			name:            "TestNewMetadataService: MetadataSources IMDS-only, IMDS error",
+			metadataSources: []string{SourceIMDS},
+			IMDSError:       errors.New("IMDS error"),
+			expectedError:   sourcesUnavailableErr([]string{SourceIMDS}),
+		},
+		{
+			name:            "TestNewMetadataService: MetadataSources K8s-only, success",
+			metadataSources: []string{SourceK8s},
+			expectedMetadata: &Metadata{
+				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
+			},
+		},
+		{
+			name:            "TestNewMetadataService: invalid source error",
+			metadataSources: []string{"invalid"},
+			expectedError:   InvalidSourceErr([]string{"invalid"}, "invalid"),
 		},
 	}
 
@@ -119,8 +147,7 @@ func TestNewMetadataService(t *testing.T) {
 				t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
 			}
 
-			if tc.ec2MetadataError == nil && !tc.imdsDisabled {
-				mockEC2Metadata.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+			if tc.IMDSError == nil && !tc.imdsDisabled && (slices.Contains(tc.metadataSources, SourceIMDS)) {
 				mockIMDS.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
@@ -139,6 +166,7 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			cfg := MetadataServiceConfig{
+				MetadataSources: tc.metadataSources,
 				IMDSClient: func() (IMDS, error) {
 					if tc.IMDSError != nil {
 						return nil, tc.IMDSError
@@ -181,7 +209,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(nil, errors.New("failed to get instance identity document"))
 			},
-			expectedError: errors.New("could not get IMDS identity metadata: failed to get instance identity document"),
+			expectedError: errors.New("could not get IMDS metadata: failed to get instance identity document"),
 		},
 		{
 			name: "TestIMDSInstanceInfo: Empty instance ID",

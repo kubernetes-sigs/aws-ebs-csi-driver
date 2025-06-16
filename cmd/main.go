@@ -135,8 +135,7 @@ func main() {
 	}
 
 	cfg := metadata.MetadataServiceConfig{
-		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
-		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
+		MetadataSources: options.MetadataSources,
 		IMDSClient:      metadata.DefaultIMDSClient,
 		K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
 	}

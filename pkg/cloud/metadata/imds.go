@@ -53,7 +53,7 @@ var DefaultIMDSClient = func() (IMDS, error) {
 func IMDSInstanceInfo(svc IMDS) (*Metadata, error) {
 	docOutput, err := svc.GetInstanceIdentityDocument(context.Background(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		return nil, fmt.Errorf("could not get IMDS identity metadata: %w", err)
+		return nil, fmt.Errorf("could not get IMDS metadata: %w", err)
 	}
 	doc := docOutput.InstanceIdentityDocument
 

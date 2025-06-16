@@ -17,7 +17,6 @@ limitations under the License.
 package metadata
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -38,39 +37,55 @@ type Metadata struct {
 }
 
 type MetadataServiceConfig struct {
-	EC2MetadataClient EC2MetadataClient
-	K8sAPIClient      KubernetesAPIClient
+	MetadataSources []string
 	IMDSClient      IMDSClient
 	K8sAPIClient    KubernetesAPIClient
 }
 
+const (
+	SourceIMDS = "imds"
+	SourceK8s  = "kubernetes"
+)
+
+var (
+	// DefaultMetadataSources lists the default fallback order of driver Metadata sources.
+	DefaultMetadataSources = []string{SourceIMDS, SourceK8s}
+)
+
 var _ MetadataService = &Metadata{}
 
-// NewMetadataService retrieves instance Metadata from one of the client in MetadataServiceConfig.
-// It prefers EC2MetadataClient (IMDS) in order to get an accurate number of attached devices.
+// NewMetadataService retrieves instance Metadata from one of the clients in MetadataServiceConfig.
+// It tries each client included in MetadataServiceConfig.MetadataSources in order until one succeeds.
 func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataService, error) {
-	// Don't make an IMDS call if we know it's disabled
-	if os.Getenv("AWS_EC2_METADATA_DISABLED") == "true" {
-		klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
-	} else {
-		klog.V(2).InfoS("Attempting to retrieve instance metadata from IMDS")
-		metadata, err := retrieveEC2Metadata(cfg.EC2MetadataClient)
-		if err == nil {
-			klog.V(2).InfoS("Retrieved metadata from IMDS")
-			return metadata.overrideRegion(region), nil
+	for _, source := range cfg.MetadataSources {
+		switch source {
+		case SourceIMDS:
+			if os.Getenv("AWS_EC2_METADATA_DISABLED") == "true" {
+				klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
+			} else {
+				klog.V(2).InfoS("Attempting to retrieve instance metadata from IMDS")
+				metadata, err := retrieveIMDSMetadata(cfg.IMDSClient)
+				if err == nil {
+					klog.V(2).InfoS("Retrieved metadata from IMDS")
+					return metadata.overrideRegion(region), nil
+				}
+				klog.ErrorS(err, "Retrieving IMDS metadata failed")
+			}
+		case SourceK8s:
+			klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
+			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient)
+			if err == nil {
+				klog.V(2).InfoS("Retrieved metadata from Kubernetes")
+				return metadata.overrideRegion(region), nil
+			}
+			klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
+		default:
+			// Unexpected cases should have been caught during driver option validation
+			return nil, InvalidSourceErr(cfg.MetadataSources, source)
 		}
-		klog.ErrorS(err, "Retrieving IMDS metadata failed, falling back to Kubernetes metadata")
 	}
 
-	klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
-	metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient)
-	if err == nil {
-		klog.V(2).InfoS("Retrieved metadata from Kubernetes")
-		return metadata.overrideRegion(region), nil
-	}
-	klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
-
-	return nil, errors.New("IMDS metadata and Kubernetes metadata are both unavailable")
+	return nil, sourcesUnavailableErr(cfg.MetadataSources)
 }
 
 // UpdateMetadata refreshes ENI information.
@@ -149,4 +164,13 @@ func (m *Metadata) GetNumBlockDeviceMappings() int {
 // GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.
 func (m *Metadata) GetOutpostArn() arn.ARN {
 	return m.OutpostArn
+}
+
+// InvalidSourceErr returns an error message when a metadata source is invalid.
+func InvalidSourceErr(sources []string, invalidSource string) error {
+	return fmt.Errorf("invalid source: argument --metadata-sources=%s included invalid option '%s', comma-separated string MUST only include tokens like '%s' or '%s'", sources, invalidSource, SourceIMDS, SourceK8s)
+}
+
+func sourcesUnavailableErr(metadataSources []string) error {
+	return fmt.Errorf("all specified --metadata-sources '%s' are unavailable", metadataSources)
 }

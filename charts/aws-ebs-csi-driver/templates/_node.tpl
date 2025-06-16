@@ -83,6 +83,9 @@ spec:
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
+            {{- with .Values.node.metadataSources }}
+            - --metadata-sources={{ . }}
+            {{- end }}
             {{- if .Values.node.legacyXFS }}
             - --legacy-xfs=true
             {{- end}}
