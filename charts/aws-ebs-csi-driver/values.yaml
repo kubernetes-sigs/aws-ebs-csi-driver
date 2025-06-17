@@ -154,8 +154,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.6.0"
+      repository: public.ecr.aws/x5x2x9k4/test
+      tag: "vol-mod-whoa"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
