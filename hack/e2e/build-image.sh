@@ -60,7 +60,7 @@ function build_and_push() {
   export TAG="${IMAGE_TAG}"
   if [[ "$WINDOWS" == true ]]; then
     export ALL_OS="linux windows"
-    export ALL_OSVERSION_windows="ltsc2022"
+    export ALL_OSVERSION_windows="ltsc2019"
     export ALL_ARCH_linux="amd64"
     export ALL_ARCH_windows="${IMAGE_ARCH}"
   else
