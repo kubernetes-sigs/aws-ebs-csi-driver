@@ -21,12 +21,12 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
-      tag: "v5.2.0-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/csi-provisioner
+      tag: "v5.3.0-eksbuild.1"
     logLevel: 2
-    # Additional parameters provided by external-provisioner.
+    # Additional parameters provided by csi-provisioner.
     additionalArgs: []
-    # Grant additional permissions to external-provisioner
+    # Grant additional permissions to csi-provisioner
     additionalClusterRoleRules:
     resources: {}
     # Tune leader lease election for csi-provisioner.
@@ -48,8 +48,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
-      tag: "v4.8.1-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/csi-attacher
+      tag: "v4.9.0-eksbuild.1"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -61,9 +61,9 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
-    # Additional parameters provided by external-attacher.
+    # Additional parameters provided by csi-attacher.
     additionalArgs: []
-    # Grant additional permissions to external-attacher
+    # Grant additional permissions to csi-attacher
     additionalClusterRoleRules: []
     resources: {}
     securityContext:
@@ -77,8 +77,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter
-      tag: "v8.2.1-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/csi-snapshotter
+      tag: "v8.2.0-eksbuild.1"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -93,8 +93,8 @@ sidecars:
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
-      tag: "v2.15.0-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/livenessprobe
+      tag: "v2.16.0-eksbuild.1"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -105,8 +105,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
-      tag: "v1.13.2-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/csi-resizer
+      tag: "v1.14.0-eksbuild.1"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -118,9 +118,9 @@ sidecars:
       # renewDeadline: "10s"
       # retryPeriod: "5s"
     logLevel: 2
-    # Additional parameters provided by external-resizer.
+    # Additional parameters provided by csi-resizer.
     additionalArgs: []
-    # Grant additional permissions to external-resizer
+    # Grant additional permissions to csi-resizer
     additionalClusterRoleRules: []
     resources: {}
     securityContext:
@@ -132,8 +132,8 @@ sidecars:
     env: []
     image:
       pullPolicy: IfNotPresent
-      repository: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
-      tag: "v2.13.0-eks-1-33-3"
+      repository: public.ecr.aws/csi-components/csi-node-driver-registrar
+      tag: "v2.13.0-eksbuild.1"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -511,4 +511,4 @@ nodeComponentOnly: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20250513-98d205aae3-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20250613-876fb90a97-master"
