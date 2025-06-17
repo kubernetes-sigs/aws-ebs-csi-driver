@@ -65,20 +65,20 @@ The EBS CSI Driver will emit [container storage Interface managed devices metric
 
 The metrics will appear in the following format: 
 ```sh
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.001"} 0
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.0025"} 0
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.005"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.01"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.025"} 1
-nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="0.05"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.1"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.25"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.5"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="1"} 1
-nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="2.5"} 1
-nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="5"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="10"} 1
-nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="+Inf"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.001"} 0
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.0025"} 0
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.005"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.01"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.025"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="0.05"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.1"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.25"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="0.5"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="1"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="2.5"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="instance-id}",le="5"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="10"} 1
+aws_ebs_csi_nvme_collector_duration_seconds_bucket{instance_id="{instance-id}",le="+Inf"} 1
 ...
 ```
 
