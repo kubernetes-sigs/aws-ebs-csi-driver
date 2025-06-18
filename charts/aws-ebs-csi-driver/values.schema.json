@@ -600,6 +600,11 @@
           "description": "Enable SELinux-only optimizations on the EBS CSI Driver node pods. Must only be set true if all linux nodes in the DaemonSet have SELinux enabled",
           "default": false
         },
+        "metadataSources": {
+          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds' and 'kubernetes'",
+          "type": ["string", "null"],
+          "default": null
+        },
         "reservedVolumeAttachments": {
           "type": ["integer", "null"],
           "description": "The number of attachment slots to reserve for system use (and not to be used for CSI volumes)\nWhen this parameter is not specified (or set to -1), the EBS CSI Driver will attempt to determine the number of reserved slots via heuristic",
