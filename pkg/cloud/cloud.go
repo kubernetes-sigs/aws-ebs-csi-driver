@@ -1825,6 +1825,8 @@ func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, err
 
 func needsVolumeModification(volume types.Volume, newSizeGiB int32, options *ModifyDiskOptions) bool {
 	oldSizeGiB := *volume.Size
+	//nolint:staticcheck // staticcheck suggests merging all of the below conditionals into one line,
+	// but that would be extremely difficult to read
 	needsModification := false
 
 	if oldSizeGiB < newSizeGiB {

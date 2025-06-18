@@ -139,7 +139,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case IopsPerGBKey:
 			parseIopsPerGBKey, parseIopsPerGBKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsPerGBKeyErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", parseIopsPerGBKeyErr)
 			}
 			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
@@ -147,19 +147,19 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case IopsKey:
 			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsKeyErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", parseIopsKeyErr)
 			}
 			iops = int32(parseIopsKey)
 		case VolumeInitializationRateKey:
 			parseInitRate, parseInitRateErr := strconv.ParseInt(value, 10, 32)
 			if parseInitRateErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid volumeInitializationRate: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid volumeInitializationRate: %v", parseInitRateErr)
 			}
 			volumeInitializationRate = int32(parseInitRate)
 		case ThroughputKey:
 			parseThroughput, parseThroughputErr := strconv.ParseInt(value, 10, 32)
 			if parseThroughputErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", parseThroughputErr)
 			}
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
