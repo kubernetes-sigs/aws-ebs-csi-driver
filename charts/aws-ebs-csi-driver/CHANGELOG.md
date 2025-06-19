@@ -1,5 +1,8 @@
 # Helm chart
 
+## v2.45.1
+- Bump csi-sidecars to new eksbuild versions to fix livenessprobe
+
 ## v2.45.0
 
 ### Feature
