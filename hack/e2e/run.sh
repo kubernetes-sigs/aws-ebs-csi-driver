@@ -145,6 +145,7 @@ else
       --focus-regex="${GINKGO_FOCUS}" \
       --test-package-version=$(curl -L https://dl.k8s.io/release/stable-${packageVersion}.txt) \
       --parallel=${GINKGO_PARALLEL} \
+      --ginkgo-args="--flake-attempts=3 --fail-fast" \
       --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=${KUBECONFIG} -node-os-distro=${NODE_OS_DISTRO}"
     TEST_PASSED=$?
     set -e
