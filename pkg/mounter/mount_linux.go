@@ -72,7 +72,7 @@ func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region str
 	if exists {
 		stat, lstatErr := os.Lstat(devicePath)
 		if lstatErr != nil {
-			return "", fmt.Errorf("failed to lstat %q: %w", devicePath, err)
+			return "", fmt.Errorf("failed to lstat %q: %w", devicePath, lstatErr)
 		}
 
 		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
