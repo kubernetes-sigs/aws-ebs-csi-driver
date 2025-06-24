@@ -46,15 +46,18 @@ const (
 )
 
 const (
-	DriverName               = "ebs.csi.aws.com"
-	AwsPartitionKey          = "topology." + DriverName + "/partition"
-	AwsAccountIDKey          = "topology." + DriverName + "/account-id"
-	AwsRegionKey             = "topology." + DriverName + "/region"
-	AwsOutpostIDKey          = "topology." + DriverName + "/outpost-id"
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
+	OSTopologyKey            = "kubernetes.io/os"
+)
+
+var (
+	DriverName      string
+	AwsPartitionKey string
+	AwsAccountIDKey string
+	AwsRegionKey    string
+	AwsOutpostIDKey string
 	// Deprecated: Use the WellKnownZoneTopologyKey instead.
-	ZoneTopologyKey = "topology." + DriverName + "/zone"
-	OSTopologyKey   = "kubernetes.io/os"
+	ZoneTopologyKey string
 )
 
 type Driver struct {
@@ -65,7 +68,15 @@ type Driver struct {
 	csi.UnimplementedIdentityServer
 }
 
-func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
+func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface, driverName string) (*Driver, error) {
+	DriverName = driverName
+	AwsPartitionKey = "topology." + DriverName + "/partition"
+	AwsAccountIDKey = "topology." + DriverName + "/account-id"
+	AwsRegionKey = "topology." + DriverName + "/region"
+	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
+	// Deprecated: Use the WellKnownZoneTopologyKey instead.
+	ZoneTopologyKey = "topology." + DriverName + "/zone"
+
 	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
 
 	if err := ValidateDriverOptions(o); err != nil {

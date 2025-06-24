@@ -195,7 +195,7 @@ func main() {
 		klog.V(2).InfoS("Failed to setup k8s client", "err", err)
 	}
 
-	drv, err := driver.NewDriver(cloud, &options, m, md, k8sClient)
+	drv, err := driver.NewDriver(cloud, &options, m, md, k8sClient, options.DriverName)
 	if err != nil {
 		klog.ErrorS(err, "failed to create driver")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)

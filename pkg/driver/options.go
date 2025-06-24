@@ -93,9 +93,13 @@ type Options struct {
 	LegacyXFSProgs bool
 	// CsiMountPointPath is the path where CSI volumes are expected to be mounted on the node.
 	CsiMountPointPath string
+
+	DriverName string
 }
 
 func (o *Options) AddFlags(f *flag.FlagSet) {
+	f.StringVar(&o.DriverName, "driver-name", "ebs.csi.aws.com", "CSI driver name")
+
 	f.StringVar(&o.Kubeconfig, "kubeconfig", "", "Absolute path to a kubeconfig file. The default is the empty string, which causes the in-cluster config to be used")
 
 	// Server options
