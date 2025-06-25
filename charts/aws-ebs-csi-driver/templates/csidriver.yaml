@@ -8,6 +8,11 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+  {{- if semverCompare ">=1.33.0-0" .Capabilities.KubeVersion.Version }}
+  {{- if .Values.nodeAllocatableUpdatePeriodSeconds }}
+  nodeAllocatableUpdatePeriodSeconds: {{ .Values.nodeAllocatableUpdatePeriodSeconds }}
+  {{- end }}
+  {{- end }}
   {{- if not .Values.useOldCSIDriver }}
   fsGroupPolicy: File
   {{- end }}
