@@ -9,10 +9,10 @@ require (
 	github.com/kubernetes-sigs/aws-ebs-csi-driver v1.44.0
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	k8s.io/api v0.33.1
-	k8s.io/apimachinery v0.33.1
+	k8s.io/api v0.33.2
+	k8s.io/apimachinery v0.33.2
 	k8s.io/client-go v1.5.2
-	k8s.io/kubernetes v1.33.1
+	k8s.io/kubernetes v1.33.2
 	k8s.io/pod-security-admission v0.33.1
 )
 
@@ -132,11 +132,11 @@ require (
 	k8s.io/apiserver v0.33.1 // indirect
 	k8s.io/cloud-provider v0.33.1 // indirect
 	k8s.io/component-base v0.33.1 // indirect
-	k8s.io/component-helpers v0.33.1 // indirect
+	k8s.io/component-helpers v0.33.2 // indirect
 	k8s.io/controller-manager v0.33.1 // indirect
 	k8s.io/cri-api v0.33.1 // indirect
 	k8s.io/cri-client v0.33.1 // indirect
-	k8s.io/csi-translation-lib v0.33.1 // indirect
+	k8s.io/csi-translation-lib v0.33.2 // indirect
 	k8s.io/dynamic-resource-allocation v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a // indirect
