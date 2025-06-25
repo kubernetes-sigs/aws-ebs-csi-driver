@@ -962,7 +962,6 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		return err
 	}
 
-	// TODO: check if attached
 	device, err := c.dm.GetDevice(instance, volumeID)
 	if err != nil {
 		return err
