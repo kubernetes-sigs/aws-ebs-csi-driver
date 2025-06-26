@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,14 +141,36 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 	} else {
 		return nil, errors.New("could not retrieve AZ from topology label")
 	}
+	val := node.GetLabels()
+	klog.V(1).InfoS("labels", "", val)
+
+	var volumes int
+	if val, ok := node.GetLabels()["num-volumes"]; ok {
+		volumes, err = strconv.Atoi(val)
+		if err != nil {
+			return nil, errors.New("failed to convert number of volumes label to int")
+		}
+	} else {
+		return nil, errors.New("could not retrieve num volumes from node label")
+	}
+
+	var ENIs int
+	if val, ok := node.GetLabels()["num-ENIs"]; ok {
+		ENIs, err = strconv.Atoi(val)
+		if err != nil {
+			return nil, errors.New("failed to convert number of ENIs label to int")
+		}
+	} else {
+		return nil, errors.New("could not retrieve num ENIs from node label")
+	}
 
 	instanceInfo := Metadata{
 		InstanceID:             instanceID,
 		InstanceType:           instanceType,
 		Region:                 region,
 		AvailabilityZone:       availabilityZone,
-		NumAttachedENIs:        1, // All nodes have at least 1 attached ENI, so we'll use that
-		NumBlockDeviceMappings: 0,
+		NumAttachedENIs:        ENIs,
+		NumBlockDeviceMappings: volumes,
 	}
 
 	return &instanceInfo, nil
