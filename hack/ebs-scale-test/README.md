@@ -6,7 +6,7 @@ Setup and run an EBS CSI Driver scalability test with our `scale-test` tool:
 
 ```shell
 # Set scalability parameters
-export CLUSTER_TYPE="pre-allocated"
+export CLUSTER_TYPE="karpenter"
 export TEST_TYPE="scale-sts"
 export REPLICAS="1000"
 
@@ -65,6 +65,7 @@ Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run d
 
 - `CLUSTER_TYPE` dictates what type of scalability cluster `scale-test` creates and which nodes are used during a scalability test run. Options include: 
   - 'pre-allocated': Additional worker nodes are created during cluster setup. By default, we pre-allocate 1 `m7a.48xlarge` EC2 instance for every 100 StatefulSet replicas.
+  - 'karpenter': Installs [Karpenter](https://github.com/aws/karpenter-provider-aws) during cluster setup. Karpenter will provision and delete worker nodes during scalability test run.
 
 - `TEST_TYPE` dictates what type of scalability test we want to run. Options include: 
   - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes.

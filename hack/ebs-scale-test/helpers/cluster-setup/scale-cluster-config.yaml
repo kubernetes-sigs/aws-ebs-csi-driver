@@ -30,6 +30,14 @@ iam:
         ebsCSIController: true
 
 managedNodeGroups:
+{{- if eq ( getenv "CLUSTER_TYPE" ) "karpenter" }}
+  - instanceType: m5.2xlarge
+    amiFamily: AmazonLinux2023
+    name: add-on-ng
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+{{- end }}
 {{- if eq ( getenv "CLUSTER_TYPE" ) "pre-allocated" }}
   - instanceType: m7a.48xlarge
     amiFamily: AmazonLinux2023
