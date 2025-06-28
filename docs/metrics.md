@@ -17,7 +17,7 @@ $ helm upgrade --install aws-ebs-csi-driver --namespace kube-system ./charts/aws
 
 ## Overview
 
-Installing the Prometheus Operator and enabling metrics will deploy a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) object that exposes the EBS CSI Driver's controller metric port through a `ClusterIP`. Additionally, a [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#:~:text=Alertmanager-,ServiceMonitor,-See%20the%20Alerting) object is deployed which updates the Prometheus scrape configuration and allows scraping metrics from the endpoint defined. For more information, see the manifest [metrics.yaml](/charts/aws-ebs-csi-driver/templates/metrics.yaml)
+Installing the Prometheus Operator and enabling metrics will deploy a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) object that exposes the EBS CSI Driver's controller metric port through a `ClusterIP`. Additionally, a [ServiceMonitor](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/getting-started.md#:~:text=Alertmanager-,ServiceMonitor,-See%20the%20Alerting) object is deployed which updates the Prometheus scrape configuration and allows scraping metrics from the endpoint defined. For more information, see the manifest [servicemonitor.yaml](/charts/aws-ebs-csi-driver/templates/servicemonitor.yaml)
 
 ## AWS API Metrics
 
