@@ -413,6 +413,11 @@
             "interval": {
               "type": "string",
               "default": "15s"
+            },
+            "metricRelabelings": {
+              "type": "array",
+              "description": "List of metricRelabelings for ServiceMonitor endpoints. See Prometheus docs for details.",
+              "default": []
             }
           }
         },
