@@ -365,6 +365,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			errCode = codes.NotFound
 		case errors.Is(err, cloud.ErrIdempotentParameterMismatch), errors.Is(err, cloud.ErrAlreadyExists):
 			errCode = codes.AlreadyExists
+		case errors.Is(err, cloud.ErrLimitExceeded):
+			errCode = codes.ResourceExhausted
 		default:
 			errCode = codes.Internal
 		}
@@ -442,7 +444,7 @@ func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		if errors.Is(err, cloud.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "Volume %q not found", volumeID)
 		}
-		if errors.Is(err, cloud.ErrAttachmentLimitExceeded) {
+		if errors.Is(err, cloud.ErrLimitExceeded) {
 			return nil, status.Errorf(codes.ResourceExhausted, "Attachment limit exceeded for volume %q on node %q: %v", volumeID, nodeID, err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
@@ -798,6 +800,8 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	if err != nil {
 		if errors.Is(err, cloud.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "Snapshot %q already exists", snapshotName)
+		} else if errors.Is(err, cloud.ErrLimitExceeded) {
+			return nil, status.Errorf(codes.ResourceExhausted, "Could not create snapshot (resource exhausted) %q: %v", snapshotName, err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not create snapshot %q: %v", snapshotName, err)
 	}
