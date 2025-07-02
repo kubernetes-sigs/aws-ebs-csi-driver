@@ -76,8 +76,8 @@ wait_for_pvcs_bound() {
 }
 
 create_snapshots() {
-  for i in {0..$(($REPLICAS - 1))}; do
-    for j in {1..$SNAPSHOTS_PER_VOLUME}; do
+  for ((i = 0; i < REPLICAS; i++)); do
+    for ((j = 1; j <= SNAPSHOTS_PER_VOLUME; j++)); do
       cat <<EOF | kubectl apply -f -
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
