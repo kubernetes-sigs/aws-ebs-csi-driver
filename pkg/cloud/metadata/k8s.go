@@ -62,12 +62,12 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 					rootCAFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "ca.crt")
 
 					token, tokenErr := os.ReadFile(tokenFile)
-					if err != nil {
+					if tokenErr != nil {
 						return nil, tokenErr
 					}
 
 					tlsClientConfig := rest.TLSClientConfig{}
-					if _, certErr := cert.NewPool(rootCAFile); err != nil {
+					if _, certErr := cert.NewPool(rootCAFile); certErr != nil {
 						return nil, fmt.Errorf("expected to load root CA config from %s, but got err: %w", rootCAFile, certErr)
 					} else {
 						tlsClientConfig.CAFile = rootCAFile
