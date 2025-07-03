@@ -259,7 +259,7 @@ sub-image-%:
 
 .PHONY: image
 image:
-	docker buildx build \
+	BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker buildx build \
 		--platform=$(OS)/$(ARCH) \
 		--progress=plain \
 		--target=$(OS)-$(OSVERSION) \
@@ -268,7 +268,6 @@ image:
 		--build-arg=GOPROXY=$(GOPROXY) \
 		--build-arg=VERSION=$(VERSION) \
 		$(FIPS_DOCKER_ARGS) \
-		`./hack/provenance.sh` \
 		$(DOCKER_EXTRA_ARGS) \
 		.
 
