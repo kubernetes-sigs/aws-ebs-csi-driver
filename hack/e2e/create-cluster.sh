@@ -70,7 +70,8 @@ elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
     "${BASE_DIR}/eksctl/vpc-resource-controller-configmap.yaml" \
     "${BASE_DIR}/eksctl/cluster.yaml" \
     "${OUTPOST_ARN}" \
-    "${OUTPOST_INSTANCE_TYPE}"
+    "${OUTPOST_INSTANCE_TYPE}" \
+    "${AMI_FAMILY}"
 else
   echo "Cluster type ${CLUSTER_TYPE} is invalid, must be kops or eksctl" >&2
   exit 1

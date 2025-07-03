@@ -56,6 +56,7 @@ Creates a cluster for running E2E tests against. There are many parameters that 
 - `CLUSTER_NAME`: The name of the cluster to create - defaults to `ebs-csi-e2e.k8s.local`
 - `INSTANCE_TYPE`: The instance type to use for cluster nodes - defaults to `c5.large`
 - `AMI_PARAMETER`: The SSM parameter of where to get the AMI for the cluster nodes (`kops` clusters only) - defaults to `/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64`
+- `AMI_FAMILY`: Which ami family to create a linux node group with for the cluster (`eksctl` clusters only) - defaults to `AmazonLinux2023`
 - `WINDOWS`: Whether or not to create a Windows node group for the cluster (`eksctl` clusters only) - defaults to `false`
 - `AWS_REGION`: Which region to create the cluster in - defaults to `us-west-2`
 - `AWS_AVAILABILITY_ZONES`: Which AZs to create nodes for the cluster in - defaults to `us-west-2a,us-west-2b,us-west-2c`
@@ -93,6 +94,14 @@ make cluster/create
 
 ```bash
 export WINDOWS="true"
+export CLUSTER_TYPE="eksctl"
+make cluster/create
+```
+
+#### Example: Create a cluster with Bottlerocket nodes
+
+```bash
+export AMI_FAMILY="Bottlerocket"
 export CLUSTER_TYPE="eksctl"
 make cluster/create
 ```
