@@ -1366,6 +1366,30 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
 		},
+		{
+			name:       "failure: create volume returned volume limit exceeded error",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expDisk:              nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr:   errors.New("VolumeLimitExceeded"),
+			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("VolumeLimitExceeded")),
+		},
+		{
+			name:       "failure: create volume returned max iops limit exceeded error",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expDisk:              nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr:   errors.New("MaxIOPSLimitExceeded"),
+			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("MaxIOPSLimitExceeded")),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1690,7 +1714,7 @@ func TestAttachDisk(t *testing.T) {
 			volumeID: defaultVolumeID,
 			nodeID:   defaultNodeID,
 			path:     defaultPath,
-			expErr: fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, &smithy.GenericAPIError{
+			expErr: fmt.Errorf("%w: %w", ErrLimitExceeded, &smithy.GenericAPIError{
 				Code:    "AttachmentLimitExceeded",
 				Message: "Volume attachment limit exceeded",
 			}),

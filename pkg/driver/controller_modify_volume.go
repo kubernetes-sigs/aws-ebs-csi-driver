@@ -149,12 +149,16 @@ func executeModifyVolumeRequest(c cloud.Cloud) func(string, modifyVolumeRequest)
 		if (req.modifyDiskOptions.IOPS != 0) || (req.modifyDiskOptions.Throughput != 0) || (req.modifyDiskOptions.VolumeType != "") || (req.newSize != 0) {
 			actualSizeGiB, err := c.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
 			if err != nil {
-				if errors.Is(err, cloud.ErrInvalidArgument) {
+				switch {
+				case errors.Is(err, cloud.ErrInvalidArgument):
 					return 0, status.Errorf(codes.InvalidArgument, "Could not modify volume (invalid argument) %q: %v", volumeID, err)
-				} else if errors.Is(err, cloud.ErrNotFound) {
+				case errors.Is(err, cloud.ErrNotFound):
 					return 0, status.Errorf(codes.NotFound, "Could not modify volume (not found) %q: %v", volumeID, err)
+				case errors.Is(err, cloud.ErrLimitExceeded):
+					return 0, status.Errorf(codes.ResourceExhausted, "Could not modify volume (resource exhausted) %q: %v", volumeID, err)
+				default:
+					return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
 				}
-				return 0, status.Errorf(codes.Internal, "Could not modify volume %q: %v", volumeID, err)
 			} else {
 				return actualSizeGiB, nil
 			}

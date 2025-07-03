@@ -172,8 +172,8 @@ var (
 	// ErrInvalidRequest is returned if parameters were rejected by driver.
 	ErrInvalidRequest = errors.New("invalid request")
 
-	// ErrAttachmentLimitExceeded is returned if the attachment limit is exceeded.
-	ErrAttachmentLimitExceeded = errors.New("attachment limit exceeded")
+	// ErrLimitExceeded is returned if a user exceeds a quota.
+	ErrLimitExceeded = errors.New("limit exceeded")
 )
 
 // Set during build time via -ldflags.
@@ -664,6 +664,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
 		}
+		if isAWSErrorVolumeLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
+		if isAwsErrorMaxIOPSLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
 
@@ -813,6 +819,12 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 			// Wrap error to preserve original message from AWS as to why this was an invalid argument
 			return 0, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
 		}
+		if isAWSErrorVolumeModificationSizeLimitExceeded(err) {
+			return 0, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
+		if isAwsErrorMaxIOPSLimitExceeded(err) {
+			return 0, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
 		return 0, err
 	}
 	// If the volume modification isn't immediately completed, wait for it to finish
@@ -934,7 +946,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 				likelyBadDeviceNames.Store(device.Path, struct{}{})
 			}
 			if isAWSErrorAttachmentLimitExceeded(attachErr) {
-				return "", fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, attachErr)
+				return "", fmt.Errorf("%w: %w", ErrLimitExceeded, attachErr)
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
@@ -1283,6 +1295,9 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		o.Retryer = c.rm.createSnapshotRetryer
 	})
 	if err != nil {
+		if isAwsErrorSnapshotLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
 		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
 	if res == nil {
@@ -1671,6 +1686,30 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 // This error is reported when the maximum number of attachments for an instance is exceeded.
 func isAWSErrorAttachmentLimitExceeded(err error) bool {
 	return isAWSError(err, "AttachmentLimitExceeded")
+}
+
+// isAWSErrorModificationSizeLimitExceeded checks if the error is a VolumeModificationSizeLimitExceeded error.
+// This error is reported when the limit on a volume modification storage in a region is exceeded.
+func isAWSErrorVolumeModificationSizeLimitExceeded(err error) bool {
+	return isAWSError(err, "VolumeModificationSizeLimitExceeded")
+}
+
+// isAWSErrorVolumeLimitExceeded checks if the error is a VolumeLimitExceeded error.
+// This error is reported when the limit on the amount of volume storage is exceeded.
+func isAWSErrorVolumeLimitExceeded(err error) bool {
+	return isAWSError(err, "VolumeLimitExceeded")
+}
+
+// isAwsErrorMaxIOPSLimitExceeded checks if the error is a MaxIOPSLimitExceeded error.
+// This error is reported when the limit on the IOPS usage for a region is exceeded.
+func isAwsErrorMaxIOPSLimitExceeded(err error) bool {
+	return isAWSError(err, "MaxIOPSLimitExceeded")
+}
+
+// isAwsErrorSnapshotLimitExceeded checks if the error is a SnapshotLimitExceeded error.
+// This error is reported when the limit on the number of snapshots that can be created is exceeded.
+func isAwsErrorSnapshotLimitExceeded(err error) bool {
+	return isAWSError(err, "SnapshotLimitExceeded")
 }
 
 // isAWSErrorInvalidParameter returns a boolean indicating whether the
