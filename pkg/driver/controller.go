@@ -427,7 +427,7 @@ func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if err := validateControllerPublishVolumeRequest(req); err != nil {
 		return nil, err
 	}
-
+	fmt.Println("Testing CI")
 	volumeID := req.GetVolumeId()
 	nodeID := req.GetNodeId()
 
