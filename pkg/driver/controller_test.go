@@ -1882,6 +1882,62 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "returns ResourceExhausted with MaxIOPSLimitExceeded error",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+				}
+
+				ctx := t.Context()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrLimitExceeded)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.ResourceExhausted)
+			},
+		},
+		{
+			name: "returns ResourceExhausted with VolumeLimitExceeded error",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+				}
+
+				ctx := t.Context()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(nil, cloud.ErrLimitExceeded)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.ResourceExhausted)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -3259,8 +3315,47 @@ func TestCreateSnapshot(t *testing.T) {
 				}
 			},
 		},
-	}
+		{
+			name: "fail with ResourceExhausted on SnapshotLimitExceeded",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name:           "test-snapshot",
+					Parameters:     nil,
+					SourceVolumeId: "vol-test",
+				}
 
+				snapshotOptions := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: snapshotName,
+						cloud.AwsEbsDriverTagKey: isManagedByDriver,
+					},
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				ctx := t.Context()
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound).AnyTimes()
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(snapshotOptions)).Return(nil, cloud.ErrLimitExceeded).Times(1)
+
+				inFlight := internal.NewInFlight()
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: inFlight,
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateSnapshot(ctx, req)
+
+				checkExpectedErrorCode(t, err, codes.ResourceExhausted)
+			},
+		},
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
 	}
@@ -3619,7 +3714,7 @@ func TestControllerPublishVolume(t *testing.T) {
 			nodeID:           expInstanceID,
 			volumeCapability: stdVolCap,
 			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
-				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", cloud.ErrAttachmentLimitExceeded)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return("", cloud.ErrLimitExceeded)
 			},
 			errorCode: codes.ResourceExhausted,
 		},
