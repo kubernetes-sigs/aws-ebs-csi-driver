@@ -17,26 +17,11 @@ enable-beta-ecosystems: true
 updates:
   - package-ecosystem: gomod
     directories: ["/", "/tests/e2e/"]
-    allow:
-      - dependency-type: "all"
     schedule:
       interval: weekly
       day: "wednesday"
       time: "06:00"
       timezone: "America/New_York"
-    groups:
-      k8s-dependencies:
-        patterns:
-          - "k8s.io*"
-          - "sigs.k8s.io*"
-          - "github.com/kubernetes-csi*"
-      misc-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "k8s.io*"
-          - "sigs.k8s.io*"
-          - "github.com/kubernetes-csi*"
     labels:
       - "area/dependency"
       - "ok-to-test"
@@ -49,10 +34,6 @@ updates:
       day: "wednesday"
       time: "06:00"
       timezone: "America/New_York"
-    groups:
-      actions:
-        patterns:
-          - "*"
     labels:
       - "area/dependency"
       - "ok-to-test"
