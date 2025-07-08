@@ -17,6 +17,10 @@ enable-beta-ecosystems: true
 updates:
   - package-ecosystem: gomod
     directories: ["/", "/tests/e2e/"]
+    groups:
+      all:
+        patterns:
+          - "*"
     schedule:
       interval: weekly
       day: "wednesday"
@@ -28,6 +32,10 @@ updates:
       - "release-note-none"
   - package-ecosystem: "github-actions"
     directory: "/"
+    groups:
+      all:
+        patterns:
+          - "*"
     schedule:
       interval: weekly
       # Wednesday chosen to minimize time after Windows Patch Tuesdays
