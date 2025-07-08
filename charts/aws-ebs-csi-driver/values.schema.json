@@ -204,6 +204,11 @@
           "description": "Enable metrics collection for the controller pod",
           "default": false
         },
+        "enablePrometheusAnnotations": {
+          "type": "boolean",
+          "description": "If metrics are enabled, add prometheus.io/scrape and prometheus.io/port annotations to the metrics services",
+          "default": true
+        },
         "extraVolumeTags": {
           "$ref": "#/$defs/extraVolumeTags",
           "description": "Additional tags to be added to all EBS volumes",
@@ -405,18 +410,22 @@
         },
         "serviceMonitor": {
           "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI controller pods",
           "additionalProperties": false,
           "properties": {
             "forceEnable": {
               "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
               "default": false
             },
             "labels": {
               "type": "object",
-              "description": "Additional labels for ServiceMonitor object"
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
             },
             "interval": {
               "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
               "default": "15s"
             },
             "relabelings": {
@@ -551,6 +560,41 @@
           "type": "boolean",
           "description": "Enable metrics collection for the node pods",
           "default": false
+        },
+        "enablePrometheusAnnotations": {
+          "type": "boolean",
+          "description": "If metrics are enabled, add prometheus.io/scrape and prometheus.io/port annotations to the metrics services",
+          "default": true
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI node pods",
+          "additionalProperties": false,
+          "properties": {
+            "forceEnable": {
+              "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
+              "default": false
+            },
+            "labels": {
+              "type": "object",
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
+            },
+            "interval": {
+              "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
+              "default": "15s"
+            },
+            "relabelings": {
+              "type": "array",
+              "description": "Additional relabeling configurations for ServiceMonitor",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
+            }
+          }
         },
         "enableWindows": {
           "type": "boolean",
