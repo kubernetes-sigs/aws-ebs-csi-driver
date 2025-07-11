@@ -30,7 +30,7 @@ iam:
         ebsCSIController: true
 managedNodeGroups:
   - name: ng-linux
-    amiFamily: AmazonLinux2023
+    amiFamily: {{ .Env.AMI_FAMILY }}
     desiredCapacity: 3
     # Test against no-IMDS environment to test k8s metadata
     # and IRSA/Pod Identity support

@@ -55,6 +55,7 @@ CLUSTER_NAME?=ebs-csi-e2e.k8s.local
 CLUSTER_TYPE?=kops
 
 GINKGO_WINDOWS_SKIP?="\[Disruptive\]|\[Serial\]|\[Flaky\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)"
+GINKGO_BOTTLEROCKET_SKIP?="\[Disruptive\]|\[Serial\]|\[Flaky\]|should not mount / map unused volumes in a pod \[LinuxOnly\]"
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
@@ -151,6 +152,11 @@ e2e/external: bin/helm bin/kubetest2
 .PHONY: e2e/external-a1-eks
 e2e/external-a1-eks: bin/helm bin/kubetest2
 	HELM_EXTRA_FLAGS="--set=a1CompatibilityDaemonSet=true" \
+	./hack/e2e/run.sh
+
+.PHONY: e2e/external-eks-bottlerocket
+e2e/external-eks-bottlerocket: bin/helm bin/kubetest2
+	GINKGO_SKIP=$(GINKGO_BOTTLEROCKET_SKIP) \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-fips
