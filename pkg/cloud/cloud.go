@@ -63,16 +63,15 @@ const (
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
-	io1MinTotalIOPS             = 100
-	io1MaxTotalIOPS             = 64000
-	io1MaxIOPSPerGB             = 50
-	io2MinTotalIOPS             = 100
-	io2MaxTotalIOPS             = 64000
-	io2BlockExpressMaxTotalIOPS = 256000
-	io2MaxIOPSPerGB             = 1000
-	gp3MaxTotalIOPS             = 16000
-	gp3MinTotalIOPS             = 3000
-	gp3MaxIOPSPerGB             = 500
+	io1MinTotalIOPS = 100
+	io1MaxTotalIOPS = 64000
+	io1MaxIOPSPerGB = 50
+	io2MinTotalIOPS = 100
+	io2MaxTotalIOPS = 256000
+	io2MaxIOPSPerGB = 1000
+	gp3MaxTotalIOPS = 16000
+	gp3MinTotalIOPS = 3000
+	gp3MaxIOPSPerGB = 500
 )
 
 var (
@@ -90,21 +89,6 @@ var (
 const (
 	cacheForgetDelay        = 1 * time.Hour
 	volInitCacheForgetDelay = 6 * time.Hour
-)
-
-// AWS provisioning limits.
-// Source:
-//
-//	https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
-const (
-	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
-	MaxNumTagsPerResource = 50
-	// MinTagKeyLength represents the minimum key length for a tag.
-	MinTagKeyLength = 1
-	// MaxTagKeyLength represents the maximum key length for a tag.
-	MaxTagKeyLength = 128
-	// MaxTagValueLength represents the maximum value length for a tag.
-	MaxTagValueLength = 256
 )
 
 // VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
@@ -127,8 +111,6 @@ const (
 	SnapshotNameTagKey = "CSIVolumeSnapshotName"
 	// KubernetesTagKeyPrefix is the prefix of the key value that is reserved for Kubernetes.
 	KubernetesTagKeyPrefix = "kubernetes.io"
-	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
-	AWSTagKeyPrefix = "aws:"
 	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
@@ -225,7 +207,6 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	OutpostArn             string
 	Encrypted              bool
-	BlockExpress           bool
 	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
@@ -575,11 +556,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		minIops = io1MinTotalIOPS
 		maxIopsPerGb = io1MaxIOPSPerGB
 	case VolumeTypeIO2:
-		if diskOptions.BlockExpress {
-			maxIops = io2BlockExpressMaxTotalIOPS
-		} else {
-			maxIops = io2MaxTotalIOPS
-		}
+		maxIops = io2MaxTotalIOPS
 		minIops = io2MinTotalIOPS
 		maxIopsPerGb = io2MaxIOPSPerGB
 	case VolumeTypeGP3:
