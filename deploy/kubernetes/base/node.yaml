@@ -105,7 +105,7 @@ spec:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
         - name: node-driver-registrar
-          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.14.0-eksbuild.3
+          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.14.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -142,7 +142,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.3
+          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
