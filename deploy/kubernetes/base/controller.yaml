@@ -133,7 +133,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-provisioner
-          image: public.ecr.aws/csi-components/csi-provisioner:v5.3.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-provisioner:v5.3.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -166,7 +166,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-attacher
-          image: public.ecr.aws/csi-components/csi-attacher:v4.9.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-attacher:v4.9.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -195,7 +195,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-snapshotter
-          image: public.ecr.aws/csi-components/csi-snapshotter:v8.2.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-snapshotter:v8.3.0-eksbuild.1
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -224,7 +224,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-resizer
-          image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -256,7 +256,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.3
+          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
