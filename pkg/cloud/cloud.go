@@ -88,7 +88,8 @@ var (
 )
 
 const (
-	cacheForgetDelay = 1 * time.Hour
+	cacheForgetDelay        = 1 * time.Hour
+	volInitCacheForgetDelay = 6 * time.Hour
 )
 
 // AWS provisioning limits.
@@ -104,6 +105,12 @@ const (
 	MaxTagKeyLength = 128
 	// MaxTagValueLength represents the maximum value length for a tag.
 	MaxTagValueLength = 256
+)
+
+// VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
+const (
+	VolumeStatusInitializingState = "initializing"
+	VolumeStatusInitializedState  = "completed"
 )
 
 // Defaults.
@@ -135,7 +142,13 @@ const (
 	snapshotTagBatcher
 
 	batchDescribeTimeout = 30 * time.Second
-	batchMaxDelay        = 500 * time.Millisecond // Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
+
+	// Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
+	batchMaxDelay = 500 * time.Millisecond
+
+	// Tuned for EC2 DescribeVolumeStatus -- as of July 2025 it takes up to 5 min for initialization info to be updated.
+	slowVolumeStatusBatchMaxDelay = 2 * time.Minute
+	fastVolumeStatusBatchMaxDelay = 500 * time.Millisecond
 )
 
 var (
@@ -315,17 +328,20 @@ type batcherManager struct {
 	snapshotIDBatcher           *batcher.Batcher[string, *types.Snapshot]
 	snapshotTagBatcher          *batcher.Batcher[string, *types.Snapshot]
 	volumeModificationIDBatcher *batcher.Batcher[string, *types.VolumeModification]
+	volumeStatusIDBatcherSlow   *batcher.Batcher[string, *types.VolumeStatusItem]
+	volumeStatusIDBatcherFast   *batcher.Batcher[string, *types.VolumeStatusItem]
 }
 
 type cloud struct {
-	region               string
-	ec2                  EC2API
-	dm                   dm.DeviceManager
-	bm                   *batcherManager
-	rm                   *retryManager
-	vwp                  volumeWaitParameters
-	likelyBadDeviceNames expiringcache.ExpiringCache[string, sync.Map]
-	latestClientTokens   expiringcache.ExpiringCache[string, int]
+	region                string
+	ec2                   EC2API
+	dm                    dm.DeviceManager
+	bm                    *batcherManager
+	rm                    *retryManager
+	vwp                   volumeWaitParameters
+	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
+	latestClientTokens    expiringcache.ExpiringCache[string, int]
+	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
 }
 
 var _ Cloud = &cloud{}
@@ -375,14 +391,15 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 	}
 
 	return &cloud{
-		region:               region,
-		dm:                   dm.NewDeviceManager(),
-		ec2:                  svc,
-		bm:                   bm,
-		rm:                   newRetryManager(),
-		vwp:                  vwp,
-		likelyBadDeviceNames: expiringcache.New[string, sync.Map](cacheForgetDelay),
-		latestClientTokens:   expiringcache.New[string, int](cacheForgetDelay),
+		region:                region,
+		dm:                    dm.NewDeviceManager(),
+		ec2:                   svc,
+		bm:                    bm,
+		rm:                    newRetryManager(),
+		vwp:                   vwp,
+		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
+		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
 }
 
@@ -408,6 +425,12 @@ func newBatcherManager(svc EC2API) *batcherManager {
 		}),
 		volumeModificationIDBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.VolumeModification, error) {
 			return execBatchDescribeVolumesModifications(svc, names)
+		}),
+		volumeStatusIDBatcherSlow: batcher.New(1000, slowVolumeStatusBatchMaxDelay, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+			return execBatchDescribeVolumeStatus(svc, ids)
+		}),
+		volumeStatusIDBatcherFast: batcher.New(1000, fastVolumeStatusBatchMaxDelay, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+			return execBatchDescribeVolumeStatus(svc, ids)
 		}),
 	}
 }
@@ -1013,6 +1036,142 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
 
 	return nil
+}
+
+type volumeInitialization struct {
+	initialized                 bool
+	estimatedInitializationTime time.Time
+}
+
+// IsVolumeInitialized calls EC2 DescribeVolumeStatus and returns whether the volume is initialized.
+func (c *cloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
+	var volumeStatusItem *types.VolumeStatusItem
+	var err error
+
+	// Because volumes can take hours to initialize, we shouldn't poll DescribeVolumeStatus (DVS) as aggressively as we
+	// do for other EC2 APIs.
+	//
+	// We use a volumeInitializations cache to keep track of initializing volumes that we should poll at a slower rate.
+	//
+	// Furthermore, if initializationRate was set during volume creation, DVS returns an estimated initialization time.
+	// We cache that estimate and defer polling of DVS until we reach that time.
+	// We clamp to a minimum of 1 min because as of July 2025 it can take up to 5 min for volume initialization info to update.
+
+	// Check volumeInitializations cache to potentially delay EC2 DescribeVolumeStatus call
+	volInit, ok := c.volumeInitializations.Get(volumeID)
+	switch {
+	// Case 1: We've never called DVS for volume. Call DVS ASAP.
+	case !ok:
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, true /* callASAP */)
+	// Case 2: We already know volume is initialized. Don't call DVS.
+	case volInit.initialized:
+		return true, nil
+	// Case 3: We know volume is initializing, but there is no SLA. Call DVS eventually during next slow batch.
+	case volInit.estimatedInitializationTime.IsZero():
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, false /* callASAP */)
+	// Case 4: We have an estimated time for initialization. Wait to call DVS again until then unless RPC ctx is done.
+	case !volInit.initialized:
+		util.WaitUntilTimeOrContext(ctx, volInit.estimatedInitializationTime)
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, true /* callASAP */)
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Parse volume status
+	if volumeStatusItem == nil || volumeStatusItem.VolumeStatus == nil || volumeStatusItem.VolumeStatus.Details == nil {
+		return false, errors.New("IsVolumeInitialized: EC2 DescribeVolumeStatus response missing volume status details")
+	}
+	isVolInitializing := isVolumeStatusInitializing(*volumeStatusItem)
+
+	// Update cache
+	var newExpectedInitTime time.Time
+	if isVolInitializing && volumeStatusItem.InitializationStatusDetails != nil && volumeStatusItem.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds != nil {
+		secondsLeft := *volumeStatusItem.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds
+		klog.V(4).InfoS("IsVolumeInitialized: volume still initializing according to EC2 DescribeVolumeStatus", "volumeID", volumeID, "estimatedTimeToCompleteInSeconds", secondsLeft)
+		// Clamp to a minimum of 1 min because as of July 2025 it can take up to 5 min for volume initialization info to update.
+		if secondsLeft < 60 {
+			secondsLeft = 60
+		}
+		newExpectedInitTime = time.Now().Add(time.Duration(secondsLeft) * time.Second)
+	}
+	c.volumeInitializations.Set(volumeID, &volumeInitialization{initialized: !isVolInitializing, estimatedInitializationTime: newExpectedInitTime})
+
+	if isVolInitializing {
+		klog.V(4).InfoS("IsVolumeInitialized: volume not initialized yet", "volumeID", volumeID)
+	} else {
+		klog.V(4).InfoS("IsVolumeInitialized: volume is initialized", "volumeID", volumeID)
+	}
+
+	return !isVolInitializing, nil
+}
+
+func isVolumeStatusInitializing(vsi types.VolumeStatusItem) bool {
+	for _, detail := range vsi.VolumeStatus.Details {
+		if detail.Name == types.VolumeStatusNameInitializationState && detail.Status != nil && *detail.Status == VolumeStatusInitializingState {
+			return true
+		}
+	}
+	return false
+}
+
+func execBatchDescribeVolumeStatus(svc EC2API, input []string) (map[string]*types.VolumeStatusItem, error) {
+	klog.V(7).InfoS("execBatchDescribeVolumeStatus", "volumeIds", input)
+	request := &ec2.DescribeVolumeStatusInput{
+		VolumeIds: input,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+	defer cancel()
+
+	var volumeStatusItems []types.VolumeStatusItem
+	var nextToken *string
+	for {
+		response, err := svc.DescribeVolumeStatus(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+		volumeStatusItems = append(volumeStatusItems, response.VolumeStatuses...)
+		nextToken = response.NextToken
+		if aws.ToString(nextToken) == "" {
+			break
+		}
+		request.NextToken = nextToken
+	}
+
+	result := make(map[string]*types.VolumeStatusItem)
+
+	for _, m := range volumeStatusItems {
+		volumeStatus := m
+		result[*volumeStatus.VolumeId] = &volumeStatus
+	}
+
+	klog.V(7).InfoS("execBatchDescribeVolumeStatus: success", "result", result)
+	return result, nil
+}
+
+// describeVolumeStatus will return the VolumeStatusItem associated with volumeID from EC2 DescribeVolumeStatus
+// Set callASAP to true if you need status within seconds (Otherwise it may take minutes).
+func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.VolumeStatusItem, error) {
+	ch := make(chan batcher.BatchResult[*types.VolumeStatusItem])
+
+	var b *batcher.Batcher[string, *types.VolumeStatusItem]
+	if callASAP {
+		b = c.bm.volumeStatusIDBatcherFast
+	} else {
+		b = c.bm.volumeStatusIDBatcherSlow
+	}
+	b.AddTask(volumeID, ch)
+
+	r := <-ch
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	return r.Result, nil
 }
 
 // WaitForAttachmentState polls until the attachment status is the expected value.

@@ -266,7 +266,7 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
-            - --timeout=60s
+            - --timeout=6m
             {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.attacher.logLevel }}

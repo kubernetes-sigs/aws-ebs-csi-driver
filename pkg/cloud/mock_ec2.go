@@ -255,6 +255,26 @@ func (mr *MockEC2APIMockRecorder) DescribeTags(ctx, params interface{}, optFns .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTags", reflect.TypeOf((*MockEC2API)(nil).DescribeTags), varargs...)
 }
 
+// DescribeVolumeStatus mocks base method.
+func (m *MockEC2API) DescribeVolumeStatus(ctx context.Context, params *ec2.DescribeVolumeStatusInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumeStatusOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeVolumeStatus", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeVolumeStatusOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVolumeStatus indicates an expected call of DescribeVolumeStatus.
+func (mr *MockEC2APIMockRecorder) DescribeVolumeStatus(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVolumeStatus", reflect.TypeOf((*MockEC2API)(nil).DescribeVolumeStatus), varargs...)
+}
+
 // DescribeVolumes mocks base method.
 func (m *MockEC2API) DescribeVolumes(ctx context.Context, params *ec2.DescribeVolumesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error) {
 	m.ctrl.T.Helper()

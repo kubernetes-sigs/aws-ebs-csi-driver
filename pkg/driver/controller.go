@@ -120,12 +120,13 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
-		blockSize       string
-		inodeSize       string
-		bytesPerInode   string
-		numberOfInodes  string
-		ext4BigAlloc    bool
-		ext4ClusterSize string
+		blockSize                   string
+		inodeSize                   string
+		bytesPerInode               string
+		numberOfInodes              string
+		ext4BigAlloc                bool
+		ext4ClusterSize             string
+		blockAttachUntilInitialized bool
 	)
 
 	tProps := new(template.PVProps)
@@ -204,6 +205,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
 			}
 			ext4ClusterSize = value
+		case BlockAttachUntilInitializedKey:
+			blockAttachUntilInitialized = isTrue(value)
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				tagsToEvaluate = append(tagsToEvaluate, value)
@@ -304,6 +307,9 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		if err = validateFormattingOption(volCap, Ext4ClusterSizeKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
+	}
+	if blockAttachUntilInitialized {
+		responseCtx[BlockAttachUntilInitializedKey] = trueStr
 	}
 
 	if !ext4BigAlloc && len(ext4ClusterSize) > 0 {
@@ -450,6 +456,20 @@ func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
+
+	if val, ok := req.GetVolumeContext()[BlockAttachUntilInitializedKey]; ok && val == trueStr {
+		isInitialized := false
+		var err error
+
+		klog.V(4).InfoS("Ensuring volume is initialized because volume context "+BlockAttachUntilInitializedKey+"=true", "volumeID", volumeID)
+
+		for !isInitialized {
+			isInitialized, err = d.cloud.IsVolumeInitialized(ctx, volumeID)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Cannot validate that volume %q is initialized while polling EC2 DescribeVolumeStatus: %v", volumeID, err)
+			}
+		}
+	}
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil

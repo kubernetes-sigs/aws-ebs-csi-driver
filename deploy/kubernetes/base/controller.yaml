@@ -169,7 +169,7 @@ spec:
           image: public.ecr.aws/csi-components/csi-attacher:v4.9.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
-            - --timeout=60s
+            - --timeout=6m
             - --csi-address=$(ADDRESS)
             - --v=2
             - --leader-election=true

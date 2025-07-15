@@ -169,7 +169,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 					Filters: []types.Filter{
 						{
 							Name:   aws.String("tag:" + testTag),
-							Values: []string{(testTagValue)},
+							Values: []string{testTagValue},
 						},
 					},
 				})
@@ -178,9 +178,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 		test.Run(cs, snapshotrcs, ns)
 	})
 
-	It("should create a volume from a snapshot with initialization rate", func() {
+	It("should create a volume from a snapshot with initialization rate and blockAttachUntilInitialized then wait to attach volume until it is initialized", func() {
 		restoredTagKey := generateTagName()
-		restoredTagVal := "volume-init-rate-test"
+		restoredTagVal := "volume-init-rate-and-block-attach-test"
 		initRate := "200"
 
 		originalPod := testsuites.PodDetails{
@@ -202,10 +202,11 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 			Volumes: []testsuites.VolumeDetails{
 				{
 					CreateVolumeParameters: map[string]string{
-						ebscsidriver.VolumeTypeKey:               awscloud.VolumeTypeGP3,
-						ebscsidriver.FSTypeKey:                   ebscsidriver.FSTypeExt4,
-						ebscsidriver.VolumeInitializationRateKey: initRate,
-						ebscsidriver.TagKeyPrefix:                fmt.Sprintf("%s=%s", restoredTagKey, restoredTagVal),
+						ebscsidriver.VolumeTypeKey:                  awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:                      ebscsidriver.FSTypeExt4,
+						ebscsidriver.VolumeInitializationRateKey:    initRate,
+						ebscsidriver.TagKeyPrefix:                   fmt.Sprintf("%s=%s", restoredTagKey, restoredTagVal),
+						ebscsidriver.BlockAttachUntilInitializedKey: "true",
 					},
 					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
@@ -245,6 +246,32 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 				}
 				if *vol.VolumeInitializationRate != int32(intInitRate) {
 					Fail(fmt.Sprintf("VolumeInitializationRate mismatch: got %d, expected %d", *vol.VolumeInitializationRate, intInitRate))
+				}
+
+				// Need volID from DescribeVolumes because we can't filter DescribeVolumeStatus results by volume tag
+				volID := aws.ToString(vol.VolumeId)
+
+				resultDVS, err := ec2Client.DescribeVolumeStatus(context.Background(), &ec2.DescribeVolumeStatusInput{
+					VolumeIds: []string{volID},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume status: %v", err))
+				}
+
+				statuses := resultDVS.VolumeStatuses
+				if len(statuses) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume status, got %d", len(statuses)))
+				}
+
+				// Purposefully don't rely on helper function from cloud pkg
+				volumeInitialized := false
+				for _, detail := range statuses[0].VolumeStatus.Details {
+					if detail.Name == types.VolumeStatusNameInitializationState && detail.Status != nil && *detail.Status == awscloud.VolumeStatusInitializedState {
+						volumeInitialized = true
+					}
+				}
+				if !volumeInitialized {
+					Fail("expected volume status item 'initialization-state' to be " + awscloud.VolumeStatusInitializedState)
 				}
 			},
 		}
