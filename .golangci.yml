@@ -38,6 +38,7 @@ linters:
     - testpackage # Require separate test package to catch leaky unexported dependencies
     - varnamelen # Long var names happen
     - wsl # Too strict of a whitespace linter
+    - wsl_v5 # Too strict
     # Consider adding in future
     - err113 # Do not create errors dynamically from scratch. Instead, wrap static (package-level) error.
     - wrapcheck # Same as err113
@@ -46,6 +47,8 @@ linters:
     - nonamedreturns # Need to nolint/refactor a few places our code
     - paralleltest # There are many tests that aren't parallelized
     - funcorder # Many of our existing files are out of order
+    - noinlineerr # We use inline errors
+    - embeddedstructfieldcheck # We have a few instances of this
   settings:
     revive:
       rules:
