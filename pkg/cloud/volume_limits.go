@@ -32,7 +32,7 @@ const (
 func init() {
 	// This list of Nitro instance types have a dedicated Amazon EBS volume limit of up to 128 attachments, depending on instance size.
 	// The limit is not shared with other device attachments: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html#nitro-system-limits
-	instanceFamilies := []string{"m8g", "m8gd", "m7i", "m7i-flex", "m7a", "c8g", "c8gd", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "r8gd", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "i7i", "i7ie", "i8g", "p5", "p5e", "p5en", "u7i-6tb", "u7i-8tb", "u7i-12tb", "u7in-16tb", "u7in-24tb", "u7in-32tb", "u7inh-32tb", "f2", "trn2", "trn2u"}
+	instanceFamilies := []string{"m8g", "m8gd", "m7i", "m7i-flex", "m7a", "c8g", "c8gd", "c8gn", "c7i", "c7i-flex", "c7a", "r7a", "r7i", "r7iz", "r8g", "r8gd", "x8g", "u7i", "u7inh", "g6", "g6e", "gr6", "gb200", "i7i", "i7ie", "i8g", "p5", "p5e", "p5en", "p6-b200", "p6e-b200", "u7i-6tb", "u7i-8tb", "u7i-12tb", "u7in-16tb", "u7in-24tb", "u7in-32tb", "u7inh-32tb", "f2", "trn2", "trn2u", "x8g"}
 	commonInstanceSizes := []string{"medium", "large", "xlarge", "2xlarge", "4xlarge", "6xlarge", "8xlarge", "12xlarge"}
 	dedicatedVolumeLimits["p4d.24xlarge"] = 28
 	dedicatedVolumeLimits["trn2.48xlarge"] = 64
