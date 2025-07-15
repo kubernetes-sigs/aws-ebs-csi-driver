@@ -108,6 +108,9 @@ const (
 
 	// OutpostArn represents key for outpost's arn.
 	OutpostArnKey = "outpostarn"
+
+	// BlockAttachUntilInitializedKey will prevent restored volume from being attached until it is fully initialized.
+	BlockAttachUntilInitializedKey = "blockattachuntilinitialized"
 )
 
 // constants of keys in snapshot parameters.

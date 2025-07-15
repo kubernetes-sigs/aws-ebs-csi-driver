@@ -217,3 +217,7 @@ func (d *fakeCloud) ModifyTags(ctx context.Context, volumeID string, tagOptions 
 func (d *fakeCloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	return &types.VolumeAttachment{}, nil
 }
+
+func (d *fakeCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
+	return true, nil
+}

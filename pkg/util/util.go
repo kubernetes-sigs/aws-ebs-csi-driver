@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/url"
@@ -26,6 +27,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -167,4 +169,17 @@ func SanitizeRequest(req interface{}) interface{} {
 		v.Set(e)
 	}
 	return req
+}
+
+// WaitUntilTimeOrContext returns once time wakeup has elapsed or ctx is done.
+func WaitUntilTimeOrContext(ctx context.Context, wakeup time.Time) {
+	now := time.Now()
+	if wakeup.Before(now) {
+		return
+	}
+
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Until(wakeup)):
+	}
 }

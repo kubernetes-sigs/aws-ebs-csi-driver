@@ -19,9 +19,11 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
@@ -253,6 +255,65 @@ func TestSanitizeRequest(t *testing.T) {
 			result := SanitizeRequest(tt.req)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("SanitizeRequest() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWaitUntilTimeOrContext(t *testing.T) {
+	tests := []struct {
+		name        string
+		wakeupDelay time.Duration
+		ctxTimeout  time.Duration
+		expectWait  bool
+	}{
+		// TODO replace sleeps with testing/synctest once go 1.25 releases
+		{
+			name:        "context cancellation before wakeup time",
+			wakeupDelay: 100 * time.Millisecond,
+			ctxTimeout:  50 * time.Millisecond,
+			expectWait:  false,
+		},
+		{
+			name:        "wakeup time before context cancellation",
+			wakeupDelay: 50 * time.Millisecond,
+			ctxTimeout:  100 * time.Millisecond,
+			expectWait:  true,
+		},
+		{
+			name:        "wakeup time in the past",
+			wakeupDelay: -50 * time.Millisecond,
+			ctxTimeout:  100 * time.Millisecond,
+			expectWait:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wakeup := time.Now().Add(tt.wakeupDelay)
+			ctx, cancel := context.WithTimeout(context.Background(), tt.ctxTimeout)
+			defer cancel()
+
+			start := time.Now()
+			WaitUntilTimeOrContext(ctx, wakeup)
+			elapsed := time.Since(start)
+
+			// Allow buffers for test execution overhead
+			switch {
+			// If we expect to wait until wakeup time, the elapsed time should be close to wakeupDelay
+			case tt.expectWait:
+				if elapsed < tt.wakeupDelay-10*time.Millisecond {
+					t.Errorf("Expected to wait until wakeup time, but returned too early. Elapsed: %v, Expected: ~%v", elapsed, tt.wakeupDelay)
+				}
+			// If we expect context cancellation to happen first, elapsed time should be close to ctxTimeout
+			case tt.wakeupDelay > 0:
+				if elapsed < tt.ctxTimeout-10*time.Millisecond {
+					t.Errorf("Expected to wait until context cancellation, but returned too early. Elapsed: %v, Expected: ~%v", elapsed, tt.ctxTimeout)
+				}
+			default:
+				if elapsed > 10*time.Millisecond {
+					t.Errorf("Expected immediate return for past wakeup time, but waited %v", elapsed)
+				}
 			}
 		})
 	}

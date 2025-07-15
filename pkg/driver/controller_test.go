@@ -1217,6 +1217,84 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with blockattachuntilinitialized passed to volume context",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateVolumeRequest{
+					Name:               "test-vol",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						BlockAttachUntilInitializedKey: "true",
+					},
+					VolumeContentSource: &csi.VolumeContentSource{
+						Type: &csi.VolumeContentSource_Snapshot{
+							Snapshot: &csi.VolumeContentSource_SnapshotSource{
+								SnapshotId: "snapshot-id",
+							},
+						},
+					},
+				}
+				expVol := &csi.Volume{
+					CapacityBytes: stdVolSize,
+					VolumeId:      "vol-test",
+					VolumeContext: map[string]string{
+						BlockAttachUntilInitializedKey: "true",
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+
+				if _, err := awsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Any()).Return(mockDisk, nil)
+				resp, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+				vol := resp.GetVolume()
+				if vol == nil {
+					t.Fatalf("Expected volume %v, got nil", expVol)
+				}
+
+				for expKey, expVal := range expVol.GetVolumeContext() {
+					ctx := vol.GetVolumeContext()
+					if gotVal, ok := ctx[expKey]; !ok || gotVal != expVal {
+						t.Fatalf("Expected volume context for key %v: %v, got: %v", expKey, expVal, gotVal)
+					}
+				}
+			},
+		},
+		{
 			name: "fail with invalid volume parameter",
 			testFunc: func(t *testing.T) {
 				t.Helper()
@@ -3690,6 +3768,7 @@ func TestControllerPublishVolume(t *testing.T) {
 		volumeID         string
 		nodeID           string
 		volumeCapability *csi.VolumeCapability
+		volumeContext    map[string]string
 		mockAttach       func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string)
 		expResp          *csi.ControllerPublishVolumeResponse
 		errorCode        codes.Code
@@ -3731,7 +3810,52 @@ func TestControllerPublishVolume(t *testing.T) {
 			},
 			errorCode: codes.OK,
 		},
-
+		{
+			name:             "Success after restored volume is initialized if blockAttachUntilInitialized set",
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			volumeContext:    map[string]string{BlockAttachUntilInitializedKey: trueStr},
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
+				mockCloud.EXPECT().IsVolumeInitialized(gomock.Eq(ctx), gomock.Eq(volumeID)).Return(true, nil)
+			},
+			expResp: &csi.ControllerPublishVolumeResponse{
+				PublishContext: map[string]string{DevicePathKey: expDevicePath},
+			},
+			errorCode: codes.OK,
+		},
+		{
+			name:             "Success after restored volume is not initialized then initialized when blockAttachUntilInitialized set",
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			volumeContext:    map[string]string{BlockAttachUntilInitializedKey: trueStr},
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
+				mockCloud.EXPECT().IsVolumeInitialized(gomock.Eq(ctx), gomock.Eq(volumeID)).Return(false, nil)
+				mockCloud.EXPECT().IsVolumeInitialized(gomock.Eq(ctx), gomock.Eq(volumeID)).Return(true, nil)
+			},
+			expResp: &csi.ControllerPublishVolumeResponse{
+				PublishContext: map[string]string{DevicePathKey: expDevicePath},
+			},
+			errorCode: codes.OK,
+		},
+		{
+			name:             "Fail ControllerPublishVolume if volume has no initialization-state status",
+			volumeID:         "vol-test",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			volumeContext:    map[string]string{BlockAttachUntilInitializedKey: trueStr},
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(ctx), gomock.Eq(volumeID), gomock.Eq(expInstanceID)).Return(expDevicePath, nil)
+				mockCloud.EXPECT().IsVolumeInitialized(gomock.Eq(ctx), gomock.Eq(volumeID)).Return(false, errors.New("test no volume status for initialization-state"))
+			},
+			expResp: &csi.ControllerPublishVolumeResponse{
+				PublishContext: map[string]string{DevicePathKey: expDevicePath},
+			},
+			errorCode: codes.Internal,
+		},
 		{
 			name:             "Invalid argument error when no VolumeId provided",
 			volumeID:         "",
@@ -3813,6 +3937,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				NodeId:           tc.nodeID,
 				VolumeCapability: tc.volumeCapability,
 				VolumeId:         tc.volumeID,
+				VolumeContext:    tc.volumeContext,
 			}
 			ctx := t.Context()
 
