@@ -113,7 +113,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		throughput               int32
 		volumeInitializationRate int32
 		isEncrypted              bool
-		blockExpress             bool
 		kmsKeyID                 string
 		tagsToEvaluate           = make([]string, 0)
 		volumeTags               = map[string]string{
@@ -176,8 +175,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case PVNameKey:
 			volumeTags[PVNameTag] = value
 			tProps.PVName = value
-		case BlockExpressKey:
-			blockExpress = isTrue(value)
+		case DeprecatedBlockExpressKey:
+			klog.V(2).InfoS("blockExpress key is deprecated and has no effect, all io2 volumes are now Block Express and share the same IOPS cap")
 		case BlockSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
@@ -316,10 +315,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.InvalidArgument, "Cannot set ext4BigAllocClusterSize when ext4BigAlloc is false")
 	}
 
-	if blockExpress && volumeType != cloud.VolumeTypeIO2 {
-		return nil, status.Errorf(codes.InvalidArgument, "Block Express is only supported on io2 volumes")
-	}
-
 	snapshotID := ""
 	volumeSource := req.GetVolumeContentSource()
 	if volumeSource != nil {
@@ -356,7 +351,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AvailabilityZone:         zone,
 		OutpostArn:               outpostArn,
 		Encrypted:                isEncrypted,
-		BlockExpress:             blockExpress,
 		KmsKeyID:                 kmsKeyID,
 		SnapshotID:               snapshotID,
 		MultiAttachEnabled:       multiAttach,

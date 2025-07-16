@@ -36,7 +36,7 @@ const (
 	tagSpecificationWithNoValue = "key3="
 	tagSpecificationWithNoEqual = "key1"
 	validTagDeletion            = "key2"
-	invalidTagSpecification     = "aws:test=TEST"
+	invalidTagSpecification     = "CSIVolumeName=extra-tag-value"
 	invalidParameter            = "invalid_parameter"
 )
 

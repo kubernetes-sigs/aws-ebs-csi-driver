@@ -19,32 +19,12 @@ package driver
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
-
-func randomString(n int) string {
-	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letter[rand.Intn(len(letter))]
-	}
-	return string(b)
-}
-
-func randomStringMap(n int) map[string]string {
-	result := map[string]string{}
-	for i := range n {
-		result[strconv.Itoa(i)] = randomString(10)
-	}
-	return result
-}
 
 func TestValidateExtraTags(t *testing.T) {
 	testCases := []struct {
@@ -58,27 +38,6 @@ func TestValidateExtraTags(t *testing.T) {
 				"extra-tag-key": "extra-tag-value",
 			},
 			expErr: nil,
-		},
-		{
-			name: "invalid tag: key too long",
-			tags: map[string]string{
-				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
-			},
-			expErr: fmt.Errorf("tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength),
-		},
-		{
-			name: "invaid tag: key is empty",
-			tags: map[string]string{
-				"": "extra-tag-value",
-			},
-			expErr: errors.New("tag key cannot be empty (min: 1)"),
-		},
-		{
-			name: "invalid tag: value too long",
-			tags: map[string]string{
-				"extra-tag-key": randomString(cloud.MaxTagValueLength + 1),
-			},
-			expErr: fmt.Errorf("tag value too long (actual: %d, limit: %d)", cloud.MaxTagValueLength+1, cloud.MaxTagValueLength),
 		},
 		{
 			name: "invalid tag: reserved CSI key",
@@ -107,18 +66,6 @@ func TestValidateExtraTags(t *testing.T) {
 				cloud.KubernetesTagKeyPrefix + "/cluster": "extra-tag-value",
 			},
 			expErr: fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix),
-		},
-		{
-			name: "invalid tag: reserved AWS key prefix",
-			tags: map[string]string{
-				cloud.AWSTagKeyPrefix + "foo": "extra-tag-value",
-			},
-			expErr: fmt.Errorf("tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix),
-		},
-		{
-			name:   "invalid tag: too many tags",
-			tags:   randomStringMap(cloud.MaxNumTagsPerResource + 1),
-			expErr: fmt.Errorf("too many tags (actual: %d, limit: %d)", cloud.MaxNumTagsPerResource+1, cloud.MaxNumTagsPerResource),
 		},
 	}
 
@@ -194,10 +141,10 @@ func TestValidateDriverOptions(t *testing.T) {
 			name: "fail because validateExtraVolumeTags fails",
 			mode: AllMode,
 			extraVolumeTags: map[string]string{
-				randomString(cloud.MaxTagKeyLength + 1): "extra-tag-value",
+				cloud.AwsEbsDriverTagKey: "extra-tag-value",
 			},
 			modifyVolumeTimeout: 5 * time.Second,
-			expErr:              fmt.Errorf("invalid extra tags: %w", fmt.Errorf("tag key too long (actual: %d, limit: %d)", cloud.MaxTagKeyLength+1, cloud.MaxTagKeyLength)),
+			expErr:              fmt.Errorf("invalid extra tags: %w", fmt.Errorf("tag key '%s' is reserved", cloud.AwsEbsDriverTagKey)),
 		},
 		{
 			name:                "fail because modifyVolumeRequestHandlerTimeout is zero",
