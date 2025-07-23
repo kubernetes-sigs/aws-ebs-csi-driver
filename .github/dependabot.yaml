@@ -46,3 +46,18 @@ updates:
       - "area/dependency"
       - "ok-to-test"
       - "release-note-none"
+  - package-ecosystem: docker
+    directory: "/"
+    groups:
+      all:
+        patterns:
+          - "*"
+    schedule:
+      interval: weekly
+      day: "wednesday"
+      time: "06:00"
+      timezone: "America/New_York"
+    labels:
+      - "area/dependency"
+      - "ok-to-test"
+      - "release-note-none"
