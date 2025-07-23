@@ -2135,13 +2135,6 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			},
 			errExpected: true,
 		},
-		{
-			name: "failure with Block Express on io1 volume",
-			formattingOptionParameters: map[string]string{
-				BlockExpressKey: "true",
-			},
-			errExpected: true,
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

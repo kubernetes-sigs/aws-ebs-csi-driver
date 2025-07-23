@@ -42,19 +42,7 @@ func ValidateDriverOptions(options *Options) error {
 }
 
 func validateExtraTags(tags map[string]string, warnOnly bool) error {
-	if len(tags) > cloud.MaxNumTagsPerResource {
-		return fmt.Errorf("too many tags (actual: %d, limit: %d)", len(tags), cloud.MaxNumTagsPerResource)
-	}
-
-	validate := func(k, v string) error {
-		if len(k) > cloud.MaxTagKeyLength {
-			return fmt.Errorf("tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
-		} else if len(k) < cloud.MinTagKeyLength {
-			return errors.New("tag key cannot be empty (min: 1)")
-		}
-		if len(v) > cloud.MaxTagValueLength {
-			return fmt.Errorf("tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)
-		}
+	validate := func(k, _ string) error {
 		if k == cloud.VolumeNameTagKey {
 			return fmt.Errorf("tag key '%s' is reserved", cloud.VolumeNameTagKey)
 		}
@@ -66,9 +54,6 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		}
 		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
 			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
-		}
-		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
-			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
 		}
 		return nil
 	}

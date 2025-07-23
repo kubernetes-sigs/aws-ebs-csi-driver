@@ -1247,14 +1247,13 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:       "success: large io2 Block Express with too high iopsPerGB",
+			name:       "success: large io2 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(3333),
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100000,
-				BlockExpress:  true,
 			},
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
