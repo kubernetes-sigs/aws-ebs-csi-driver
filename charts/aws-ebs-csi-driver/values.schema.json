@@ -107,7 +107,7 @@
       "default": false
     },
     "nodeAllocatableUpdatePeriodSeconds": {
-      "type": "integer",
+      "type": ["integer", "null"],
       "description": "nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval. Kubernetes enforces a minimum update interval of 10 seconds. This parameter is supported in Kubernetes 1.33+, the MutableCSINodeAllocatableCount feature gate must be enabled in kubelet and kube-apiserver.",
       "default": 10
     },
