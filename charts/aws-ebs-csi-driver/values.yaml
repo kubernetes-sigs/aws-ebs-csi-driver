@@ -23,7 +23,7 @@ sidecars:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-provisioner
       tag: "v5.3.0-eksbuild.3"
-    logLevel: 2
+    logLevel: 7
     # Additional parameters provided by csi-provisioner.
     additionalArgs: []
     # Grant additional permissions to csi-provisioner

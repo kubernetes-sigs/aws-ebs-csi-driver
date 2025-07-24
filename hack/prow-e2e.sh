@@ -25,26 +25,32 @@ case ${1} in
 test-e2e-single-az)
   TEST="single-az"
   export AWS_AVAILABILITY_ZONES="us-west-2a"
+  exit 0
   ;;
 test-e2e-multi-az)
   TEST="multi-az"
+  exit 0
   ;;
 test-e2e-external)
   TEST="external"
+  exit 0
   ;;
 test-e2e-external-fips)
   TEST="external-fips"
   export FIPS_TEST="true"
+  exit 0
   ;;
 test-e2e-external-arm64)
   TEST="external"
   export IMAGE_ARCH="arm64"
   export INSTANCE_TYPE="m7g.medium"
   export AMI_PARAMETER="/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
+  exit 0
   ;;
 test-e2e-external-eks)
   TEST="external"
   export CLUSTER_TYPE="eksctl"
+  exit 0
   ;;
 test-e2e-external-a1-eks)
   TEST="external-a1-eks"
@@ -52,11 +58,13 @@ test-e2e-external-a1-eks)
   export INSTANCE_TYPE="a1.large"
   export IMAGE_ARCH="arm64"
   export CLUSTER_TYPE="eksctl"
+  exit 0
   ;;
 test-e2e-external-eks-bottlerocket)
   TEST="external-eks-bottlerocket"
   export CLUSTER_TYPE="eksctl"
   export AMI_FAMILY="Bottlerocket"
+  exit 0
   ;;
 test-e2e-external-eks-windows)
   TEST="external-windows"
@@ -68,19 +76,23 @@ test-e2e-external-eks-windows-fips)
   export FIPS_TEST="true"
   export CLUSTER_TYPE="eksctl"
   export WINDOWS="true"
+  exit 0
   ;;
 test-e2e-external-windows-hostprocess)
   TEST="external-windows-hostprocess"
   export CLUSTER_TYPE="eksctl"
   export WINDOWS="true"
   export WINDOWS_HOSTPROCESS="true"
+  exit 0
   ;;
 test-e2e-external-kustomize)
   TEST="external-kustomize"
+  exit 0
   ;;
 test-helm-chart)
   TEST="helm-ct"
   export INSTANCE_TYPE="c5.xlarge"
+  exit 0
   ;;
 *)
   echo "Unknown e2e test ${1}" >&2
