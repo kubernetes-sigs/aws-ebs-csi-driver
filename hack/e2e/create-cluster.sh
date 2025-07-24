@@ -29,6 +29,15 @@ source "${BASE_DIR}/util.sh"
 source "${BASE_DIR}/kops/kops.sh"
 source "${BASE_DIR}/eksctl/eksctl.sh"
 
+aws elbv2 describe-target-groups --region us-west-2 | \
+  jq -r '.TargetGroups[].TargetGroupArn' | \
+  while read -r arn; do
+    echo "Deleting target group: $arn"
+    aws elbv2 delete-target-group --target-group-arn "$arn" --region us-west-2
+  done
+
+  echo "Cleaned up target groups in us-west-2"
+
 if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   BUCKET_CHECK=$("${BIN}/aws" s3api head-bucket --region us-east-1 --bucket "${KOPS_BUCKET}" 2>&1 || true)
   if grep -q "Forbidden" <<<"${BUCKET_CHECK}"; then
