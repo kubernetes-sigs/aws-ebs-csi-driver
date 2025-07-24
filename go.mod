@@ -4,8 +4,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.36.6
 	github.com/aws/aws-sdk-go-v2/config v1.29.18
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.33
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.234.0
-	github.com/aws/smithy-go v1.22.4
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.235.0
+	github.com/aws/smithy-go v1.22.5
 	github.com/awslabs/volume-modifier-for-k8s v0.7.0
 	github.com/container-storage-interface/spec v1.11.0
 	github.com/golang/mock v1.6.0
