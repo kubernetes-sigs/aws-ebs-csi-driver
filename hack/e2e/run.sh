@@ -134,6 +134,9 @@ else
     pushd "${BASE_DIR}/../../tests/e2e-kubernetes"
     packageVersion=$(echo $(cut -d '.' -f 1,2 <<<$K8S_VERSION))
 
+    # TODO: Always skip broken upstream test - remove after fix released
+    GINKGO_SKIP="(should be protected by vac\\-protection finalizer)|${GINKGO_SKIP}"
+    GINKGO_SKIP="${GINKGO_SKIP%|}" # Strip trailing | if needed - remove with above TODO
     set -x
     set +e
     # kubetest2 looks for deployers/testers in $PATH
