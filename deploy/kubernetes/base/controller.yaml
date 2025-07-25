@@ -98,6 +98,12 @@ spec:
                   name: aws-meta
                   key: endpoint
                   optional: true
+            - name: AWS_SAGEMAKER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: aws-meta
+                  key: sagemaker_endpoint
+                  optional: true
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

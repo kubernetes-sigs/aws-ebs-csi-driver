@@ -32,6 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
 	"github.com/aws/smithy-go"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
@@ -173,6 +174,11 @@ var (
 
 // Set during build time via -ldflags.
 var driverVersion string
+
+// AWS error codes.
+const (
+	ValidationException = "ValidationException"
+)
 
 var invalidParameterErrorCodes = map[string]struct{}{
 	"InvalidParameter":            {},
@@ -316,6 +322,7 @@ type batcherManager struct {
 type cloud struct {
 	region                string
 	ec2                   EC2API
+	sm                    SageMakerAPI
 	dm                    dm.DeviceManager
 	bm                    *batcherManager
 	rm                    *retryManager
@@ -323,18 +330,19 @@ type cloud struct {
 	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
 	latestClientTokens    expiringcache.ExpiringCache[string, int]
 	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
+	accountID             string
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool, deprecatedMetrics bool) (Cloud, error) {
-	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching, deprecatedMetrics)
+func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExtra string, batching bool, deprecatedMetrics bool) (Cloud, error) {
+	c := newEC2Cloud(region, accountID, awsSdkDebugLog, userAgentExtra, batching, deprecatedMetrics)
 	return c, nil
 }
 
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
+func newEC2Cloud(region string, accountID string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -365,6 +373,17 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		o.RetryMaxAttempts = retryMaxAttempt
 	})
 
+	// Create SageMaker client
+	smClient := sagemaker.NewFromConfig(cfg, func(o *sagemaker.Options) {
+		o.RetryMaxAttempts = retryMaxAttempt
+
+		// Allow custom SageMaker endpoint for testing
+		endpoint := os.Getenv("AWS_SAGEMAKER_ENDPOINT")
+		if endpoint != "" {
+			o.BaseEndpoint = &endpoint
+		}
+	})
+
 	var bm *batcherManager
 	if batchingEnabled {
 		klog.V(4).InfoS("newEC2Cloud: batching enabled")
@@ -375,11 +394,13 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		region:                region,
 		dm:                    dm.NewDeviceManager(),
 		ec2:                   svc,
+		sm:                    smClient,
 		bm:                    bm,
 		rm:                    newRetryManager(),
 		vwp:                   vwp,
 		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
 		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
+		accountID:             accountID,
 		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
 }
@@ -909,6 +930,10 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 }
 
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
+	if isHyperPodNode(nodeID) {
+		return c.attachDiskHyperPod(ctx, volumeID, nodeID)
+	}
+
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
@@ -968,7 +993,62 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	return device.Path, nil
 }
 
+func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string) (string, error) {
+	klog.V(2).InfoS("AttachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
+
+	instanceID := getInstanceIDFromHyperPodNode(nodeID)
+	clusterArn := c.buildHyperPodClusterArn(nodeID)
+
+	klog.V(5).InfoS("HyperPod attachment details",
+		"volumeID", volumeID,
+		"instanceID", instanceID,
+		"clusterArn", clusterArn)
+
+	// Construct real SageMaker AttachClusterNodeVolumeInput
+	input := &sagemaker.AttachClusterNodeVolumeInput{
+		ClusterArn: aws.String(clusterArn),
+		NodeId:     aws.String(instanceID),
+		VolumeId:   aws.String(volumeID),
+	}
+
+	klog.V(5).InfoS("Calling AttachClusterNodeVolume", "input", input)
+
+	resp, attachErr := c.sm.AttachClusterNodeVolume(ctx, input)
+	if attachErr != nil {
+		if isAWSHyperPodErrorAttachmentLimitExceeded(attachErr) {
+			return "", fmt.Errorf("%w: %w", ErrLimitExceeded, attachErr)
+		}
+		return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
+	}
+
+	klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
+
+	// Wait for attachment completion
+	deviceName := aws.ToString(resp.DeviceName)
+	_, err := c.WaitForAttachmentState(
+		ctx,
+		types.VolumeAttachmentStateAttached,
+		volumeID,
+		nodeID,
+		deviceName,
+		false,
+	)
+	if err != nil {
+		return "", fmt.Errorf("error waiting for volume attachment: %w", err)
+	}
+
+	klog.V(5).InfoS("Volume attached from HyperPod node successfully",
+		"volumeID", volumeID,
+		"nodeID", nodeID,
+		"deviceName", deviceName)
+
+	return deviceName, nil
+}
+
 func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
+	if isHyperPodNode(nodeID) {
+		return c.detachDiskHyperPod(ctx, volumeID, nodeID)
+	}
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return err
@@ -1011,6 +1091,57 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		klog.V(2).InfoS("waitForAttachmentState returned non-nil attachment with state=detached", "attachment", attachment)
 	}
 	metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
+
+	return nil
+}
+
+func (c *cloud) detachDiskHyperPod(ctx context.Context, volumeID, nodeID string) error {
+	klog.V(2).InfoS("DetachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
+
+	instanceID := getInstanceIDFromHyperPodNode(nodeID)
+	clusterArn := c.buildHyperPodClusterArn(nodeID)
+
+	klog.V(4).InfoS("HyperPod detachment details",
+		"volumeID", volumeID,
+		"instanceID", instanceID,
+		"clusterArn", clusterArn)
+
+	// Construct real SageMaker DetachClusterNodeVolumeInput
+	input := &sagemaker.DetachClusterNodeVolumeInput{
+		ClusterArn: aws.String(clusterArn),
+		NodeId:     aws.String(instanceID),
+		VolumeId:   aws.String(volumeID),
+	}
+	klog.V(4).InfoS("Calling DetachClusterNodeVolumeInput", "input", input)
+
+	_, err := c.sm.DetachClusterNodeVolume(ctx, input)
+	if err != nil {
+		if isAWSHyperPodErrorIncorrectState(err) ||
+			isAWSHyperPodErrorInvalidAttachmentNotFound(err) ||
+			isAWSHyperPodErrorVolumeNotFound(err) {
+			metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
+			return ErrNotFound
+		}
+		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
+	}
+
+	klog.V(5).InfoS("[Debug] DetachVolume", "volumeID", volumeID, "nodeID", nodeID)
+	// Wait for detachment completion
+	_, err = c.WaitForAttachmentState(
+		ctx,
+		types.VolumeAttachmentStateDetached,
+		volumeID,
+		nodeID,
+		"",
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("error waiting for volume detachment: %w", err)
+	}
+
+	klog.V(5).InfoS("Volume detached from HyperPod node successfully",
+		"volumeID", volumeID,
+		"nodeID", nodeID)
 
 	return nil
 }
@@ -1154,6 +1285,7 @@ func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.Vol
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
+	isHyperPod := isHyperPodNode(expectedInstance)
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
 		request := &ec2.DescribeVolumesInput{
@@ -1188,11 +1320,20 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 		var attachmentState types.VolumeAttachmentState
 
 		for _, a := range volume.Attachments {
-			if a.InstanceId != nil {
-				if aws.ToString(a.InstanceId) == expectedInstance {
-					attachmentState = a.State
-					attachment = &a
+			if isHyperPod {
+				if a.AssociatedResource != nil {
+					instanceID, err := getInstanceIDFromAssociatedResource(aws.ToString(a.AssociatedResource))
+					if err != nil {
+						return false, err
+					}
+					if instanceID == getInstanceIDFromHyperPodNode(expectedInstance) {
+						attachmentState = a.State
+						attachment = &a
+					}
 				}
+			} else if a.InstanceId != nil && aws.ToString(a.InstanceId) == expectedInstance {
+				attachmentState = a.State
+				attachment = &a
 			}
 		}
 
@@ -1200,7 +1341,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 			attachmentState = types.VolumeAttachmentStateDetached
 		}
 
-		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached {
+		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached && !isHyperPod {
 			device := aws.ToString(attachment.Device)
 			if device != expectedDevice {
 				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
@@ -1296,6 +1437,36 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}
 
 	return disk, nil
+}
+
+func isHyperPodNode(nodeID string) bool {
+	return strings.HasPrefix(nodeID, "hyperpod-")
+}
+
+// Only for hyperpod node, getInstanceIDFromHyperPodNode extracts the EC2 instance ID from a HyperPod node ID.
+func getInstanceIDFromHyperPodNode(nodeID string) string {
+	parts := strings.SplitN(nodeID, "-", 3)
+	return parts[2]
+}
+
+// Only for hyperpod node, buildHyperPodClusterArn: arn:aws:sagemaker:region:account:cluster/clusterID.
+func (c *cloud) buildHyperPodClusterArn(nodeID string) string {
+	parts := strings.Split(nodeID, "-")
+	return fmt.Sprintf("arn:aws:sagemaker:%s:%s:cluster/%s", c.region, c.accountID, parts[1])
+}
+
+// For hyperpod node, AssociatedResource is in arn:aws:sagemaker:region:account:cluster/clusterID-instanceId format.
+func getInstanceIDFromAssociatedResource(arn string) (string, error) {
+	parts := strings.Split(arn, "-")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid ARN format: %s", arn)
+	}
+	lastTwo := parts[len(parts)-2:]
+	instanceID := strings.Join(lastTwo, "-")
+	if !strings.HasPrefix(instanceID, "i-") {
+		return "", fmt.Errorf("invalid instance ID format: %s", instanceID)
+	}
+	return instanceID, nil
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
@@ -1822,6 +1993,61 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 // This error is reported when the maximum number of attachments for an instance is exceeded.
 func isAWSErrorAttachmentLimitExceeded(err error) bool {
 	return isAWSError(err, "AttachmentLimitExceeded")
+}
+
+// isAWSHyperPodErrorAttachmentLimitExceeded checks if the error is an AttachmentLimitExceeded error.
+// This error is reported when the maximum number of attachments for an instance is exceeded.
+func isAWSHyperPodErrorAttachmentLimitExceeded(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: AttachmentLimitExceeded") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorVolumeNotFound returns a boolean indicating whether the
+// given error is a ValidationException error. This error is
+// reported when the specified volume doesn't exist.
+func isAWSHyperPodErrorVolumeNotFound(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidVolume.NotFound") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorIncorrectState returns a boolean indicating whether the
+// given error is a ValidationException error. This error is
+// reported when the resource is not in a correct state for the request.
+func isAWSHyperPodErrorIncorrectState(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: IncorrectState") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorInvalidAttachmentNotFound returns a boolean indicating whether the
+// given error is a ValidationException error. This error is reported
+// when attempting to detach a volume from an instance to which it is not attached.
+func isAWSHyperPodErrorInvalidAttachmentNotFound(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidAttachment.NotFound") {
+			return true
+		}
+	}
+	return false
 }
 
 // isAWSErrorModificationSizeLimitExceeded checks if the error is a VolumeModificationSizeLimitExceeded error.
