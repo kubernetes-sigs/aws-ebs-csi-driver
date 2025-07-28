@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -35,6 +36,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -72,7 +74,7 @@ var (
 
 const (
 	// taintWatcherDuration is the maximum duration for the not-ready taint watcher to run.
-	taintWatcherDuration = 1 * time.Minute
+	taintWatcherDuration = 10 * time.Minute
 )
 
 // NodeService represents the node service of CSI driver.
@@ -89,7 +91,7 @@ func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, 
 	if k != nil {
 		// Watch for the agent‑not‑ready taint for up to one minute and remove it
 		// as soon as allocatable is available.
-		startNotReadyTaintWatcher(k, taintWatcherDuration)
+		go startNotReadyTaintWatcher(k, taintWatcherDuration)
 	}
 
 	return &NodeService{
@@ -862,30 +864,44 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		clientset,
-		0, // No resync
+		5*time.Second, // Resync every 5 seconds in case of networking or other rare issue
 		informers.WithTweakListOptions(func(lo *metav1.ListOptions) {
 			lo.FieldSelector = "metadata.name=" + nodeName
 		}),
 	)
 	informer := factory.Core().V1().Nodes().Informer()
 
+	var mutex sync.Mutex
+	ctx, cancel := context.WithTimeout(context.Background(), maxWatchDuration)
+	defer cancel()
 	attemptTaintRemoval := func(n *corev1.Node) {
 		if !hasNotReadyTaint(n) {
+			// Node has no taint, do nothing
 			return
 		}
+
+		if !mutex.TryLock() {
+			// Another removal thread is already running, do nothing
+			return
+		}
+		defer mutex.Unlock()
 
 		backoff := wait.Backoff{
 			Duration: 2 * time.Second,
 			Factor:   1.5,
 			Steps:    5,
 		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), maxWatchDuration)
-		defer cancel()
-
 		err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
 			if err := removeNotReadyTaint(ctx, clientset, n); err != nil {
 				klog.ErrorS(err, "Failed to remove agent-not-ready taint, retrying", "node", n.Name)
+				if apierrors.IsBadRequest(err) || apierrors.IsInvalid(err) || apierrors.IsNotFound(err) {
+					// Our node is probably stale, get a new copy
+					var err error
+					n, err = clientset.CoreV1().Nodes().Get(ctx, n.Name, metav1.GetOptions{})
+					if err != nil {
+						klog.ErrorS(err, "Failed to update potentially stale node", "node", n.Name)
+					}
+				}
 				return false, nil // Continue retrying
 			}
 			klog.V(2).InfoS("Successfully removed agent-not-ready taint", "node", n.Name)
@@ -913,26 +929,28 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 		return
 	}
 
-	stopCh := make(chan struct{})
+	factory.Start(ctx.Done())
+	if ok := cache.WaitForCacheSync(ctx.Done(), informer.HasSynced); !ok {
+		klog.ErrorS(nil, "Taint-watcher: cache sync failed")
+	}
 
-	go func() {
-		factory.Start(stopCh)
-
-		if ok := cache.WaitForCacheSync(stopCh, informer.HasSynced); !ok {
-			klog.ErrorS(nil, "Taint-watcher: cache sync failed")
+	// Immediate scan in case the taint is already present and no event fires.
+	if obj, exists, err := informer.GetStore().GetByKey(nodeName); err == nil && exists {
+		if n, ok := obj.(*corev1.Node); ok {
+			attemptTaintRemoval(n)
 		}
+	}
 
-		// Immediate scan in case the taint is already present and no event fires.
-		if obj, exists, err := informer.GetStore().GetByKey(nodeName); err == nil && exists {
-			if n, ok := obj.(*corev1.Node); ok {
-				attemptTaintRemoval(n)
-			}
-		}
+	<-time.After(maxWatchDuration)
+	klog.V(8).InfoS("Taint-watcher timeout reached; stopping")
 
-		<-time.After(maxWatchDuration)
-		klog.V(8).InfoS("Taint-watcher timeout reached; stopping")
-		close(stopCh)
-	}()
+	// Try to remove the taint one last time in case we got extremely unlucky with the informer
+	lastChanceNode, err := clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get node for last chance", "node", nodeName)
+	} else {
+		attemptTaintRemoval(lastChanceNode)
+	}
 }
 
 func hasNotReadyTaint(n *corev1.Node) bool {
