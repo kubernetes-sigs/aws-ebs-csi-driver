@@ -111,10 +111,7 @@ func TestNewCloud(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
-		if err != nil {
-			t.Fatalf("error %v", err)
-		}
+		ec2Cloud := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
 		ec2CloudAscloud, ok := ec2Cloud.(*cloud)
 		if !ok {
 			t.Fatalf("could not assert object ec2Cloud as cloud type, %v", ec2Cloud)
@@ -3620,6 +3617,78 @@ func TestIsVolumeInitialized(t *testing.T) {
 				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, *tc.dvsOutput)
 			} else {
 				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, volumeStatusInitialized)
+			}
+		})
+	}
+}
+
+func TestDryRun(t *testing.T) {
+	testCases := []struct {
+		name                string
+		errCode             string
+		attemptDryRunBefore bool
+		attemptDryRunAfter  bool
+		dryRunAttempts      int
+		expectedErr         bool
+	}{
+		{
+			name:                "Successful DryRunOperation",
+			errCode:             "DryRunOperation",
+			attemptDryRunBefore: true,
+			attemptDryRunAfter:  false,
+			dryRunAttempts:      1,
+			expectedErr:         false,
+		},
+		{
+			name:                "Skip DryRun",
+			attemptDryRunBefore: false,
+			attemptDryRunAfter:  false,
+			dryRunAttempts:      1,
+			expectedErr:         false,
+		},
+		{
+			name:                "Failed DryRun",
+			errCode:             "UnexpectedErr",
+			attemptDryRunBefore: true,
+			attemptDryRunAfter:  true,
+			dryRunAttempts:      1,
+			expectedErr:         true,
+		},
+		{
+			name:                "Fail, fail, successful DryRun",
+			errCode:             "UnexpectedErr",
+			attemptDryRunBefore: true,
+			attemptDryRunAfter:  true,
+			dryRunAttempts:      3,
+			expectedErr:         true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := &cloud{
+				region: "test-region",
+				ec2:    mockEC2,
+			}
+			c.attemptDryRun.Store(tc.attemptDryRunBefore)
+
+			if tc.attemptDryRunBefore {
+				mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{
+					Code: tc.errCode,
+				}).Times(tc.dryRunAttempts)
+			}
+
+			var err error
+			for range tc.dryRunAttempts {
+				err = c.DryRun(context.Background())
+			}
+
+			assert.Equal(t, tc.attemptDryRunAfter, c.attemptDryRun.Load())
+
+			if tc.expectedErr {
+				assert.Error(t, err)
 			}
 		})
 	}

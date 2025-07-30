@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -89,6 +90,8 @@ var (
 const (
 	cacheForgetDelay        = 1 * time.Hour
 	volInitCacheForgetDelay = 6 * time.Hour
+
+	dryRunInterval = 3 * time.Hour
 )
 
 // VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
@@ -323,18 +326,14 @@ type cloud struct {
 	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
 	latestClientTokens    expiringcache.ExpiringCache[string, int]
 	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
+	attemptDryRun         atomic.Bool
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool, deprecatedMetrics bool) (Cloud, error) {
-	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching, deprecatedMetrics)
-	return c, nil
-}
-
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -367,11 +366,11 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 
 	var bm *batcherManager
 	if batchingEnabled {
-		klog.V(4).InfoS("newEC2Cloud: batching enabled")
+		klog.V(4).InfoS("NewCloud: batching enabled")
 		bm = newBatcherManager(svc)
 	}
 
-	return &cloud{
+	c := &cloud{
 		region:                region,
 		dm:                    dm.NewDeviceManager(),
 		ec2:                   svc,
@@ -382,6 +381,16 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
 		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
+
+	// Ensure an EC2 Dry-run API call is made on startup and every dryRunInterval
+	c.attemptDryRun.Store(true)
+	go func() {
+		for range time.Tick(dryRunInterval) {
+			c.attemptDryRun.Store(true)
+		}
+	}()
+
+	return c
 }
 
 // newBatcherManager initializes a new instance of batcherManager.
@@ -1579,6 +1588,29 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 		return nil, errors.New(strings.Join(errDetails, "; "))
 	}
 	return response, nil
+}
+
+// DryRun will make a dry-run EC2 API call. Nil return value means we successfully received EC2 DryRunOperation error code.
+func (c *cloud) DryRun(ctx context.Context) error {
+	if c.attemptDryRun.Load() {
+		// Rely on EC2 DAZ because it is required in ebs controller IAM role, but not in instance default role.
+		_, apiErr := c.ec2.DescribeAvailabilityZones(ctx,
+			&ec2.DescribeAvailabilityZonesInput{DryRun: aws.Bool(true)},
+			func(o *ec2.Options) {
+				o.Retryer = aws.NopRetryer{} // Don't retry so we can catch network failures. CO should retry liveness check multiple times.
+				o.APIOptions = nil           // Don't add our logging/metrics middleware because we expect errors.
+			})
+		if apiErr != nil {
+			var awsErr smithy.APIError
+			if errors.As(apiErr, &awsErr) && awsErr.ErrorCode() == "DryRunOperation" {
+				c.attemptDryRun.Store(false)
+				return nil
+			}
+			return fmt.Errorf("dry-run EC2 API call failed: %w", apiErr)
+		}
+	}
+
+	return nil
 }
 
 func describeVolumes(ctx context.Context, svc EC2API, request *ec2.DescribeVolumesInput) ([]types.Volume, error) {
