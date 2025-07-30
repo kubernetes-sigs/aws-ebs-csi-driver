@@ -405,18 +405,22 @@
         },
         "serviceMonitor": {
           "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI controller pods",
           "additionalProperties": false,
           "properties": {
             "forceEnable": {
               "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
               "default": false
             },
             "labels": {
               "type": "object",
-              "description": "Additional labels for ServiceMonitor object"
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
             },
             "interval": {
               "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
               "default": "15s"
             }
           }
@@ -543,6 +547,28 @@
           "type": "boolean",
           "description": "Enable metrics collection for the node pods",
           "default": false
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI node pods",
+          "additionalProperties": false,
+          "properties": {
+            "forceEnable": {
+              "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
+              "default": false
+            },
+            "labels": {
+              "type": "object",
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
+            },
+            "interval": {
+              "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
+              "default": "15s"
+            }
+          }
         },
         "enableWindows": {
           "type": "boolean",

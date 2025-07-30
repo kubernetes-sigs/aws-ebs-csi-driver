@@ -5,6 +5,9 @@ kind: Service
 metadata:
   name: ebs-csi-controller
   namespace: {{ .Release.Namespace }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3301"
   labels:
     app: ebs-csi-controller
 spec:
@@ -37,7 +40,7 @@ spec:
   endpoints:
     - targetPort: 3301
       path: /metrics
-      interval: {{ .Values.controller.serviceMonitor.interval | default "15s"}}
+      interval: {{ .Values.controller.serviceMonitor.interval | default "15s" }}
 {{- end }}
 {{- end }}
 ---
@@ -61,4 +64,28 @@ spec:
       targetPort: 3302
   internalTrafficPolicy: Local
   type: ClusterIP
+---
+{{- if or .Values.node.serviceMonitor.forceEnable (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ebs-csi-node
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ebs-csi-node
+    {{- if .Values.node.serviceMonitor.labels }}
+    {{- toYaml .Values.node.serviceMonitor.labels | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: ebs-csi-node
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - targetPort: 3302
+      path: /metrics
+      interval: {{ .Values.controller.node.interval | default "15s" }}
+{{- end }}
 {{- end }}
