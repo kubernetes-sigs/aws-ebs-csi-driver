@@ -241,6 +241,8 @@ controller:
     labels:
       release: prometheus
     interval: "15s"
+    # List of metricRelabelings for ServiceMonitor endpoints. See Prometheus docs for details.
+    metricRelabelings: []
   # If set to true, AWS API call metrics will be exported to the following
   # TCP endpoint: "0.0.0.0:3301"
   # ---
