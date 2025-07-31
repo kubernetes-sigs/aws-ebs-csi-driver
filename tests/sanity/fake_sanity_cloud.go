@@ -29,14 +29,14 @@ import (
 )
 
 type fakeCloud struct {
-	fakeMetadata     metadata.Metadata
+	fakeMetadata     *metadata.Metadata
 	mountPath        string
 	disks            map[string]*cloud.Disk
 	snapshots        map[string]*cloud.Snapshot
 	snapshotNameToID map[string]string
 }
 
-func newFakeCloud(fmd metadata.Metadata, mp string) *fakeCloud {
+func newFakeCloud(fmd *metadata.Metadata, mp string) *fakeCloud {
 	return &fakeCloud{
 		fakeMetadata:     fmd,
 		mountPath:        mp,
@@ -136,6 +136,10 @@ func (d *fakeCloud) GetSnapshotByName(ctx context.Context, name string) (*cloud.
 		return d.snapshots[snapshotID], nil
 	}
 	return nil, cloud.ErrNotFound
+}
+
+func (d *fakeCloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	return []*types.Instance{}, nil
 }
 
 func (d *fakeCloud) ListSnapshots(ctx context.Context, sourceVolumeID string, maxResults int32, nextToken string) (*cloud.ListSnapshotsResponse, error) {

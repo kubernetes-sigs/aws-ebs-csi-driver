@@ -35,6 +35,19 @@ These values are typically set by the [AWS CCM](https://github.com/kubernetes/cl
 
 Kubernetes metadata does not provide information about the number of ENIs or EBS volumes attached to an instance. Thus, when performing volume limit calculations, node pods using Kubernetes metadata will assume one ENI and one EBS volume (the root volume) is attached.
 
+#### Metadata Labeler
+
+**Note: This metadata source is currently in alpha and disabled by default.**
+
+The `metadata-labeler` sidecar (and corresponding metadata source) allow passing information from the EC2 API via labels on the sidecars, similar to the labels applied by the AWS CCM used by the `kubernetes` source.
+
+For the Instance ID, type, region, and AZ, this metadata source uses the same logic as the `kubernetes` metadata source and has the same requirements. In addition, this metadata source uses labels applied by the EBS CSI `metadata-labeler` sidecar for the number of ENIs and extra EBS volumes attached to an instance.
+
+To enable this metadata source:
+- Set `sidecars.metadataLabeler.enabled` to `true`
+- Include `metadata-labeler` in `node.metadataSources` list. E.g. setting `node.metadataSources` to `"metadata-labeler,kubernetes"` will first attempt to use this new metadata source, then fallback to Kubernetes metadata.
+- EBS CSI Controller Pods must hold Kubernetes RBAC permission to patch Node objects (this is automatically enabled in the EBS CSI Helm chart via `sidecars.metadataLabeler.enabled`).
+
 ## Installation
 ### Set up driver permissions
 

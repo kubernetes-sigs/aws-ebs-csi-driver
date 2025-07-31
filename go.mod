@@ -1,19 +1,20 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.39.2
-	github.com/aws/aws-sdk-go-v2/config v1.31.12
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.9
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.256.0
-	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.215.3
-	github.com/aws/aws-sdk-go-v2/service/sts v1.38.6
-	github.com/aws/smithy-go v1.23.0
+	github.com/aws/aws-sdk-go-v2 v1.39.3
+	github.com/aws/aws-sdk-go-v2/config v1.31.13
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.10
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.257.1
+	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.215.4
+	github.com/aws/aws-sdk-go-v2/service/sts v1.38.7
+	github.com/aws/smithy-go v1.23.1
 	github.com/awslabs/volume-modifier-for-k8s v0.8.0
-	github.com/container-storage-interface/spec v1.11.0
+	github.com/container-storage-interface/spec v1.12.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/kubernetes-csi/csi-proxy/client v1.2.1
-	github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
+	github.com/kubernetes-csi/csi-lib-utils v0.22.0
+	github.com/kubernetes-csi/csi-proxy/client v1.3.0
+	github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.2
 	github.com/kubernetes-csi/csi-test/v5 v5.3.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.1
@@ -40,14 +41,14 @@ require (
 require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.9 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.9 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.29.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.1 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.29.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -107,8 +108,8 @@ require (
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20251007200510-49b9836ed3ff // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251007200510-49b9836ed3ff // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -119,5 +120,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// Workaround https://github.com/kubernetes-csi/csi-proxy/issues/411
+replace github.com/kubernetes-csi/csi-proxy/v2 => github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
 
 go 1.25.2

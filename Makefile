@@ -147,9 +147,11 @@ e2e/multi-az: bin/helm bin/ginkgo
 .PHONY: e2e/disruptive
 e2e/disruptive: bin/helm bin/ginkgo
 	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[disruptive\]" \
+	GINKGO_FOCUS="\[ebs-csi-e2e\] \[Disruptive\]" \
+	GINKGO_SKIP="\[Flaky\]" \
 	GINKGO_PARALLEL=1 \
 	EBS_INSTALL_SNAPSHOT=false \
+	HELM_EXTRA_FLAGS="--set=sidecars.metadataLabeler.enabled=true,node.metadataSources='metadata-labeler'" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external

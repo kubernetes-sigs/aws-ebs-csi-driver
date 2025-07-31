@@ -69,7 +69,7 @@ func TestSanity(t *testing.T) {
 		Resource:  "op-1234567890abcdef0",
 	}
 
-	drv, err := driver.NewDriver(newFakeCloud(*fakeMetadata, mountPath), driverOptions, newFakeMounter(), newFakeMetadataService(instanceID, region, availabilityZone, *outpostArn), nil)
+	drv, err := driver.NewDriver(newFakeCloud(fakeMetadata, mountPath), driverOptions, newFakeMounter(), newFakeMetadataService(instanceID, region, availabilityZone, *outpostArn), nil)
 	if err != nil {
 		t.Fatalf("Failed to create fake driver: %v", err.Error())
 	}
