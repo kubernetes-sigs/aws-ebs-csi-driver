@@ -199,6 +199,21 @@ func (mr *MockCloudMockRecorder) GetDiskByName(ctx, name, capacityBytes interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), ctx, name, capacityBytes)
 }
 
+// GetInstancesPatching mocks base method.
+func (m *MockCloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstancesPatching", ctx, nodeIDs)
+	ret0, _ := ret[0].([]*types.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstancesPatching indicates an expected call of GetInstancesPatching.
+func (mr *MockCloudMockRecorder) GetInstancesPatching(ctx, nodeIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstancesPatching", reflect.TypeOf((*MockCloud)(nil).GetInstancesPatching), ctx, nodeIDs)
+}
+
 // GetSnapshotByID mocks base method.
 func (m *MockCloud) GetSnapshotByID(ctx context.Context, snapshotID string) (*Snapshot, error) {
 	m.ctrl.T.Helper()
