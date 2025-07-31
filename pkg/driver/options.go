@@ -155,7 +155,7 @@ func (o *Options) Validate() error {
 	for i, s := range o.MetadataSources {
 		s = strings.ToLower(strings.TrimSpace(s))
 		switch s {
-		case metadata.SourceIMDS, metadata.SourceK8s:
+		case metadata.SourceIMDS, metadata.SourceK8s, metadata.SourceEC2LabelsK8s:
 			o.MetadataSources[i] = s
 		default:
 			return metadata.InvalidSourceErr(o.MetadataSources, s)
