@@ -138,6 +138,14 @@ func (d *fakeCloud) GetSnapshotByName(ctx context.Context, name string) (*cloud.
 	return nil, cloud.ErrNotFound
 }
 
+func (d *fakeCloud) GetInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
+	return &types.Instance{}, nil
+}
+
+func (d *fakeCloud) GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	return []*types.Instance{}, nil
+}
+
 func (d *fakeCloud) ListSnapshots(ctx context.Context, sourceVolumeID string, maxResults int32, nextToken string) (*cloud.ListSnapshotsResponse, error) {
 	var s []*cloud.Snapshot
 	startIndex := 0

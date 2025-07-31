@@ -229,6 +229,26 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+        - name: patcher
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.46.0 #TODO: question: should we have this be separate image path with just this extra container
+          imagePullPolicy: IfNotPresent
+          args:
+            - patcher
+            - --v=4
+          env:
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 40Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
         - name: csi-resizer
           image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.3
           imagePullPolicy: IfNotPresent

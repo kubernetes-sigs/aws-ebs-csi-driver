@@ -1,0 +1,15 @@
+---
+# Source: aws-ebs-csi-driver/templates/clusterrolebinding-patcher.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: label-patcher-binding
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
+subjects:
+- kind: ServiceAccount
+  name: ebs-csi-controller-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: label-patcher

@@ -428,6 +428,38 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         {{- end }}
+        - name: patcher
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }} #TODO: question: should we have this be separate image path with just this extra container
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - patcher
+            - --v={{ .Values.sidecars.patcher.logLevel }}
+            {{- range .Values.sidecars.patcher.additionalArgs }}
+            - {{ . }}
+            {{- end }}
+          env:
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.patcher.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          {{- with .Values.controller.envFrom }}
+          envFrom:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with default .Values.controller.resources .Values.sidecars.patcher.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.patcher.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: csi-resizer
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy }}
