@@ -128,8 +128,6 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   set -e
   set +x
 else
-  loudecho "Testing focus ${GINKGO_FOCUS}"
-
   if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
     pushd "${BASE_DIR}/../../tests/e2e-kubernetes"
     packageVersion=$(echo $(cut -d '.' -f 1,2 <<<$K8S_VERSION))
@@ -154,19 +152,36 @@ else
     set +x
     popd
   else
-    set -x
-    set +e
-    "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
-      --focus="${GINKGO_FOCUS}" \
-      --skip="${GINKGO_SKIP}" \
-      --junit-report="${REPORT_DIR}/junit.xml" \
-      "${TEST_PATH}" \
-      -- \
-      -kubeconfig="${KUBECONFIG}" \
-      -gce-zone="${FIRST_ZONE}"
-    TEST_PASSED=$?
-    set -e
-    set +x
+    if [[ -n "${GINKGO_LABEL_FILTER:-}" ]]; then
+      loudecho "Testing label ${GINKGO_LABEL_FILTER}"
+      set -x
+      set +e
+      "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
+        --label-filter="${GINKGO_LABEL_FILTER:-}" \
+        --junit-report="${REPORT_DIR}/junit.xml" \
+        "${TEST_PATH}" \
+        -- \
+        -kubeconfig="${KUBECONFIG}" \
+        -gce-zone="${FIRST_ZONE}"
+      TEST_PASSED=$?
+      set -e
+      set +x
+    else
+      loudecho "Testing focus ${GINKGO_FOCUS}"
+      set -x
+      set +e
+      "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
+        --focus="${GINKGO_FOCUS}" \
+        --skip="${GINKGO_SKIP}" \
+        --junit-report="${REPORT_DIR}/junit.xml" \
+        "${TEST_PATH}" \
+        -- \
+        -kubeconfig="${KUBECONFIG}" \
+        -gce-zone="${FIRST_ZONE}"
+      TEST_PASSED=$?
+      set -e
+      set +x
+    fi
   fi
 
   PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
