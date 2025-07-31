@@ -239,6 +239,12 @@ sub-push-a1compat:
 .PHONY: all-push
 all-push: sub-push sub-push-fips sub-push-a1compat
 
+# QUESTION: should my tests be run in the current CI jobs or a separate job
+
+.PHONY: ec2Labels-test
+ec2Labels-test:
+	cd tests/e2e && ginkgo -v -focus="disruptive"
+
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*
 

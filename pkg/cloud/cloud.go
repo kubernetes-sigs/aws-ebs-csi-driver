@@ -935,6 +935,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	}
 
 	instance, err := c.getInstance(ctx, nodeID)
+
 	if err != nil {
 		return "", err
 	}
@@ -1812,7 +1813,8 @@ func describeInstances(ctx context.Context, svc EC2API, request *ec2.DescribeIns
 	return instances, nil
 }
 
-func (c *cloud) getInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
+// GetInstance returns the instance info associated with a single node ID.
+func (c *cloud) GetInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{nodeID},
 	}
@@ -1833,6 +1835,31 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*types.Instance
 	} else {
 		return c.batchDescribeInstances(request)
 	}
+}
+
+// GetInstances returns the instance info associated with each node ID in `nodeIDs`.
+func (c *cloud) GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	request := &ec2.DescribeInstancesInput{
+		InstanceIds: nodeIDs,
+	}
+
+	instances := []*types.Instance{}
+	// A batcher isn't used here because GetInstances is only called once in awhile to update
+	// metadata labels of each node.
+	response, err := c.ec2.DescribeInstances(ctx, request)
+	if err != nil {
+		if isAWSErrorInstanceNotFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("error listing AWS instances: %w", err)
+	}
+
+	for _, reservation := range response.Reservations {
+		for _, instance := range reservation.Instances {
+			instances = append(instances, &instance)
+		}
+	}
+	return instances, nil
 }
 
 func describeSnapshots(ctx context.Context, svc EC2API, request *ec2.DescribeSnapshotsInput) ([]types.Snapshot, error) {

@@ -1930,7 +1930,7 @@ func TestNodeGetInfo(t *testing.T) {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
 				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
-				m.EXPECT().UpdateMetadata().Return(nil)
+				m.EXPECT().UpdateMetadata(gomock.Any()).Return(nil)
 				m.EXPECT().GetOutpostArn().Return(arn.ARN{})
 				return m
 			},
@@ -1950,7 +1950,7 @@ func TestNodeGetInfo(t *testing.T) {
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				// When UpdateMedata returns an error, NodeGetInfo should continue execution.
-				m.EXPECT().UpdateMetadata().Return(errors.New("metadata update failed"))
+				m.EXPECT().UpdateMetadata(gomock.Any()).Return(errors.New("metadata update failed"))
 				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
 				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
 				m.EXPECT().GetOutpostArn().Return(arn.ARN{})
@@ -1973,7 +1973,7 @@ func TestNodeGetInfo(t *testing.T) {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceID().Return("i-1234567890abcdef0")
 				m.EXPECT().GetAvailabilityZone().Return("us-west-2a")
-				m.EXPECT().UpdateMetadata().Return(nil)
+				m.EXPECT().UpdateMetadata(gomock.Any()).Return(nil)
 				m.EXPECT().GetOutpostArn().Return(arn.ARN{
 					Partition: "aws",
 					Service:   "outposts",

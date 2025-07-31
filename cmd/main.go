@@ -42,6 +42,11 @@ var (
 	featureGate = featuregate.NewFeatureGate()
 )
 
+const (
+	// LabelRefreshTime is the time in minutes that it takes for node labels to update volume and ENI count.
+	LabelRefreshTime = 60
+)
+
 func main() {
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
 	if err := logsapi.RegisterLogFormat(logsapi.JSONLogFormat, json.Factory{}, logsapi.LoggingBetaOptions); err != nil {
@@ -70,7 +75,7 @@ func main() {
 
 	switch cmd {
 	case "pre-stop-hook":
-		clientset, clientErr := metadata.DefaultKubernetesAPIClient(options.Kubeconfig)()
+		clientset, _, clientErr := metadata.DefaultKubernetesAPIClient(options.Kubeconfig)()
 		if clientErr != nil {
 			klog.ErrorS(err, "unable to communicate with k8s API")
 		} else {
@@ -83,8 +88,71 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	case string(driver.ControllerMode), string(driver.NodeMode), string(driver.AllMode):
 		options.Mode = driver.Mode(cmd)
+
+	// TODO question: I think it makes sense to check if cmd == "patcher" here because this is where the other
+	// cmd checks are. However, this would result in a lot of code duplication as the patcher container needs
+	// metadata (region and instance ID) to run.
+	case "patcher":
+		options.AddFlags(fs)
+		if err = fs.Parse(args); err != nil {
+			klog.ErrorS(err, "Failed to parse options")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+		}
+		if err = options.Validate(); err != nil {
+			klog.ErrorS(err, "Invalid options")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+		}
+
+		err = logsapi.ValidateAndApply(c, featureGate)
+		if err != nil {
+			klog.ErrorS(err, "failed to validate and apply logging configuration")
+		}
+
+		cfg := metadata.MetadataServiceConfig{
+			MetadataSources: options.MetadataSources,
+			IMDSClient:      metadata.DefaultIMDSClient,
+			K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
+		}
+
+		region := os.Getenv("AWS_REGION")
+		var md metadata.MetadataService
+		var metadataErr error
+
+		if region != "" {
+			klog.InfoS("Region provided via AWS_REGION environment variable", "region", region)
+			if options.Mode != driver.ControllerMode {
+				klog.InfoS("Node service requires metadata even if AWS_REGION provided, initializing metadata")
+				md, metadataErr = metadata.NewMetadataService(cfg, region)
+			}
+		} else {
+			klog.InfoS("Initializing metadata")
+			md, metadataErr = metadata.NewMetadataService(cfg, region)
+		}
+
+		if metadataErr != nil {
+			klog.ErrorS(metadataErr, "Failed to initialize metadata when it is required")
+			if options.Mode == driver.ControllerMode {
+				klog.InfoS("The region can be manually supplied via the AWS_REGION environment variable")
+			}
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		} else if region == "" {
+			region = md.GetRegion()
+		}
+
+		cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
+		if err != nil {
+			klog.ErrorS(err, "failed to create cloud service")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+
+		k8sClient, k8sConfig, err := cfg.K8sAPIClient()
+		if err != nil {
+			klog.V(2).InfoS("Failed to setup k8s client", "err", err)
+		}
+		metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, k8sConfig, md.GetInstanceID(), cloud, LabelRefreshTime)
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	default:
-		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, patcher, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 
@@ -212,7 +280,7 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	k8sClient, err := cfg.K8sAPIClient()
+	k8sClient, _, err := cfg.K8sAPIClient()
 	if err != nil {
 		klog.V(2).InfoS("Failed to setup k8s client", "err", err)
 	}

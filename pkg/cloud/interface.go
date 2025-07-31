@@ -39,4 +39,6 @@ type Cloud interface {
 	ListSnapshots(ctx context.Context, volumeID string, maxResults int32, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error)
 	EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error)
 	AvailabilityZones(ctx context.Context) (map[string]struct{}, error)
+	GetInstance(ctx context.Context, nodeID string) (*types.Instance, error)
+	GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error)
 }

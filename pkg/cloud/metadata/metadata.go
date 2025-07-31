@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
@@ -43,13 +44,14 @@ type MetadataServiceConfig struct {
 }
 
 const (
-	SourceIMDS = "imds"
-	SourceK8s  = "kubernetes"
+	SourceIMDS         = "imds"
+	SourceEC2LabelsK8s = "ec2labelskubernetes"
+	SourceK8s          = "kubernetes"
 )
 
 var (
 	// DefaultMetadataSources lists the default fallback order of driver Metadata sources.
-	DefaultMetadataSources = []string{SourceIMDS, SourceK8s}
+	DefaultMetadataSources = []string{SourceIMDS, SourceEC2LabelsK8s, SourceK8s}
 )
 
 var _ MetadataService = &Metadata{}
@@ -71,9 +73,24 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 				}
 				klog.ErrorS(err, "Retrieving IMDS metadata failed")
 			}
+		case SourceEC2LabelsK8s:
+			klog.V(2).InfoS("Attempting to retrieve instance metadata from ec2Labels Kubernetes API")
+			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient, true)
+			if err == nil {
+				klog.V(2).InfoS("Retrieved metadata from ec2Labels Kubernetes")
+				return metadata.overrideRegion(region), nil
+			}
+			klog.ErrorS(err, "Retrieving ec2Labels Kubernetes metadata failed, fallback to Kubernetes metadata")
+			klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
+			metadata, err = retrieveK8sMetadata(cfg.K8sAPIClient, false)
+			if err == nil {
+				klog.V(2).InfoS("Retrieved metadata from Kubernetes")
+				return metadata.overrideRegion(region), nil
+			}
+			klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
 		case SourceK8s:
 			klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
-			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient)
+			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient, false)
 			if err == nil {
 				klog.V(2).InfoS("Retrieved metadata from Kubernetes")
 				return metadata.overrideRegion(region), nil
@@ -88,9 +105,10 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	return nil, sourcesUnavailableErr(cfg.MetadataSources)
 }
 
+// TODO: Enhanceed-kuberentes metadata should also be updated from node regularly once KEP enters beta and new PR merges.
 // UpdateMetadata refreshes ENI information.
 // We do not refresh blockDeviceMappings because IMDS only reports data from when instance starts (As of April 2025).
-func (m *Metadata) UpdateMetadata() error {
+func (m *Metadata) UpdateMetadata(k8sClient kubernetes.Interface) error {
 	if m.IMDSClient == nil {
 		// IMDS not available, skip updates
 		return nil
@@ -114,13 +132,13 @@ func retrieveIMDSMetadata(imdsClient IMDSClient) (*Metadata, error) {
 	return IMDSInstanceInfo(svc)
 }
 
-func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient) (*Metadata, error) {
-	clientset, err := k8sAPIClient()
+func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient, ec2Labels bool) (*Metadata, error) {
+	clientset, _, err := k8sAPIClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return KubernetesAPIInstanceInfo(clientset)
+	return KubernetesAPIInstanceInfo(clientset, ec2Labels)
 }
 
 // Override the region on a Metadata object if it is non-empty.

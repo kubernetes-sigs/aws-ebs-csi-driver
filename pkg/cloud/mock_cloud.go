@@ -185,6 +185,36 @@ func (mr *MockCloudMockRecorder) GetDiskByName(ctx, name, capacityBytes interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), ctx, name, capacityBytes)
 }
 
+// GetInstance mocks base method.
+func (m *MockCloud) GetInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstance", ctx, nodeID)
+	ret0, _ := ret[0].(*types.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstance indicates an expected call of GetInstance.
+func (mr *MockCloudMockRecorder) GetInstance(ctx, nodeID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockCloud)(nil).GetInstance), ctx, nodeID)
+}
+
+// GetInstances mocks base method.
+func (m *MockCloud) GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstances", ctx, nodeIDs)
+	ret0, _ := ret[0].([]*types.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstances indicates an expected call of GetInstances.
+func (mr *MockCloudMockRecorder) GetInstances(ctx, nodeIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstances", reflect.TypeOf((*MockCloud)(nil).GetInstances), ctx, nodeIDs)
+}
+
 // GetSnapshotByID mocks base method.
 func (m *MockCloud) GetSnapshotByID(ctx context.Context, snapshotID string) (*Snapshot, error) {
 	m.ctrl.T.Helper()

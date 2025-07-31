@@ -11,6 +11,7 @@ import (
 	arn "github.com/aws/aws-sdk-go-v2/aws/arn"
 	imds "github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	gomock "github.com/golang/mock/gomock"
+	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 // MockMetadataService is a mock of MetadataService interface.
@@ -135,17 +136,17 @@ func (mr *MockMetadataServiceMockRecorder) GetRegion() *gomock.Call {
 }
 
 // UpdateMetadata mocks base method.
-func (m *MockMetadataService) UpdateMetadata() error {
+func (m *MockMetadataService) UpdateMetadata(k8sClient kubernetes.Interface) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateMetadata")
+	ret := m.ctrl.Call(m, "UpdateMetadata", k8sClient)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateMetadata indicates an expected call of UpdateMetadata.
-func (mr *MockMetadataServiceMockRecorder) UpdateMetadata() *gomock.Call {
+func (mr *MockMetadataServiceMockRecorder) UpdateMetadata(k8sClient interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetadata", reflect.TypeOf((*MockMetadataService)(nil).UpdateMetadata))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetadata", reflect.TypeOf((*MockMetadataService)(nil).UpdateMetadata), k8sClient)
 }
 
 // MockIMDS is a mock of IMDS interface.
