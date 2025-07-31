@@ -90,6 +90,14 @@ sidecars:
         type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+  metadataLabeler:
+    # Additional parameters provided by metadataLabeler.
+    logLevel: 2
+    additionalArgs: []
+    resources: {}
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
@@ -251,6 +259,7 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
+  deployMetadataLabelerContainer: false
   deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
