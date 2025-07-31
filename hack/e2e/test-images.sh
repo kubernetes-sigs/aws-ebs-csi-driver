@@ -38,6 +38,7 @@ function build_and_push() {
 
   if [ $IMAGE_COUNT -ge $MAX_IMAGES ]; then
     loudecho "Repository image limit reached. Unable to push new images."
+    aws ecr batch-delete-image --repository-name "${IMAGE##*/}" --region "${REGION}" --image-ids "$(aws ecr list-images --repository-name "${IMAGE##*/}" --region "${REGION}" --query 'imageIds[:200]' --output json)" || true
     exit 1
   fi
 
