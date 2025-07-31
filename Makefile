@@ -247,6 +247,15 @@ sub-push-a1compat:
 .PHONY: all-push
 all-push: sub-push sub-push-fips sub-push-a1compat
 
+# .PHONY: e2e/ec2-labels-test
+# e2e/ec2-labels-test: bin/helm bin/ginkgo
+# 	TEST_PATH=./tests/e2e/... \
+# 	GINKGO_LABEL_FILTER="Disruptive" \
+# 	GINKGO_PARALLEL=1 \
+# 	EBS_INSTALL_SNAPSHOT="false" \
+# 	METADATA_SOURCES="ec2labelskubernetes" \
+# 	./hack/e2e/run.sh
+
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*
 
