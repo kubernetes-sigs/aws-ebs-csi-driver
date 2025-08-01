@@ -91,7 +91,7 @@ sidecars:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   patcher:
-    # Additional parameters provided by livenessprobe.
+    # Additional parameters provided by patcher.
     logLevel: 4
     additionalArgs: []
     resources: {}

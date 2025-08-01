@@ -44,7 +44,7 @@ const (
 	ENIsLabel = "ebs.csi.aws.com/enis-count"
 
 	// RenewDeadline is lease duration of the resource lock for leader election to update Nodes with additional ebs-csi-driver metadata labels.
-	RenewDeadline = 10
+	renewDeadline = 10
 )
 
 type enisVolumes struct {
@@ -67,7 +67,7 @@ func ContinuousUpdateLabelsLeaderElection(clientset kubernetes.Interface, k8sCon
 			Identity: instanceID, //TODO: question: what's a better identity to use
 		},
 		k8sConfig,
-		time.Second*RenewDeadline,
+		time.Second*renewDeadline,
 	)
 	if err != nil {
 		klog.ErrorS(err, "Could not set up leader election for updating Nodes with additional ebs-csi-driver metadata labels")

@@ -80,14 +80,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 				klog.V(2).InfoS("Retrieved metadata from ec2Labels Kubernetes")
 				return metadata.overrideRegion(region), nil
 			}
-			klog.ErrorS(err, "Retrieving ec2Labels Kubernetes metadata failed, fallback to Kubernetes metadata")
-			klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
-			metadata, err = retrieveK8sMetadata(cfg.K8sAPIClient, false)
-			if err == nil {
-				klog.V(2).InfoS("Retrieved metadata from Kubernetes")
-				return metadata.overrideRegion(region), nil
-			}
-			klog.ErrorS(err, "Retrieving Kubernetes metadata failed")
+			klog.ErrorS(err, "Retrieving ec2Labels Kubernetes metadata failed")
 		case SourceK8s:
 			klog.V(2).InfoS("Attempting to retrieve instance metadata from Kubernetes API")
 			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient, false)
