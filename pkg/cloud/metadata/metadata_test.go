@@ -165,7 +165,7 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
-			name:            "TestEC2LabelsKubernetesAPIInstanceInfo: Invalid volume label, fallback to Kubernetes Metadata",
+			name:            "TestEC2LabelsKubernetesAPIInstanceInfo: Invalid volume label",
 			metadataSources: []string{SourceEC2LabelsK8s},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -182,17 +182,10 @@ func TestNewMetadataService(t *testing.T) {
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},
 			},
-			expectedMetadata: &Metadata{
-				InstanceID:             "i-1234567890abcdef0",
-				InstanceType:           "c5.xlarge",
-				Region:                 "us-west-2",
-				AvailabilityZone:       "us-west-2a",
-				NumAttachedENIs:        1,
-				NumBlockDeviceMappings: 0,
-			},
+			expectedError: sourcesUnavailableErr([]string{SourceEC2LabelsK8s}),
 		},
 		{
-			name:            "TestEC2LabelsKubernetesAPIInstanceInfo: Invalid ENI label, fallback to Kubernetes Metadata",
+			name:            "TestEC2LabelsKubernetesAPIInstanceInfo: Invalid ENI label",
 			metadataSources: []string{SourceEC2LabelsK8s},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -208,14 +201,7 @@ func TestNewMetadataService(t *testing.T) {
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},
 			},
-			expectedMetadata: &Metadata{
-				InstanceID:             "i-1234567890abcdef0",
-				InstanceType:           "c5.xlarge",
-				Region:                 "us-west-2",
-				AvailabilityZone:       "us-west-2a",
-				NumAttachedENIs:        1,
-				NumBlockDeviceMappings: 0,
-			},
+			expectedError: sourcesUnavailableErr([]string{SourceEC2LabelsK8s}),
 		},
 	}
 

@@ -116,8 +116,8 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 		return nil, fmt.Errorf("error getting Node %v: %w", nodeName, err)
 	}
 
-	enis := 1
-	volumes := 0
+	enis := 1    // All nodes have at least 1 attached ENI, so we'll use that
+	volumes := 0 // Root volume already accounted for elsewhere (in getVolumesLimit())
 
 	if ec2Labels {
 		backoff := wait.Backoff{
@@ -126,7 +126,6 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 			Steps:    6,
 		}
 
-		//TODO: need to shorten to 5 seconds later
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -225,45 +224,28 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 }
 
 func getEC2ENIsVolumes(node *corev1.Node) (int, int, error) {
-	vol, err := getVolumes(node)
+	eni, err := getLabelAsInt(node, ENIsLabel, 1)
 	if err != nil {
 		return 0, 0, err
 	}
-	eni, err := getENIs(node)
+	vol, err := getLabelAsInt(node, VolumesLabel, 0)
 	if err != nil {
 		return 0, 0, err
 	}
 	return eni, vol, nil
 }
 
-func getVolumes(node *corev1.Node) (int, error) {
-	var volumes int
-	if val, ok := node.GetLabels()[VolumesLabel]; ok {
-		var err error
-		volumes, err = strconv.Atoi(val)
-		if err != nil {
-			klog.ErrorS(err, "failed to convert number of volumes label to int")
-			return 0, err
-		}
-	} else {
-		klog.V(2).InfoS("label not found on node", "node", node.Name, "label", VolumesLabel)
-		return 0, fmt.Errorf("%s label not found on node", VolumesLabel)
+func getLabelAsInt(node *corev1.Node, label string, defaultValue int) (int, error) {
+	val, ok := node.GetLabels()[label]
+	if !ok {
+		klog.V(2).InfoS("label not found on node", "node", node.Name, "label", label)
+		return defaultValue, fmt.Errorf("%s label not found on node", label)
 	}
-	return volumes, nil
-}
 
-func getENIs(node *corev1.Node) (int, error) {
-	var enis int
-	if val, ok := node.GetLabels()[ENIsLabel]; ok {
-		var err error
-		enis, err = strconv.Atoi(val)
-		if err != nil {
-			klog.ErrorS(err, "failed to convert number of ENIs label to int")
-			return 1, err
-		}
-	} else {
-		klog.V(2).InfoS("label not found on node", "node", node.Name, "label", ENIsLabel)
-		return 1, fmt.Errorf("%s label not found on node", ENIsLabel)
+	result, err := strconv.Atoi(val)
+	if err != nil {
+		klog.ErrorS(err, "failed to convert label to int", "label", label)
+		return defaultValue, err
 	}
-	return enis, nil
+	return result, nil
 }
