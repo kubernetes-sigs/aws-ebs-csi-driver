@@ -37,7 +37,8 @@ function build_and_push() {
   IMAGE_COUNT=$(aws ecr list-images --repository-name "${IMAGE##*/}" --region "${REGION}" --query 'length(imageIds[])')
 
   if [ $IMAGE_COUNT -ge $MAX_IMAGES ]; then
-    loudecho "Repository image limit reached. Unable to push new images."
+    loudecho "Repository image limit reached. Unable to push new images. Deleting Repo"
+    loudecho "no change"
     exit 1
   fi
 
