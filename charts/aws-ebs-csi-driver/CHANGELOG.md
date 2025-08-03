@@ -1,6 +1,5 @@
 # Helm chart
 
-## v2.47.0
 - Added `controller.serviceMonitor.extraRelabelings` parameter to support relabelings in Prometheus ServiceMonitor configuration
 
 ## v2.46.0
