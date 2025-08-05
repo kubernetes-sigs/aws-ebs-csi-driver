@@ -478,6 +478,19 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			expectedError: "did not find aws instance ID in node providerID string",
 		},
 		{
+			name:     "Instance ID not found(hyperpod)",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///us-west-2a/hyperpod-clusterId",
+				},
+			},
+			expectedError: "did not find aws instance ID in node providerID string",
+		},
+		{
 			name:     "TestKubernetesAPIInstanceInfo: Missing instance type label",
 			nodeName: "test-node",
 			node: &corev1.Node{
@@ -541,6 +554,60 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			},
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
+			},
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: HyperPod instance with SageMaker labels",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
+						corev1.LabelTopologyRegion:             "us-west-2",
+						corev1.LabelTopologyZone:               "us-west-2a",
+						LabelSageMakerENICount:                 "3",
+						LabelSageMakerBlockDeviceMappingsCount: "2",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
+				},
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "hyperpod-abcde3ghij4l-i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        3,
+				NumBlockDeviceMappings: 2,
+			},
+		},
+		{
+			name:     "TestKubernetesAPIInstanceInfo: HyperPod instance invalid SageMaker labels",
+			nodeName: "test-node",
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-node",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
+						corev1.LabelTopologyRegion:             "us-west-2",
+						corev1.LabelTopologyZone:               "us-west-2a",
+						LabelSageMakerENICount:                 "invalid-number",
+						LabelSageMakerBlockDeviceMappingsCount: "invalid-number",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
+				},
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "hyperpod-abcde3ghij4l-i-1234567890abcdef0",
 				InstanceType:           "c5.xlarge",
 				Region:                 "us-west-2",
 				AvailabilityZone:       "us-west-2a",
