@@ -19,6 +19,7 @@ limitations under the License.
 package mounter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -155,7 +156,8 @@ func findNvmeVolume(findName string) (device string, err error) {
 // execRunner is a helper to inject exec.Comamnd().CombinedOutput() for verifyVolumeSerialMatch
 // Tests use a mocked version that does not actually execute any binaries.
 func execRunner(name string, arg ...string) ([]byte, error) {
-	return exec.Command(name, arg...).CombinedOutput()
+	// TODO: Pass context down from driver.go
+	return exec.CommandContext(context.TODO(), name, arg...).CombinedOutput()
 }
 
 // verifyVolumeSerialMatch checks the volume serial of the device against the expected volume.
