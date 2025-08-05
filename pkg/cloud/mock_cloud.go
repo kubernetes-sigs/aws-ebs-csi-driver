@@ -140,6 +140,20 @@ func (mr *MockCloudMockRecorder) DetachDisk(ctx, volumeID, nodeID interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachDisk", reflect.TypeOf((*MockCloud)(nil).DetachDisk), ctx, volumeID, nodeID)
 }
 
+// DryRun mocks base method.
+func (m *MockCloud) DryRun(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DryRun", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DryRun indicates an expected call of DryRun.
+func (mr *MockCloudMockRecorder) DryRun(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DryRun", reflect.TypeOf((*MockCloud)(nil).DryRun), ctx)
+}
+
 // EnableFastSnapshotRestores mocks base method.
 func (m *MockCloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error) {
 	m.ctrl.T.Helper()
