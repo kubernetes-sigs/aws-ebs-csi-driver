@@ -1,4 +1,70 @@
+# v1.47.0
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The `blockExpress` StorageClass parameter is deprecated, effective immediately ([#2564](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2564), [@mdzraf](https://github.com/mdzraf))
+
+**Starting in `v1.47.0`, newly created `io2` volumes will always use a cap of 256,000 IOPS, irregardless of whether the `blockExpress` parameter is set to true or not.** This aligns with EBS, which now [creates all `io2` volumes as Block Express](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html#vol-type-ssd). Volumes with greater than 64,000 IOPS may not reach their full performance on non-Nitro instances, see the EBS documentation for more details.
+
+Starting in `v1.47.0`, the `blockExpress` parameter has no effect (other than logging a deprecation warning) when present in a `StorageClass`. There are no current plans to fully remove support for the parameter (and fail `StorageClass`es using it), and any such change will be communicated in advance via the EBS CSI Driver `CHANGELOG`.
+
+### Feature
+
+- Support attaching and detaching volumes from Amazon SageMaker HyperPod nodes on EKS clusters ([#2601](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2601), [@zzh611](https://github.com/zzh611))
+
+### Bug or Regression
+
+- Increase robustness of taint removal via resync ([#2588](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2588), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- cel.dev/expr: v0.23.0 → v0.24.0
+- cloud.google.com/go/compute/metadata: v0.6.0 → v0.7.0
+- github.com/aws/aws-sdk-go-v2/config: [v1.29.17 → v1.30.3](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.29.17...config/v1.30.3)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.17.70 → v1.18.3](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.17.70...credentials/v1.18.3)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.16.32 → v1.18.2](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.16.32...feature/ec2/imds/v1.18.2)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.3.36 → v1.4.2](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.3.36...internal/configsources/v1.4.2)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.6.36 → v2.7.2](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.6.36...internal/endpoints/v2/v2.7.2)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.232.0 → v1.240.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.232.0...service/ec2/v1.240.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.12.4 → v1.13.0](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.12.4...service/internal/accept-encoding/v1.13.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.12.17 → v1.13.2](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.12.17...service/internal/presigned-url/v1.13.2)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.25.5 → v1.27.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.25.5...service/sso/v1.27.0)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.30.3 → v1.32.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.30.3...service/ssooidc/v1.32.0)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.34.0 → v1.36.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.34.0...service/sts/v1.36.0)
+- github.com/aws/aws-sdk-go-v2: [v1.36.5 → v1.37.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.36.5...v1.37.2)
+- github.com/aws/smithy-go: [v1.22.4 → v1.22.5](https://github.com/aws/smithy-go/compare/v1.22.4...v1.22.5)
+- github.com/cenkalti/backoff/v5: [v5.0.2 → v5.0.3](https://github.com/cenkalti/backoff/compare/v5.0.2...v5.0.3)
+- github.com/cncf/xds/go: [ae57f3c → 2ac532f](https://github.com/cncf/xds/compare/ae57f3c...2ac532f)
+- github.com/golang/glog: [v1.2.4 → v1.2.5](https://github.com/golang/glog/compare/v1.2.4...v1.2.5)
+- github.com/onsi/gomega: [v1.37.0 → v1.38.0](https://github.com/onsi/gomega/compare/v1.37.0...v1.38.0)
+- github.com/prometheus/client_golang: [v1.22.0 → v1.23.0](https://github.com/prometheus/client_golang/compare/v1.22.0...v1.23.0)
+- github.com/spf13/pflag: [v1.0.6 → v1.0.7](https://github.com/spf13/pflag/compare/v1.0.6...v1.0.7)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.35.0 → v1.36.0
+- go.opentelemetry.io/proto/otlp: v1.7.0 → v1.7.1
+- google.golang.org/genproto/googleapis/api: 8d1bb00 → a7a43d2
+- google.golang.org/genproto/googleapis/rpc: 8d1bb00 → a7a43d2
+- google.golang.org/grpc: v1.73.0 → v1.74.2
+- k8s.io/api: v0.33.2 → v0.33.3
+- k8s.io/apimachinery: v0.33.2 → v0.33.3
+- k8s.io/client-go: v0.33.2 → v0.33.3
+- k8s.io/component-base: v0.33.2 → v0.33.3
+- k8s.io/mount-utils: v0.33.2 → v0.33.3
+- sigs.k8s.io/json: cfa47c3 → 2d32026
+- sigs.k8s.io/yaml: v1.5.0 → v1.6.0
+
+### Removed
+_Nothing has changed._
+
 # v1.46.0
+
+## Changes by Kind
 
 ### Feature
 

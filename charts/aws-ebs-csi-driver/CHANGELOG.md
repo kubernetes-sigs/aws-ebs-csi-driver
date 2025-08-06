@@ -1,5 +1,16 @@
 # Helm chart
 
+## v2.47.0
+
+### Feature
+
+- Bump driver version to `v1.47.0`
+- Add `ebs-csi-node` readiness probe so that pod is not marked ready until metadata source acquired and starts serving CSI RPCs ([#2579](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2579), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+### Bug or Regression
+
+- Allow `null` to be set for `nodeAllocatableUpdatePeriodSeconds.type` in Helm schema ([#2578](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2578), [@torredil](https://github.com/torredil))
+
 ## v2.46.0
 - Bump driver version to `v1.46.0`
 - Added new Helm parameter: nodeAllocatableUpdatePeriodSeconds. This parameter updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval. Kubernetes enforces a minimum update interval of 10 seconds. This parameter is supported in Kubernetes 1.33+ and requires the MutableCSINodeAllocatableCount feature gate to be enabled in kubelet and kube-apiserver. ([#2538](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2538), [@torredil](https://github.com/torredil))
