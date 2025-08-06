@@ -31,8 +31,8 @@ loudecho "Set up Docker Buildx"
 # See https://github.com/docker/setup-buildx-action
 # and https://github.com/kubernetes-csi/csi-release-tools/blob/master/build.make#L132
 export DOCKER_CLI_EXPERIMENTAL=enabled
-trap "docker buildx rm multiarchimage-buildertest" EXIT
-docker buildx create --driver-opt=image=moby/buildkit:v0.12.5 --bootstrap --use --name multiarchimage-buildertest
+trap "docker buildx rm multiarchimage-cloudbuild" EXIT
+docker buildx create --driver-opt=image=moby/buildkit:v0.23.2 --bootstrap --use --name multiarchimage-cloudbuild
 
 loudecho "Set up QEMU"
 # See https://github.com/docker/setup-qemu-action
