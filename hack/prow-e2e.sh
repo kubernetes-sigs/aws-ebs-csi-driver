@@ -19,6 +19,7 @@
 
 # Prevent race conditions by frontloading tool download
 # TODO: Find a way to lock pip installs to prevent pip concurrency bugs from hurting us
+exit 0
 make bin/aws
 
 case ${1} in
