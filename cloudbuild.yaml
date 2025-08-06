@@ -20,3 +20,5 @@ steps:
       - GIT_TAG=${_GIT_TAG}
       - PULL_BASE_REF=${_PULL_BASE_REF}
       - HOME=/root
+options:
+  machineType: E2_HIGHCPU_32
