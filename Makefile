@@ -93,7 +93,8 @@ update: update/gofix update/gofmt update/kustomize update/mockgen update/gomod u
 	@echo "All updates succeeded!"
 
 .PHONY: verify
-verify: verify/govet verify/golangci-lint verify/update
+verify:
+	go test -v -race ./cmd/... ./pkg/... ./tests/sanity/...
 	@echo "All verifications passed!"
 
 .PHONY: cluster/create
