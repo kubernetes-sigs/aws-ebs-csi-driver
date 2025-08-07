@@ -4,7 +4,12 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: label-patcher
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
 rules:
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["patch"]
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["list", "watch", "get"]

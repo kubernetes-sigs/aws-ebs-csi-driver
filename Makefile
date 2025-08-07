@@ -1,4 +1,4 @@
-# Copyright 2023 The Kubernetes Authors.
+# Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -239,11 +239,14 @@ sub-push-a1compat:
 .PHONY: all-push
 all-push: sub-push sub-push-fips sub-push-a1compat
 
-# QUESTION: should my tests be run in the current CI jobs or a separate job
-
-.PHONY: ec2Labels-test
-ec2Labels-test:
-	cd tests/e2e && ginkgo -v -focus="disruptive"
+.PHONY: e2e/ec2-labels-test
+e2e/ec2-labels-test: bin/helm bin/ginkgo
+	TEST_PATH=./tests/e2e/... \
+	GINKGO_LABEL_FILTER="Disruptive" \
+	GINKGO_PARALLEL=1 \
+	EBS_INSTALL_SNAPSHOT="false" \
+	METADATA_SOURCES="ec2labelskubernetes" \
+	./hack/e2e/run.sh
 
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*

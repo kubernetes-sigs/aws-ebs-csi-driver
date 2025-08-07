@@ -24,7 +24,7 @@ In order for the driver to access IMDS, it either must be run in host networking
 
 #### EC2 Labels Kubernetes Metadata
 
-TODO: placeholder
+For this metadata source to work, the driver pods must have access to the Kubernetes API server. The driver controller pods must also have Kubernetes RBAC permission to patch nodes. This metadata service gets the instance ID, type, region, and AZ in the same way as Kubernetes Metadata. The volume and ENI count are additionally obtained from the EC2 API. 
 
 #### Kubernetes Metadata
 

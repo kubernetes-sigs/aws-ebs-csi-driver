@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
 )
 
 func TestNewMetadataService(t *testing.T) {
@@ -208,12 +207,11 @@ func TestNewMetadataService(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockIMDS := NewMockIMDS(ctrl)
-			mockK8sClient := func() (kubernetes.Interface, *rest.Config, error) {
+			mockK8sClient := func() (kubernetes.Interface, error) {
 				if tc.k8sAPIError != nil {
-					return nil, nil, tc.k8sAPIError
+					return nil, tc.k8sAPIError
 				}
-				node := tc.node
-				return fake.NewSimpleClientset(node), nil, nil
+				return fake.NewSimpleClientset(tc.node), nil
 			}
 
 			t.Setenv("CSI_NODE_NAME", "test-node")

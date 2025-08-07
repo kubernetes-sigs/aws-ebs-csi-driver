@@ -21,7 +21,6 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
@@ -101,7 +100,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 // TODO: Enhanceed-kuberentes metadata should also be updated from node regularly once KEP enters beta and new PR merges.
 // UpdateMetadata refreshes ENI information.
 // We do not refresh blockDeviceMappings because IMDS only reports data from when instance starts (As of April 2025).
-func (m *Metadata) UpdateMetadata(k8sClient kubernetes.Interface) error {
+func (m *Metadata) UpdateMetadata() error {
 	if m.IMDSClient == nil {
 		// IMDS not available, skip updates
 		return nil
@@ -126,7 +125,7 @@ func retrieveIMDSMetadata(imdsClient IMDSClient) (*Metadata, error) {
 }
 
 func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient, ec2Labels bool) (*Metadata, error) {
-	clientset, _, err := k8sAPIClient()
+	clientset, err := k8sAPIClient()
 	if err != nil {
 		return nil, err
 	}

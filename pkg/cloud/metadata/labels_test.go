@@ -20,6 +20,7 @@ import (
 	"fmt"
 	reflect "reflect"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,18 +30,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 )
 
-func TestMetadataInformer(t *testing.T) {
+func TestPatchNewNodes(t *testing.T) {
 	testCases := []struct {
-		name             string
-		newNode          *corev1.Node
-		newPV            *corev1.PersistentVolume
-		expectedMetadata map[string]enisVolumes
-		expErr           error
+		name            string
+		newNode         *corev1.Node
+		newPV           *corev1.PersistentVolume
+		newNodeMetadata map[string]enisVolumes
+		expErr          error
 	}{
 		{
 			name: "success: normal, new node added",
@@ -53,7 +55,7 @@ func TestMetadataInformer(t *testing.T) {
 					ProviderID: "example/i-001",
 				},
 			},
-			expectedMetadata: map[string]enisVolumes{
+			newNodeMetadata: map[string]enisVolumes{
 				"i-001": {ENIs: 2, Volumes: 2},
 			},
 			expErr: nil,
@@ -65,65 +67,47 @@ func TestMetadataInformer(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockCloud := cloud.NewMockCloud(mockCtrl)
 
-			mockCloud.EXPECT().GetInstance(gomock.Any(), gomock.Any()).Return(
-				newFakeInstance(tc.newNode.Name, tc.expectedMetadata[tc.newNode.Name].ENIs, tc.expectedMetadata[tc.newNode.Name].Volumes+1),
+			mockCloud.EXPECT().GetInstancesPatching(gomock.Any(), gomock.Any()).Return(
+				[]*types.Instance{newFakeInstance(tc.newNode.Name, tc.newNodeMetadata[tc.newNode.Name].ENIs, tc.newNodeMetadata[tc.newNode.Name].Volumes+1)},
 				tc.expErr,
 			)
 
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			pvWatcherStarted := make(chan struct{})
-			pvClientset := fake.NewSimpleClientset()
-			pvClientset.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-				gvr := action.GetResource()
-				ns := action.GetNamespace()
-				watch, err := pvClientset.Tracker().Watch(gvr, ns)
-				if err != nil {
-					return false, nil, err
-				}
-				close(pvWatcherStarted)
-				return true, watch, nil
+			watcherStarted := make(chan struct{})
+			mockClientSet := newMockClientSet(watcherStarted)
+			factory := informers.NewSharedInformerFactory(mockClientSet, 0)
+			pvInformer := factory.Core().V1().PersistentVolumes().Informer()
+			err := pvInformer.AddIndexers(cache.Indexers{
+				"volumeID": volumeIDIndexFunc,
 			})
-			pvInformerFactory, pvInformer := pvInformer(pvClientset)
-			pvInformerFactory.Start(ctx.Done())
+			if err != nil {
+				t.Fatalf("Failed to add volume ID indexer: %v", err)
+			}
+			nodesInformer := factory.Core().V1().Nodes().Informer()
+			patchError := patchNewNodes(ctx, mockClientSet, mockCloud, nodesInformer, pvInformer)
+			factory.Start(ctx.Done())
 			cache.WaitForCacheSync(ctx.Done())
-			<-pvWatcherStarted
+			<-watcherStarted
 
-			nodeWatcherStarted := make(chan struct{})
-			nodeClientset := fake.NewSimpleClientset()
-			nodeClientset.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-				gvr := action.GetResource()
-				ns := action.GetNamespace()
-				watch, err := nodeClientset.Tracker().Watch(gvr, ns)
-				if err != nil {
-					return false, nil, err
-				}
-				close(nodeWatcherStarted)
-				return true, watch, nil
-			})
-			nodeInformer := metadataInformer(ctx, nodeClientset, mockCloud, pvInformer)
-			nodeInformer.Start(ctx.Done())
-			cache.WaitForCacheSync(ctx.Done())
-			<-nodeWatcherStarted
-
-			_, err := nodeClientset.CoreV1().Nodes().Create(t.Context(), tc.newNode, metav1.CreateOptions{})
+			_, err = mockClientSet.CoreV1().Nodes().Create(t.Context(), tc.newNode, metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("error injecting node add: %v", err)
 			}
 
-			time.Sleep(5e8)
-			node, _ := nodeClientset.CoreV1().Nodes().Get(t.Context(), tc.newNode.Name, metav1.GetOptions{})
-			if err != nil {
+			time.Sleep(500 * time.Millisecond)
+			node, _ := mockClientSet.CoreV1().Nodes().Get(t.Context(), tc.newNode.Name, metav1.GetOptions{})
+			if patchError != nil {
 				if tc.expErr == nil {
-					t.Fatalf("MetadataInformer() failed: expected no error, got: %v", err)
+					t.Fatalf("MetadataInformer() failed: expected no error, got: %v", patchError)
 				}
-				if err.Error() != tc.expErr.Error() {
-					t.Fatalf("MetadataInformer() failed: expected error %q, got %q", tc.expErr, err)
+				if patchError.Error() != tc.expErr.Error() {
+					t.Fatalf("MetadataInformer() failed: expected error %q, got %q", tc.expErr, patchError)
 				}
 			} else {
-				expectedENIs := strconv.Itoa(tc.expectedMetadata[node.Name].ENIs)
-				expectedVol := strconv.Itoa(tc.expectedMetadata[node.Name].Volumes)
+				expectedENIs := strconv.Itoa(tc.newNodeMetadata[node.Name].ENIs)
+				expectedVol := strconv.Itoa(tc.newNodeMetadata[node.Name].Volumes)
 
 				labeledENIs := node.GetLabels()[ENIsLabel]
 				labeledVol := node.GetLabels()[VolumesLabel]
@@ -137,6 +121,24 @@ func TestMetadataInformer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newMockClientSet(watcherStarted chan struct{}) *fake.Clientset {
+	mockClientSet := fake.NewSimpleClientset()
+	var once sync.Once
+	mockClientSet.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
+		gvr := action.GetResource()
+		ns := action.GetNamespace()
+		watch, err := mockClientSet.Tracker().Watch(gvr, ns)
+		if err != nil {
+			return false, nil, err
+		}
+		once.Do(func() {
+			close(watcherStarted)
+		})
+		return true, watch, nil
+	})
+	return mockClientSet
 }
 
 func newFakeInstance(instanceID string, numENIs, numVolumes int) *types.Instance {
@@ -162,10 +164,18 @@ func mockAddPV(newPV *corev1.PersistentVolume, instances []*types.Instance) []*t
 		return instances
 	}
 
+	var volumeID string
+
+	if newPV.Spec.CSI != nil && newPV.Spec.CSI.Driver == "ebs.csi.aws.com" {
+		volumeID = newPV.Spec.CSI.VolumeHandle
+	} else if newPV.Spec.AWSElasticBlockStore != nil {
+		volumeID = newPV.Spec.AWSElasticBlockStore.VolumeID
+	}
+
 	instances[0].BlockDeviceMappings = append(instances[0].BlockDeviceMappings,
 		types.InstanceBlockDeviceMapping{
 			Ebs: &types.EbsInstanceBlockDevice{
-				VolumeId: &newPV.Spec.CSI.VolumeHandle,
+				VolumeId: &volumeID,
 			},
 		})
 
@@ -269,6 +279,27 @@ func TestGetMetadata(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:      "success: normal with one instance and add one migrated PV",
+			instances: []*types.Instance{newFakeInstance("i-001", 5, 2)},
+			nodes:     defaultNode,
+			expectedMetadata: map[string]enisVolumes{
+				"i-001": {ENIs: 5, Volumes: 1},
+			},
+			newPV: &corev1.PersistentVolume{
+				Spec: corev1.PersistentVolumeSpec{
+					PersistentVolumeSource: corev1.PersistentVolumeSource{
+						CSI: &corev1.CSIPersistentVolumeSource{
+							Driver: "",
+						},
+						AWSElasticBlockStore: &corev1.AWSElasticBlockStoreVolumeSource{
+							VolumeID: "vol-003",
+						},
+					},
+				},
+			},
+			expErr: nil,
+		},
+		{
 			name:             "error: describe instances error",
 			instances:        []*types.Instance{newFakeInstance("i-001", 5, 2)},
 			nodes:            defaultNode,
@@ -283,46 +314,36 @@ func TestGetMetadata(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
-			pvWatcherStarted := make(chan struct{})
-			pvClientset := fake.NewSimpleClientset()
-			pvClientset.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-				gvr := action.GetResource()
-				ns := action.GetNamespace()
-				watch, err := pvClientset.Tracker().Watch(gvr, ns)
-				if err != nil {
-					return false, nil, err
-				}
-				close(pvWatcherStarted)
-				return true, watch, nil
+			watcherStarted := make(chan struct{})
+			mockClientSet := newMockClientSet(watcherStarted)
+			factory := informers.NewSharedInformerFactory(mockClientSet, 0)
+			pvInformer := factory.Core().V1().PersistentVolumes().Informer()
+			err := pvInformer.AddIndexers(cache.Indexers{
+				"volumeID": volumeIDIndexFunc,
 			})
-			pvInformerFactory, pvInformer := pvInformer(pvClientset)
-			pvInformerFactory.Start(ctx.Done())
+			if err != nil {
+				t.Fatalf("Failed to add volume ID indexer: %v", err)
+			}
+			factory.Start(ctx.Done())
 			cache.WaitForCacheSync(ctx.Done())
-			<-pvWatcherStarted
+			<-watcherStarted
 
 			if tc.newPV != nil {
-				_, err := pvClientset.CoreV1().PersistentVolumes().Create(t.Context(), tc.newPV, metav1.CreateOptions{})
+				_, err := mockClientSet.CoreV1().PersistentVolumes().Create(t.Context(), tc.newPV, metav1.CreateOptions{})
 				if err != nil {
 					t.Fatalf("error injecting PV add: %v", err)
 				}
-				time.Sleep(5e8)
+				time.Sleep(500 * time.Millisecond)
 			}
 
 			tc.instances = mockAddPV(tc.newPV, tc.instances)
 			mockCtrl := gomock.NewController(t)
 			mockCloud := cloud.NewMockCloud(mockCtrl)
 
-			if len(tc.instances) > 1 {
-				mockCloud.EXPECT().GetInstances(gomock.Any(), gomock.Any()).Return(
-					tc.instances,
-					tc.expErr,
-				)
-			} else {
-				mockCloud.EXPECT().GetInstance(gomock.Any(), gomock.Any()).Return(
-					tc.instances[0],
-					tc.expErr,
-				)
-			}
+			mockCloud.EXPECT().GetInstancesPatching(gomock.Any(), gomock.Any()).Return(
+				tc.instances,
+				tc.expErr,
+			)
 
 			ENIsVolumesMap, err := getMetadata(t.Context(), mockCloud, tc.nodes, pvInformer)
 			if err != nil {
@@ -368,12 +389,28 @@ func TestPatchLabels(t *testing.T) {
 			},
 			expErr: nil,
 		},
+		{
+			name: "error: failed to patch 1 node",
+			ENIsVolumesMap: map[string]enisVolumes{
+				"i-001": {ENIs: 1, Volumes: 1},
+			},
+			node: corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "i-001",
+					Labels: map[string]string{},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "",
+				},
+			},
+			expErr: errors.New("failed to patch 1 nodes"),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			clientset := fake.NewSimpleClientset(&tc.node)
-			err := patchNodes(t.Context(), &corev1.NodeList{Items: []corev1.Node{tc.node}}, tc.ENIsVolumesMap, clientset)
+			err := patchNodes(t.Context(), &corev1.NodeList{Items: []corev1.Node{tc.node}}, tc.ENIsVolumesMap, clientset, 1)
 			if err != nil {
 				if tc.expErr == nil {
 					t.Fatalf("PatchNodes() failed: expected no error, got: %v", err)

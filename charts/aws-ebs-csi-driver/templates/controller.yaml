@@ -429,7 +429,7 @@ spec:
           {{- end }}
         {{- end }}
         - name: patcher
-          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }} #TODO: question: should we have this be separate image path with just this extra container
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - patcher
