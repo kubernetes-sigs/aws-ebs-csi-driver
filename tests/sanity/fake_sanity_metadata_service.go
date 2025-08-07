@@ -16,7 +16,6 @@ package sanity
 
 import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
-	"k8s.io/client-go/kubernetes"
 )
 
 type fakeMetadataService struct {
@@ -35,7 +34,7 @@ func newFakeMetadataService(id string, r string, az string, oa arn.ARN) *fakeMet
 	}
 }
 
-func (m *fakeMetadataService) UpdateMetadata(kubernetes.Interface) error {
+func (m *fakeMetadataService) UpdateMetadata() error {
 	return nil
 }
 

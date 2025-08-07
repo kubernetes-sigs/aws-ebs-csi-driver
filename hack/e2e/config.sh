@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2023 The Kubernetes Authors.
+# Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 OUTPOST_ARN=${OUTPOST_ARN:-}
 OUTPOST_INSTANCE_TYPE=${OUTPOST_INSTANCE_TYPE:-${INSTANCE_TYPE}}
 FIPS_TEST=${FIPS_TEST:-"false"}
+METADATA_SOURCES=${METADATA_SOURCES:-"imds"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
@@ -63,5 +64,6 @@ COLLECT_METRICS=${COLLECT_METRICS:-"false"}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e-kubernetes/..."}
 GINKGO_FOCUS=${GINKGO_FOCUS:-"External.Storage"}
+GINKGO_LABEL_FILTER=${GINKGO_LABEL_FILTER:-""}
 GINKGO_SKIP=${GINKGO_SKIP:-"\[Disruptive\]|\[Serial\]|\[Flaky\]"}
 GINKGO_PARALLEL=${GINKGO_PARALLEL:-25}

@@ -19,7 +19,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"k8s.io/client-go/kubernetes"
 )
 
 // MetadataService represents AWS metadata service.
@@ -31,7 +30,7 @@ type MetadataService interface {
 	GetNumAttachedENIs() int
 	GetNumBlockDeviceMappings() int
 	GetOutpostArn() arn.ARN
-	UpdateMetadata(k8sClient kubernetes.Interface) error
+	UpdateMetadata() error
 }
 
 type IMDS interface {

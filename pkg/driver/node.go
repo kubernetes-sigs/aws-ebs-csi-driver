@@ -79,11 +79,10 @@ const (
 
 // NodeService represents the node service of CSI driver.
 type NodeService struct {
-	metadata  metadata.MetadataService
-	mounter   mounter.Mounter
-	inFlight  *internal.InFlight
-	options   *Options
-	k8sClient kubernetes.Interface
+	metadata metadata.MetadataService
+	mounter  mounter.Mounter
+	inFlight *internal.InFlight
+	options  *Options
 	csi.UnimplementedNodeServer
 }
 
@@ -96,11 +95,10 @@ func NewNodeService(o *Options, md metadata.MetadataService, m mounter.Mounter, 
 	}
 
 	return &NodeService{
-		metadata:  md,
-		mounter:   m,
-		inFlight:  internal.NewInFlight(),
-		options:   o,
-		k8sClient: k,
+		metadata: md,
+		mounter:  m,
+		inFlight: internal.NewInFlight(),
+		options:  o,
 	}
 }
 
@@ -578,7 +576,7 @@ func (d *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *NodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).InfoS("NodeGetInfo: called", "args", req)
 
-	if err := d.metadata.UpdateMetadata(d.k8sClient); err != nil {
+	if err := d.metadata.UpdateMetadata(); err != nil {
 		klog.ErrorS(err, "Failed to update metadata, using cached values")
 	}
 

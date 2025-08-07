@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Kubernetes Authors.
+Copyright 2025 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,11 +28,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	v1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -40,7 +43,7 @@ import (
 	admissionapi "k8s.io/pod-security-admission/api"
 )
 
-type metadata struct {
+type instanceMetadata struct {
 	ENIs             int
 	Volumes          int
 	InstanceType     string
@@ -49,41 +52,32 @@ type metadata struct {
 	AvailabilityZone string
 }
 
-const (
-	// VolumesLabel is the label name for the number of volumes on a node
-	VolumesLabel = "ebs.csi.aws.com/non-csi-ebs-volumes-count"
-
-	// ENIsLabel is the label name for the number of ENIs on a node
-	ENIsLabel = "ebs.csi.aws.com/enis-count"
-)
-
-var _ = Describe("[disruptive] EBS CSI Driver Node Labeling", func() {
+var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisruptive(), func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		ec2Client        *ec2.Client
 		cs               clientset.Interface
-		expectedMetadata map[string]*metadata
-		labeledMetadata  map[string]*metadata
+		expectedMetadata map[string]*instanceMetadata
+		labeledMetadata  map[string]*instanceMetadata
 		cleanUp          []func()
 	)
 
 	BeforeEach(func() {
-		cfg, err := config.LoadDefaultConfig(context.TODO())
+		cfg, err := config.LoadDefaultConfig(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to load AWS SDK config")
 		ec2Client = ec2.NewFromConfig(cfg)
 
 		cs = f.ClientSet
 
-		labeledMetadata = make(map[string]*metadata)
+		labeledMetadata = make(map[string]*instanceMetadata)
 	})
 
 	AfterEach(func() {
 		for i := len(cleanUp) - 1; i >= 0; i-- {
 			cleanUp[i]()
 		}
-
 		checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
 		By("Deleting the EBS CSI node pods to reset allocatable counts")
 		for instance := range labeledMetadata {
@@ -115,8 +109,9 @@ var _ = Describe("[disruptive] EBS CSI Driver Node Labeling", func() {
 			cleanUp = append(cleanUp, func() {
 				cleanUpVolume(firstCreatedNonCSIVolumeID, firstChangedNonCSIVolumeInstance, ec2Client, expectedMetadata)
 			})
+
 			By("Attaching the new non CSI managed volume")
-			attachVolume(ec2Client, firstCreatedNonCSIVolumeID, firstChangedNonCSIVolumeInstance, "/dev/sdf", expectedMetadata)
+			attachVolume(ec2Client, firstCreatedNonCSIVolumeID, firstChangedNonCSIVolumeInstance, "/dev/sdz", expectedMetadata)
 			checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
 			By("Deleting the EBS CSI node pod to trigger label update")
 			deletePod(labeledMetadata[firstChangedNonCSIVolumeInstance].NodeID, cs)
@@ -126,11 +121,11 @@ var _ = Describe("[disruptive] EBS CSI Driver Node Labeling", func() {
 			By("Creating and attaching a new CSI managed volume")
 			createStorageClass(cs)
 			cleanUp = append(cleanUp, func() { cleanUpStorageClass(cs, "ebs-sc") })
-			pvc := createPVC(cs)
-			cleanUp = append(cleanUp, func() { cleanUpPVC(cs, "default", "ebs-claim") })
-			pod := createPod(cs)
-			cleanUp = append(cleanUp, func() { cleanUpPod(cs, "default", "app") })
-			changedCSIVolumeInstance := createCSIManagedVolume(cs, pvc, pod)
+			pvc := createPVC(cs, f.Namespace.Name)
+			cleanUp = append(cleanUp, func() { cleanUpPVC(cs, f.Namespace.Name, "ebs-claim") })
+			pod := createPod(cs, f.Namespace.Name)
+			cleanUp = append(cleanUp, func() { cleanUpPod(cs, f.Namespace.Name, "app") })
+			changedCSIVolumeInstance := createCSIManagedVolume(cs, pvc, pod, f.Namespace.Name)
 
 			// Because the previous step should not change volume labels/allocatable count, we add a non CSI managed volume to know that the
 			// volume labels/allocatable count updated accordingly
@@ -138,19 +133,19 @@ var _ = Describe("[disruptive] EBS CSI Driver Node Labeling", func() {
 			changedNonCSIVolumeInstance, createdNonCSIVolumeID := createNonCSIManagedVolume(ec2Client, expectedMetadata, changedCSIVolumeInstance)
 			cleanUp = append(cleanUp, func() { cleanUpVolume(createdNonCSIVolumeID, changedNonCSIVolumeInstance, ec2Client, expectedMetadata) })
 			By("Attaching the new non CSI managed volume")
-			attachVolume(ec2Client, createdNonCSIVolumeID, changedNonCSIVolumeInstance, "/dev/sdh", expectedMetadata)
+			attachVolume(ec2Client, createdNonCSIVolumeID, changedNonCSIVolumeInstance, "/dev/sdy", expectedMetadata)
 			checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
 			By("Deleting the EBS CSI node pod to trigger label update")
 			deletePod(labeledMetadata[changedNonCSIVolumeInstance].NodeID, cs)
 			checkCSINodesUpdated(cs, labeledMetadata, expectedMetadata)
 
 			By("Verifying updated node labels")
-			updatedNodes, err := cs.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+			updatedNodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Failed to list updated nodes")
 			checkVolENI(expectedMetadata, labeledMetadata, updatedNodes)
 
 			By("Verifying updated CSI node allocatable counts")
-			updatedCsiNodes, err := cs.StorageV1().CSINodes().List(context.TODO(), metav1.ListOptions{})
+			updatedCsiNodes, err := cs.StorageV1().CSINodes().List(context.Background(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred(), "Failed to list updated CSI nodes")
 			checkAllocatable(expectedMetadata, labeledMetadata, updatedCsiNodes)
 		})
@@ -165,8 +160,8 @@ func getAllocatableCount(volumes, enis int) int32 {
 }
 
 // getVolENIs gets the expected metadata of each instance from the ec2 API
-func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*metadata {
-	expectedMetadata := map[string]*metadata{}
+func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*instanceMetadata {
+	expectedMetadata := map[string]*instanceMetadata{}
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
 			instanceID := *instance.InstanceId
@@ -181,7 +176,7 @@ func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*metadata {
 				// we do not include the root volume in the expected number of volumes attached
 				numBlockDeviceMappings = len(instance.BlockDeviceMappings) - 1
 			}
-			expectedMetadata[instanceID] = &metadata{
+			expectedMetadata[instanceID] = &instanceMetadata{
 				ENIs:             numAttachedENIs,
 				Volumes:          numBlockDeviceMappings,
 				InstanceType:     string(instance.InstanceType),
@@ -193,12 +188,12 @@ func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*metadata {
 }
 
 // checkVolENI compares `expectedMetadata` and `labeledMetadata` to have the same number of volumes and ENIs attached to each node in `nodes`
-func checkVolENI(expectedMetadata, labeledMetadata map[string]*metadata, nodes *corev1.NodeList) {
+func checkVolENI(expectedMetadata, labeledMetadata map[string]*instanceMetadata, nodes *corev1.NodeList) {
 	for _, node := range nodes.Items {
-		vol, _ := strconv.Atoi(node.GetLabels()[VolumesLabel])
-		enis, _ := strconv.Atoi(node.GetLabels()[ENIsLabel])
-		id := parseNode(node.Spec.ProviderID)
-		labeledMetadata[id] = &metadata{}
+		vol, _ := strconv.Atoi(node.GetLabels()[metadata.VolumesLabel])
+		enis, _ := strconv.Atoi(node.GetLabels()[metadata.ENIsLabel])
+		id := parseProviderID(node.Spec.ProviderID)
+		labeledMetadata[id] = &instanceMetadata{}
 		labeledMetadata[id].ENIs = enis
 		labeledMetadata[id].Volumes = vol
 		labeledMetadata[id].NodeID = node.Name
@@ -217,7 +212,7 @@ func checkVolENI(expectedMetadata, labeledMetadata map[string]*metadata, nodes *
 }
 
 // checkAllocatable compares `expectedMetadata` and `labeledMetadata` to have the same allocatable count on each node in `nodes`
-func checkAllocatable(expectedMetadata, labeledMetadata map[string]*metadata, csiNodes *storagev1.CSINodeList) {
+func checkAllocatable(expectedMetadata, labeledMetadata map[string]*instanceMetadata, csiNodes *storagev1.CSINodeList) {
 	for _, csiNode := range csiNodes.Items {
 		nodeID := csiNode.Name
 		for _, driver := range csiNode.Spec.Drivers {
@@ -233,9 +228,9 @@ func checkAllocatable(expectedMetadata, labeledMetadata map[string]*metadata, cs
 	}
 }
 
-func createCSIManagedVolume(cs kubernetes.Interface, pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod) string {
+func createCSIManagedVolume(cs kubernetes.Interface, pvc *corev1.PersistentVolumeClaim, pod *corev1.Pod, namespace string) string {
 	Eventually(func() bool {
-		pvcCheck, err := cs.CoreV1().PersistentVolumeClaims("default").Get(context.TODO(), pvc.Name, metav1.GetOptions{})
+		pvcCheck, err := cs.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), pvc.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Printf("Error getting PVC: %v\n", err)
 			return false
@@ -247,29 +242,29 @@ func createCSIManagedVolume(cs kubernetes.Interface, pvc *corev1.PersistentVolum
 		return false
 	}, 5*time.Minute, 10*time.Second).Should(BeTrue(), "PVC should be bound with volume name")
 
-	updatedPod, err := cs.CoreV1().Pods("default").Get(context.TODO(), pod.Name, metav1.GetOptions{})
+	updatedPod, err := cs.CoreV1().Pods(namespace).Get(context.Background(), pod.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "failed to get updated pod")
 
-	node, err := cs.CoreV1().Nodes().Get(context.TODO(), updatedPod.Spec.NodeName, metav1.GetOptions{})
+	node, err := cs.CoreV1().Nodes().Get(context.Background(), updatedPod.Spec.NodeName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "failed to get node")
 
-	instanceID := parseNode(node.Spec.ProviderID)
+	instanceID := parseProviderID(node.Spec.ProviderID)
 
 	return instanceID
 }
 
-func checkLabelsUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetadata map[string]*metadata) {
+func checkLabelsUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetadata map[string]*instanceMetadata) {
 	By("Waiting for labels to update")
 	Eventually(func() bool {
-		updatedNodes, err := cs.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+		updatedNodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false
 		}
 
 		for _, node := range updatedNodes.Items {
-			id := parseNode(node.Spec.ProviderID)
-			vol, _ := strconv.Atoi(node.Labels[VolumesLabel])
-			eni, _ := strconv.Atoi(node.Labels[ENIsLabel])
+			id := parseProviderID(node.Spec.ProviderID)
+			vol, _ := strconv.Atoi(node.Labels[metadata.VolumesLabel])
+			eni, _ := strconv.Atoi(node.Labels[metadata.ENIsLabel])
 			labeledMetadata[id].Volumes = vol
 			labeledMetadata[id].ENIs = eni
 
@@ -281,10 +276,10 @@ func checkLabelsUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetada
 	}, "2m", "2s").Should(BeTrue(), "Node labels were not updated with correct volume count")
 }
 
-func checkCSINodesUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetadata map[string]*metadata) {
+func checkCSINodesUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetadata map[string]*instanceMetadata) {
 	By("Waiting for CSI node allocatable count to update")
 	Eventually(func() bool {
-		updatedCsiNodes, err := cs.StorageV1().CSINodes().List(context.TODO(), metav1.ListOptions{})
+		updatedCsiNodes, err := cs.StorageV1().CSINodes().List(context.Background(), metav1.ListOptions{})
 		if err != nil {
 			return false
 		}
@@ -305,13 +300,14 @@ func checkCSINodesUpdated(cs kubernetes.Interface, labeledMetadata, expectedMeta
 	}, "2m", "2s").Should(BeTrue(), "CSI node allocatable count were not updated with correct count")
 }
 
-func createNonCSIManagedVolume(ec2svc *ec2.Client, metadata map[string]*metadata, changedCSIVolumeInstance string) (string, string) {
+func createNonCSIManagedVolume(ec2svc *ec2.Client, metadata map[string]*instanceMetadata, changedCSIVolumeInstance string) (string, string) {
 	var instanceID string
 	if changedCSIVolumeInstance != "" {
 		instanceID = changedCSIVolumeInstance
 	} else {
 		for k := range metadata {
 			instanceID = k
+			break // a random instance is chosen for the test
 		}
 	}
 
@@ -321,7 +317,7 @@ func createNonCSIManagedVolume(ec2svc *ec2.Client, metadata map[string]*metadata
 		VolumeType:       types.VolumeTypeGp3,
 	}
 
-	volumeResult, err := ec2svc.CreateVolume(context.TODO(), createInput)
+	volumeResult, err := ec2svc.CreateVolume(context.Background(), createInput)
 	Expect(err).NotTo(HaveOccurred(), "Failed to create volume")
 	volumeID := *volumeResult.VolumeId
 
@@ -331,7 +327,7 @@ func createNonCSIManagedVolume(ec2svc *ec2.Client, metadata map[string]*metadata
 			VolumeIds: []string{*volumeResult.VolumeId},
 		}
 
-		result, err := ec2svc.DescribeVolumes(context.TODO(), describeInput)
+		result, err := ec2svc.DescribeVolumes(context.Background(), describeInput)
 		if err != nil {
 			return false
 		}
@@ -346,14 +342,14 @@ func createNonCSIManagedVolume(ec2svc *ec2.Client, metadata map[string]*metadata
 	return instanceID, volumeID
 }
 
-func attachVolume(ec2svc *ec2.Client, volumeID, instanceID, device string, metadata map[string]*metadata) bool {
+func attachVolume(ec2svc *ec2.Client, volumeID, instanceID, device string, metadata map[string]*instanceMetadata) bool {
 	attachInput := &ec2.AttachVolumeInput{
 		Device:     aws.String(device),
 		InstanceId: aws.String(instanceID),
 		VolumeId:   aws.String(volumeID),
 	}
 
-	_, err := ec2svc.AttachVolume(context.TODO(), attachInput)
+	_, err := ec2svc.AttachVolume(context.Background(), attachInput)
 	Expect(err).NotTo(HaveOccurred(), "Failed to attach volume")
 
 	metadata[instanceID].Volumes += 1
@@ -361,7 +357,7 @@ func attachVolume(ec2svc *ec2.Client, volumeID, instanceID, device string, metad
 }
 
 func deletePod(nodeID string, cs clientset.Interface) {
-	pods, err := cs.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+	pods, err := cs.CoreV1().Pods("kube-system").List(context.Background(), metav1.ListOptions{
 		FieldSelector: "spec.nodeName=" + nodeID,
 	})
 	Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
@@ -381,46 +377,38 @@ func deletePod(nodeID string, cs clientset.Interface) {
 		PropagationPolicy: &deletePolicy,
 	}
 
-	err = cs.CoreV1().Pods("kube-system").Delete(context.TODO(), targetPod, deleteOptions)
+	err = cs.CoreV1().Pods("kube-system").Delete(context.Background(), targetPod, deleteOptions)
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete pod "+targetPod)
 }
 
-func parseNode(providerID string) string {
-	if providerID != "" {
-		parts := strings.Split(providerID, "/")
-		if len(parts) > 0 {
-			return parts[len(parts)-1]
-		}
-	}
-	return ""
+func parseProviderID(providerID string) string {
+	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|i-[a-z0-9]+$"
+
+	re := regexp.MustCompile(awsInstanceIDRegex)
+	instanceID := re.FindString(providerID)
+
+	return instanceID
+
 }
 
 func createStorageClass(cs kubernetes.Interface) *v1.StorageClass {
 	storageClass := &storagev1.StorageClass{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "storage.k8s.io/v1",
-			Kind:       "StorageClass",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ebs-sc",
 		},
 		Provisioner:       "ebs.csi.aws.com",
 		VolumeBindingMode: func() *storagev1.VolumeBindingMode { v := storagev1.VolumeBindingWaitForFirstConsumer; return &v }()}
 
-	_, err := cs.StorageV1().StorageClasses().Create(context.TODO(), storageClass, metav1.CreateOptions{})
+	_, err := cs.StorageV1().StorageClasses().Create(context.Background(), storageClass, metav1.CreateOptions{})
 	if err != nil {
 		Expect(err).NotTo(HaveOccurred(), "Failed to create storage class")
 	}
 	return storageClass
 }
 
-func createPVC(cs kubernetes.Interface) *corev1.PersistentVolumeClaim {
+func createPVC(cs kubernetes.Interface, namespace string) *corev1.PersistentVolumeClaim {
 	storageClassName := "ebs-sc"
 	pvc := &corev1.PersistentVolumeClaim{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "PersistentVolumeClaim",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ebs-claim",
 		},
@@ -436,23 +424,29 @@ func createPVC(cs kubernetes.Interface) *corev1.PersistentVolumeClaim {
 			},
 		},
 	}
-	_, err := cs.CoreV1().PersistentVolumeClaims("default").Create(context.TODO(), pvc, metav1.CreateOptions{})
+	_, err := cs.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), pvc, metav1.CreateOptions{})
 	if err != nil {
 		Expect(err).NotTo(HaveOccurred(), "Failed to create pvc")
 	}
 	return pvc
 }
 
-func createPod(cs kubernetes.Interface) *corev1.Pod {
+func createPod(cs kubernetes.Interface, namespace string) *corev1.Pod {
+	runAsNonRoot := true
+	runAsUser := int64(1000)
+	allowPrivilegeEscalation := false
 	pod := &corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Pod",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "app",
 		},
 		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: &runAsNonRoot,
+				RunAsUser:    &runAsUser,
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "app",
@@ -461,6 +455,17 @@ func createPod(cs kubernetes.Interface) *corev1.Pod {
 						{
 							Name:      "persistent-storage",
 							MountPath: "/data",
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+						RunAsNonRoot:             &runAsNonRoot,
+						RunAsUser:                &runAsUser,
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
 					},
 				},
@@ -477,7 +482,7 @@ func createPod(cs kubernetes.Interface) *corev1.Pod {
 			},
 		},
 	}
-	_, err := cs.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
+	_, err := cs.CoreV1().Pods(namespace).Create(context.Background(), pod, metav1.CreateOptions{})
 	if err != nil {
 		Expect(err).NotTo(HaveOccurred(), "Failed to create pod")
 	}
@@ -486,17 +491,18 @@ func createPod(cs kubernetes.Interface) *corev1.Pod {
 
 func cleanUpPod(cs kubernetes.Interface, namespace, name string) {
 	By("Deleting new pod")
-	err := cs.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err := cs.CoreV1().Pods(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	Eventually(func() bool {
-		_, err := cs.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-		return err != nil
+		_, err := cs.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+
+		return errors.IsNotFound(err)
 	}, "2m", "2s").Should(BeTrue())
 }
 
-func cleanUpVolume(volumeID, instanceID string, ec2Client *ec2.Client, expectedMetadata map[string]*metadata) {
-	result, _ := ec2Client.DescribeVolumes(context.TODO(), &ec2.DescribeVolumesInput{
+func cleanUpVolume(volumeID, instanceID string, ec2Client *ec2.Client, expectedMetadata map[string]*instanceMetadata) {
+	result, _ := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
 		VolumeIds: []string{volumeID},
 	})
 
@@ -510,7 +516,7 @@ func cleanUpVolume(volumeID, instanceID string, ec2Client *ec2.Client, expectedM
 			InstanceId: aws.String(instanceID),
 		}
 
-		_, err := ec2Client.DetachVolume(context.TODO(), detachInput)
+		_, err := ec2Client.DetachVolume(context.Background(), detachInput)
 		Expect(err).NotTo(HaveOccurred(), "Failed to detach volume")
 
 		By("Waiting for volume to be detached")
@@ -519,7 +525,7 @@ func cleanUpVolume(volumeID, instanceID string, ec2Client *ec2.Client, expectedM
 				VolumeIds: []string{volumeID},
 			}
 
-			result, err := ec2Client.DescribeVolumes(context.TODO(), describeInput)
+			result, err := ec2Client.DescribeVolumes(context.Background(), describeInput)
 			if err != nil || len(result.Volumes) == 0 {
 				return false
 			}
@@ -533,29 +539,29 @@ func cleanUpVolume(volumeID, instanceID string, ec2Client *ec2.Client, expectedM
 		VolumeId: aws.String(volumeID),
 	}
 
-	_, err := ec2Client.DeleteVolume(context.TODO(), deleteInput)
+	_, err := ec2Client.DeleteVolume(context.Background(), deleteInput)
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete volume")
 	expectedMetadata[instanceID].Volumes -= 1
 }
 
 func cleanUpPVC(cs kubernetes.Interface, namespace, name string) {
 	By("Deleting PVC")
-	err := cs.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err := cs.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	Eventually(func() bool {
-		_, err := cs.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-		return err != nil
-	}, "2m", 5*time.Second).Should(BeTrue())
+		_, err := cs.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, "2m", "5s").Should(BeTrue())
 }
 
 func cleanUpStorageClass(cs kubernetes.Interface, name string) {
 	By("Deleting StorageClass")
-	err := cs.StorageV1().StorageClasses().Delete(context.TODO(), name, metav1.DeleteOptions{})
+	err := cs.StorageV1().StorageClasses().Delete(context.Background(), name, metav1.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	Eventually(func() bool {
-		_, err := cs.StorageV1().StorageClasses().Get(context.TODO(), name, metav1.GetOptions{})
-		return err != nil
-	}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+		_, err := cs.StorageV1().StorageClasses().Get(context.Background(), name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, "2m", "5s").Should(BeTrue())
 }

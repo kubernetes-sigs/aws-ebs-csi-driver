@@ -134,6 +134,13 @@ const (
 	fastVolumeStatusBatchMaxDelay = 500 * time.Millisecond
 )
 
+const (
+	// maxInstancesDescribed is the maximum number of instances described in each EC2 Describe Instances call
+	// TODO Question: what should a good number for this constant be? https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-pagination.html just says
+	// that it shouldn't be more than 1000.
+	maxInstancesDescribed = 1000
+)
+
 var (
 	// ErrMultiDisks is an error that is returned when multiple
 	// disks are found with the same volume name.
@@ -1813,8 +1820,7 @@ func describeInstances(ctx context.Context, svc EC2API, request *ec2.DescribeIns
 	return instances, nil
 }
 
-// GetInstance returns the instance info associated with a single node ID.
-func (c *cloud) GetInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
+func (c *cloud) getInstance(ctx context.Context, nodeID string) (*types.Instance, error) {
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{nodeID},
 	}
@@ -1837,28 +1843,59 @@ func (c *cloud) GetInstance(ctx context.Context, nodeID string) (*types.Instance
 	}
 }
 
-// GetInstances returns the instance info associated with each node ID in `nodeIDs`.
-func (c *cloud) GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
-	request := &ec2.DescribeInstancesInput{
-		InstanceIds: nodeIDs,
+// GetInstancesPatching returns the instance info associated with each node ID in `nodeIDs` and uses pagination
+// to get instances for large clusters. The instances are also described in batches of size up to `maxInstancesDescribed`.
+func (c *cloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	var allInstances []*types.Instance
+
+	for i := 0; i < len(nodeIDs); i += maxInstancesDescribed {
+		end := i + maxInstancesDescribed
+		if end > len(nodeIDs) {
+			end = len(nodeIDs)
+		}
+
+		batch := nodeIDs[i:end]
+		batchInstances, err := c.getInstancesPatchingBatch(ctx, batch)
+		if err != nil {
+			return nil, err
+		}
+
+		allInstances = append(allInstances, batchInstances...)
 	}
 
-	instances := []*types.Instance{}
-	// A batcher isn't used here because GetInstances is only called once in awhile to update
-	// metadata labels of each node.
-	response, err := c.ec2.DescribeInstances(ctx, request)
-	if err != nil {
-		if isAWSErrorInstanceNotFound(err) {
-			return nil, ErrNotFound
+	return allInstances, nil
+}
+
+func (c *cloud) getInstancesPatchingBatch(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+	var instances []*types.Instance
+	var nextToken *string
+
+	for {
+		request := &ec2.DescribeInstancesInput{
+			InstanceIds: nodeIDs,
+			NextToken:   nextToken,
 		}
-		return nil, fmt.Errorf("error listing AWS instances: %w", err)
+
+		response, err := c.ec2.DescribeInstances(ctx, request)
+		if err != nil {
+			if isAWSErrorInstanceNotFound(err) {
+				return nil, ErrNotFound
+			}
+			return nil, fmt.Errorf("error listing AWS instances: %w", err)
+		}
+
+		for _, reservation := range response.Reservations {
+			for _, instance := range reservation.Instances {
+				instances = append(instances, &instance)
+			}
+		}
+
+		if response.NextToken == nil {
+			break
+		}
+		nextToken = response.NextToken
 	}
 
-	for _, reservation := range response.Reservations {
-		for _, instance := range reservation.Instances {
-			instances = append(instances, &instance)
-		}
-	}
 	return instances, nil
 }
 

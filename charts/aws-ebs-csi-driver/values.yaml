@@ -92,7 +92,7 @@ sidecars:
       allowPrivilegeEscalation: false
   patcher:
     # Additional parameters provided by patcher.
-    logLevel: 4
+    logLevel: 2
     additionalArgs: []
     resources: {}
     securityContext:

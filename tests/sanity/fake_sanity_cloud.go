@@ -142,7 +142,7 @@ func (d *fakeCloud) GetInstance(ctx context.Context, nodeID string) (*types.Inst
 	return &types.Instance{}, nil
 }
 
-func (d *fakeCloud) GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
+func (d *fakeCloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error) {
 	return []*types.Instance{}, nil
 }
 
