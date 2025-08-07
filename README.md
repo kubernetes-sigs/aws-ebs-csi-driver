@@ -19,8 +19,8 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| v1.47.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.47.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.47.0                      |
 | v1.46.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.46.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.46.0                      |
-| v1.45.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.45.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.45.0                      |
 
 ## Releases
 
