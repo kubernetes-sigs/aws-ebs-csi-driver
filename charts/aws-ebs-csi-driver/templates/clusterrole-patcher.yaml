@@ -1,0 +1,16 @@
+{{- if not .Values.nodeComponentOnly -}}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: label-patcher
+  labels:
+    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["patch"]
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["list", "watch", "get"]
+{{- end -}}
