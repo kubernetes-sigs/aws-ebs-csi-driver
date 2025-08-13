@@ -38,9 +38,9 @@ spec:
     - targetPort: 3301
       path: /metrics
       interval: {{ .Values.controller.serviceMonitor.interval | default "15s"}}
-      {{- if .Values.controller.serviceMonitor.extraRelabelings }}
+      {{- if .Values.controller.serviceMonitor.relabelings }}
       relabelings:
-      {{- toYaml .Values.controller.serviceMonitor.extraRelabelings | nindent 6 }}
+      {{- toYaml .Values.controller.serviceMonitor.relabelings | nindent 6 }}
       {{- end }}
 {{- end }}
 {{- end }}

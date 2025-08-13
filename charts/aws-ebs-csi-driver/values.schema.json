@@ -419,7 +419,7 @@
               "type": "string",
               "default": "15s"
             },
-            "extraRelabelings": {
+            "relabelings": {
               "type": "array",
               "description": "Additional relabeling configurations for ServiceMonitor",
               "default": [],
