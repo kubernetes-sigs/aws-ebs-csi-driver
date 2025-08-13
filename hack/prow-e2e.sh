@@ -48,7 +48,7 @@ test-e2e-external-eks)
   ;;
 test-e2e-external-a1-eks)
   TEST="external-a1-eks"
-  export K8S_VERSION_EKSCTL="1.30"
+  export K8S_VERSION_EKSCTL="1.32"
   export INSTANCE_TYPE="a1.large"
   export IMAGE_ARCH="arm64"
   export CLUSTER_TYPE="eksctl"
