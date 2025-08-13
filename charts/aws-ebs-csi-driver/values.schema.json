@@ -418,6 +418,14 @@
             "interval": {
               "type": "string",
               "default": "15s"
+            },
+            "relabelings": {
+              "type": "array",
+              "description": "Additional relabeling configurations for ServiceMonitor",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
             }
           }
         },
