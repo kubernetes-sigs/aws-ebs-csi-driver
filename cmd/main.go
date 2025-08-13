@@ -200,11 +200,7 @@ func main() {
 		}
 	}
 
-	cloud, err := cloud.NewCloud(region, accountID, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
-	if err != nil {
-		klog.ErrorS(err, "failed to create cloud service")
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-	}
+	cloud := cloud.NewCloud(region, accountID, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 
 	m, err := mounter.NewNodeMounter(options.WindowsHostProcess)
 	if err != nil {
