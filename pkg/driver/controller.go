@@ -330,6 +330,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	zoneID := pickAvailabilityZoneID(req.GetAccessibilityRequirements())
 	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
 
 	// fill volume tags
@@ -349,6 +350,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		IOPS:                     iops,
 		Throughput:               throughput,
 		AvailabilityZone:         zone,
+		AvailabilityZoneID:       zoneID,
 		OutpostArn:               outpostArn,
 		Encrypted:                isEncrypted,
 		KmsKeyID:                 kmsKeyID,
@@ -367,6 +369,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			errCode = codes.AlreadyExists
 		case errors.Is(err, cloud.ErrLimitExceeded):
 			errCode = codes.ResourceExhausted
+		case errors.Is(err, cloud.ErrInvalidArgument):
+			errCode = codes.InvalidArgument
 		default:
 			errCode = codes.Internal
 		}
@@ -940,6 +944,25 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 			return zone
 		}
 		zone, exists = topology.GetSegments()[ZoneTopologyKey]
+		if exists {
+			return zone
+		}
+	}
+	return ""
+}
+
+func pickAvailabilityZoneID(requirement *csi.TopologyRequirement) string {
+	if requirement == nil {
+		return ""
+	}
+	for _, topology := range requirement.GetPreferred() {
+		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
+		if exists {
+			return zone
+		}
+	}
+	for _, topology := range requirement.GetRequisite() {
+		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
 		if exists {
 			return zone
 		}
