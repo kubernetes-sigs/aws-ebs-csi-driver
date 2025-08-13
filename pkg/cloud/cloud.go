@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -90,6 +91,8 @@ var (
 const (
 	cacheForgetDelay        = 1 * time.Hour
 	volInitCacheForgetDelay = 6 * time.Hour
+
+	dryRunInterval = 3 * time.Hour
 )
 
 // VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
@@ -333,6 +336,7 @@ type cloud struct {
 	latestClientTokens    expiringcache.ExpiringCache[string, int]
 	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
 	accountID             string
+	attemptDryRun         atomic.Bool
 }
 
 var _ Cloud = &cloud{}
@@ -387,7 +391,7 @@ func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExt
 		bm = newBatcherManager(svc)
 	}
 
-	return &cloud{
+	c := &cloud{
 		region:                region,
 		dm:                    dm.NewDeviceManager(),
 		ec2:                   svc,
@@ -400,6 +404,16 @@ func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExt
 		accountID:             accountID,
 		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
+
+	// Ensure an EC2 Dry-run API call is made on startup and every dryRunInterval
+	c.attemptDryRun.Store(true)
+	go func() {
+		for range time.Tick(dryRunInterval) {
+			c.attemptDryRun.Store(true)
+		}
+	}()
+
+	return c
 }
 
 // newBatcherManager initializes a new instance of batcherManager.
@@ -1756,6 +1770,29 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 		return nil, errors.New(strings.Join(errDetails, "; "))
 	}
 	return response, nil
+}
+
+// DryRun will make a dry-run EC2 API call. Nil return value means we successfully received EC2 DryRunOperation error code.
+func (c *cloud) DryRun(ctx context.Context) error {
+	if c.attemptDryRun.Load() {
+		// Rely on EC2 DAZ because it is required in ebs controller IAM role, but not in instance default role.
+		_, apiErr := c.ec2.DescribeAvailabilityZones(ctx,
+			&ec2.DescribeAvailabilityZonesInput{DryRun: aws.Bool(true)},
+			func(o *ec2.Options) {
+				o.Retryer = aws.NopRetryer{} // Don't retry so we can catch network failures. CO should retry liveness check multiple times.
+				o.APIOptions = nil           // Don't add our logging/metrics middleware because we expect errors.
+			})
+		if apiErr != nil {
+			var awsErr smithy.APIError
+			if errors.As(apiErr, &awsErr) && awsErr.ErrorCode() == "DryRunOperation" {
+				c.attemptDryRun.Store(false)
+				return nil
+			}
+			return fmt.Errorf("dry-run EC2 API call failed: %w", apiErr)
+		}
+	}
+
+	return nil
 }
 
 func describeVolumes(ctx context.Context, svc EC2API, request *ec2.DescribeVolumesInput) ([]types.Volume, error) {
