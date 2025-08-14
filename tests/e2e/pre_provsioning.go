@@ -87,7 +87,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Tags:             map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud = awscloud.NewCloud(region, "", false, "", true, false)
+		cloud = awscloud.NewCloud(region, false, "", true, false)
 		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 		disk, err := cloud.CreateDisk(context.Background(), fmt.Sprintf("pvc-%d", r1.Uint64()), diskOptions)
 		if err != nil {
@@ -257,7 +257,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 			Tags:               map[string]string{awscloud.VolumeNameTagKey: dummyVolumeName, awscloud.AwsEbsDriverTagKey: "true"},
 		}
 		var err error
-		cloud = awscloud.NewCloud(region, "", false, "", true, false)
+		cloud = awscloud.NewCloud(region, false, "", true, false)
 		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 		disk, err := cloud.CreateDisk(context.Background(), fmt.Sprintf("pvc-%d", r1.Uint64()), diskOptions)
 		if err != nil {
