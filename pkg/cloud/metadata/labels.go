@@ -44,6 +44,9 @@ const (
 
 	// patchFails is the number of nodes we fail to patch before returning an error.
 	patchFails = 5
+
+	// numWorkersPatchLables is the number of worker threads patching node labels.
+	numWorkersPatchLabels = 10
 )
 
 type enisVolumes struct {
@@ -249,52 +252,72 @@ func getMetadata(ctx context.Context, cloud cloud.Cloud, nodes *v1.NodeList, pvI
 
 // patchNodes patches the labels of each node to have the number of ENIs and non-CSI managed volumes attached to each node.
 func patchNodes(ctx context.Context, nodes *v1.NodeList, enisVolumeMap map[string]enisVolumes, clientset kubernetes.Interface, patchFails int) error {
-	numberFailedPatches := 0
+	numWorkers := min(len(nodes.Items), numWorkersPatchLabels)
+	if numWorkers == 0 {
+		return nil
+	}
+
+	jobs := make(chan v1.Node, len(nodes.Items))
+	results := make(chan error, len(nodes.Items))
+
+	for range numWorkers {
+		go func() {
+			for node := range jobs {
+				results <- patchSingleNode(ctx, node, enisVolumeMap, clientset)
+			}
+		}()
+	}
+
 	for _, node := range nodes.Items {
-		if numberFailedPatches != 0 && numberFailedPatches == patchFails {
-			return fmt.Errorf("failed to patch %d nodes", patchFails)
-		}
-
-		instanceID, err := parseProviderID(&node)
-		if err != nil {
-			klog.Error(err, "could not get instanceID", "node", node.Name)
-			numberFailedPatches += 1
-			continue
-		}
-
-		newNode := node.DeepCopy()
-		numAttachedENIs := enisVolumeMap[instanceID].ENIs
-		numBlockDeviceMappings := enisVolumeMap[instanceID].Volumes
-		newNode.Labels[VolumesLabel] = strconv.Itoa(numBlockDeviceMappings)
-		newNode.Labels[ENIsLabel] = strconv.Itoa(numAttachedENIs)
-
-		oldData, err := json.Marshal(node)
-		if err != nil {
-			klog.ErrorS(err, "failed to marshal the existing node", "node", node.Name)
-			numberFailedPatches += 1
-			continue
-		}
-		newData, err := json.Marshal(newNode)
-		if err != nil {
-			klog.ErrorS(err, "failed to marshal the new node", "node", newNode.Name)
-			numberFailedPatches += 1
-			continue
-		}
-		patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, &v1.Node{})
-		if err != nil {
-			klog.ErrorS(err, "failed to create two way merge", "node", node.Name)
-			numberFailedPatches += 1
-			continue
-		}
-		if _, err := clientset.CoreV1().Nodes().Patch(ctx, node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}); err != nil {
-			klog.ErrorS(err, "failed to patch node", "node", node.Name)
-			numberFailedPatches += 1
-			continue
-		}
-		klog.V(6).InfoS("Patched labels", "node", node.Name, "num volumes label", VolumesLabel, "num ENIs label", ENIsLabel)
+		jobs <- node
 	}
-	if numberFailedPatches != 0 && numberFailedPatches == patchFails {
-		return fmt.Errorf("failed to patch %d nodes", patchFails)
+	close(jobs)
+
+	var failures int
+	for range len(nodes.Items) {
+		if err := <-results; err != nil {
+			failures++
+			if failures == patchFails {
+				return fmt.Errorf("failed to patch %d nodes", patchFails)
+			}
+		}
 	}
+
+	return nil
+}
+
+func patchSingleNode(ctx context.Context, node v1.Node, enisVolumeMap map[string]enisVolumes, clientset kubernetes.Interface) error {
+	instanceID, err := parseProviderID(&node)
+	if err != nil {
+		klog.Error(err, "could not get instanceID", "node", node.Name)
+		return err
+	}
+
+	newNode := node.DeepCopy()
+	numAttachedENIs := enisVolumeMap[instanceID].ENIs
+	numBlockDeviceMappings := enisVolumeMap[instanceID].Volumes
+	newNode.Labels[VolumesLabel] = strconv.Itoa(numBlockDeviceMappings)
+	newNode.Labels[ENIsLabel] = strconv.Itoa(numAttachedENIs)
+
+	oldData, err := json.Marshal(node)
+	if err != nil {
+		klog.ErrorS(err, "failed to marshal the existing node", "node", node.Name)
+		return err
+	}
+	newData, err := json.Marshal(newNode)
+	if err != nil {
+		klog.ErrorS(err, "failed to marshal the new node", "node", newNode.Name)
+		return err
+	}
+	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, &v1.Node{})
+	if err != nil {
+		klog.ErrorS(err, "failed to create two way merge", "node", node.Name)
+		return err
+	}
+	if _, err := clientset.CoreV1().Nodes().Patch(ctx, node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}); err != nil {
+		klog.ErrorS(err, "failed to patch node", "node", node.Name)
+		return err
+	}
+	klog.V(6).InfoS("Patched labels", "node", node.Name, "num volumes label", VolumesLabel, "num ENIs label", ENIsLabel)
 	return nil
 }

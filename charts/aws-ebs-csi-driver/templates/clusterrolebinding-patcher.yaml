@@ -1,4 +1,4 @@
-{{- if not .Values.nodeComponentOnly -}}
+{{- if and (not .Values.nodeComponentOnly) (.Values.controller.deployMetadataLablerContainer) -}}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

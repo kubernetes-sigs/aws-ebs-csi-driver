@@ -43,14 +43,14 @@ type MetadataServiceConfig struct {
 }
 
 const (
-	SourceIMDS         = "imds"
-	SourceEC2LabelsK8s = "ec2labelskubernetes"
-	SourceK8s          = "kubernetes"
+	SourceIMDS           = "imds"
+	SourceMetadataLabler = "metadatalabler"
+	SourceK8s            = "kubernetes"
 )
 
 var (
 	// DefaultMetadataSources lists the default fallback order of driver Metadata sources.
-	DefaultMetadataSources = []string{SourceIMDS, SourceEC2LabelsK8s, SourceK8s}
+	DefaultMetadataSources = []string{SourceIMDS, SourceMetadataLabler, SourceK8s}
 )
 
 var _ MetadataService = &Metadata{}
@@ -72,7 +72,7 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 				}
 				klog.ErrorS(err, "Retrieving IMDS metadata failed")
 			}
-		case SourceEC2LabelsK8s:
+		case SourceMetadataLabler:
 			klog.V(2).InfoS("Attempting to retrieve instance metadata from ec2Labels Kubernetes API")
 			metadata, err := retrieveK8sMetadata(cfg.K8sAPIClient, true)
 			if err == nil {

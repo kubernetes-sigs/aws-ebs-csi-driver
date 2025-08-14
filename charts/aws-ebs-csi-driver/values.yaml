@@ -90,8 +90,8 @@ sidecars:
         type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
-  patcher:
-    # Additional parameters provided by patcher.
+  metadataLabler:
+    # Additional parameters provided by metadataLabler.
     logLevel: 2
     additionalArgs: []
     resources: {}
@@ -257,6 +257,7 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
+  deployMetadataLablerContainer: false
   deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}

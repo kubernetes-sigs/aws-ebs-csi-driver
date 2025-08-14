@@ -43,7 +43,7 @@ var (
 
 const (
 	// LabelRefreshTime is the time in minutes that it takes for node labels to update volume and ENI count.
-	LabelRefreshTime = 60 * time.Minute
+	LabelRefreshTime = 10 * time.Second
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 			string(driver.ControllerMode): {},
 			string(driver.NodeMode):       {},
 			string(driver.AllMode):        {},
-			"patcher":                     {},
+			"metadataLabler":              {},
 		}
 	)
 
@@ -84,6 +84,11 @@ func main() {
 	var cloud cloudPkg.Cloud
 	var k8sClient kubernetes.Interface
 	var md metadata.MetadataService
+	cfg := metadata.MetadataServiceConfig{
+		MetadataSources: options.MetadataSources,
+		IMDSClient:      metadata.DefaultIMDSClient,
+		K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
+	}
 
 	if _, ok := metadataRequiredModes[cmd]; ok {
 		options.Mode = driver.Mode(cmd)
@@ -101,12 +106,6 @@ func main() {
 		err := logsapi.ValidateAndApply(c, featureGate)
 		if err != nil {
 			klog.ErrorS(err, "failed to validate and apply logging configuration")
-		}
-
-		cfg := metadata.MetadataServiceConfig{
-			MetadataSources: options.MetadataSources,
-			IMDSClient:      metadata.DefaultIMDSClient,
-			K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
 		}
 
 		region := os.Getenv("AWS_REGION")
@@ -134,11 +133,11 @@ func main() {
 		}
 
 		cloud = cloudPkg.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
+	}
 
-		k8sClient, err = cfg.K8sAPIClient()
-		if err != nil {
-			klog.V(2).InfoS("Failed to setup k8s client", "err", err)
-		}
+	k8sClient, err = cfg.K8sAPIClient()
+	if err != nil {
+		klog.V(2).InfoS("Failed to setup k8s client", "err", err)
 	}
 
 	switch cmd {
@@ -155,14 +154,14 @@ func main() {
 		}
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	case string(driver.ControllerMode), string(driver.NodeMode), string(driver.AllMode):
-	case "patcher":
+	case "metadataLabler":
 		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, LabelRefreshTime)
 		if err != nil {
 			klog.ErrorS(err, "failed to patch volume/ENI count on node labels")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 		}
 	default:
-		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, patcher, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, metadataLabler, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 

@@ -280,6 +280,11 @@
           "description": "Annotations applied to the controller pod",
           "default": null
         },
+        "deployMetadataLablerContainer": {
+          "type": "boolean",
+          "description": "Deploy EBS CSI Controller with metadata labeler container",
+          "default": false
+        },
         "podDisruptionBudget": {
           "type": "object",
           "additionalProperties": false,
@@ -1099,13 +1104,13 @@
             }
           }
         },
-        "patcher": {
+        "metadataLabler": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "additionalArgs": {
               "type": "array",
-              "description": "Additional arguments passed to the patcher container",
+              "description": "Additional arguments passed to the metadataLabler container",
               "default": [],
               "items": {
                 "type": "string"

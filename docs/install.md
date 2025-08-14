@@ -22,9 +22,11 @@ If the driver is able to access IMDS, it will utilize that as a preferred source
 
 In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit).
 
-#### EC2 Labels Kubernetes Metadata
+#### Metadata Labler
 
 For this metadata source to work, the driver pods must have access to the Kubernetes API server. The driver controller pods must also have Kubernetes RBAC permission to patch nodes. This metadata service gets the instance ID, type, region, and AZ in the same way as Kubernetes Metadata. The volume and ENI count are additionally obtained from the EC2 API. 
+
+This is an alpha feature and is disabled by default. To enable this feature set `controller.deployMetadataContainer` to `true`.
 
 #### Kubernetes Metadata
 

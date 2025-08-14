@@ -369,22 +369,56 @@ func TestGetMetadata(t *testing.T) {
 func TestPatchLabels(t *testing.T) {
 	testCases := []struct {
 		name           string
-		node           corev1.Node
+		nodes          corev1.NodeList
 		ENIsVolumesMap map[string]enisVolumes
 		expErr         error
 	}{
 		{
-			name: "success: normal",
+			name: "success: normal patching 1 node",
 			ENIsVolumesMap: map[string]enisVolumes{
 				"i-001": {ENIs: 1, Volumes: 1},
 			},
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "i-001",
-					Labels: map[string]string{},
+			nodes: corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "i-001",
+							Labels: map[string]string{},
+						},
+						Spec: corev1.NodeSpec{
+							ProviderID: "example/i-001",
+						},
+					},
 				},
-				Spec: corev1.NodeSpec{
-					ProviderID: "example/i-001",
+			},
+			expErr: nil,
+		},
+		{
+			name: "success: normal patching 2 nodes",
+			ENIsVolumesMap: map[string]enisVolumes{
+				"i-001": {ENIs: 1, Volumes: 1},
+				"i-002": {ENIs: 2, Volumes: 3},
+			},
+			nodes: corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "i-001",
+							Labels: map[string]string{},
+						},
+						Spec: corev1.NodeSpec{
+							ProviderID: "example/i-001",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "i-002",
+							Labels: map[string]string{},
+						},
+						Spec: corev1.NodeSpec{
+							ProviderID: "example/i-002",
+						},
+					},
 				},
 			},
 			expErr: nil,
@@ -394,13 +428,17 @@ func TestPatchLabels(t *testing.T) {
 			ENIsVolumesMap: map[string]enisVolumes{
 				"i-001": {ENIs: 1, Volumes: 1},
 			},
-			node: corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "i-001",
-					Labels: map[string]string{},
-				},
-				Spec: corev1.NodeSpec{
-					ProviderID: "",
+			nodes: corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "i-001",
+							Labels: map[string]string{},
+						},
+						Spec: corev1.NodeSpec{
+							ProviderID: "",
+						},
+					},
 				},
 			},
 			expErr: errors.New("failed to patch 1 nodes"),
@@ -409,8 +447,8 @@ func TestPatchLabels(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			clientset := fake.NewSimpleClientset(&tc.node)
-			err := patchNodes(t.Context(), &corev1.NodeList{Items: []corev1.Node{tc.node}}, tc.ENIsVolumesMap, clientset, 1)
+			clientset := fake.NewSimpleClientset(&tc.nodes)
+			err := patchNodes(t.Context(), &tc.nodes, tc.ENIsVolumesMap, clientset, 1)
 			if err != nil {
 				if tc.expErr == nil {
 					t.Fatalf("PatchNodes() failed: expected no error, got: %v", err)
@@ -423,18 +461,20 @@ func TestPatchLabels(t *testing.T) {
 					t.Fatal("PatchNodes() failed: expected error, got nothing")
 				}
 
-				node, _ := clientset.CoreV1().Nodes().Get(t.Context(), tc.node.Name, metav1.GetOptions{})
-				expectedENIs := strconv.Itoa(tc.ENIsVolumesMap[tc.node.Name].ENIs)
-				gotENIs := node.GetLabels()[ENIsLabel]
+				for _, originalNode := range tc.nodes.Items {
+					node, _ := clientset.CoreV1().Nodes().Get(t.Context(), originalNode.Name, metav1.GetOptions{})
+					expectedENIs := strconv.Itoa(tc.ENIsVolumesMap[originalNode.Name].ENIs)
+					gotENIs := node.GetLabels()[ENIsLabel]
 
-				expectedVolumes := strconv.Itoa(tc.ENIsVolumesMap[tc.node.Name].Volumes)
-				gotVolumes := node.GetLabels()[VolumesLabel]
+					expectedVolumes := strconv.Itoa(tc.ENIsVolumesMap[originalNode.Name].Volumes)
+					gotVolumes := node.GetLabels()[VolumesLabel]
 
-				if node.GetLabels()[ENIsLabel] != strconv.Itoa(tc.ENIsVolumesMap[tc.node.Name].ENIs) {
-					t.Fatalf("PatchNodes() failed: expected %q ENIs, got %q", expectedENIs, gotENIs)
-				}
-				if node.GetLabels()[VolumesLabel] != strconv.Itoa(tc.ENIsVolumesMap[tc.node.Name].Volumes) {
-					t.Fatalf("PatchNodes() failed: expected %q volumes, got %q", expectedVolumes, gotVolumes)
+					if node.GetLabels()[ENIsLabel] != strconv.Itoa(tc.ENIsVolumesMap[originalNode.Name].ENIs) {
+						t.Fatalf("PatchNodes() failed: expected %q ENIs, got %q", expectedENIs, gotENIs)
+					}
+					if node.GetLabels()[VolumesLabel] != strconv.Itoa(tc.ENIsVolumesMap[originalNode.Name].Volumes) {
+						t.Fatalf("PatchNodes() failed: expected %q volumes, got %q", expectedVolumes, gotVolumes)
+					}
 				}
 			}
 		})
