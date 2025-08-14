@@ -33,6 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
@@ -88,8 +89,9 @@ var (
 )
 
 const (
-	cacheForgetDelay        = 1 * time.Hour
-	volInitCacheForgetDelay = 6 * time.Hour
+	cacheForgetDelay            = 1 * time.Hour
+	volInitCacheForgetDelay     = 6 * time.Hour
+	getCallerIdentityRetryDelay = 30 * time.Second
 )
 
 // VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
@@ -322,6 +324,7 @@ type batcherManager struct {
 }
 
 type cloud struct {
+	awsConfig             aws.Config
 	region                string
 	ec2                   EC2API
 	sm                    SageMakerAPI
@@ -333,13 +336,14 @@ type cloud struct {
 	latestClientTokens    expiringcache.ExpiringCache[string, int]
 	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
 	accountID             string
+	accountIDOnce         sync.Once
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
-func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -388,6 +392,7 @@ func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExt
 	}
 
 	return &cloud{
+		awsConfig:             cfg,
 		region:                region,
 		dm:                    dm.NewDeviceManager(),
 		ec2:                   svc,
@@ -397,7 +402,6 @@ func NewCloud(region string, accountID string, awsSdkDebugLog bool, userAgentExt
 		vwp:                   vwp,
 		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
 		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
-		accountID:             accountID,
 		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
 }
@@ -1003,7 +1007,11 @@ func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 	klog.V(2).InfoS("AttachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
 
 	instanceID := getInstanceIDFromHyperPodNode(nodeID)
-	clusterArn := c.buildHyperPodClusterArn(nodeID)
+	accountID, err := c.getAccountID(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get account ID: %w", err)
+	}
+	clusterArn := buildHyperPodClusterArn(nodeID, c.region, accountID)
 
 	klog.V(5).InfoS("HyperPod attachment details",
 		"volumeID", volumeID,
@@ -1031,7 +1039,7 @@ func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 
 	// Wait for attachment completion
 	deviceName := aws.ToString(resp.DeviceName)
-	_, err := c.WaitForAttachmentState(
+	_, err = c.WaitForAttachmentState(
 		ctx,
 		types.VolumeAttachmentStateAttached,
 		volumeID,
@@ -1105,7 +1113,11 @@ func (c *cloud) detachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 	klog.V(2).InfoS("DetachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
 
 	instanceID := getInstanceIDFromHyperPodNode(nodeID)
-	clusterArn := c.buildHyperPodClusterArn(nodeID)
+	accountID, err := c.getAccountID(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get account ID: %w", err)
+	}
+	clusterArn := buildHyperPodClusterArn(nodeID, c.region, accountID)
 
 	klog.V(4).InfoS("HyperPod detachment details",
 		"volumeID", volumeID,
@@ -1120,7 +1132,7 @@ func (c *cloud) detachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 	}
 	klog.V(4).InfoS("Calling DetachClusterNodeVolumeInput", "input", input)
 
-	_, err := c.sm.DetachClusterNodeVolume(ctx, input)
+	_, err = c.sm.DetachClusterNodeVolume(ctx, input)
 	if err != nil {
 		if isAWSHyperPodErrorIncorrectState(err) ||
 			isAWSHyperPodErrorInvalidAttachmentNotFound(err) ||
@@ -1456,9 +1468,9 @@ func getInstanceIDFromHyperPodNode(nodeID string) string {
 }
 
 // Only for hyperpod node, buildHyperPodClusterArn: arn:aws:sagemaker:region:account:cluster/clusterID.
-func (c *cloud) buildHyperPodClusterArn(nodeID string) string {
+func buildHyperPodClusterArn(nodeID string, region string, accountID string) string {
 	parts := strings.Split(nodeID, "-")
-	return fmt.Sprintf("arn:aws:sagemaker:%s:%s:cluster/%s", c.region, c.accountID, parts[1])
+	return fmt.Sprintf("arn:aws:sagemaker:%s:%s:cluster/%s", region, accountID, parts[1])
 }
 
 // For hyperpod node, AssociatedResource is in arn:aws:sagemaker:region:account:cluster/clusterID-instanceId format.
@@ -1920,6 +1932,54 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	})
 
 	return err
+}
+
+// getAccountID returns the account ID of the AWS Account for the IAM credentials in use.
+//
+// In the first call (or any calls made before the first call succeeds), getAccountID
+// will attempt to determine the Account ID via sts:GetCallerIdentity.
+// This attempt will retry indefinitely, however getAccountID will return when ctx is cancelled,
+// leaving the account ID thread to run in the background.
+//
+// In subsequent calls (after the first success), getAccountID will use a cached value.
+func (c *cloud) getAccountID(ctx context.Context) (string, error) {
+	accountIDRetrieved := make(chan struct{}, 1)
+
+	// Start background thread if it isn't already.
+	// Intentionally runs in the background until account ID is retrieved, so we don't pass the context.
+	//nolint:contextcheck
+	go func() {
+		c.accountIDOnce.Do(func() {
+			for c.accountID == "" {
+				cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(c.region))
+				if err != nil {
+					klog.ErrorS(err, "Failed to create AWS config for account ID retrieval")
+				}
+
+				stsClient := sts.NewFromConfig(cfg)
+				resp, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
+				if err != nil {
+					klog.ErrorS(err, "Failed to get AWS account ID, required for HyperPod operations, will retry")
+					time.Sleep(getCallerIdentityRetryDelay)
+				} else {
+					c.accountID = *resp.Account
+					klog.V(5).InfoS("Retrieved AWS account ID for HyperPod operations", "accountID", c.accountID)
+				}
+			}
+		})
+
+		// Once.Do blocks until the function exits, even if we aren't the first caller.
+		// So the account ID must be available now.
+		accountIDRetrieved <- struct{}{}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+
+	case <-accountIDRetrieved:
+		return c.accountID, nil
+	}
 }
 
 // isAWSError returns a boolean indicating whether the error is AWS-related

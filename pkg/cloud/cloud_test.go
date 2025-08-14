@@ -90,7 +90,6 @@ func TestNewCloud(t *testing.T) {
 	testCases := []struct {
 		name              string
 		region            string
-		accountID         string
 		awsSdkDebugLog    bool
 		userAgentExtra    string
 		batchingEnabled   bool
@@ -99,7 +98,6 @@ func TestNewCloud(t *testing.T) {
 		{
 			name:            "success: with awsSdkDebugLog, userAgentExtra, and batchingEnabled",
 			region:          "us-east-1",
-			accountID:       "123456789012",
 			awsSdkDebugLog:  true,
 			userAgentExtra:  "example_user_agent_extra",
 			batchingEnabled: true,
@@ -107,7 +105,6 @@ func TestNewCloud(t *testing.T) {
 		{
 			name:           "success: with only awsSdkDebugLog, and userAgentExtra",
 			region:         "us-east-1",
-			accountID:      "123456789012",
 			awsSdkDebugLog: true,
 			userAgentExtra: "example_user_agent_extra",
 		},
@@ -117,7 +114,7 @@ func TestNewCloud(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud := NewCloud(tc.region, tc.accountID, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
+		ec2Cloud := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
 		ec2CloudAscloud, ok := ec2Cloud.(*cloud)
 		if !ok {
 			t.Fatalf("could not assert object ec2Cloud as cloud type, %v", ec2Cloud)
@@ -130,6 +127,7 @@ func TestNewCloud(t *testing.T) {
 		}
 	}
 }
+
 func TestBatchDescribeVolumes(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -2456,11 +2454,15 @@ func TestBuildHyperPodClusterArn(t *testing.T) {
 	testCases := []struct {
 		name        string
 		nodeID      string
+		region      string
+		accountID   string
 		expectedArn string
 	}{
 		{
 			name:        "success: valid HyperPod node",
 			nodeID:      "hyperpod-abc123-i-1234567890abcdef0",
+			region:      "test-region",
+			accountID:   "123456789012",
 			expectedArn: "arn:aws:sagemaker:test-region:123456789012:cluster/abc123",
 		},
 	}
@@ -2470,13 +2472,7 @@ func TestBuildHyperPodClusterArn(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockEC2 := NewMockEC2API(mockCtrl)
-			c := newCloud(mockEC2)
-			cloudInstance, ok := c.(*cloud)
-			if !ok {
-				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
-			}
-			result := cloudInstance.buildHyperPodClusterArn(tc.nodeID)
+			result := buildHyperPodClusterArn(tc.nodeID, tc.region, tc.accountID)
 			assert.Equal(t, tc.expectedArn, result)
 		})
 	}

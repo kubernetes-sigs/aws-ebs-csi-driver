@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/cmd/hooks"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
@@ -181,26 +179,7 @@ func main() {
 		region = md.GetRegion()
 	}
 
-	var accountID string
-	if options.Mode == driver.ControllerMode || options.Mode == driver.AllMode {
-		cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
-		if err != nil {
-			klog.ErrorS(err, "Failed to create AWS config for account ID retrieval")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-
-		stsClient := sts.NewFromConfig(cfg)
-		resp, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
-		if err != nil {
-			klog.ErrorS(err, "Failed to get AWS account ID, HyperPod functionality may not work")
-			// Continue without account ID - existing functionality should still work
-		} else {
-			accountID = *resp.Account
-			klog.V(5).InfoS("Retrieved AWS account ID for HyperPod operations", "accountID", accountID)
-		}
-	}
-
-	cloud := cloud.NewCloud(region, accountID, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
+	cloud := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 
 	m, err := mounter.NewNodeMounter(options.WindowsHostProcess)
 	if err != nil {
