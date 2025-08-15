@@ -621,7 +621,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
 		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
 		region := availabilityZone[0 : len(availabilityZone)-1]
-		cloud := awscloud.NewCloud(region, "", false, "", true, false)
+		cloud := awscloud.NewCloud(region, false, "", true, false)
 
 		test := testsuites.DynamicallyProvisionedReclaimPolicyTest{
 			CSIDriver: ebsDriver,
