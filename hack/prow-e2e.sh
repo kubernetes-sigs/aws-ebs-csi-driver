@@ -52,6 +52,7 @@ test-e2e-external-a1-eks)
   export INSTANCE_TYPE="a1.large"
   export IMAGE_ARCH="arm64"
   export CLUSTER_TYPE="eksctl"
+  export AMI_FAMILY="AmazonLinux2"
   ;;
 test-e2e-external-eks-bottlerocket)
   TEST="external-eks-bottlerocket"

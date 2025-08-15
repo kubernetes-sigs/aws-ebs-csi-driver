@@ -31,6 +31,9 @@ iam:
 managedNodeGroups:
   - name: ng-linux
     amiFamily: {{ .Env.AMI_FAMILY }}
+    {{- if env.Getenv "LINUX_AMI" }}
+    ami: {{ .Env.LINUX_AMI }}
+    {{- end }}
     desiredCapacity: 3
     # Test against no-IMDS environment to test k8s metadata
     # and IRSA/Pod Identity support
@@ -38,7 +41,7 @@ managedNodeGroups:
     instanceTypes: [{{ .Env.INSTANCE_TYPE }}]
     ssh:
       allow: false
-{{- if eq .Env.WINDOWS "true" }}
+{{- if and (eq .Env.WINDOWS "true") (not (env.Getenv "WINDOWS_AMI")) }}
   - name: ng-windows
     amiFamily: WindowsServer2022CoreContainer
     desiredCapacity: 3
@@ -47,13 +50,14 @@ managedNodeGroups:
     ssh:
       allow: false
 {{- end }}
-# env.Getenv will return empty for missing variables, unlike .Env
-# https://docs.gomplate.ca/syntax/#env
-{{- if env.Getenv "OUTPOST_ARN" }}
-# Outpost nodegroups cannot be managed
 nodeGroups:
+{{- if env.Getenv "OUTPOST_ARN" }}
+  # Outpost nodegroups cannot be managed
   - name: ng-outpost
     amiFamily: AmazonLinux2023
+    {{- if env.Getenv "LINUX_AMI" }}
+    ami: {{ .Env.LINUX_AMI }}
+    {{- end }}
     desiredCapacity: 3
     # Driver needs access to IMDS on outposts for correct metadata
     disablePodIMDS: false
@@ -61,4 +65,15 @@ nodeGroups:
     ssh:
       allow: false
     outpostARN: {{ .Env.OUTPOST_ARN }}
+{{- end }}
+{{- if and (eq .Env.WINDOWS "true") (env.Getenv "WINDOWS_AMI") }}
+  # Windows nodegroups with a custom AMI cannot be managed
+  - name: ng-windows
+    amiFamily: WindowsServer2022CoreContainer
+    ami: {{ .Env.WINDOWS_AMI }}
+    desiredCapacity: 3
+    disablePodIMDS: true
+    instanceType: m5.2xlarge
+    ssh:
+      allow: false
 {{- end }}

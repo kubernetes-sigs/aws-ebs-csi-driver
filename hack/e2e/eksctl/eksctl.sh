@@ -35,6 +35,8 @@ function eksctl_create_cluster() {
   OUTPOST_ARN=${13}
   OUTPOST_INSTANCE_TYPE=${14}
   AMI_FAMILY=${15}
+  LINUX_AMI=${16}
+  WINDOWS_AMI=${17}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
@@ -76,6 +78,8 @@ function eksctl_create_cluster() {
       WINDOWS="${WINDOWS}" \
       OUTPOST_ARN="${OUTPOST_ARN}" \
       OUTPOST_INSTANCE_TYPE="${OUTPOST_INSTANCE_TYPE}" \
+      LINUX_AMI="${LINUX_AMI}" \
+      WINDOWS_AMI="${WINDOWS_AMI}" \
       ${GOMPLATE_BIN} -f "${TEMPLATE_FILE}" -o "${CLUSTER_FILE}"
     ${EKSCTL_BIN} create nodegroup -f "${CLUSTER_FILE}"
   fi
