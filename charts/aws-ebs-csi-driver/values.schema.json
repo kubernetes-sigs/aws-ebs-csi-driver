@@ -280,6 +280,11 @@
           "description": "Annotations applied to the controller pod",
           "default": null
         },
+        "deployMetadataLabelerContainer": {
+          "type": "boolean",
+          "description": "Deploy EBS CSI Controller with metadata labeler container",
+          "default": false
+        },
         "podDisruptionBudget": {
           "type": "object",
           "additionalProperties": false,
@@ -1096,6 +1101,36 @@
                   "default": 15
                 }
               }
+            }
+          }
+        },
+        "metadataLabeler": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "additionalArgs": {
+              "type": "array",
+              "description": "Additional arguments passed to the metadataLabeler container",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            "resources": {
+              "type": ["object", "null"],
+              "default": null
+            },
+            "logLevel": {
+              "type": "integer",
+              "description": "Set the level of verbosity of the logs",
+              "default": 4
+            },
+            "env": {
+              "type": "array",
+              "default": []
+            },
+            "securityContext": {
+              "type": "object"
             }
           }
         },
