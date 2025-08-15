@@ -96,7 +96,7 @@ func TestPatchNewNodes(t *testing.T) {
 				t.Fatalf("error injecting node add: %v", err)
 			}
 
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(600 * time.Millisecond)
 			node, _ := mockClientSet.CoreV1().Nodes().Get(t.Context(), tc.newNode.Name, metav1.GetOptions{})
 			if patchError != nil {
 				if tc.expErr == nil {

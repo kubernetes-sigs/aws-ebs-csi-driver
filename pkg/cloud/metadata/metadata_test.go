@@ -137,8 +137,8 @@ func TestNewMetadataService(t *testing.T) {
 			expectedError:   InvalidSourceErr([]string{"invalid"}, "invalid"),
 		},
 		{
-			name:            "TestMetadataLablerInstanceInfo: success ec2Labels metadata",
-			metadataSources: []string{SourceMetadataLabler},
+			name:            "TestMetadataLabelerInstanceInfo: success ec2Labels metadata",
+			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node",
@@ -164,8 +164,8 @@ func TestNewMetadataService(t *testing.T) {
 			},
 		},
 		{
-			name:            "TestMetadataLablerInstanceInfo: Invalid volume label",
-			metadataSources: []string{SourceMetadataLabler},
+			name:            "TestMetadataLabelerInstanceInfo: Invalid volume label",
+			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node",
@@ -181,11 +181,11 @@ func TestNewMetadataService(t *testing.T) {
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},
 			},
-			expectedError: sourcesUnavailableErr([]string{SourceMetadataLabler}),
+			expectedError: sourcesUnavailableErr([]string{SourceMetadataLabeler}),
 		},
 		{
-			name:            "TestMetadataLablerInstanceInfo: Invalid ENI label",
-			metadataSources: []string{SourceMetadataLabler},
+			name:            "TestMetadataLabelerInstanceInfo: Invalid ENI label",
+			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-node",
@@ -200,7 +200,7 @@ func TestNewMetadataService(t *testing.T) {
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},
 			},
-			expectedError: sourcesUnavailableErr([]string{SourceMetadataLabler}),
+			expectedError: sourcesUnavailableErr([]string{SourceMetadataLabeler}),
 		},
 	}
 
@@ -713,7 +713,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 	}
 }
 
-func TestMetadataLablerInstanceInfo(t *testing.T) {
+func TestMetadataLabelerInstanceInfo(t *testing.T) {
 	testCases := []struct {
 		name             string
 		nodeName         string
@@ -722,17 +722,17 @@ func TestMetadataLablerInstanceInfo(t *testing.T) {
 		expectedMetadata *Metadata
 	}{
 		{
-			name:          "TestMetadataLablerInstanceInfo: Node name not set",
+			name:          "TestMetadataLabelerInstanceInfo: Node name not set",
 			nodeName:      "",
 			expectedError: "CSI_NODE_NAME env var not set",
 		},
 		{
-			name:          "TestMetadataLablerInstanceInfo: Error getting node",
+			name:          "TestMetadataLabelerInstanceInfo: Error getting node",
 			nodeName:      "test-node",
 			expectedError: "error getting Node test-node: nodes \"test-node\" not found",
 		},
 		{
-			name:     "TestMetadataLablerInstanceInfo: Valid instance info for ec2 labels metadata",
+			name:     "TestMetadataLabelerInstanceInfo: Valid instance info for ec2 labels metadata",
 			nodeName: "test-node",
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -759,7 +759,7 @@ func TestMetadataLablerInstanceInfo(t *testing.T) {
 			},
 		},
 		{
-			name:     "TestMetadataLablerInstanceInfo: non valid labels",
+			name:     "TestMetadataLabelerInstanceInfo: non valid labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{

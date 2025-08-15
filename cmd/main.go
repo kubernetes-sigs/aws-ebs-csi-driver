@@ -65,7 +65,7 @@ func main() {
 			string(driver.ControllerMode): {},
 			string(driver.NodeMode):       {},
 			string(driver.AllMode):        {},
-			"metadataLabler":              {},
+			"metadataLabeler":             {},
 		}
 	)
 
@@ -81,6 +81,23 @@ func main() {
 		args = os.Args[2:]
 	}
 
+	options.Mode = driver.Mode(cmd)
+	options.AddFlags(fs)
+
+	if err := fs.Parse(args); err != nil {
+		klog.ErrorS(err, "Failed to parse options")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+	if err := options.Validate(); err != nil {
+		klog.ErrorS(err, "Invalid options")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+
+	err = logsapi.ValidateAndApply(c, featureGate)
+	if err != nil {
+		klog.ErrorS(err, "failed to validate and apply logging configuration")
+	}
+
 	var cloud cloudPkg.Cloud
 	var k8sClient kubernetes.Interface
 	var md metadata.MetadataService
@@ -91,23 +108,6 @@ func main() {
 	}
 
 	if _, ok := metadataRequiredModes[cmd]; ok {
-		options.Mode = driver.Mode(cmd)
-		options.AddFlags(fs)
-
-		if err := fs.Parse(args); err != nil {
-			klog.ErrorS(err, "Failed to parse options")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
-		}
-		if err := options.Validate(); err != nil {
-			klog.ErrorS(err, "Invalid options")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
-		}
-
-		err := logsapi.ValidateAndApply(c, featureGate)
-		if err != nil {
-			klog.ErrorS(err, "failed to validate and apply logging configuration")
-		}
-
 		region := os.Getenv("AWS_REGION")
 		var metadataErr error
 
@@ -154,14 +154,14 @@ func main() {
 		}
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	case string(driver.ControllerMode), string(driver.NodeMode), string(driver.AllMode):
-	case "metadataLabler":
+	case "metadataLabeler":
 		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, LabelRefreshTime)
 		if err != nil {
 			klog.ErrorS(err, "failed to patch volume/ENI count on node labels")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 		}
 	default:
-		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, metadataLabler, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, metadataLabeler, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 

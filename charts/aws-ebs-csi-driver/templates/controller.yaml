@@ -428,14 +428,14 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         {{- end }}
-        {{- if .Values.controller.deployMetadataLablerContainer }}
-        - name: metadata-labler
+        {{- if .Values.controller.deployMetadataLabelerContainer }}
+        - name: metadata-labeler
           image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - metadataLabler
-            - --v={{ .Values.sidecars.metadataLabler.logLevel }}
-            {{- range .Values.sidecars.metadataLabler.additionalArgs }}
+            - metadataLabeler
+            - --v={{ .Values.sidecars.metadataLabeler.logLevel }}
+            {{- range .Values.sidecars.metadataLabeler.additionalArgs }}
             - {{ . }}
             {{- end }}
           env:
@@ -446,18 +446,18 @@ spec:
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.sidecars.metadataLabler.env }}
+            {{- with .Values.sidecars.metadataLabeler.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
           {{- end }}
-          {{- with default .Values.controller.resources .Values.sidecars.metadataLabler.resources }}
+          {{- with default .Values.controller.resources .Values.sidecars.metadataLabeler.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.sidecars.metadataLabler.securityContext }}
+          {{- with .Values.sidecars.metadataLabeler.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
