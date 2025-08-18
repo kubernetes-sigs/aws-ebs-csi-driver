@@ -22,7 +22,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-provisioner
-      tag: "v5.3.0-eksbuild.3"
+      tag: "v5.3.0-eksbuild.4"
     logLevel: 2
     # Additional parameters provided by csi-provisioner.
     additionalArgs: []
@@ -49,7 +49,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-attacher
-      tag: "v4.9.0-eksbuild.3"
+      tag: "v4.9.0-eksbuild.4"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -78,7 +78,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-snapshotter
-      tag: "v8.3.0-eksbuild.1"
+      tag: "v8.3.0-eksbuild.2"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -94,7 +94,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/livenessprobe
-      tag: "v2.16.0-eksbuild.4"
+      tag: "v2.16.0-eksbuild.5"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -106,7 +106,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-resizer
-      tag: "v1.14.0-eksbuild.3"
+      tag: "v1.14.0-eksbuild.4"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -133,7 +133,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-node-driver-registrar
-      tag: "v2.14.0-eksbuild.4"
+      tag: "v2.14.0-eksbuild.5"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -516,4 +516,4 @@ nodeComponentOnly: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20250722-31ecdfb417-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20250815-171060767f-master"

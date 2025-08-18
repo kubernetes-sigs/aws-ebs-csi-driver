@@ -4,8 +4,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.38.0
 	github.com/aws/aws-sdk-go-v2/config v1.31.0
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.3
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.243.0
-	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.208.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.244.0
+	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.209.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.37.0
 	github.com/aws/smithy-go v1.22.5
 	github.com/awslabs/volume-modifier-for-k8s v0.7.0
@@ -27,12 +27,12 @@ require (
 	golang.org/x/sys v0.35.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.3
-	k8s.io/component-base v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
+	k8s.io/component-base v0.33.4
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/mount-utils v0.33.3
+	k8s.io/mount-utils v0.33.4
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 )
 
@@ -51,7 +51,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -98,13 +98,13 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250811160224-6b04f9b4fc78 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811160224-6b04f9b4fc78 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
+	k8s.io/kube-openapi v0.0.0-20250814151709-d7b6acb124c3 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
