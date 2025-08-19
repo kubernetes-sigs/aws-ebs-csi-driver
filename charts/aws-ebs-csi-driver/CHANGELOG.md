@@ -1,5 +1,10 @@
 # Helm chart
 
+## v2.47.1
+
+- Bump Driver version to `v1.47.1`
+- Bump csi-sidecars to new eksbuild version 
+
 ## v2.47.0
 
 ### Feature
