@@ -89,7 +89,11 @@ func TestMakeDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Logf("Failed to remove temp directory: %v", err)
+		}
+	}()
 
 	targetPath := filepath.Join(dir, "targetdir")
 
@@ -117,7 +121,11 @@ func TestMakeFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Logf("Failed to remove temp directory: %v", err)
+		}
+	}()
 
 	targetPath := filepath.Join(dir, "targetfile")
 
@@ -145,7 +153,11 @@ func TestPathExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Logf("Failed to remove temp directory: %v", err)
+		}
+	}()
 
 	targetPath := filepath.Join(dir, "notafile")
 
@@ -171,7 +183,11 @@ func TestGetDeviceName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			t.Logf("Failed to remove temp directory: %v", err)
+		}
+	}()
 
 	targetPath := filepath.Join(dir, "notafile")
 

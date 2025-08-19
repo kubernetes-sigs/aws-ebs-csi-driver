@@ -46,7 +46,11 @@ func TestSanity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create sanity temp working dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Logf("Failed to remove temp directory: %v", err)
+		}
+	}()
 
 	defer func() {
 		if err = os.RemoveAll(tmpDir); err != nil {

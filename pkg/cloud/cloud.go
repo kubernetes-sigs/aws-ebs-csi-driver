@@ -355,9 +355,13 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 
 	// Set the env var so that the session appends custom user agent string
 	if userAgentExtra != "" {
-		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion+"-"+userAgentExtra)
+		if err := os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion+"-"+userAgentExtra); err != nil {
+			klog.ErrorS(err, "Failed to set AWS_EXECUTION_ENV")
+		}
 	} else {
-		os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion)
+		if err := os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion); err != nil {
+			klog.ErrorS(err, "Failed to set AWS_EXECUTION_ENV")
+		}
 	}
 
 	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
