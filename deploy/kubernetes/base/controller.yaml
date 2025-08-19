@@ -116,15 +116,15 @@ spec:
               path: /healthz
               port: healthz
             initialDelaySeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 60
             periodSeconds: 10
-            failureThreshold: 5
+            failureThreshold: 10
           readinessProbe:
             httpGet:
               path: /healthz
               port: healthz
             initialDelaySeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 60
             periodSeconds: 10
             failureThreshold: 5
           resources:
@@ -266,6 +266,7 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
+            - --probe-timeout=60s
           volumeMounts:
             - name: socket-dir
               mountPath: /csi

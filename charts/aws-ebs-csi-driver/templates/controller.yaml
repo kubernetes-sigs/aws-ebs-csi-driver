@@ -188,15 +188,15 @@ spec:
               path: /healthz
               port: healthz
             initialDelaySeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 60
             periodSeconds: 10
-            failureThreshold: 5
+            failureThreshold: 10
           readinessProbe:
             httpGet:
               path: /healthz
               port: healthz
             initialDelaySeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 60
             periodSeconds: 10
             failureThreshold: 5
           {{- with .Values.controller.resources }}
@@ -535,6 +535,7 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
+            - --probe-timeout=60s
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-metrics-address)" (join " " .Values.sidecars.livenessProbe.additionalArgs))) }}
             - --metrics-address=0.0.0.0:3305
             {{- end}}
