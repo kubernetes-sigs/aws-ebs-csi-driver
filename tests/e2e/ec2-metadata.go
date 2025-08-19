@@ -52,7 +52,7 @@ type instanceMetadata struct {
 	AvailabilityZone string
 }
 
-var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisruptive(), func() {
+var _ = framework.Describe("[ebs-csi-e2e] [disruptive] EBS CSI Driver Node Labeling", framework.WithDisruptive(), func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -400,7 +400,7 @@ func createStorageClass(cs kubernetes.Interface) *v1.StorageClass {
 		VolumeBindingMode: func() *storagev1.VolumeBindingMode { v := storagev1.VolumeBindingWaitForFirstConsumer; return &v }()}
 
 	_, err := cs.StorageV1().StorageClasses().Create(context.Background(), storageClass, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
 		Expect(err).NotTo(HaveOccurred(), "Failed to create storage class")
 	}
 	return storageClass

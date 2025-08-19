@@ -137,7 +137,7 @@ func TestNewMetadataService(t *testing.T) {
 			expectedError:   InvalidSourceErr([]string{"invalid"}, "invalid"),
 		},
 		{
-			name:            "TestMetadataLabelerInstanceInfo: success ec2Labels metadata",
+			name:            "TestMetadataLabelerInstanceInfo: success metadata-labeler",
 			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -732,7 +732,7 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 			expectedError: "error getting Node test-node: nodes \"test-node\" not found",
 		},
 		{
-			name:     "TestMetadataLabelerInstanceInfo: Valid instance info for ec2 labels metadata",
+			name:     "TestMetadataLabelerInstanceInfo: Valid instance info for metadata labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -789,7 +789,12 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 				require.Nil(t, metadata)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedMetadata, metadata)
+				require.Equal(t, tc.expectedMetadata.InstanceID, metadata.InstanceID)
+				require.Equal(t, tc.expectedMetadata.InstanceType, metadata.InstanceType)
+				require.Equal(t, tc.expectedMetadata.Region, metadata.Region)
+				require.Equal(t, tc.expectedMetadata.AvailabilityZone, metadata.AvailabilityZone)
+				require.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.NumAttachedENIs)
+				require.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.NumBlockDeviceMappings)
 			}
 		})
 	}

@@ -91,9 +91,10 @@ sidecars:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
   metadataLabeler:
-    # Additional parameters provided by metadataLabeler.
+    enabled: true
     logLevel: 2
-    additionalArgs: []
+    # Additional parameters provided by metadataLabeler.
+    additionalArgs: [ ]
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
@@ -259,7 +260,6 @@ controller:
   logLevel: 2
   userAgentExtra: "helm"
   nodeSelector: {}
-  deployMetadataLabelerContainer: false
   deploymentAnnotations: {}
   podAnnotations: {}
   podLabels: {}
@@ -426,7 +426,8 @@ node:
   # Enable the linux daemonset creation
   enableLinux: true
   enableWindows: true
-  metadataSources:
+  # Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds', 'kubernetes', and 'metadatalabeler'
+  metadataSources: "metadatalabeler"
   # Warning: This option will be removed in a future release. It is a temporary workaround for users unable to immediately migrate off of older kernel versions.
   # Formats XFS volumes with bigtime=0,inobtcount=0,reflink=0, for mounting onto nodes with linux kernel version <= 5.4.
   # Note that XFS volumes formatted with this option will only have timestamp records until 2038.

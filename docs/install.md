@@ -22,12 +22,6 @@ If the driver is able to access IMDS, it will utilize that as a preferred source
 
 In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit).
 
-#### Metadata Labeler
-
-For this metadata source to work, the driver pods must have access to the Kubernetes API server. The driver controller pods must also have Kubernetes RBAC permission to patch nodes. This metadata service gets the instance ID, type, region, and AZ in the same way as Kubernetes Metadata. The volume and ENI count are additionally obtained from the EC2 API. 
-
-This is an alpha feature and is disabled by default. To enable this feature set `controller.deployMetadataContainer` to `true`.
-
 #### Kubernetes Metadata
 
 By default, if the driver is unable to reach IMDS, it will fall back to using the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
@@ -40,6 +34,18 @@ By default, if the driver is unable to reach IMDS, it will fall back to using th
 These values are typically set by the [AWS CCM](https://github.com/kubernetes/cloud-provider-aws). You must have the AWS CCM or a similar tool installed in your cluster providing these values for Kubernetes metadata to function.
 
 Kubernetes metadata does not provide information about the number of ENIs or EBS volumes attached to an instance. Thus, when performing volume limit calculations, node pods using Kubernetes metadata will assume one ENI and one EBS volume (the root volume) is attached.
+
+#### Metadata Labeler
+
+Note: This metadata source is an alpha feature and is disabled by default. Try this metadata source if you disable pod access to IMDS on your cluster, but still need accurate volume attachment limit counts.
+
+This metadata source enhances the Kubernetes metadata source to get ENI & Volume Attachment count from EC2 DescribeInstances to Kubernetes Node labels and then uses those labels.
+
+For this metadata source to work:
+- Set `sidecars.metadataLabeler.enabled` to `true`
+- Include `metadatalabeler` in `node.metadataSources` list. E.g. setting `node.metadataSources` to `"metadatalabeler,kubernetes"` will first attempt to use this new metadata source, then fallback to Kubernetes.
+- EBS CSI Node Pods must have access to the Kubernetes API server.
+- EBS CSI Controller Pods have Kubernetes RBAC permission to patch Nodes.
 
 ## Installation
 ### Set up driver permissions

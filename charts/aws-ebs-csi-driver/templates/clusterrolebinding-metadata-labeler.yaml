@@ -1,9 +1,9 @@
-{{- if and (not .Values.nodeComponentOnly) (.Values.controller.deployMetadataLabelerContainer) -}}
+{{- if and (not .Values.nodeComponentOnly) (.Values.sidecars.metadataLabeler.enabled) -}}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: label-patcher-binding
+  name: ebs-csi-metadata-labeler-binding
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 subjects:
@@ -13,5 +13,5 @@ subjects:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: label-patcher
+  name: ebs-metadata-labeler-role
 {{- end -}}

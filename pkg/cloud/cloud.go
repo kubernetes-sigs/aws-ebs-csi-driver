@@ -141,9 +141,7 @@ const (
 )
 
 const (
-	// maxInstancesDescribed is the maximum number of instances described in each EC2 Describe Instances call
-	// TODO Question: what should a good number for this constant be? https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-pagination.html just says
-	// that it shouldn't be more than 1000.
+	// maxInstancesDescribed is the maximum number of instances described in each EC2 Describe Instances call.
 	maxInstancesDescribed = 1000
 )
 
@@ -971,7 +969,6 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	}
 
 	instance, err := c.getInstance(ctx, nodeID)
-
 	if err != nil {
 		return "", err
 	}
