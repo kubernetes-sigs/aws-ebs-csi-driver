@@ -1,3 +1,20 @@
+# v1.47.1
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The `blockExpress` StorageClass parameter is deprecated, effective immediately ([#2564](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2564), [@mdzraf](https://github.com/mdzraf))
+
+**Starting in `v1.47.0`, newly created `io2` volumes will always use a cap of 256,000 IOPS, irregardless of whether the `blockExpress` parameter is set to true or not.** This aligns with EBS, which now [creates all `io2` volumes as Block Express](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html#vol-type-ssd). Volumes with greater than 64,000 IOPS may not reach their full performance on non-Nitro instances, see the EBS documentation for more details.
+
+Starting in `v1.47.0`, the `blockExpress` parameter has no effect (other than logging a deprecation warning) when present in a `StorageClass`. There are no current plans to fully remove support for the parameter (and fail `StorageClass`es using it), and any such change will be communicated in advance via the EBS CSI Driver `CHANGELOG`.
+
+### Bug or Regression
+
+- Prevent liveness probe failure (and thus CrashLoopBackoff) without proper logging by moving sts:GetCallerIdentity call from blocking startup to just in time ([#2621](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2621), [@ConnorJC3](https://github.com/ConnorJC3))
+
 # v1.47.0
 
 ## Changes by Kind
