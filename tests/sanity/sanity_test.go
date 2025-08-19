@@ -18,7 +18,6 @@ package sanity
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"testing"
 
@@ -42,21 +41,7 @@ func TestSanity(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	tmpDir, err := os.MkdirTemp("", "csi-sanity-")
-	if err != nil {
-		t.Fatalf("Failed to create sanity temp working dir: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Logf("Failed to remove temp directory: %v", err)
-		}
-	}()
-
-	defer func() {
-		if err = os.RemoveAll(tmpDir); err != nil {
-			t.Fatalf("Failed to clean up sanity temp working dir %s: %v", tmpDir, err.Error())
-		}
-	}()
+	tmpDir := t.TempDir()
 
 	endpoint := fmt.Sprintf("unix:%s/csi.sock", tmpDir)
 	mountPath := path.Join(tmpDir, "mount")
