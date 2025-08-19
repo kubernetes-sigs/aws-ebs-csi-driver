@@ -1,0 +1,15 @@
+---
+# Source: aws-ebs-csi-driver/templates/clusterrole-metadata-labeler.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ebs-metadata-labeler-role
+  labels:
+    app.kubernetes.io/name: aws-ebs-csi-driver
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["patch"]
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["list", "watch", "get"]

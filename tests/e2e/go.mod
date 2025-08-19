@@ -72,7 +72,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.22.0 // indirect
 	github.com/kubernetes-csi/csi-proxy/client v1.2.1 // indirect
 	github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1 // indirect

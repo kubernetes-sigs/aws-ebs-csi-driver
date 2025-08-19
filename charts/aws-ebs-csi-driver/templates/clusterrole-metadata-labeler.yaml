@@ -1,9 +1,9 @@
-{{- if and (not .Values.nodeComponentOnly) (.Values.controller.deployMetadataLabelerContainer) -}}
+{{- if and (not .Values.nodeComponentOnly) (.Values.sidecars.metadataLabeler.enabled) -}}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: label-patcher
+  name: ebs-metadata-labeler-role
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 rules:

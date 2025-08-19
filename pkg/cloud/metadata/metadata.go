@@ -19,8 +19,11 @@ package metadata
 import (
 	"fmt"
 	"os"
+	"sync/atomic"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
@@ -34,6 +37,8 @@ type Metadata struct {
 	NumBlockDeviceMappings int
 	OutpostArn             arn.ARN
 	IMDSClient             IMDS
+	K8sAPIClient           kubernetes.Interface
+	AttemptMetadataUpdate  atomic.Bool
 }
 
 type MetadataServiceConfig struct {
@@ -97,20 +102,28 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	return nil, sourcesUnavailableErr(cfg.MetadataSources)
 }
 
-// TODO: Enhanceed-kuberentes metadata should also be updated from node regularly once KEP enters beta and new PR merges.
-// UpdateMetadata refreshes ENI information.
-// We do not refresh blockDeviceMappings because IMDS only reports data from when instance starts (As of April 2025).
+// UpdateMetadata refreshes metadata cache based upon driver startup metadata source.
 func (m *Metadata) UpdateMetadata() error {
-	if m.IMDSClient == nil {
-		// IMDS not available, skip updates
-		return nil
+	switch {
+	case m.IMDSClient != nil:
+		// We do not refresh blockDeviceMappings because IMDS only reports data from instance start (As of April 2025)
+		attachedENIs, err := getAttachedENIs(m.IMDSClient)
+		if err != nil {
+			return fmt.Errorf("failed to update ENI count via IMDS metadata source: %w", err)
+		}
+		m.NumAttachedENIs = attachedENIs
+	case m.K8sAPIClient != nil:
+		// TODO Q: Should this wrap all metadataSources or just metadataLabeler path?
+		if m.AttemptMetadataUpdate.Load() {
+			m.AttemptMetadataUpdate.Store(false) // Always set to false, even upon failure, to avoid K8s API Spam.
+			updatedMetadata, err := KubernetesAPIInstanceInfo(m.K8sAPIClient, true /* metadataLabeler */)
+			if updatedMetadata == nil || err != nil {
+				return fmt.Errorf("failed to update ENI and Block Device count via metadataLabeler source: %w", err)
+			}
+			m.NumAttachedENIs = updatedMetadata.NumAttachedENIs
+			m.NumBlockDeviceMappings = updatedMetadata.NumBlockDeviceMappings
+		}
 	}
-
-	attachedENIs, err := getAttachedENIs(m.IMDSClient)
-	if err != nil {
-		return fmt.Errorf("failed to update ENI count: %w", err)
-	}
-	m.NumAttachedENIs = attachedENIs
 
 	return nil
 }
@@ -124,13 +137,27 @@ func retrieveIMDSMetadata(imdsClient IMDSClient) (*Metadata, error) {
 	return IMDSInstanceInfo(svc)
 }
 
-func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient, ec2Labels bool) (*Metadata, error) {
+func retrieveK8sMetadata(k8sAPIClient KubernetesAPIClient, metadataLabeler bool) (*Metadata, error) {
 	clientset, err := k8sAPIClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return KubernetesAPIInstanceInfo(clientset, ec2Labels)
+	metadata, err := KubernetesAPIInstanceInfo(clientset, metadataLabeler)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure we only update metadataLabeler metadata every nodeMetadataLabelerUpdateInterval
+	if metadataLabeler {
+		go func() {
+			for range time.Tick(nodeMetadataLabelerUpdateInterval) {
+				metadata.AttemptMetadataUpdate.Store(true)
+			}
+		}()
+	}
+
+	return metadata, nil
 }
 
 // Override the region on a Metadata object if it is non-empty.

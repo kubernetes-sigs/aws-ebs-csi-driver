@@ -40,7 +40,5 @@ type Cloud interface {
 	EnableFastSnapshotRestores(ctx context.Context, availabilityZones []string, snapshotID string) (*ec2.EnableFastSnapshotRestoresOutput, error)
 	AvailabilityZones(ctx context.Context) (map[string]struct{}, error)
 	DryRun(ctx context.Context) error
-	GetInstance(ctx context.Context, nodeID string) (*types.Instance, error)
-	GetInstances(ctx context.Context, nodeIDs []string) ([]*types.Instance, error)
 	GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error)
 }

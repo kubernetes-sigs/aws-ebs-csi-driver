@@ -41,11 +41,6 @@ var (
 	featureGate = featuregate.NewFeatureGate()
 )
 
-const (
-	// LabelRefreshTime is the time in minutes that it takes for node labels to update volume and ENI count.
-	LabelRefreshTime = 10 * time.Second
-)
-
 func main() {
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
 	if err := logsapi.RegisterLogFormat(logsapi.JSONLogFormat, json.Factory{}, logsapi.LoggingBetaOptions); err != nil {
@@ -65,7 +60,7 @@ func main() {
 			string(driver.ControllerMode): {},
 			string(driver.NodeMode):       {},
 			string(driver.AllMode):        {},
-			"metadataLabeler":             {},
+			driver.MetadataLabelerMode:    {},
 		}
 	)
 
@@ -154,14 +149,14 @@ func main() {
 		}
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	case string(driver.ControllerMode), string(driver.NodeMode), string(driver.AllMode):
-	case "metadataLabeler":
-		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, LabelRefreshTime)
+	case driver.MetadataLabelerMode:
+		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, metadata.ControllerMetadataLabelerInterval)
 		if err != nil {
 			klog.ErrorS(err, "failed to patch volume/ENI count on node labels")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 		}
 	default:
-		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, metadataLabeler, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, %s, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode, driver.MetadataLabelerMode)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 

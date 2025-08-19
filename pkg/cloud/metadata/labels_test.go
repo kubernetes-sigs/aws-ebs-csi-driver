@@ -87,6 +87,15 @@ func TestPatchNewNodes(t *testing.T) {
 			}
 			nodesInformer := factory.Core().V1().Nodes().Informer()
 			patchError := patchNewNodes(ctx, mockClientSet, mockCloud, nodesInformer, pvInformer)
+			if patchError != nil {
+				if tc.expErr == nil {
+					t.Fatalf("MetadataInformer() failed: expected no error, got: %v", patchError)
+				}
+				if patchError.Error() != tc.expErr.Error() {
+					t.Fatalf("MetadataInformer() failed: expected error %q, got %q", tc.expErr, patchError)
+				}
+			}
+
 			factory.Start(ctx.Done())
 			cache.WaitForCacheSync(ctx.Done())
 			<-watcherStarted
@@ -96,28 +105,29 @@ func TestPatchNewNodes(t *testing.T) {
 				t.Fatalf("error injecting node add: %v", err)
 			}
 
-			time.Sleep(600 * time.Millisecond)
-			node, _ := mockClientSet.CoreV1().Nodes().Get(t.Context(), tc.newNode.Name, metav1.GetOptions{})
-			if patchError != nil {
-				if tc.expErr == nil {
-					t.Fatalf("MetadataInformer() failed: expected no error, got: %v", patchError)
+			// Mock k8s client is racy
+			var node *corev1.Node
+			start := time.Now()
+			timeout := 5 * time.Second
+			for time.Since(start) < timeout {
+				node, err = mockClientSet.CoreV1().Nodes().Get(t.Context(), tc.newNode.Name, metav1.GetOptions{})
+				if err == nil && node.GetLabels()[ENIsLabel] != "" {
+					break
 				}
-				if patchError.Error() != tc.expErr.Error() {
-					t.Fatalf("MetadataInformer() failed: expected error %q, got %q", tc.expErr, patchError)
-				}
-			} else {
-				expectedENIs := strconv.Itoa(tc.newNodeMetadata[node.Name].ENIs)
-				expectedVol := strconv.Itoa(tc.newNodeMetadata[node.Name].Volumes)
+				time.Sleep(100 * time.Millisecond)
+			}
 
-				labeledENIs := node.GetLabels()[ENIsLabel]
-				labeledVol := node.GetLabels()[VolumesLabel]
+			expectedENIs := strconv.Itoa(tc.newNodeMetadata[node.Name].ENIs)
+			expectedVol := strconv.Itoa(tc.newNodeMetadata[node.Name].Volumes)
 
-				if labeledENIs != expectedENIs {
-					t.Fatalf("MetadataInformer() failed: expected %s ENIs, got %s", expectedENIs, labeledENIs)
-				}
-				if labeledVol != expectedVol {
-					t.Fatalf("MetadataInformer() failed: expected %s volumes, got %s", expectedVol, labeledVol)
-				}
+			labeledENIs := node.GetLabels()[ENIsLabel]
+			labeledVol := node.GetLabels()[VolumesLabel]
+
+			if labeledENIs != expectedENIs {
+				t.Fatalf("MetadataInformer() failed: expected %s ENIs, got %s", expectedENIs, labeledENIs)
+			}
+			if labeledVol != expectedVol {
+				t.Fatalf("MetadataInformer() failed: expected %s volumes, got %s", expectedVol, labeledVol)
 			}
 		})
 	}

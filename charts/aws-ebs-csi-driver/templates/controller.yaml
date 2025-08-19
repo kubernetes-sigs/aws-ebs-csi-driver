@@ -484,7 +484,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         {{- end }}
-        {{- if .Values.controller.deployMetadataLabelerContainer }}
+        {{- if .Values.sidecars.metadataLabeler.enabled }}
         - name: metadata-labeler
           image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
