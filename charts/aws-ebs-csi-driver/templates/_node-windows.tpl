@@ -88,7 +88,11 @@ spec:
             {{- with .Values.node.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.node.logLevel }}
+            {{- end }}
             {{- if .Values.node.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
@@ -181,7 +185,11 @@ spec:
           {{- if .Values.node.windowsHostProcess }}
             - --plugin-registration-path=$(PLUGIN_REG_DIR)
           {{- end }}
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            {{- end }}
           env:
             - name: ADDRESS
             {{- if .Values.node.windowsHostProcess }}
