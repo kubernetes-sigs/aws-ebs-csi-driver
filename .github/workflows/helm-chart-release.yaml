@@ -17,7 +17,7 @@ name: Release Helm Charts
 on:
   push:
     branches:
-      - master
+      - 'release-*'
     paths:
       - "charts/**/Chart.yaml"
 

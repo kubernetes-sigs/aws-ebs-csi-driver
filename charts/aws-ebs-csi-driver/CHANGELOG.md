@@ -1,5 +1,18 @@
 # Helm chart
 
+## 2.48.0
+
+### Feature
+
+- Bump driver version to `v1.48.0`
+- Add support for custom relabelings in ServiceMonitor via `controller.serviceMonitor.extraRelabelings` configuration option ([#2594](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2594), [@bartier](https://github.com/bartier))
+- Align node and controller metrics to consistent experience supporting `prometheus.io` annotations and `ServiceMonitor` objects for both; Enable sidecar metrics when controller metrics are enabled ([#2558](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2558), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## v2.47.1
+
+- Bump Driver version to `v1.47.1`
+- Bump csi-sidecars to new eksbuild version
+
 ## v2.47.0
 
 ### Feature

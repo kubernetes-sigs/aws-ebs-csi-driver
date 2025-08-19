@@ -1,3 +1,70 @@
+# v1.48.0
+
+## Changes by Kind
+
+### Feature
+
+- Add ability to provision volumes using AZ-ID ([#2613](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2613), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.30.3 → v1.31.0](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.30.3...config/v1.31.0)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.3 → v1.18.4](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.3...credentials/v1.18.4)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.2 → v1.18.3](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.2...feature/ec2/imds/v1.18.3)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.2 → v1.4.3](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.2...internal/configsources/v1.4.3)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.2 → v2.7.3](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.2...internal/endpoints/v2/v2.7.3)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.240.0 → v1.244.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.240.0...service/ec2/v1.244.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.2 → v1.13.3](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.2...service/internal/presigned-url/v1.13.3)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.204.0 → v1.209.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.204.0...service/sagemaker/v1.209.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.27.0 → v1.28.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.27.0...service/sso/v1.28.0)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.32.0 → v1.33.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.32.0...service/ssooidc/v1.33.0)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.36.0 → v1.37.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.36.0...service/sts/v1.37.0)
+- github.com/aws/aws-sdk-go-v2: [v1.37.2 → v1.38.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.37.2...v1.38.0)
+- github.com/emicklei/go-restful/v3: [v3.12.2 → v3.13.0](https://github.com/emicklei/go-restful/compare/v3.12.2...v3.13.0)
+- github.com/go-openapi/jsonpointer: [v0.21.1 → v0.21.2](https://github.com/go-openapi/jsonpointer/compare/v0.21.1...v0.21.2)
+- golang.org/x/crypto: v0.40.0 → v0.41.0
+- golang.org/x/mod: v0.25.0 → v0.26.0
+- golang.org/x/net: v0.42.0 → v0.43.0
+- golang.org/x/sys: v0.34.0 → v0.35.0
+- golang.org/x/telemetry: bda5523 → 8d8967a
+- golang.org/x/term: v0.33.0 → v0.34.0
+- golang.org/x/text: v0.27.0 → v0.28.0
+- golang.org/x/tools: v0.34.0 → v0.35.0
+- google.golang.org/genproto/googleapis/api: a7a43d2 → 5f3141c
+- google.golang.org/genproto/googleapis/rpc: a7a43d2 → 5f3141c
+- google.golang.org/protobuf: v1.36.6 → v1.36.7
+- gopkg.in/evanphx/json-patch.v4: v4.12.0 → v4.13.0
+- k8s.io/api: v0.33.3 → v0.33.4
+- k8s.io/apimachinery: v0.33.3 → v0.33.4
+- k8s.io/client-go: v0.33.3 → v0.33.4
+- k8s.io/component-base: v0.33.3 → v0.33.4
+- k8s.io/mount-utils: v0.33.3 → v0.33.4
+
+### Removed
+_Nothing has changed._
+
+# v1.47.1
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+The `blockExpress` StorageClass parameter is deprecated, effective immediately ([#2564](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2564), [@mdzraf](https://github.com/mdzraf))
+
+**Starting in `v1.47.0`, newly created `io2` volumes will always use a cap of 256,000 IOPS, irregardless of whether the `blockExpress` parameter is set to true or not.** This aligns with EBS, which now [creates all `io2` volumes as Block Express](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html#vol-type-ssd). Volumes with greater than 64,000 IOPS may not reach their full performance on non-Nitro instances, see the EBS documentation for more details.
+
+Starting in `v1.47.0`, the `blockExpress` parameter has no effect (other than logging a deprecation warning) when present in a `StorageClass`. There are no current plans to fully remove support for the parameter (and fail `StorageClass`es using it), and any such change will be communicated in advance via the EBS CSI Driver `CHANGELOG`.
+
+### Bug or Regression
+
+- Prevent liveness probe failure (and thus CrashLoopBackoff) without proper logging by moving sts:GetCallerIdentity call from blocking startup to just in time ([#2621](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2621), [@ConnorJC3](https://github.com/ConnorJC3))
+
+
 # v1.47.0
 
 ## Changes by Kind
