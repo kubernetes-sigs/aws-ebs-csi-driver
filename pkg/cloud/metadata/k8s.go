@@ -104,7 +104,7 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 	}
 }
 
-func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (*Metadata, error) {
+func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler bool) (*Metadata, error) {
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
 		return nil, errors.New("CSI_NODE_NAME env var not set")
@@ -118,20 +118,18 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 
 	numAttachedENIs := 1        // Default: All nodes have at least 1 attached ENI
 	numBlockDeviceMappings := 0 // Default: 0
-	sageMakerLabels := true
+	sageMakerLabels := false
 
 	if val, ok := node.GetLabels()[LabelSageMakerENICount]; ok {
 		if num, err := strconv.Atoi(val); err == nil {
+			sageMakerLabels = true
 			numAttachedENIs = num
 			klog.V(2).InfoS("Using ENI count from SageMaker label", "count", numAttachedENIs)
 		} else {
 			klog.ErrorS(err, "Invalid ENI count in SageMaker label, using default",
 				"value", val,
 				"default", numAttachedENIs)
-			sageMakerLabels = false
 		}
-	} else {
-		sageMakerLabels = false
 	}
 
 	if val, ok := node.GetLabels()[LabelSageMakerBlockDeviceMappingsCount]; ok {
@@ -144,11 +142,9 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 				"default", numBlockDeviceMappings)
 			sageMakerLabels = false
 		}
-	} else {
-		sageMakerLabels = false
 	}
 
-	if ec2Labels && !sageMakerLabels {
+	if metadataLabeler && !sageMakerLabels {
 		backoff := wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   1.5,
@@ -216,6 +212,12 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, ec2Labels bool) (
 		NumAttachedENIs:        numAttachedENIs,
 		NumBlockDeviceMappings: numBlockDeviceMappings,
 	}
+
+	// Only let metadata.UpdateMetadata work for metadataLabeler data source
+	if metadataLabeler {
+		instanceInfo.K8sAPIClient = clientset
+	}
+
 	return &instanceInfo, nil
 }
 

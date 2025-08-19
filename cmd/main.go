@@ -43,7 +43,7 @@ var (
 
 const (
 	// LabelRefreshTime is the time in minutes that it takes for node labels to update volume and ENI count.
-	LabelRefreshTime = 10 * time.Second
+	LabelRefreshTime = 60 * time.Minute
 )
 
 func main() {
