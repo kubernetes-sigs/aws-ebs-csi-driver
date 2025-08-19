@@ -31,6 +31,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -2582,7 +2583,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
-								Name: DriverName,
+								Name: util.DriverName,
 								Allocatable: &v1.VolumeNodeResources{
 									Count: &count,
 								},
@@ -2638,7 +2639,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
-								Name: DriverName,
+								Name: util.DriverName,
 								Allocatable: &v1.VolumeNodeResources{
 									Count: &count,
 								},
@@ -2740,7 +2741,7 @@ func TestStartNotReadyTaintWatcher(t *testing.T) {
 				Spec: v1.CSINodeSpec{
 					Drivers: []v1.CSINodeDriver{
 						{
-							Name: DriverName,
+							Name: util.DriverName,
 							Allocatable: &v1.VolumeNodeResources{
 								Count: &count,
 							},

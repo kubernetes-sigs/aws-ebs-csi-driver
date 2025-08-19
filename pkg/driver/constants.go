@@ -16,7 +16,11 @@ limitations under the License.
 
 package driver
 
-import "time"
+import (
+	"time"
+
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+)
 
 // constants of keys in PublishContext.
 const (
@@ -181,7 +185,7 @@ const (
 // constants for node k8s API use.
 const (
 	// AgentNotReadyNodeTaintKey contains the key of taints to be removed on driver startup.
-	AgentNotReadyNodeTaintKey = "ebs.csi.aws.com/agent-not-ready"
+	AgentNotReadyNodeTaintKey = util.DriverName + "/agent-not-ready"
 )
 
 type fileSystemConfig struct {

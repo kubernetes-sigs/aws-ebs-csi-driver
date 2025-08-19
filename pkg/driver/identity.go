@@ -20,13 +20,14 @@ import (
 	"context"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
 
 func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	klog.V(6).InfoS("GetPluginInfo: called", "args", req)
 	resp := &csi.GetPluginInfoResponse{
-		Name:          DriverName,
+		Name:          util.DriverName,
 		VendorVersion: driverVersion,
 	}
 
