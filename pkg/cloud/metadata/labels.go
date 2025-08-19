@@ -18,6 +18,7 @@ import (
 	"context"
 	json "encoding/json"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/kubernetes-csi/csi-lib-utils/leaderelection"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,16 +39,26 @@ import (
 
 const (
 	// VolumesLabel is the label name for the number of volumes on a node.
-	VolumesLabel = "ebs.csi.aws.com/non-csi-ebs-volumes-count"
+	VolumesLabel = util.DriverName + "/non-csi-ebs-volumes-count"
 
 	// ENIsLabel is the label name for the number of ENIs on a node.
-	ENIsLabel = "ebs.csi.aws.com/enis-count"
+	ENIsLabel = util.DriverName + "/enis-count"
+
+	// ControllerMetadataLabelerInterval is the interval metadata-labeler mode refreshes node labels with volume and ENI count.
+	ControllerMetadataLabelerInterval = 60 * time.Minute
 
 	// patchFails is the number of nodes we fail to patch before returning an error.
 	patchFails = 5
 
-	// numWorkersPatchLables is the number of worker threads patching node labels.
+	// numWorkersPatchLabels is the number of worker threads patching node labels.
 	numWorkersPatchLabels = 10
+)
+
+var (
+	// nodeMetadataLabelerUpdateInterval is interval between attempts to update metadata by getting Node resource
+	// Jitter between node service replicas to avoid spiking K8s API Server.
+	//nolint:gosec // This use of rand is just for jitter.
+	nodeMetadataLabelerUpdateInterval = 1*time.Hour + time.Duration(rand.Intn(10))*time.Minute
 )
 
 type enisVolumes struct {
@@ -54,21 +66,21 @@ type enisVolumes struct {
 	Volumes int
 }
 
-// Uses leader election so that only one controller pod calls containuousUpdateLabels().
+// ContinuousUpdateLabelsLeaderElection uses leader election so that only one controller pod calls continuousUpdateLabels().
 func ContinuousUpdateLabelsLeaderElection(clientset kubernetes.Interface, cloud cloud.Cloud, updateTime time.Duration) error {
 	var (
-		lockName = "node-patcher-ebs.csi.aws.com"
+		lockName = "metadata-labeler-" + util.DriverName
 	)
 	le := leaderelection.NewLeaderElection(clientset, lockName, func(ctx context.Context) {
 		err := continuousUpdateLabels(ctx, clientset, cloud, updateTime)
 		if err != nil {
-			klog.ErrorS(err, "failed to patch node labels with volume/ENI count")
+			klog.ErrorS(err, "Failed to patch node labels with volume/ENI count")
 			return
 		}
 	})
 	err := le.Run()
 	if err != nil {
-		klog.ErrorS(err, "could not run leader election")
+		klog.ErrorS(err, "Could not run leader election")
 		return err
 	}
 	return nil
@@ -85,13 +97,13 @@ func continuousUpdateLabels(ctx context.Context, k8sClient kubernetes.Interface,
 		"volumeID": volumeIDIndexFunc,
 	})
 	if err != nil {
-		klog.ErrorS(err, "failed to add volume ID indexer")
+		klog.ErrorS(err, "Failed to add volume ID indexer")
 		return err
 	}
 	nodesInformer := factory.Core().V1().Nodes().Informer()
 	err = patchNewNodes(ctx, k8sClient, cloud, nodesInformer, pvInformer)
 	if err != nil {
-		klog.ErrorS(err, "could not add event handler to informer to patch new nodes")
+		klog.ErrorS(err, "Could not add event handler to informer to patch new nodes")
 		return err
 	}
 	factory.Start(ctx.Done())
@@ -99,13 +111,13 @@ func continuousUpdateLabels(ctx context.Context, k8sClient kubernetes.Interface,
 
 	err = updateLabels(ctx, k8sClient, cloud, pvInformer)
 	if err != nil {
-		klog.ErrorS(err, "could not patch node labels with updated volume/ENI count")
+		klog.ErrorS(err, "Could not patch node labels with updated volume/ENI count")
 		return err
 	}
 	for range time.Tick(updateTime) {
 		err = updateLabels(ctx, k8sClient, cloud, pvInformer)
 		if err != nil {
-			klog.ErrorS(err, "could not patch node labels with updated volume/ENI count")
+			klog.ErrorS(err, "Could not patch node labels with updated volume/ENI count")
 			return err
 		}
 	}
@@ -121,7 +133,7 @@ func volumeIDIndexFunc(obj interface{}) ([]string, error) {
 	var volumeIDs []string
 	var volumeID string
 
-	if pv.Spec.CSI != nil && pv.Spec.CSI.Driver == "ebs.csi.aws.com" {
+	if pv.Spec.CSI != nil && pv.Spec.CSI.Driver == util.DriverName {
 		volumeID = pv.Spec.CSI.VolumeHandle
 	} else if pv.Spec.AWSElasticBlockStore != nil {
 		volumeID = pv.Spec.AWSElasticBlockStore.VolumeID
@@ -165,13 +177,13 @@ func patchNewNodes(ctx context.Context, clientset kubernetes.Interface, cloud cl
 			}
 			err := updateMetadataEC2(ctx, clientset, cloud, node, pvInformer)
 			if err != nil {
-				klog.ErrorS(err, "unable to update ENI/Volume count on node labels", "node", node.Items[0].Name)
+				klog.ErrorS(err, "Unable to update ENI/Volume count on node labels", "node", node.Items[0].Name)
 			}
 		}
 	}
 	_, err := nodesInformer.AddEventHandler(handler)
 	if err != nil {
-		klog.ErrorS(err, "unable to add event handler for node informer")
+		klog.ErrorS(err, "Unable to add event handler for node informer")
 		return err
 	}
 	return nil
@@ -180,12 +192,12 @@ func patchNewNodes(ctx context.Context, clientset kubernetes.Interface, cloud cl
 func updateLabels(ctx context.Context, k8sClient kubernetes.Interface, cloud cloud.Cloud, pvCache cache.SharedIndexInformer) error {
 	nodes, err := getNodes(ctx, k8sClient)
 	if err != nil {
-		klog.ErrorS(err, "could not get nodes")
+		klog.ErrorS(err, "Could not get nodes")
 		return err
 	}
 	err = updateMetadataEC2(ctx, k8sClient, cloud, nodes, pvCache)
 	if err != nil {
-		klog.ErrorS(err, "unable to update ENI/Volume count on node labels")
+		klog.ErrorS(err, "Unable to update ENI/Volume count on node labels")
 		return err
 	}
 	return nil
@@ -194,7 +206,7 @@ func updateLabels(ctx context.Context, k8sClient kubernetes.Interface, cloud clo
 func getNodes(ctx context.Context, kubeclient kubernetes.Interface) (*v1.NodeList, error) {
 	nodes, err := kubeclient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.ErrorS(err, "could not get nodes")
+		klog.ErrorS(err, "Could not get nodes")
 		return nil, err
 	}
 	return nodes, nil
@@ -203,7 +215,7 @@ func getNodes(ctx context.Context, kubeclient kubernetes.Interface) (*v1.NodeLis
 func updateMetadataEC2(ctx context.Context, kubeclient kubernetes.Interface, cloud cloud.Cloud, nodes *v1.NodeList, pvInformer cache.SharedIndexInformer) error {
 	enisVolumeMap, err := getMetadata(ctx, cloud, nodes, pvInformer)
 	if err != nil {
-		klog.ErrorS(err, "unable to get ENI/Volume count")
+		klog.ErrorS(err, "Unable to get ENI/Volume count")
 		return err
 	}
 
@@ -229,7 +241,7 @@ func getMetadata(ctx context.Context, cloud cloud.Cloud, nodes *v1.NodeList, pvI
 	respList, err := cloud.GetInstancesPatching(ctx, nodeIds)
 
 	if err != nil {
-		klog.ErrorS(err, "failed to describe instances")
+		klog.ErrorS(err, "Failed to describe instances")
 		return nil, err
 	}
 
@@ -289,7 +301,7 @@ func patchNodes(ctx context.Context, nodes *v1.NodeList, enisVolumeMap map[strin
 func patchSingleNode(ctx context.Context, node v1.Node, enisVolumeMap map[string]enisVolumes, clientset kubernetes.Interface) error {
 	instanceID, err := parseProviderID(&node)
 	if err != nil {
-		klog.Error(err, "could not get instanceID", "node", node.Name)
+		klog.Error(err, "Could not get instanceID", "node", node.Name)
 		return err
 	}
 
@@ -301,21 +313,21 @@ func patchSingleNode(ctx context.Context, node v1.Node, enisVolumeMap map[string
 
 	oldData, err := json.Marshal(node)
 	if err != nil {
-		klog.ErrorS(err, "failed to marshal the existing node", "node", node.Name)
+		klog.ErrorS(err, "Failed to marshal the existing node", "node", node.Name)
 		return err
 	}
 	newData, err := json.Marshal(newNode)
 	if err != nil {
-		klog.ErrorS(err, "failed to marshal the new node", "node", newNode.Name)
+		klog.ErrorS(err, "Failed to marshal the new node", "node", newNode.Name)
 		return err
 	}
 	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, &v1.Node{})
 	if err != nil {
-		klog.ErrorS(err, "failed to create two way merge", "node", node.Name)
+		klog.ErrorS(err, "Failed to create two way merge", "node", node.Name)
 		return err
 	}
 	if _, err := clientset.CoreV1().Nodes().Patch(ctx, node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}); err != nil {
-		klog.ErrorS(err, "failed to patch node", "node", node.Name)
+		klog.ErrorS(err, "Failed to patch node", "node", node.Name)
 		return err
 	}
 	klog.V(6).InfoS("Patched labels", "node", node.Name, "num volumes label", VolumesLabel, "num ENIs label", ENIsLabel)

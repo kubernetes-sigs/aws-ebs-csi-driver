@@ -62,6 +62,7 @@ spec:
             - node
             - --endpoint=$(CSI_ENDPOINT)
             - --csi-mount-point-prefix=/var/lib/kubelet/plugins/kubernetes.io/csi/ebs.csi.aws.com/
+            - --metadata-sources=metadatalabeler
             - --logging-format=text
             - --v=2
           env:

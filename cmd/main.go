@@ -41,11 +41,6 @@ var (
 	featureGate = featuregate.NewFeatureGate()
 )
 
-const (
-	// LabelRefreshTime is the time in minutes that it takes for node labels to update volume and ENI count.
-	LabelRefreshTime = 10 * time.Second
-)
-
 func main() {
 	fs := flag.NewFlagSet("aws-ebs-csi-driver", flag.ExitOnError)
 	if err := logsapi.RegisterLogFormat(logsapi.JSONLogFormat, json.Factory{}, logsapi.LoggingBetaOptions); err != nil {
@@ -155,7 +150,7 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	case string(driver.ControllerMode), string(driver.NodeMode), string(driver.AllMode):
 	case "metadataLabeler":
-		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, LabelRefreshTime)
+		err := metadata.ContinuousUpdateLabelsLeaderElection(k8sClient, cloud, metadata.ControllerMetadataLabelerInterval)
 		if err != nil {
 			klog.ErrorS(err, "failed to patch volume/ENI count on node labels")
 			klog.FlushAndExit(klog.ExitFlushTimeout, 0)

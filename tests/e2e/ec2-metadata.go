@@ -43,6 +43,10 @@ import (
 	admissionapi "k8s.io/pod-security-admission/api"
 )
 
+const (
+	driverNamespace = "kube-system"
+)
+
 type instanceMetadata struct {
 	ENIs             int
 	Volumes          int
@@ -52,7 +56,7 @@ type instanceMetadata struct {
 	AvailabilityZone string
 }
 
-var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisruptive(), func() {
+var _ = framework.Describe("[ebs-csi-e2e] [disruptive] EBS CSI Driver Node Labeling", framework.WithDisruptive(), func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -78,10 +82,11 @@ var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisrupt
 		for i := len(cleanUp) - 1; i >= 0; i-- {
 			cleanUp[i]()
 		}
+		deleteControllerPod(cs)
 		checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
 		By("Deleting the EBS CSI node pods to reset allocatable counts")
 		for instance := range labeledMetadata {
-			deletePod(labeledMetadata[instance].NodeID, cs)
+			deleteNodePod(labeledMetadata[instance].NodeID, cs)
 		}
 		checkCSINodesUpdated(cs, labeledMetadata, expectedMetadata)
 	})
@@ -112,9 +117,11 @@ var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisrupt
 
 			By("Attaching the new non CSI managed volume")
 			attachVolume(ec2Client, firstCreatedNonCSIVolumeID, firstChangedNonCSIVolumeInstance, "/dev/sdz", expectedMetadata)
+			By("Deleting the EBS CSI controller pods to trigger Node label update")
+			deleteControllerPod(cs)
 			checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
-			By("Deleting the EBS CSI node pod to trigger label update")
-			deletePod(labeledMetadata[firstChangedNonCSIVolumeInstance].NodeID, cs)
+			By("Deleting the EBS CSI node pod to trigger CSINode allocatable update")
+			deleteNodePod(labeledMetadata[firstChangedNonCSIVolumeInstance].NodeID, cs)
 			checkCSINodesUpdated(cs, labeledMetadata, expectedMetadata)
 
 			// For the instance that the new volume is attached to, the volume labels and allocatable count should not change
@@ -134,9 +141,11 @@ var _ = framework.Describe("EBS CSI Driver Node Labeling", framework.WithDisrupt
 			cleanUp = append(cleanUp, func() { cleanUpVolume(createdNonCSIVolumeID, changedNonCSIVolumeInstance, ec2Client, expectedMetadata) })
 			By("Attaching the new non CSI managed volume")
 			attachVolume(ec2Client, createdNonCSIVolumeID, changedNonCSIVolumeInstance, "/dev/sdy", expectedMetadata)
+			By("Deleting the EBS CSI controller pods to trigger Node label update")
+			deleteControllerPod(cs)
 			checkLabelsUpdated(cs, labeledMetadata, expectedMetadata)
-			By("Deleting the EBS CSI node pod to trigger label update")
-			deletePod(labeledMetadata[changedNonCSIVolumeInstance].NodeID, cs)
+			By("Deleting the EBS CSI node pod to trigger CSINode allocatable update")
+			deleteNodePod(labeledMetadata[changedNonCSIVolumeInstance].NodeID, cs)
 			checkCSINodesUpdated(cs, labeledMetadata, expectedMetadata)
 
 			By("Verifying updated node labels")
@@ -356,8 +365,8 @@ func attachVolume(ec2svc *ec2.Client, volumeID, instanceID, device string, metad
 	return true
 }
 
-func deletePod(nodeID string, cs clientset.Interface) {
-	pods, err := cs.CoreV1().Pods("kube-system").List(context.Background(), metav1.ListOptions{
+func deleteNodePod(nodeID string, cs clientset.Interface) {
+	pods, err := cs.CoreV1().Pods(driverNamespace).List(context.Background(), metav1.ListOptions{
 		FieldSelector: "spec.nodeName=" + nodeID,
 	})
 	Expect(err).NotTo(HaveOccurred(), "Failed to list pods")
@@ -377,8 +386,21 @@ func deletePod(nodeID string, cs clientset.Interface) {
 		PropagationPolicy: &deletePolicy,
 	}
 
-	err = cs.CoreV1().Pods("kube-system").Delete(context.Background(), targetPod, deleteOptions)
-	Expect(err).NotTo(HaveOccurred(), "Failed to delete pod "+targetPod)
+	err = cs.CoreV1().Pods(driverNamespace).Delete(context.Background(), targetPod, deleteOptions)
+	Expect(err).NotTo(HaveOccurred(), "Failed to delete ebs-csi-node pod "+targetPod)
+}
+
+func deleteControllerPod(cs clientset.Interface) {
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+	listOptions := metav1.ListOptions{
+		LabelSelector: "app=ebs-csi-controller",
+	}
+
+	err := cs.CoreV1().Pods(driverNamespace).DeleteCollection(context.Background(), deleteOptions, listOptions)
+	Expect(err).NotTo(HaveOccurred(), "Failed to delete ebs-csi-controller pods")
 }
 
 func parseProviderID(providerID string) string {
@@ -400,7 +422,7 @@ func createStorageClass(cs kubernetes.Interface) *v1.StorageClass {
 		VolumeBindingMode: func() *storagev1.VolumeBindingMode { v := storagev1.VolumeBindingWaitForFirstConsumer; return &v }()}
 
 	_, err := cs.StorageV1().StorageClasses().Create(context.Background(), storageClass, metav1.CreateOptions{})
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
 		Expect(err).NotTo(HaveOccurred(), "Failed to create storage class")
 	}
 	return storageClass
