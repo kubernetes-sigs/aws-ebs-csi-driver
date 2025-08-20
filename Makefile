@@ -89,7 +89,7 @@ test/coverage:
 tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
 
 .PHONY: update
-update: update/gofix update/gofmt update/kustomize update/mockgen update/gomod update/shfmt update/generate-license-header
+update: update/gofix update/gofmt update/golangci-fix update/kustomize update/mockgen update/gomod update/shfmt update/generate-license-header
 	@echo "All updates succeeded!"
 
 .PHONY: verify
@@ -304,6 +304,12 @@ update/gofix:
 .PHONY: update/gofmt
 update/gofmt:
 	gofmt -s -w .
+
+.PHONY: update/golangci-fix
+update/golangci-fix: bin/golangci-lint
+ifndef SKIP_GOLANGCI_FIX
+	./bin/golangci-lint run --fix ./... || true
+endif
 
 .PHONY: update/kustomize
 update/kustomize: bin/helm

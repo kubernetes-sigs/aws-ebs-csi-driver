@@ -25,7 +25,7 @@ TEST_DIR=$(mktemp -d)
 trap "rm -rf \"${TEST_DIR}\"" EXIT
 cp -rf "${ROOT}/." "${TEST_DIR}"
 
-if ! make -C "${TEST_DIR}" update >/dev/null; then
+if ! SKIP_GOLANGCI_FIX=true make -C "${TEST_DIR}" update >/dev/null; then
   echo "\`make update\` failed!"
   exit 1
 fi
