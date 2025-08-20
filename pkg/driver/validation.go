@@ -52,6 +52,12 @@ func validateExtraTags(tags map[string]string, warnOnly bool) error {
 		if k == cloud.SnapshotNameTagKey {
 			return fmt.Errorf("tag key '%s' is reserved", cloud.SnapshotNameTagKey)
 		}
+		if k == IopsPerGBKey {
+			return fmt.Errorf("tag key '%s' is reserved", IopsPerGBKey)
+		}
+		if k == AllowAutoIopsIncreaseOnResizeKey {
+			return fmt.Errorf("tag key '%s' is reserved", AllowAutoIopsIncreaseOnResizeKey)
+		}
 		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
 			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
 		}

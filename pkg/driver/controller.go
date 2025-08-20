@@ -142,6 +142,9 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", parseIopsPerGBKeyErr)
 			}
 			iopsPerGB = int32(parseIopsPerGBKey)
+			volumeTags[IopsPerGBKey] = strconv.Itoa(int(iopsPerGB))
+		case AllowAutoIopsIncreaseOnResizeKey:
+			volumeTags[AllowAutoIopsIncreaseOnResizeKey] = value
 		case AllowAutoIOPSPerGBIncreaseKey:
 			allowIOPSPerGBIncrease = isTrue(value)
 		case IopsKey:

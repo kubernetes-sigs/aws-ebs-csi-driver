@@ -28,6 +28,7 @@ import (
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/coalescer"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -146,6 +147,12 @@ func executeModifyVolumeRequest(c cloud.Cloud) func(string, modifyVolumeRequest)
 		if err != nil {
 			return 0, err
 		}
+
+		req.modifyDiskOptions.IOPS, err = matchIOPStoIopsPerGbRatio(c, ctx, volumeID, &req)
+		if err != nil {
+			return 0, err
+		}
+
 		if (req.modifyDiskOptions.IOPS != 0) || (req.modifyDiskOptions.Throughput != 0) || (req.modifyDiskOptions.VolumeType != "") || (req.newSize != 0) {
 			actualSizeGiB, err := c.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
 			if err != nil {
@@ -176,6 +183,7 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 		},
 	}
 	var rawTagsToAdd []string
+	var noValidationTags = make(map[string]string)
 	tProps := new(template.PVProps)
 	for key, value := range params {
 		switch key {
@@ -200,6 +208,10 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 			options.modifyDiskOptions.VolumeType = value
 		case ModificationKeyVolumeType:
 			options.modifyDiskOptions.VolumeType = value
+		case IopsPerGBKey:
+			noValidationTags[IopsPerGBKey] = value
+		case AllowAutoIopsIncreaseOnResizeKey:
+			noValidationTags[AllowAutoIopsIncreaseOnResizeKey] = value
 		case PVCNameKey:
 			tProps.PVCName = value
 		case PVCNamespaceKey:
@@ -224,6 +236,33 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 	if err := validateExtraTags(addTags, false); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
+	for k, v := range noValidationTags {
+		addTags[k] = v
+	}
 	options.modifyTagsOptions.TagsToAdd = addTags
 	return &options, nil
+}
+
+func matchIOPStoIopsPerGbRatio(c cloud.Cloud, ctx context.Context, volumeID string, req *modifyVolumeRequest) (int32, error) {
+	disk, err := c.GetDiskByID(ctx, volumeID)
+	if err != nil {
+		if errors.Is(err, cloud.ErrNotFound) {
+			return 0, status.Error(codes.NotFound, "Volume not found")
+		}
+		return 0, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
+	}
+
+	if val, ok := req.modifyTagsOptions.TagsToAdd[IopsPerGBKey]; ok {
+		iopsPerGb, err := strconv.ParseInt(val, 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("invalid iopspergb value %s", val)
+		}
+		if req.newSize != 0 {
+			req.modifyDiskOptions.IOPS = int32(iopsPerGb) * util.BytesToGiB(req.newSize)
+		} else {
+			req.modifyDiskOptions.IOPS = int32(iopsPerGb) * disk.CapacityGiB
+			req.newSize = util.GiBToBytes(disk.CapacityGiB) // Make sure to always pass in a size to capIOPS
+		}
+	}
+	return req.modifyDiskOptions.IOPS, nil
 }
