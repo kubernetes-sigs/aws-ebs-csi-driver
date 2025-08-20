@@ -146,7 +146,8 @@ func executeModifyVolumeRequest(c cloud.Cloud) func(string, modifyVolumeRequest)
 		if err != nil {
 			return 0, err
 		}
-		if (req.modifyDiskOptions.IOPS != 0) || (req.modifyDiskOptions.Throughput != 0) || (req.modifyDiskOptions.VolumeType != "") || (req.newSize != 0) {
+
+		if (req.modifyDiskOptions.IOPS != 0) || (req.modifyDiskOptions.Throughput != 0) || (req.modifyDiskOptions.VolumeType != "") || (req.newSize != 0) || (req.modifyDiskOptions.IOPSPerGB != 0) {
 			actualSizeGiB, err := c.ResizeOrModifyDisk(ctx, volumeID, req.newSize, &req.modifyDiskOptions)
 			if err != nil {
 				switch {
@@ -176,6 +177,7 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 		},
 	}
 	var rawTagsToAdd []string
+	var noValidationTags = make(map[string]string)
 	tProps := new(template.PVProps)
 	for key, value := range params {
 		switch key {
@@ -200,6 +202,16 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 			options.modifyDiskOptions.VolumeType = value
 		case ModificationKeyVolumeType:
 			options.modifyDiskOptions.VolumeType = value
+		case IopsPerGBKey:
+			noValidationTags[cloud.IopsPerGBKey] = value
+			iopsPerGb, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IopsPerGb: %q", value)
+			}
+			options.modifyDiskOptions.IOPSPerGB = int32(iopsPerGb)
+		case AllowAutoIopsIncreaseOnResizeKey:
+			noValidationTags[cloud.AllowAutoIopsIncreaseOnResizeKey] = value
+			options.modifyDiskOptions.AllowIopsIncreaseOnResize = isTrue(value)
 		case PVCNameKey:
 			tProps.PVCName = value
 		case PVCNamespaceKey:
@@ -223,6 +235,9 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 	}
 	if err := validateExtraTags(addTags, false); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+	for k, v := range noValidationTags {
+		addTags[k] = v
 	}
 	options.modifyTagsOptions.TagsToAdd = addTags
 	return &options, nil
