@@ -24,6 +24,7 @@ import (
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
@@ -169,7 +170,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotID s
 				Name:      volumeSnapshotNameStatic,
 				Namespace: t.namespace.Name,
 			},
-			Driver: "ebs.csi.aws.com",
+			Driver: util.DriverName,
 			Source: volumesnapshotv1.VolumeSnapshotContentSource{
 				SnapshotHandle: aws.String(snapshotID),
 			},
@@ -373,7 +374,7 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 
 			keyFound := false
 			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions {
-				if v.Key == "topology.ebs.csi.aws.com/zone" {
+				if v.Key == "topology"+util.DriverName+"/zone" {
 					keyFound = true
 					Expect(v.Key).To(Equal(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key))
 				}

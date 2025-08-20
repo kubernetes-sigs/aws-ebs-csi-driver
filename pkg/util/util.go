@@ -33,6 +33,10 @@ import (
 )
 
 const (
+	// DriverName is the domain for all EBS CSI Driver related components.
+	// In util package to avoid cyclic dependency conflicts.
+	DriverName = "ebs.csi.aws.com"
+
 	GiB              = int64(1024 * 1024 * 1024)
 	DefaultBlockSize = 4096
 )

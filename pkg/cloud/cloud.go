@@ -115,7 +115,7 @@ const (
 	// KubernetesTagKeyPrefix is the prefix of the key value that is reserved for Kubernetes.
 	KubernetesTagKeyPrefix = "kubernetes.io"
 	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
-	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
+	AwsEbsDriverTagKey = util.DriverName + "/cluster"
 )
 
 // Batcher.

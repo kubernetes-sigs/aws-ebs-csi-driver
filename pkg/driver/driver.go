@@ -46,14 +46,13 @@ const (
 )
 
 const (
-	DriverName               = "ebs.csi.aws.com"
-	AwsPartitionKey          = "topology." + DriverName + "/partition"
-	AwsAccountIDKey          = "topology." + DriverName + "/account-id"
-	AwsRegionKey             = "topology." + DriverName + "/region"
-	AwsOutpostIDKey          = "topology." + DriverName + "/outpost-id"
+	AwsPartitionKey          = "topology." + util.DriverName + "/partition"
+	AwsAccountIDKey          = "topology." + util.DriverName + "/account-id"
+	AwsRegionKey             = "topology." + util.DriverName + "/region"
+	AwsOutpostIDKey          = "topology." + util.DriverName + "/outpost-id"
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
 	// Deprecated: Use the WellKnownZoneTopologyKey instead.
-	ZoneTopologyKey = "topology." + DriverName + "/zone"
+	ZoneTopologyKey = "topology." + util.DriverName + "/zone"
 	// This name is purposefully consistent with the CCM's ZoneID topology key.
 	// This key is only used for provisioning by az-id and will not be used for node topology
 	// to prevent any backwards compatibility issues.
@@ -70,7 +69,7 @@ type Driver struct {
 }
 
 func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
-	klog.InfoS("Driver Information", "Driver", DriverName, "Version", driverVersion)
+	klog.InfoS("Driver Information", "Driver", util.DriverName, "Version", driverVersion)
 
 	if err := ValidateDriverOptions(o); err != nil {
 		return nil, fmt.Errorf("invalid driver options: %w", err)

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
@@ -57,7 +58,7 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 	testVolume, _ := volumeDetails.SetupDynamicPersistentVolumeClaim(c, ns, ebsDriver)
 	defer testVolume.Cleanup()
 
-	parametersWithPrefix := PrefixAnnotations("ebs.csi.aws.com/", modifyVolumeTest.ModifyVolumeParameters)
+	parametersWithPrefix := PrefixAnnotations(util.DriverName+"/", modifyVolumeTest.ModifyVolumeParameters)
 
 	By("deploying pod continuously writing to volume")
 	formatOptionMountPod := createPodWithVolume(c, ns, PodCmdContinuousWrite(DefaultMountPath), testVolume, volumeDetails)
@@ -79,7 +80,7 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 				Name:      formatOptionMountPod.pod.Name,
 				Namespace: ns.Name,
 			},
-			DriverName: "ebs.csi.aws.com",
+			DriverName: util.DriverName,
 			Parameters: modifyVolumeTest.ModifyVolumeParameters,
 		}, metav1.CreateOptions{})
 		framework.ExpectNoError(err)
