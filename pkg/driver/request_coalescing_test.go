@@ -105,6 +105,7 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		if newSize != NewSize {
@@ -167,6 +168,7 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return 0, errors.New("ResizeOrModifyDisk failed")
@@ -230,6 +232,7 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 	volumeTypeChosen := ""
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		if newSize != NewSize {
@@ -322,6 +325,7 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return newSize, nil
@@ -380,6 +384,7 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return newSize, nil
@@ -438,6 +443,7 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
+	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
 	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 

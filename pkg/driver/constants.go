@@ -47,6 +47,9 @@ const (
 	// AllowAutoIOPSPerGBIncreaseKey represents key for allowing automatic increase of IOPS.
 	AllowAutoIOPSPerGBIncreaseKey = "allowautoiopspergbincrease"
 
+	// AllowAutoIOPSIncreaseOnModifyKey represents key for allowing IOPS increase on resizing if IopsPerGB is set to ensure desired ratio is maintained.
+	AllowAutoIOPSIncreaseOnModifyKey = "allowautoiopsincreaseonmodify"
+
 	// VolumeInitializationRateKey represents key for volume initialization rate when creating volumes from snapshots.
 	VolumeInitializationRateKey = "volumeinitializationrate"
 
