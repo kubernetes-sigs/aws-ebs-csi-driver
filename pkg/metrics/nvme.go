@@ -287,7 +287,11 @@ func getNVMEMetrics(devicePath string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getNVMEMetrics: error opening device: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			klog.ErrorS(err, "Failed to close device file", "devicePath", devicePath)
+		}
+	}()
 
 	data, err := nvmeReadLogPage(f.Fd(), 0xD0)
 	if err != nil {

@@ -70,7 +70,6 @@ linters:
       - comments
       - common-false-positives
       - legacy
-      - std-error-handling
     rules:
       # gosec recommends ignoring test files
       - linters:

@@ -20,7 +20,6 @@ package mounter
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -85,11 +84,7 @@ func TestNeedResize(t *testing.T) {
 
 func TestMakeDir(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := os.MkdirTemp("", "mount-ebs-csi")
-	if err != nil {
-		t.Fatalf("error creating directory %v", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	targetPath := filepath.Join(dir, "targetdir")
 
@@ -113,11 +108,7 @@ func TestMakeDir(t *testing.T) {
 
 func TestMakeFile(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := os.MkdirTemp("", "mount-ebs-csi")
-	if err != nil {
-		t.Fatalf("error creating directory %v", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	targetPath := filepath.Join(dir, "targetfile")
 
@@ -141,11 +132,7 @@ func TestMakeFile(t *testing.T) {
 
 func TestPathExists(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := os.MkdirTemp("", "mount-ebs-csi")
-	if err != nil {
-		t.Fatalf("error creating directory %v", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	targetPath := filepath.Join(dir, "notafile")
 
@@ -167,11 +154,7 @@ func TestPathExists(t *testing.T) {
 
 func TestGetDeviceName(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := os.MkdirTemp("", "mount-ebs-csi")
-	if err != nil {
-		t.Fatalf("error creating directory %v", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	targetPath := filepath.Join(dir, "notafile")
 
