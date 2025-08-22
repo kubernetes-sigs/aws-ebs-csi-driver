@@ -113,19 +113,19 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		throughput               int32
 		volumeInitializationRate int32
 		isEncrypted              bool
-		blockExpress             bool
 		kmsKeyID                 string
-		scTags                   []string
+		tagsToEvaluate           = make([]string, 0)
 		volumeTags               = map[string]string{
 			cloud.VolumeNameTagKey:   volName,
 			cloud.AwsEbsDriverTagKey: isManagedByDriver,
 		}
-		blockSize       string
-		inodeSize       string
-		bytesPerInode   string
-		numberOfInodes  string
-		ext4BigAlloc    bool
-		ext4ClusterSize string
+		blockSize                   string
+		inodeSize                   string
+		bytesPerInode               string
+		numberOfInodes              string
+		ext4BigAlloc                bool
+		ext4ClusterSize             string
+		blockAttachUntilInitialized bool
 	)
 
 	tProps := new(template.PVProps)
@@ -139,7 +139,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case IopsPerGBKey:
 			parseIopsPerGBKey, parseIopsPerGBKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsPerGBKeyErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", parseIopsPerGBKeyErr)
 			}
 			iopsPerGB = int32(parseIopsPerGBKey)
 		case AllowAutoIOPSPerGBIncreaseKey:
@@ -147,19 +147,19 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case IopsKey:
 			parseIopsKey, parseIopsKeyErr := strconv.ParseInt(value, 10, 32)
 			if parseIopsKeyErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iops: %v", parseIopsKeyErr)
 			}
 			iops = int32(parseIopsKey)
 		case VolumeInitializationRateKey:
 			parseInitRate, parseInitRateErr := strconv.ParseInt(value, 10, 32)
 			if parseInitRateErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid volumeInitializationRate: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid volumeInitializationRate: %v", parseInitRateErr)
 			}
 			volumeInitializationRate = int32(parseInitRate)
 		case ThroughputKey:
 			parseThroughput, parseThroughputErr := strconv.ParseInt(value, 10, 32)
 			if parseThroughputErr != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", err)
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid throughput: %v", parseThroughputErr)
 			}
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
@@ -175,8 +175,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		case PVNameKey:
 			volumeTags[PVNameTag] = value
 			tProps.PVName = value
-		case BlockExpressKey:
-			blockExpress = isTrue(value)
+		case DeprecatedBlockExpressKey:
+			klog.V(2).InfoS("blockExpress key is deprecated and has no effect, all io2 volumes are now Block Express and share the same IOPS cap")
 		case BlockSizeKey:
 			if isAlphanumeric := util.StringIsAlphanumeric(value); !isAlphanumeric {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse blockSize (%s): %v", value, err)
@@ -204,30 +204,69 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
 			}
 			ext4ClusterSize = value
+		case BlockAttachUntilInitializedKey:
+			blockAttachUntilInitialized = isTrue(value)
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
-				scTags = append(scTags, value)
+				tagsToEvaluate = append(tagsToEvaluate, value)
 			} else {
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 			}
 		}
 	}
 
-	modifyOptions, err := parseModifyVolumeParameters(req.GetMutableParameters())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter: %v", err)
-	}
+	mutableParameters := req.GetMutableParameters()
 
 	// "Values specified in mutable_parameters MUST take precedence over the values from parameters."
 	// https://github.com/container-storage-interface/spec/blob/master/spec.md#createvolume
-	if modifyOptions.modifyDiskOptions.VolumeType != "" {
-		volumeType = modifyOptions.modifyDiskOptions.VolumeType
+	for key, value := range mutableParameters {
+		switch key {
+		case IopsKey:
+			vacIops, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse IOPS: %q", value)
+			}
+			iops = int32(vacIops)
+		case ThroughputKey:
+			vacThroughput, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse throughput: %q", value)
+			}
+			throughput = int32(vacThroughput)
+		case DeprecatedModificationKeyVolumeType:
+			if _, ok := mutableParameters[ModificationKeyVolumeType]; ok {
+				klog.Infof("Ignoring deprecated key `volumeType` because preferred key `type` is present")
+				continue
+			}
+			klog.InfoS("Key `volumeType` is deprecated, please use `type` instead")
+			volumeType = value
+		case VolumeTypeKey:
+			volumeType = value
+		default:
+			switch {
+			case strings.HasPrefix(key, ModificationAddTag):
+				tagsToEvaluate = append(tagsToEvaluate, value)
+			default:
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid mutable parameter key: %s", key)
+			}
+		}
 	}
-	if modifyOptions.modifyDiskOptions.IOPS != 0 {
-		iops = modifyOptions.modifyDiskOptions.IOPS
+
+	for key, value := range d.options.ExtraTags {
+		tagsToEvaluate = append(tagsToEvaluate, key+"="+value)
 	}
-	if modifyOptions.modifyDiskOptions.Throughput != 0 {
-		throughput = modifyOptions.modifyDiskOptions.Throughput
+
+	addTags, err := template.Evaluate(tagsToEvaluate, tProps, d.options.WarnOnInvalidTag)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating tag value: %v", err)
+	}
+
+	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
+	}
+
+	for k, v := range addTags {
+		volumeTags[k] = v
 	}
 
 	responseCtx := map[string]string{}
@@ -268,13 +307,12 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return nil, err
 		}
 	}
+	if blockAttachUntilInitialized {
+		responseCtx[BlockAttachUntilInitializedKey] = trueStr
+	}
 
 	if !ext4BigAlloc && len(ext4ClusterSize) > 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Cannot set ext4BigAllocClusterSize when ext4BigAlloc is false")
-	}
-
-	if blockExpress && volumeType != cloud.VolumeTypeIO2 {
-		return nil, status.Errorf(codes.InvalidArgument, "Block Express is only supported on io2 volumes")
 	}
 
 	snapshotID := ""
@@ -292,6 +330,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// create a new volume
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
+	zoneID := pickAvailabilityZoneID(req.GetAccessibilityRequirements())
 	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
 
 	// fill volume tags
@@ -300,22 +339,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
 		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
 		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
-	}
-	for k, v := range d.options.ExtraTags {
-		volumeTags[k] = v
-	}
-
-	addTags, err := template.Evaluate(scTags, tProps, d.options.WarnOnInvalidTag)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
-	}
-
-	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
-	}
-
-	for k, v := range addTags {
-		volumeTags[k] = v
 	}
 
 	opts := &cloud.DiskOptions{
@@ -327,9 +350,9 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		IOPS:                     iops,
 		Throughput:               throughput,
 		AvailabilityZone:         zone,
+		AvailabilityZoneID:       zoneID,
 		OutpostArn:               outpostArn,
 		Encrypted:                isEncrypted,
-		BlockExpress:             blockExpress,
 		KmsKeyID:                 kmsKeyID,
 		SnapshotID:               snapshotID,
 		MultiAttachEnabled:       multiAttach,
@@ -344,6 +367,10 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			errCode = codes.NotFound
 		case errors.Is(err, cloud.ErrIdempotentParameterMismatch), errors.Is(err, cloud.ErrAlreadyExists):
 			errCode = codes.AlreadyExists
+		case errors.Is(err, cloud.ErrLimitExceeded):
+			errCode = codes.ResourceExhausted
+		case errors.Is(err, cloud.ErrInvalidArgument):
+			errCode = codes.InvalidArgument
 		default:
 			errCode = codes.Internal
 		}
@@ -419,15 +446,28 @@ func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
 	if err != nil {
 		if errors.Is(err, cloud.ErrNotFound) {
-			klog.InfoS("ControllerPublishVolume: volume not found", "volumeID", volumeID, "nodeID", nodeID)
 			return nil, status.Errorf(codes.NotFound, "Volume %q not found", volumeID)
 		}
-		if errors.Is(err, cloud.ErrAttachmentLimitExceeded) {
+		if errors.Is(err, cloud.ErrLimitExceeded) {
 			return nil, status.Errorf(codes.ResourceExhausted, "Attachment limit exceeded for volume %q on node %q: %v", volumeID, nodeID, err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	klog.InfoS("ControllerPublishVolume: attached", "volumeID", volumeID, "nodeID", nodeID, "devicePath", devicePath)
+
+	if val, ok := req.GetVolumeContext()[BlockAttachUntilInitializedKey]; ok && val == trueStr {
+		isInitialized := false
+		var err error
+
+		klog.V(4).InfoS("Ensuring volume is initialized because volume context "+BlockAttachUntilInitializedKey+"=true", "volumeID", volumeID)
+
+		for !isInitialized {
+			isInitialized, err = d.cloud.IsVolumeInitialized(ctx, volumeID)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Cannot validate that volume %q is initialized while polling EC2 DescribeVolumeStatus: %v", volumeID, err)
+			}
+		}
+	}
 
 	pvInfo := map[string]string{DevicePathKey: devicePath}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
@@ -734,7 +774,7 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 
 	addTags, err := template.Evaluate(vscTags, vsProps, d.options.WarnOnInvalidTag)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating the tag value: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Error interpolating tag value: %v", err)
 	}
 
 	if err = validateExtraTags(addTags, d.options.WarnOnInvalidTag); err != nil {
@@ -778,6 +818,8 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	if err != nil {
 		if errors.Is(err, cloud.ErrAlreadyExists) {
 			return nil, status.Errorf(codes.AlreadyExists, "Snapshot %q already exists", snapshotName)
+		} else if errors.Is(err, cloud.ErrLimitExceeded) {
+			return nil, status.Errorf(codes.ResourceExhausted, "Could not create snapshot (resource exhausted) %q: %v", snapshotName, err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not create snapshot %q: %v", snapshotName, err)
 	}
@@ -902,6 +944,25 @@ func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
 			return zone
 		}
 		zone, exists = topology.GetSegments()[ZoneTopologyKey]
+		if exists {
+			return zone
+		}
+	}
+	return ""
+}
+
+func pickAvailabilityZoneID(requirement *csi.TopologyRequirement) string {
+	if requirement == nil {
+		return ""
+	}
+	for _, topology := range requirement.GetPreferred() {
+		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
+		if exists {
+			return zone
+		}
+	}
+	for _, topology := range requirement.GetRequisite() {
+		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
 		if exists {
 			return zone
 		}

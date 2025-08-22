@@ -134,6 +134,12 @@ spec:
                   name: aws-meta
                   key: endpoint
                   optional: true
+            - name: AWS_SAGEMAKER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: aws-meta
+                  key: sagemaker_endpoint
+                  optional: true
             {{- with .Values.controller.region }}
             - name: AWS_REGION
               value: {{ . }}
@@ -234,6 +240,9 @@ spec:
             {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
             - --feature-gates=VolumeAttributesClass=true
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.provisioner.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3302
+            {{- end}}
             {{- range .Values.sidecars.provisioner.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -266,7 +275,7 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
-            - --timeout=60s
+            - --timeout=6m
             {{- end }}
             - --csi-address=$(ADDRESS)
             - --v={{ .Values.sidecars.attacher.logLevel }}
@@ -290,6 +299,9 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
             - --retry-interval-max=5m
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.attacher.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3303
+            {{- end}}
             {{- range .Values.sidecars.attacher.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -336,6 +348,9 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.snapshotter.additionalArgs)) }}
             - --retry-interval-max=30m
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.snapshotter.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3306
+            {{- end}}
             {{- range .Values.sidecars.snapshotter.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -386,6 +401,9 @@ spec:
             - --leader-election-retry-period={{ .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
             {{- end }}
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.volumemodifier.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3307
+            {{- end}}
             {{- range .Values.sidecars.volumemodifier.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -458,6 +476,9 @@ spec:
             {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
             - --feature-gates=VolumeAttributesClass=true
             {{- end }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.resizer.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3304
+            {{- end}}
             {{- range .Values.sidecars.resizer.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -490,6 +511,9 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
           args:
             - --csi-address=/csi/csi.sock
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-metrics-address)" (join " " .Values.sidecars.livenessProbe.additionalArgs))) }}
+            - --metrics-address=0.0.0.0:3305
+            {{- end}}
             {{- range .Values.sidecars.livenessProbe.additionalArgs }}
             - {{ . }}
             {{- end }}

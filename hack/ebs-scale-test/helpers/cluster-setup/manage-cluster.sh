@@ -30,6 +30,7 @@ create_cluster() {
     echo "Deploying EKS cluster. See configuration in $EXPORT_DIR/cluster-config.yaml"
     gomplate -f "$path_to_cluster_setup_dir/scale-cluster-config.yaml" -o "$EXPORT_DIR/cluster-config.yaml"
     eksctl create cluster -f "$EXPORT_DIR/cluster-config.yaml"
+    aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
   fi
 }
 
@@ -70,6 +71,76 @@ deploy_ebs_csi_driver() {
     --wait \
     --timeout 15m \
     "$path_to_chart"
+}
+
+## Karpenter
+
+deploy_karpenter() {
+  echo "Deploying Karpenter Pre-requisites"
+  echo "Deploying Karpenter-${CLUSTER_NAME} CF Stack"
+  curl -fsSL https://raw.githubusercontent.com/aws/karpenter-provider-aws/v"${KARPENTER_VERSION}"/website/content/en/preview/getting-started/getting-started-with-karpenter/cloudformation.yaml >"$TEMPOUT" &&
+    aws cloudformation deploy \
+      --stack-name "Karpenter-${CLUSTER_NAME}" \
+      --template-file "$TEMPOUT" \
+      --capabilities CAPABILITY_NAMED_IAM \
+      --parameter-overrides "ClusterName=${CLUSTER_NAME}"
+
+  echo "Creating Karpenter iamidentitymapping"
+  eksctl create iamidentitymapping \
+    --cluster "${CLUSTER_NAME}" \
+    --region="${AWS_REGION}" \
+    --arn "arn:aws:iam::${AWS_ACCOUNT_ID}:role/KarpenterNodeRole-${CLUSTER_NAME}" \
+    --group "system:bootstrappers" \
+    --group "system:nodes" \
+    --username "system:node:{{EC2PrivateDNSName}}"
+
+  echo "Creating Karpenter podidentityassociation"
+  eksctl create podidentityassociation \
+    --cluster "${CLUSTER_NAME}" \
+    --namespace kube-system \
+    --service-account-name karpenter \
+    --role-name "${CLUSTER_NAME}-karpenter" \
+    --permission-policy-arns "arn:aws:iam::${AWS_ACCOUNT_ID}:policy/KarpenterControllerPolicy-${CLUSTER_NAME}" || true
+
+  aws iam create-service-linked-role --aws-service-name spot.amazonaws.com >/dev/null 2>&1 || true
+
+  KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${CLUSTER_NAME}-karpenter"
+  echo "Karpenter IAM Role: ${KARPENTER_IAM_ROLE_ARN}"
+
+  echo "Installing Karpenter to cluster"
+  helm registry logout public.ecr.aws || true
+
+  helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter --version "${KARPENTER_VERSION}" --namespace "kube-system" --create-namespace \
+    --set "settings.clusterName=${CLUSTER_NAME}" \
+    --set "settings.interruptionQueue=${CLUSTER_NAME}" \
+    --set controller.resources.requests.cpu=1 \
+    --set controller.resources.requests.memory=2Gi \
+    --set controller.resources.limits.cpu=2 \
+    --set controller.resources.limits.memory=2Gi \
+    --wait \
+    --timeout 15m
+
+  echo "Deploying ebs-scale-test NodePool & EC2NodeClass to cluster"
+  gomplate -f "$path_to_cluster_setup_dir/nodes-karpenter.yaml" | kubectl apply -f -
+}
+
+cleanup_karpenter() {
+  # Ignore failures to preserve idempotency. Recommended by official Karpenter uninstallation guide.
+  echo "Cleaning up Karpenter resources. Should see 'Karpenter Cleanup Complete'"
+
+  # Karpenter needs to delete all instances it manages before uninstalled. Otherwise instances may be orphaned.
+  kubectl delete nodepools --all --wait=true --timeout=1200s || true
+  kubectl delete ec2nodeclass --all --wait=true || true
+  kubectl delete nodeclaims --all --wait=true || true
+
+  helm uninstall karpenter -n "kube-system" || true
+  eksctl delete podidentityassociation --cluster "${CLUSTER_NAME}" --namespace kube-system --service-account-name karpenter || true
+  aws ec2 describe-launch-templates --filters "Name=tag:karpenter.k8s.aws/cluster,Values=${CLUSTER_NAME}" |
+    jq -r ".LaunchTemplates[].LaunchTemplateName" |
+    xargs -I{} aws ec2 delete-launch-template --launch-template-name {}
+  aws cloudformation delete-stack --stack-name "Karpenter-${CLUSTER_NAME}" || true
+
+  echo "Karpenter cleanup complete, but check EC2 Console to ensure no lingering instances"
 }
 
 (return 0 2>/dev/null) || (

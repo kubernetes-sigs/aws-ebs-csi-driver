@@ -53,6 +53,11 @@ test-e2e-external-a1-eks)
   export IMAGE_ARCH="arm64"
   export CLUSTER_TYPE="eksctl"
   ;;
+test-e2e-external-eks-bottlerocket)
+  TEST="external-eks-bottlerocket"
+  export CLUSTER_TYPE="eksctl"
+  export AMI_FAMILY="Bottlerocket"
+  ;;
 test-e2e-external-eks-windows)
   TEST="external-windows"
   export CLUSTER_TYPE="eksctl"

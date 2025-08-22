@@ -19,12 +19,13 @@ limitations under the License.
 package mounter
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
 	fakeexec "k8s.io/utils/exec/testing"
@@ -184,103 +185,79 @@ func TestGetDeviceName(t *testing.T) {
 	}
 }
 
-func TestFindDevicePath(t *testing.T) {
-	testCases := []struct {
-		name            string
-		volumeID        string
-		partition       string
-		region          string
-		createTempDir   bool
-		symlink         bool
-		verifyErr       error
-		deviceSize      string
-		cmdOutputFsType string
-		expectedErr     error
-	}{
+const fakeVolumeName = "vol11111111111111111"
+const fakeIncorrectVolumeName = "vol21111111111111111"
+
+func TestVerifyVolumeSerialMatch(t *testing.T) {
+	type testCase struct {
+		name        string
+		execOutput  string
+		path        string
+		execError   error
+		expectError bool
+	}
+	testCases := []testCase{
 		{
-			name:            "Device path exists and matches volume ID",
-			volumeID:        "vol-1234567890abcdef0",
-			partition:       "1",
-			createTempDir:   true,
-			symlink:         false,
-			verifyErr:       nil,
-			deviceSize:      "1024",
-			cmdOutputFsType: "ext4",
-			expectedErr:     nil,
+			name:       "success: empty",
+			execOutput: "",
 		},
 		{
-			name:            "Device path doesn't exist",
-			volumeID:        "vol-1234567890abcdef0",
-			partition:       "1",
-			createTempDir:   false,
-			symlink:         false,
-			verifyErr:       nil,
-			deviceSize:      "1024",
-			cmdOutputFsType: "ext4",
-			expectedErr:     fmt.Errorf("no device path for device %q volume %q found", "/temp/vol-1234567890abcdef0", "vol-1234567890abcdef0"),
+			name:       "success: single",
+			execOutput: fakeVolumeName,
+		},
+		{
+			name:       "success: multiple",
+			execOutput: fakeVolumeName + "\n" + fakeVolumeName + "\n" + fakeVolumeName,
+		},
+		{
+			name:       "success: whitespace",
+			execOutput: "\t     " + fakeVolumeName + "         \n    \t    ",
+		},
+		{
+			name:       "success: extra output",
+			execOutput: "extra output without name in it\n" + fakeVolumeName,
+		},
+		{
+			name:      "success: failed command",
+			execError: errors.New("Exec failed"),
+		},
+		{
+			name:        "failure: wrong volume",
+			execOutput:  fakeIncorrectVolumeName,
+			expectError: true,
+		},
+		{
+			name:        "failure: mixed",
+			execOutput:  fakeVolumeName + "\n" + fakeIncorrectVolumeName,
+			expectError: true,
+		},
+		{
+			name:        "failure: bad path (malicious argument)",
+			path:        "--fake-malicious-path=do_evil",
+			expectError: true,
+		},
+		{
+			name:        "failure: bad path (directory traversal)",
+			path:        "/dev/../nvme1n1",
+			expectError: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var tmpDir string
-			var err error
+			mockExecRunner := func(_ string, _ ...string) ([]byte, error) {
+				return []byte(tc.execOutput), tc.execError
+			}
 
-			if tc.createTempDir {
-				tmpDir, err = os.MkdirTemp("", "temp-test-device-path")
-				if err != nil {
-					t.Fatalf("Failed to create temporary directory: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
+			path := "/dev/nvme1n1"
+			if tc.path != "" {
+				path = tc.path
+			}
+			result := verifyVolumeSerialMatch(path, fakeVolumeName, mockExecRunner)
+			if tc.expectError {
+				assert.Error(t, result)
 			} else {
-				tmpDir = "/temp"
-			}
-
-			devicePath := filepath.Join(tmpDir, tc.volumeID)
-			expectedResult := devicePath + tc.partition
-
-			fcmd := fakeexec.FakeCmd{
-				CombinedOutputScript: []fakeexec.FakeAction{
-					func() ([]byte, []byte, error) { return []byte(tc.deviceSize), nil, nil },
-					func() ([]byte, []byte, error) { return []byte(tc.cmdOutputFsType), nil, nil },
-				},
-			}
-			fexec := fakeexec.FakeExec{
-				CommandScript: []fakeexec.FakeCommandAction{
-					func(cmd string, args ...string) utilexec.Cmd { return fakeexec.InitFakeCmd(&fcmd, cmd, args...) },
-					func(cmd string, args ...string) utilexec.Cmd { return fakeexec.InitFakeCmd(&fcmd, cmd, args...) },
-				},
-			}
-
-			safe := mount.SafeFormatAndMount{
-				Interface: mount.New(""),
-				Exec:      &fexec,
-			}
-
-			fakeMounter := NodeMounter{&safe}
-
-			if tc.createTempDir {
-				if tc.symlink {
-					symlinkErr := os.Symlink(devicePath, devicePath)
-					if symlinkErr != nil {
-						t.Fatalf("Failed to create symlink: %v", err)
-					}
-				} else {
-					_, osCreateErr := os.Create(devicePath)
-					if osCreateErr != nil {
-						t.Fatalf("Failed to create device path: %v", err)
-					}
-				}
-			}
-
-			result, err := fakeMounter.FindDevicePath(devicePath, tc.volumeID, tc.partition, tc.region)
-
-			if tc.expectedErr == nil {
-				assert.Equal(t, expectedResult, result)
-				assert.NoError(t, err)
-			} else {
-				assert.Empty(t, result)
-				assert.EqualError(t, err, tc.expectedErr.Error())
+				require.NoError(t, result)
 			}
 		})
 	}

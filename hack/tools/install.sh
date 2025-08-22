@@ -19,32 +19,32 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.27.17"
+AWSCLI_VERSION="2.28.11"
 # https://github.com/helm/chart-testing
-CT_VERSION="v3.12.0"
+CT_VERSION="v3.13.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.208.0"
+EKSCTL_VERSION="v0.212.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.23.4"
+GINKGO_VERSION="v2.24.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v1.64.8"
+GOLANGCI_LINT_VERSION="v2.4.0"
 # https://github.com/hairyhenderson/gomplate
-GOMPLATE_VERSION="v4.3.2"
+GOMPLATE_VERSION="v4.3.3"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
 GOVULNCHECK_VERSION="v1.1.4"
 # https://github.com/helm/helm
-HELM_VERSION="v3.17.3"
+HELM_VERSION="v3.18.5"
 # https://github.com/kubernetes/kops
 # Commit is preferred over version if non-empty, and can
 # be used to test new Kubernetes releases earlier
-KOPS_VERSION="v1.33.0-alpha.1"
+KOPS_VERSION="v1.33.0-beta.1"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20250219121027-1cc02edeb0b6"
+KUBETEST2_VERSION="v0.0.0-20250722085027-1ad71e1e364e"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
-SHFMT_VERSION="v3.11.0"
+SHFMT_VERSION="v3.12.0"
 # https://pypi.org/project/yamale/
 YAMALE_VERSION="6.0.0"
 # https://pypi.org/project/yamllint/

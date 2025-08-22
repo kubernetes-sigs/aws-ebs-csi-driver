@@ -1,64 +1,67 @@
 {{- if and .Values.controller.enableMetrics (not .Values.nodeComponentOnly) -}}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ebs-csi-controller
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: ebs-csi-controller
-spec:
-  selector:
-    app: ebs-csi-controller
-  ports:
-    - name: metrics
-      port: 3301
-      targetPort: 3301
-  type: ClusterIP
----
-{{- if or .Values.controller.serviceMonitor.forceEnable (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: ebs-csi-controller
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: ebs-csi-controller
-    {{- if .Values.controller.serviceMonitor.labels }}
-    {{- toYaml .Values.controller.serviceMonitor.labels | nindent 4 }}
-    {{- end }}
-spec:
-  selector:
-    matchLabels:
-      app: ebs-csi-controller
-  namespaceSelector:
-    matchNames:
-      - {{ .Release.Namespace }}
-  endpoints:
-    - targetPort: 3301
-      path: /metrics
-      interval: {{ .Values.controller.serviceMonitor.interval | default "15s"}}
+{{/* Metrics for the controller pods - we create a separate service per container
+because the prometheus.io annotations don't allow specifying multiple ports */}}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3301
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-provisioner"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3302
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-attacher"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3303
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-resizer"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3304
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-liveness-probe"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3305
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-snapshotter"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3306
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- end }}
+{{- if (.Values.controller.volumeModificationFeature).enabled }}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-volumemodifier"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3307
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
 {{- end }}
 {{- end }}
----
 {{- if .Values.node.enableMetrics }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: ebs-csi-node
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "3302"
-  labels:
-    app: ebs-csi-node
-spec:
-  selector:
-    app: ebs-csi-node
-  ports:
-    - name: metrics
-      port: 3302
-      targetPort: 3302
-  internalTrafficPolicy: Local
-  type: ClusterIP
+{{- include "metrics" (dict
+  "Name" "ebs-csi-node"
+  "TargetPod" "ebs-csi-node"
+  "Port" 3302
+  "ServiceMonitor" .Values.node.serviceMonitor
+  "EnableAnnotations" .Values.node.enablePrometheusAnnotations
+  "InternalTrafficPolicy" "Local"
+  "Release" .Release "Capabilities" .Capabilities) -}}
 {{- end }}

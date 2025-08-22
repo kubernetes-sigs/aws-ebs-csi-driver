@@ -4,7 +4,7 @@
 
 * Kubernetes Version >= 1.20 
 
-* If you are using a self managed cluster, ensure the flag `--allow-privileged=true` for `kube-apiserver`.
+* If you are using a self-managed cluster, ensure the flag `--allow-privileged=true` for `kube-apiserver`.
 
 * Important: If you intend to use the Volume Snapshot feature, the [Kubernetes Volume Snapshot CRDs](https://github.com/kubernetes-csi/external-snapshotter/tree/master/client/config/crd) must be installed **before** the EBS CSI driver. For installation instructions, see [CSI Snapshotter Usage](https://github.com/kubernetes-csi/external-snapshotter#usage).
 
@@ -14,6 +14,8 @@ The EBS CSI Driver uses a metadata source in order to gather necessary informati
 
 The controller `Deployment` can skip metadata if the region is provided via the `AWS_REGION` environment variable (Helm parameter `controller.region`). The node `DaemonSet` requires metadata and will not function without access to one of the sources.
 
+You may override the default metadata behavior of attempting IMDS, then falling back to Kubernetes, through the `--metadata-sources` flag.
+
 #### IMDS (EC2) Metadata
 
 If the driver is able to access IMDS, it will utilize that as a preferred source of metadata. The EBS CSI Driver supports IMDSv1 and IMDSv2 (and will prefer IMDSv2 if both are available). However, by default, [IMDSv2 uses a hop limit of 1](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html#instance-metadata-v2-how-it-works). That will prevent the driver from accessing IMDSv2 if run inside a container with the default IMDSv2 configuration.
@@ -22,7 +24,7 @@ In order for the driver to access IMDS, it either must be run in host networking
 
 #### Kubernetes Metadata
 
-If the driver is unable to reach IMDS, it will fallback to using the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
+By default, if the driver is unable to reach IMDS, it will fall back to using the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
 
 - Instance ID (in the `Node`'s `ProviderID`)
 - Instance Type (in the label `node.kubernetes.io/instance-type`)
@@ -127,7 +129,7 @@ You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS mana
 
 #### Kustomize
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.44"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.47"
 ```
 
 *Note: Using the master branch to deploy the driver is not supported as the master branch may contain upcoming features incompatible with the currently released stable version of the driver.*

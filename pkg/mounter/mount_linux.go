@@ -19,6 +19,7 @@ limitations under the License.
 package mounter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -72,7 +73,7 @@ func (m *NodeMounter) FindDevicePath(devicePath, volumeID, partition, region str
 	if exists {
 		stat, lstatErr := os.Lstat(devicePath)
 		if lstatErr != nil {
-			return "", fmt.Errorf("failed to lstat %q: %w", devicePath, err)
+			return "", fmt.Errorf("failed to lstat %q: %w", devicePath, lstatErr)
 		}
 
 		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -155,15 +156,22 @@ func findNvmeVolume(findName string) (device string, err error) {
 // execRunner is a helper to inject exec.Comamnd().CombinedOutput() for verifyVolumeSerialMatch
 // Tests use a mocked version that does not actually execute any binaries.
 func execRunner(name string, arg ...string) ([]byte, error) {
-	return exec.Command(name, arg...).CombinedOutput()
+	// TODO: Pass context down from driver.go
+	return exec.CommandContext(context.TODO(), name, arg...).CombinedOutput()
 }
 
 // verifyVolumeSerialMatch checks the volume serial of the device against the expected volume.
 func verifyVolumeSerialMatch(canonicalDevicePath string, strippedVolumeName string, execRunner func(string, ...string) ([]byte, error)) error {
+	// As a security precaution, check the device name looks like a real device name before passing anything to exec
+	cleanDevice := filepath.Clean(canonicalDevicePath)
+	if !regexp.MustCompile(`^/dev/[A-Za-z0-9]+$`).MatchString(cleanDevice) {
+		return fmt.Errorf("refusing to mount %s (raw: %s) because it does not appear to be a valid device", cleanDevice, canonicalDevicePath)
+	}
+
 	// In some rare cases, a race condition can lead to the /dev/disk/by-id/ symlink becoming out of date
 	// See https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/1224 for more info
 	// Attempt to use lsblk to double check that the nvme device selected was the correct volume
-	output, err := execRunner("lsblk", "--noheadings", "--ascii", "--nodeps", "--output", "SERIAL", canonicalDevicePath)
+	output, err := execRunner("lsblk", "--noheadings", "--ascii", "--nodeps", "--output", "SERIAL", "--", cleanDevice)
 
 	if err == nil {
 		// Look for an EBS volume ID in the output, compare all matches against what we expect
@@ -171,14 +179,14 @@ func verifyVolumeSerialMatch(canonicalDevicePath string, strippedVolumeName stri
 		// If no volume ID is in the output (non-Nitro instances, SBE devices, etc) silently proceed
 		volumeRegex := regexp.MustCompile(`vol[a-z0-9]+`)
 		for _, volume := range volumeRegex.FindAllString(string(output), -1) {
-			klog.V(6).InfoS("Comparing volume serial", "canonicalDevicePath", canonicalDevicePath, "expected", strippedVolumeName, "actual", volume)
+			klog.V(6).InfoS("Comparing volume serial", "cleanDevice", cleanDevice, "expected", strippedVolumeName, "actual", volume)
 			if volume != strippedVolumeName {
-				return fmt.Errorf("refusing to mount %s because it claims to be %s but should be %s", canonicalDevicePath, volume, strippedVolumeName)
+				return fmt.Errorf("refusing to mount %s because it claims to be %s but should be %s", cleanDevice, volume, strippedVolumeName)
 			}
 		}
 	} else {
 		// If the command fails (for example, because lsblk is not available), silently ignore the error and proceed
-		klog.V(5).ErrorS(err, "Ignoring lsblk failure", "canonicalDevicePath", canonicalDevicePath, "strippedVolumeName", strippedVolumeName)
+		klog.V(5).ErrorS(err, "Ignoring lsblk failure", "cleanDevice", cleanDevice, "strippedVolumeName", strippedVolumeName)
 	}
 
 	return nil

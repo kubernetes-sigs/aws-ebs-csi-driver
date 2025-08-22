@@ -64,7 +64,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.44.0
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.47.0
           imagePullPolicy: IfNotPresent
           args:
             - controller
@@ -97,6 +97,12 @@ spec:
                 configMapKeyRef:
                   name: aws-meta
                   key: endpoint
+                  optional: true
+            - name: AWS_SAGEMAKER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: aws-meta
+                  key: sagemaker_endpoint
                   optional: true
           volumeMounts:
             - name: socket-dir
@@ -133,7 +139,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-provisioner
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner:v5.2.0-eks-1-33-3
+          image: public.ecr.aws/csi-components/csi-provisioner:v5.3.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -166,10 +172,10 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-attacher
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher:v4.8.1-eks-1-33-3
+          image: public.ecr.aws/csi-components/csi-attacher:v4.9.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
-            - --timeout=60s
+            - --timeout=6m
             - --csi-address=$(ADDRESS)
             - --v=2
             - --leader-election=true
@@ -195,7 +201,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-snapshotter
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter:v8.2.1-eks-1-33-3
+          image: public.ecr.aws/csi-components/csi-snapshotter:v8.3.0-eksbuild.2
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -224,7 +230,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: csi-resizer
-          image: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer:v1.13.2-eks-1-33-3
+          image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.4
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -256,7 +262,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
         - name: liveness-probe
-          image: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe:v2.15.0-eks-1-33-3
+          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.5
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock

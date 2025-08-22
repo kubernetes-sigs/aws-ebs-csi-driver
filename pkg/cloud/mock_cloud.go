@@ -215,6 +215,21 @@ func (mr *MockCloudMockRecorder) GetSnapshotByName(ctx, name interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshotByName", reflect.TypeOf((*MockCloud)(nil).GetSnapshotByName), ctx, name)
 }
 
+// IsVolumeInitialized mocks base method.
+func (m *MockCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsVolumeInitialized", ctx, volumeID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsVolumeInitialized indicates an expected call of IsVolumeInitialized.
+func (mr *MockCloudMockRecorder) IsVolumeInitialized(ctx, volumeID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsVolumeInitialized", reflect.TypeOf((*MockCloud)(nil).IsVolumeInitialized), ctx, volumeID)
+}
+
 // ListSnapshots mocks base method.
 func (m *MockCloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int32, nextToken string) (*ListSnapshotsResponse, error) {
 	m.ctrl.T.Helper()

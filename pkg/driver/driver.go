@@ -47,7 +47,11 @@ const (
 
 const (
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
-	OSTopologyKey            = "kubernetes.io/os"
+	// This name is purposefully consistent with the CCM's ZoneID topology key.
+	// This key is only used for provisioning by az-id and will not be used for node topology
+	// to prevent any backwards compatibility issues.
+	ZoneIDTopologyKey = "topology.k8s.aws/zone-id"
+	OSTopologyKey     = "kubernetes.io/os"
 )
 
 var (
@@ -108,7 +112,8 @@ func (d *Driver) Run() error {
 		return err
 	}
 
-	listener, err := net.Listen(scheme, addr)
+	listenConfig := net.ListenConfig{}
+	listener, err := listenConfig.Listen(context.Background(), scheme, addr)
 	if err != nil {
 		return err
 	}

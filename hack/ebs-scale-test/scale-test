@@ -39,10 +39,11 @@ SCALABILITY_TEST_RUN_NAME=${SCALABILITY_TEST_RUN_NAME:="$CLUSTER_NAME-$TEST_TYPE
 EXPORT_DIR=${EXPORT_DIR:="/tmp/ebs-scale-test/$SCALABILITY_TEST_RUN_NAME"}
 
 ## Internal environment variables
-export PRE_ALLOCATED_NODES K8S_VERSION AWS_ACCOUNT_ID AWS_REGION BASE_DIR TEMPOUT
+export PRE_ALLOCATED_NODES K8S_VERSION KARPENTER_VERSION AWS_ACCOUNT_ID AWS_REGION BASE_DIR TEMPOUT
 
 PRE_ALLOCATED_NODES=${PRE_ALLOCATED_NODES:=$((($REPLICAS / 100) + 1))}
 K8S_VERSION=$(aws eks describe-cluster-versions --query "clusterVersions[0].clusterVersion")
+KARPENTER_VERSION="1.5.1"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 AWS_REGION=$(aws configure get region)
@@ -82,6 +83,11 @@ check_dependencies_helper() {
 # Functions sourced from helpers/cluster-setup/manage-cluster.sh
 setup_scale() {
   create_cluster
+
+  if [[ $CLUSTER_TYPE == "karpenter" ]]; then
+    deploy_karpenter
+  fi
+
   deploy_snapshot_controller
   deploy_ebs_csi_driver
 }
@@ -105,6 +111,10 @@ run_scale() {
 
 # Functions sourced from helpers/cluster-setup/manage-cluster.sh
 clean_scale() {
+  if [[ $CLUSTER_TYPE == "karpenter" ]]; then
+    cleanup_karpenter
+  fi
+
   cleanup_cluster
   check_lingering_volumes
   check_lingering_snapshots

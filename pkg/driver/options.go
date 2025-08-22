@@ -18,8 +18,10 @@ package driver
 
 import (
 	"errors"
+	"strings"
 	"time"
 
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	flag "github.com/spf13/pflag"
 	cliflag "k8s.io/component-base/cli/flag"
 )
@@ -93,6 +95,10 @@ type Options struct {
 	LegacyXFSProgs bool
 	// CsiMountPointPath is the path where CSI volumes are expected to be mounted on the node.
 	CsiMountPointPath string
+	// MetadataSources dictates which sources are used to retrieve instance metadata.
+	// The driver will attempt to rely on each source in order until one succeeds.
+	// Valid options include 'imds' and 'kubernetes'.
+	MetadataSources []string
 
 	DriverName string
 }
@@ -108,6 +114,7 @@ func (o *Options) AddFlags(f *flag.FlagSet) {
 	f.StringVar(&o.MetricsCertFile, "metrics-cert-file", "", "The path to a certificate to use for serving the metrics server over HTTPS. If the certificate is signed by a certificate authority, this file should be the concatenation of the server's certificate, any intermediates, and the CA's certificate. If this is non-empty, --http-endpoint and --metrics-key-file MUST also be non-empty.")
 	f.StringVar(&o.MetricsKeyFile, "metrics-key-file", "", "The path to a key to use for serving the metrics server over HTTPS. If this is non-empty, --http-endpoint and --metrics-cert-file MUST also be non-empty.")
 	f.BoolVar(&o.EnableOtelTracing, "enable-otel-tracing", false, "To enable opentelemetry tracing for the driver. The tracing is disabled by default. Configure the exporter endpoint with OTEL_EXPORTER_OTLP_ENDPOINT and other env variables, see https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration.")
+	f.StringSliceVar(&o.MetadataSources, "metadata-sources", metadata.DefaultMetadataSources, "Dictates which sources are used to retrieve instance metadata. The driver will attempt to rely on each source in order until one succeeds. Valid options include 'imds' and 'kubernetes'.")
 
 	// Controller options
 	if o.Mode == AllMode || o.Mode == ControllerMode {
@@ -141,11 +148,21 @@ func (o *Options) Validate() error {
 	if o.MetricsCertFile != "" || o.MetricsKeyFile != "" {
 		switch {
 		case o.HTTPEndpoint == "":
-			return errors.New("--http-endpoint MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--http-endpoint MUST be specified when using the metrics server with HTTPS")
 		case o.MetricsCertFile == "":
-			return errors.New("--metrics-cert-file MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--metrics-cert-file MUST be specified when using the metrics server with HTTPS")
 		case o.MetricsKeyFile == "":
-			return errors.New("--metrics-key-file MUST be specififed when using the metrics server with HTTPS")
+			return errors.New("--metrics-key-file MUST be specified when using the metrics server with HTTPS")
+		}
+	}
+
+	for i, s := range o.MetadataSources {
+		s = strings.ToLower(strings.TrimSpace(s))
+		switch s {
+		case metadata.SourceIMDS, metadata.SourceK8s:
+			o.MetadataSources[i] = s
+		default:
+			return metadata.InvalidSourceErr(o.MetadataSources, s)
 		}
 	}
 

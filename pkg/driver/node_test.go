@@ -2120,6 +2120,7 @@ func TestNodeExpandVolume(t *testing.T) {
 		metadataMock func(ctrl *gomock.Controller) *metadata.MockMetadataService
 		expectedResp *csi.NodeExpandVolumeResponse
 		expectedErr  error
+		inflight     bool
 	}{
 		{
 			name: "success",
@@ -2312,6 +2313,15 @@ func TestNodeExpandVolume(t *testing.T) {
 			expectedResp: nil,
 			expectedErr:  status.Error(codes.Internal, "failed to get block capacity on path /volume/path: failed to get block size"),
 		},
+		{
+			name: "operation_already_exists",
+			req: &csi.NodeExpandVolumeRequest{
+				VolumeId:   "vol-test",
+				VolumePath: "/staging/path",
+			},
+			expectedErr: status.Error(codes.Aborted, "An operation with the given volume=\"vol-test\" is already in progress"),
+			inflight:    true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -2332,6 +2342,11 @@ func TestNodeExpandVolume(t *testing.T) {
 			driver := &NodeService{
 				mounter:  mounter,
 				metadata: metadata,
+				inFlight: internal.NewInFlight(),
+			}
+
+			if tc.inflight {
+				driver.inFlight.Insert("vol-test")
 			}
 
 			resp, err := driver.NodeExpandVolume(t.Context(), tc.req)

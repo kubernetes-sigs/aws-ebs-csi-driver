@@ -78,8 +78,9 @@ const (
 	// for the snapshot.
 	VolumeSnapshotContentNameKey = "csi.storage.k8s.io/volumesnapshotcontent/name"
 
-	// BlockExpressKey increases the iops limit for io2 volumes to the block express limit.
-	BlockExpressKey = "blockexpress"
+	// Previously `BlockExpressKey` now deprecated as all io2 volumes now support up to 256,000 IOPS.
+	// See https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html.
+	DeprecatedBlockExpressKey = "blockexpress"
 
 	// FSTypeKey configures the file system type that will be formatted during volume creation.
 	FSTypeKey = "csi.storage.k8s.io/fstype"
@@ -108,6 +109,9 @@ const (
 
 	// OutpostArn represents key for outpost's arn.
 	OutpostArnKey = "outpostarn"
+
+	// BlockAttachUntilInitializedKey will prevent restored volume from being attached until it is fully initialized.
+	BlockAttachUntilInitializedKey = "blockattachuntilinitialized"
 )
 
 // constants of keys in snapshot parameters.

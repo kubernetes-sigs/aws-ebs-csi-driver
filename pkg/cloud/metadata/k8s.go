@@ -22,6 +22,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +32,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/klog/v2"
+)
+
+const (
+	LabelSageMakerENICount                 = "sagemaker.amazonaws.com/num-eni-attachments"
+	LabelSageMakerBlockDeviceMappingsCount = "sagemaker.amazonaws.com/num-block-device-mappings"
 )
 
 type KubernetesAPIClient func() (kubernetes.Interface, error)
@@ -62,12 +69,12 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 					rootCAFile := filepath.Join(sandboxMountPoint, "var", "run", "secrets", "kubernetes.io", "serviceaccount", "ca.crt")
 
 					token, tokenErr := os.ReadFile(tokenFile)
-					if err != nil {
+					if tokenErr != nil {
 						return nil, tokenErr
 					}
 
 					tlsClientConfig := rest.TLSClientConfig{}
-					if _, certErr := cert.NewPool(rootCAFile); err != nil {
+					if _, certErr := cert.NewPool(rootCAFile); certErr != nil {
 						return nil, fmt.Errorf("expected to load root CA config from %s, but got err: %w", rootCAFile, certErr)
 					} else {
 						tlsClientConfig.CAFile = rootCAFile
@@ -112,7 +119,7 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, errors.New("node providerID empty, cannot parse")
 	}
 
-	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|i-[a-z0-9]+$"
+	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|(hyperpod-[a-z0-9]+-)?i-[a-z0-9]+$"
 
 	re := regexp.MustCompile(awsInstanceIDRegex)
 	instanceID := re.FindString(providerID)
@@ -122,7 +129,12 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 
 	var instanceType string
 	if val, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
-		instanceType = val
+		if strings.HasPrefix(val, "ml.") {
+			// sagemaker instance type has 'ml.' prefix, remove 'ml.' prefix
+			instanceType = strings.TrimPrefix(val, "ml.")
+		} else {
+			instanceType = val
+		}
 	} else {
 		return nil, errors.New("could not retrieve instance type from topology label")
 	}
@@ -141,13 +153,38 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, errors.New("could not retrieve AZ from topology label")
 	}
 
+	numAttachedENIs := 1        // Default: All nodes have at least 1 attached ENI
+	numBlockDeviceMappings := 0 // Default: 0
+
+	if val, ok := node.GetLabels()[LabelSageMakerENICount]; ok {
+		if num, err := strconv.Atoi(val); err == nil {
+			numAttachedENIs = num
+			klog.V(2).InfoS("Using ENI count from SageMaker label", "count", numAttachedENIs)
+		} else {
+			klog.ErrorS(err, "Invalid ENI count in SageMaker label, using default",
+				"value", val,
+				"default", numAttachedENIs)
+		}
+	}
+
+	if val, ok := node.GetLabels()[LabelSageMakerBlockDeviceMappingsCount]; ok {
+		if num, err := strconv.Atoi(val); err == nil {
+			numBlockDeviceMappings = num
+			klog.V(2).InfoS("Using block device mapping count from SageMaker label", "count", numBlockDeviceMappings)
+		} else {
+			klog.ErrorS(err, "Invalid block device mapping count in SageMaker label, using default",
+				"value", val,
+				"default", numBlockDeviceMappings)
+		}
+	}
+
 	instanceInfo := Metadata{
 		InstanceID:             instanceID,
 		InstanceType:           instanceType,
 		Region:                 region,
 		AvailabilityZone:       availabilityZone,
-		NumAttachedENIs:        1, // All nodes have at least 1 attached ENI, so we'll use that
-		NumBlockDeviceMappings: 0,
+		NumAttachedENIs:        numAttachedENIs,
+		NumBlockDeviceMappings: numBlockDeviceMappings,
 	}
 
 	return &instanceInfo, nil

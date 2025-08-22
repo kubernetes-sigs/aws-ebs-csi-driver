@@ -17,6 +17,7 @@
 set -euo pipefail
 
 BASE_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+BIN="${BASE_DIR}/../../bin"
 TEST_DIR="${BASE_DIR}/csi-test-artifacts"
 # On Prow, $ARTIFACTS indicates where to put the artifacts for skylens upload
 REPORT_DIR="${ARTIFACTS:-${TEST_DIR}/artifacts}"
@@ -24,12 +25,16 @@ mkdir -p "${TEST_DIR}"
 CLUSTER_FILE=${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.yaml
 KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig"}
 
-export AWS_REGION=${AWS_REGION:-us-west-2}
-ZONES=${AWS_AVAILABILITY_ZONES:-us-west-2a,us-west-2b,us-west-2c}
+# Use AWS_REGION as priority, fallback to region from awscli config, fallback to us-west-2
+REGION_FROM_CONFIG="$(${BIN}/aws configure get region || echo '')"
+export AWS_REGION=${AWS_REGION:-${REGION_FROM_CONFIG:-us-west-2}}
+# If zones are not provided, auto-detect the first 3 AZs that are not opt in
+ZONES=${AWS_AVAILABILITY_ZONES:-$(${BIN}/aws ec2 describe-availability-zones --region "${AWS_REGION}" | jq -r '[.AvailabilityZones[] | select(.OptInStatus == "opt-in-not-required") | .ZoneName][:3] | join(",")')}
 FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}
 WINDOWS=${WINDOWS:-"false"}
+AMI_FAMILY=${AMI_FAMILY:-"AmazonLinux2023"}
 WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 OUTPOST_ARN=${OUTPOST_ARN:-}
 OUTPOST_INSTANCE_TYPE=${OUTPOST_INSTANCE_TYPE:-${INSTANCE_TYPE}}
@@ -37,12 +42,11 @@ FIPS_TEST=${FIPS_TEST:-"false"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-# NOTE: Keep KOPS at v1.29.x until ELB usage bug fixed
-K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.33.1}
-K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-1.32}
+K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.33.3}
+K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-1.33}
 
 EBS_INSTALL_SNAPSHOT=${EBS_INSTALL_SNAPSHOT:-"true"}
-EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v8.2.1"}
+EBS_INSTALL_SNAPSHOT_VERSION=${EBS_INSTALL_SNAPSHOT_VERSION:-"v8.3.0"}
 EBS_INSTALL_SNAPSHOT_CUSTOM_IMAGE=${EBS_INSTALL_SNAPSHOT_CUSTOM_IMAGE:-}
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)

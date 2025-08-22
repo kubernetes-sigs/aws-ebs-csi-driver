@@ -17,42 +17,46 @@ enable-beta-ecosystems: true
 updates:
   - package-ecosystem: gomod
     directories: ["/", "/tests/e2e/"]
-    allow:
-      - dependency-type: "all"
+    groups:
+      all:
+        patterns:
+          - "*"
     schedule:
       interval: weekly
       day: "wednesday"
       time: "06:00"
       timezone: "America/New_York"
-    groups:
-      k8s-dependencies:
-        patterns:
-          - "k8s.io*"
-          - "sigs.k8s.io*"
-          - "github.com/kubernetes-csi*"
-      misc-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "k8s.io*"
-          - "sigs.k8s.io*"
-          - "github.com/kubernetes-csi*"
     labels:
       - "area/dependency"
       - "ok-to-test"
       - "release-note-none"
   - package-ecosystem: "github-actions"
     directory: "/"
+    groups:
+      all:
+        patterns:
+          - "*"
     schedule:
       interval: weekly
       # Wednesday chosen to minimize time after Windows Patch Tuesdays
       day: "wednesday"
       time: "06:00"
       timezone: "America/New_York"
+    labels:
+      - "area/dependency"
+      - "ok-to-test"
+      - "release-note-none"
+  - package-ecosystem: docker
+    directory: "/"
     groups:
-      actions:
+      all:
         patterns:
           - "*"
+    schedule:
+      interval: weekly
+      day: "wednesday"
+      time: "06:00"
+      timezone: "America/New_York"
     labels:
       - "area/dependency"
       - "ok-to-test"

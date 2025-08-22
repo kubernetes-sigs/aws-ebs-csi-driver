@@ -1,4 +1,4 @@
-# Copyright 2024 The Kubernetes Authors.
+# Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
@@ -12,36 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+version: "2"
 run:
   modules-download-mode: readonly
-issues:
-  exclude-rules:
-    # gosec recommends ignoring test files
-    - path: (.+)_test.go
-      linters:
-        - gosec
-    - path: tests/e2e
-      linters:
-        - gosec
-    - path: tests/sanity
-      linters:
-        - gosec
-linters-settings:
-  revive:
-    rules:
-      # Using += 1 instead of ++ is fine
-      - name: increment-decrement
-        disabled: true
-  stylecheck:
-    # Dot importing ginkgo and gomega is standard practice
-    dot-import-whitelist:
-      - "github.com/onsi/gomega"
-      - "github.com/onsi/ginkgo/v2"
-  usetesting:
-    # Turning check for os.MkdirTemp() off as t.TempDir() is not sufficient for mounter and sanity tests in their current state.
-    os-mkdir-temp: false 
 linters:
-  enable-all: true
+  default: all
   disable:
     - govet # We already run with `make verify/govet`
     # We do not use
@@ -52,7 +27,6 @@ linters:
     - funlen # Long func names happen
     - gocognit # Cognitive complexity
     - gocyclo # Cyclomatic complexity
-    - gofumpt # We don't rely on gofumpt
     - gomoddirectives # We need `replace` in `go.mod`
     - interfacebloat # No more than 10 interface methods
     - ireturn # Accept interfaces return concrete types
@@ -64,6 +38,7 @@ linters:
     - testpackage # Require separate test package to catch leaky unexported dependencies
     - varnamelen # Long var names happen
     - wsl # Too strict of a whitespace linter
+    - wsl_v5 # Too strict
     # Consider adding in future
     - err113 # Do not create errors dynamically from scratch. Instead, wrap static (package-level) error.
     - wrapcheck # Same as err113
@@ -71,3 +46,46 @@ linters:
     - godox # Do not allow TODOs
     - nonamedreturns # Need to nolint/refactor a few places our code
     - paralleltest # There are many tests that aren't parallelized
+    - funcorder # Many of our existing files are out of order
+    - noinlineerr # We use inline errors
+    - embeddedstructfieldcheck # We have a few instances of this
+  settings:
+    revive:
+      rules:
+        # Using += 1 instead of ++ is fine
+        - name: increment-decrement
+          disabled: true
+    staticcheck:
+      # Dot importing ginkgo and gomega is standard practice
+      dot-import-whitelist:
+        - github.com/onsi/gomega
+        - github.com/onsi/ginkgo/v2
+    usetesting:
+      # Turning check for os.MkdirTemp() off as t.TempDir() is not sufficient for mounter and sanity tests in their current state.
+      os-mkdir-temp: false
+  exclusions:
+    # Exclude files that look auto-generated
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # gosec recommends ignoring test files
+      - linters:
+          - gosec
+        path: (.+)_test.go
+      - linters:
+          - gosec
+        path: tests/e2e
+      - linters:
+          - gosec
+        path: tests/sanity
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax

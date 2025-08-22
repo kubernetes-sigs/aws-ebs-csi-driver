@@ -8,7 +8,15 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+  {{- if semverCompare ">=1.33.0-0" .Capabilities.KubeVersion.Version }}
+  {{- with .Values.nodeAllocatableUpdatePeriodSeconds }}
+  nodeAllocatableUpdatePeriodSeconds: {{ . }}
+  {{- end }}
+  {{- end }}
   {{- if not .Values.useOldCSIDriver }}
   fsGroupPolicy: File
+  {{- end }}
+  {{- if .Values.node.selinux }}
+  seLinuxMount: true
   {{- end }}
 {{- end }}

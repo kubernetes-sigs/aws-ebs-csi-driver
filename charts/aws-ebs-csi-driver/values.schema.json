@@ -106,6 +106,11 @@
       "description": "Use old CSIDriver without an fsGroupPolicy set Intended for use with older clusters that cannot easily replace the CSIDriver objectThis parameter should always be false for new installations",
       "default": false
     },
+    "nodeAllocatableUpdatePeriodSeconds": {
+      "type": ["integer", "null"],
+      "description": "nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval. Kubernetes enforces a minimum update interval of 10 seconds. This parameter is supported in Kubernetes 1.33+, the MutableCSINodeAllocatableCount feature gate must be enabled in kubelet and kube-apiserver.",
+      "default": 10
+    },
     "nodeComponentOnly": {
       "type": "boolean",
       "description": "Deploy EBS CSI Driver without controller and associated resources",
@@ -198,6 +203,11 @@
           "type": "boolean",
           "description": "Enable metrics collection for the controller pod",
           "default": false
+        },
+        "enablePrometheusAnnotations": {
+          "type": "boolean",
+          "description": "If metrics are enabled, add prometheus.io/scrape and prometheus.io/port annotations to the metrics services",
+          "default": true
         },
         "extraVolumeTags": {
           "$ref": "#/$defs/extraVolumeTags",
@@ -400,19 +410,31 @@
         },
         "serviceMonitor": {
           "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI controller pods",
           "additionalProperties": false,
           "properties": {
             "forceEnable": {
               "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
               "default": false
             },
             "labels": {
               "type": "object",
-              "description": "Additional labels for ServiceMonitor object"
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
             },
             "interval": {
               "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
               "default": "15s"
+            },
+            "relabelings": {
+              "type": "array",
+              "description": "Additional relabeling configurations for ServiceMonitor",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
             }
           }
         },
@@ -539,6 +561,41 @@
           "description": "Enable metrics collection for the node pods",
           "default": false
         },
+        "enablePrometheusAnnotations": {
+          "type": "boolean",
+          "description": "If metrics are enabled, add prometheus.io/scrape and prometheus.io/port annotations to the metrics services",
+          "default": true
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "description": "Parameters to configure the ServiceMonitor for the EBS CSI node pods",
+          "additionalProperties": false,
+          "properties": {
+            "forceEnable": {
+              "type": "boolean",
+              "description": "Render ServiceMonitor object even when CRD is not detected",
+              "default": false
+            },
+            "labels": {
+              "type": "object",
+              "description": "Additional labels for ServiceMonitor object",
+              "default": {}
+            },
+            "interval": {
+              "type": "string",
+              "description": "Scrape interval for the ServiceMonitor object",
+              "default": "15s"
+            },
+            "relabelings": {
+              "type": "array",
+              "description": "Additional relabeling configurations for ServiceMonitor",
+              "default": [],
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "enableWindows": {
           "type": "boolean",
           "description": "Enable the node Windows DaemonSet",
@@ -599,6 +656,11 @@
           "type": "boolean",
           "description": "Enable SELinux-only optimizations on the EBS CSI Driver node pods. Must only be set true if all linux nodes in the DaemonSet have SELinux enabled",
           "default": false
+        },
+        "metadataSources": {
+          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds' and 'kubernetes'",
+          "type": ["string", "null"],
+          "default": null
         },
         "reservedVolumeAttachments": {
           "type": ["integer", "null"],
@@ -747,7 +809,7 @@
             },
             "additionalClusterRoleRules": {
               "type": ["array", "null"],
-              "description": "Grant additional permissions to external-provisioner",
+              "description": "Grant additional permissions to csi-provisioner",
               "default": []
             },
             "logLevel": {
@@ -781,7 +843,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner"
+                  "default": "public.ecr.aws/csi-components/csi-provisioner"
                 }
               }
             }
@@ -827,7 +889,7 @@
             },
             "additionalClusterRoleRules": {
               "type": ["array", "null"],
-              "description": "Grant additional permissions to external-attacher",
+              "description": "Grant additional permissions to csi-attacher",
               "default": []
             },
             "image": {
@@ -843,7 +905,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/external-attacher"
+                  "default": "public.ecr.aws/csi-components/csi-attacher"
                 }
               }
             }
@@ -855,7 +917,7 @@
           "properties": {
             "forceEnable": {
               "type": "boolean",
-              "description": "Enables/disables the external-snapshotter sidecar",
+              "description": "Enables/disables the csi-snapshotter sidecar",
               "default": true
             },
             "additionalArgs": {
@@ -868,7 +930,7 @@
             },
             "additionalClusterRoleRules": {
               "type": ["array", "null"],
-              "description": "Grant additional permissions to external-snapshotter",
+              "description": "Grant additional permissions to csi-snapshotter",
               "default": []
             },
             "logLevel": {
@@ -897,7 +959,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/external-snapshotter/csi-snapshotter"
+                  "default": "public.ecr.aws/csi-components/csi-snapshotter"
                 }
               }
             },
@@ -939,7 +1001,7 @@
             },
             "additionalClusterRoleRules": {
               "type": ["array", "null"],
-              "description": "Grant additional permissions to external-snapshotter",
+              "description": "Grant additional permissions to csi-snapshotter",
               "default": []
             },
             "env": {
@@ -959,7 +1021,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/external-resizer"
+                  "default": "public.ecr.aws/csi-components/csi-resizer"
                 }
               }
             },
@@ -985,7 +1047,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe"
+                  "default": "public.ecr.aws/csi-components/livenessprobe"
                 }
               }
             },
@@ -1036,7 +1098,7 @@
                 },
                 "repository": {
                   "type": "string",
-                  "default": "public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar"
+                  "default": "public.ecr.aws/csi-components/csi-node-driver-registrar"
                 }
               }
             },
@@ -1147,15 +1209,13 @@
       "propertyNames": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 128,
-        "pattern": "^[a-zA-Z0-9 _\\.:\\/=+\\-@]*$"
+        "maxLength": 128
       },
       "patternProperties": {
         "^.*$": {
           "type": "string",
           "minLength": 0,
-          "maxLength": 256,
-          "pattern": "^[a-zA-Z0-9 _\\.:\\/=+\\-@]*$"
+          "maxLength": 256
         }
       }
     }

@@ -83,6 +83,9 @@ spec:
             {{- with .Values.node.volumeAttachLimit }}
             - --volume-attach-limit={{ . }}
             {{- end }}
+            {{- with .Values.node.metadataSources }}
+            - --metadata-sources={{ . }}
+            {{- end }}
             {{- if .Values.node.legacyXFS }}
             - --legacy-xfs=true
             {{- end}}
@@ -134,7 +137,6 @@ spec:
             {{- if .Values.node.selinux }}
             - name: selinux-sysfs
               mountPath: /sys/fs/selinux
-              readOnly: true
             - name: selinux-config
               mountPath: /etc/selinux/config
               readOnly: true
@@ -154,6 +156,13 @@ spec:
             timeoutSeconds: 3
             periodSeconds: 10
             failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
           {{- with .Values.node.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

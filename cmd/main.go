@@ -135,8 +135,9 @@ func main() {
 	}
 
 	cfg := metadata.MetadataServiceConfig{
-		EC2MetadataClient: metadata.DefaultEC2MetadataClient,
-		K8sAPIClient:      metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
+		MetadataSources: options.MetadataSources,
+		IMDSClient:      metadata.DefaultIMDSClient,
+		K8sAPIClient:    metadata.DefaultKubernetesAPIClient(options.Kubeconfig),
 	}
 
 	region := os.Getenv("AWS_REGION")
@@ -178,11 +179,7 @@ func main() {
 		region = md.GetRegion()
 	}
 
-	cloud, err := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
-	if err != nil {
-		klog.ErrorS(err, "failed to create cloud service")
-		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-	}
+	cloud := cloud.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 
 	m, err := mounter.NewNodeMounter(options.WindowsHostProcess)
 	if err != nil {

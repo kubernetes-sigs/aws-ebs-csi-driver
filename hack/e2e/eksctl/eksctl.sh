@@ -34,6 +34,7 @@ function eksctl_create_cluster() {
   TEMPLATE_FILE=${12}
   OUTPOST_ARN=${13}
   OUTPOST_INSTANCE_TYPE=${14}
+  AMI_FAMILY=${15}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
@@ -43,6 +44,7 @@ function eksctl_create_cluster() {
     K8S_VERSION="${K8S_VERSION}" \
     ZONES="${ZONES}" \
     INSTANCE_TYPE="${INSTANCE_TYPE}" \
+    AMI_FAMILY="${AMI_FAMILY}" \
     WINDOWS="${WINDOWS}" \
     OUTPOST_ARN="" \
     ${GOMPLATE_BIN} -f "${TEMPLATE_FILE}" -o "${CLUSTER_FILE}"

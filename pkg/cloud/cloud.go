@@ -32,6 +32,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
@@ -63,16 +65,15 @@ const (
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
-	io1MinTotalIOPS             = 100
-	io1MaxTotalIOPS             = 64000
-	io1MaxIOPSPerGB             = 50
-	io2MinTotalIOPS             = 100
-	io2MaxTotalIOPS             = 64000
-	io2BlockExpressMaxTotalIOPS = 256000
-	io2MaxIOPSPerGB             = 1000
-	gp3MaxTotalIOPS             = 16000
-	gp3MinTotalIOPS             = 3000
-	gp3MaxIOPSPerGB             = 500
+	io1MinTotalIOPS = 100
+	io1MaxTotalIOPS = 64000
+	io1MaxIOPSPerGB = 50
+	io2MinTotalIOPS = 100
+	io2MaxTotalIOPS = 256000
+	io2MaxIOPSPerGB = 1000
+	gp3MaxTotalIOPS = 16000
+	gp3MinTotalIOPS = 3000
+	gp3MaxIOPSPerGB = 500
 )
 
 var (
@@ -88,22 +89,15 @@ var (
 )
 
 const (
-	cacheForgetDelay = 1 * time.Hour
+	cacheForgetDelay            = 1 * time.Hour
+	volInitCacheForgetDelay     = 6 * time.Hour
+	getCallerIdentityRetryDelay = 30 * time.Second
 )
 
-// AWS provisioning limits.
-// Source:
-//
-//	https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions
+// VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
 const (
-	// MaxNumTagsPerResource represents the maximum number of tags per AWS resource.
-	MaxNumTagsPerResource = 50
-	// MinTagKeyLength represents the minimum key length for a tag.
-	MinTagKeyLength = 1
-	// MaxTagKeyLength represents the maximum key length for a tag.
-	MaxTagKeyLength = 128
-	// MaxTagValueLength represents the maximum value length for a tag.
-	MaxTagValueLength = 256
+	VolumeStatusInitializingState = "initializing"
+	VolumeStatusInitializedState  = "completed"
 )
 
 // Defaults.
@@ -120,8 +114,6 @@ const (
 	SnapshotNameTagKey = "CSIVolumeSnapshotName"
 	// KubernetesTagKeyPrefix is the prefix of the key value that is reserved for Kubernetes.
 	KubernetesTagKeyPrefix = "kubernetes.io"
-	// AWSTagKeyPrefix is the prefix of the key value that is reserved for AWS.
-	AWSTagKeyPrefix = "aws:"
 	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
 	AwsEbsDriverTagKey = "ebs.csi.aws.com/cluster"
 )
@@ -135,7 +127,13 @@ const (
 	snapshotTagBatcher
 
 	batchDescribeTimeout = 30 * time.Second
-	batchMaxDelay        = 500 * time.Millisecond // Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
+
+	// Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
+	batchMaxDelay = 500 * time.Millisecond
+
+	// Tuned for EC2 DescribeVolumeStatus -- as of July 2025 it takes up to 5 min for initialization info to be updated.
+	slowVolumeStatusBatchMaxDelay = 2 * time.Minute
+	fastVolumeStatusBatchMaxDelay = 500 * time.Millisecond
 )
 
 var (
@@ -172,12 +170,17 @@ var (
 	// ErrInvalidRequest is returned if parameters were rejected by driver.
 	ErrInvalidRequest = errors.New("invalid request")
 
-	// ErrAttachmentLimitExceeded is returned if the attachment limit is exceeded.
-	ErrAttachmentLimitExceeded = errors.New("attachment limit exceeded")
+	// ErrLimitExceeded is returned if a user exceeds a quota.
+	ErrLimitExceeded = errors.New("limit exceeded")
 )
 
 // Set during build time via -ldflags.
 var driverVersion string
+
+// AWS error codes.
+const (
+	ValidationException = "ValidationException"
+)
 
 var invalidParameterErrorCodes = map[string]struct{}{
 	"InvalidParameter":            {},
@@ -192,12 +195,13 @@ var invalidParameterErrorCodes = map[string]struct{}{
 
 // Disk represents a EBS volume.
 type Disk struct {
-	VolumeID         string
-	CapacityGiB      int32
-	AvailabilityZone string
-	SnapshotID       string
-	OutpostArn       string
-	Attachments      []string
+	VolumeID           string
+	CapacityGiB        int32
+	AvailabilityZone   string
+	AvailabilityZoneID string
+	SnapshotID         string
+	OutpostArn         string
+	Attachments        []string
 }
 
 // DiskOptions represents parameters to create an EBS volume.
@@ -210,9 +214,9 @@ type DiskOptions struct {
 	IOPS                   int32
 	Throughput             int32
 	AvailabilityZone       string
+	AvailabilityZoneID     string
 	OutpostArn             string
 	Encrypted              bool
-	BlockExpress           bool
 	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
@@ -315,29 +319,31 @@ type batcherManager struct {
 	snapshotIDBatcher           *batcher.Batcher[string, *types.Snapshot]
 	snapshotTagBatcher          *batcher.Batcher[string, *types.Snapshot]
 	volumeModificationIDBatcher *batcher.Batcher[string, *types.VolumeModification]
+	volumeStatusIDBatcherSlow   *batcher.Batcher[string, *types.VolumeStatusItem]
+	volumeStatusIDBatcherFast   *batcher.Batcher[string, *types.VolumeStatusItem]
 }
 
 type cloud struct {
-	region               string
-	ec2                  EC2API
-	dm                   dm.DeviceManager
-	bm                   *batcherManager
-	rm                   *retryManager
-	vwp                  volumeWaitParameters
-	likelyBadDeviceNames expiringcache.ExpiringCache[string, sync.Map]
-	latestClientTokens   expiringcache.ExpiringCache[string, int]
+	awsConfig             aws.Config
+	region                string
+	ec2                   EC2API
+	sm                    SageMakerAPI
+	dm                    dm.DeviceManager
+	bm                    *batcherManager
+	rm                    *retryManager
+	vwp                   volumeWaitParameters
+	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
+	latestClientTokens    expiringcache.ExpiringCache[string, int]
+	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
+	accountID             string
+	accountIDOnce         sync.Once
 }
 
 var _ Cloud = &cloud{}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
-func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batching bool, deprecatedMetrics bool) (Cloud, error) {
-	c := newEC2Cloud(region, awsSdkDebugLog, userAgentExtra, batching, deprecatedMetrics)
-	return c, nil
-}
-
-func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
+func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchingEnabled bool, deprecatedMetrics bool) Cloud {
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
 	if err != nil {
 		panic(err)
@@ -368,21 +374,35 @@ func newEC2Cloud(region string, awsSdkDebugLog bool, userAgentExtra string, batc
 		o.RetryMaxAttempts = retryMaxAttempt
 	})
 
+	// Create SageMaker client
+	smClient := sagemaker.NewFromConfig(cfg, func(o *sagemaker.Options) {
+		o.RetryMaxAttempts = retryMaxAttempt
+
+		// Allow custom SageMaker endpoint for testing
+		endpoint := os.Getenv("AWS_SAGEMAKER_ENDPOINT")
+		if endpoint != "" {
+			o.BaseEndpoint = &endpoint
+		}
+	})
+
 	var bm *batcherManager
 	if batchingEnabled {
-		klog.V(4).InfoS("newEC2Cloud: batching enabled")
+		klog.V(4).InfoS("NewCloud: batching enabled")
 		bm = newBatcherManager(svc)
 	}
 
 	return &cloud{
-		region:               region,
-		dm:                   dm.NewDeviceManager(),
-		ec2:                  svc,
-		bm:                   bm,
-		rm:                   newRetryManager(),
-		vwp:                  vwp,
-		likelyBadDeviceNames: expiringcache.New[string, sync.Map](cacheForgetDelay),
-		latestClientTokens:   expiringcache.New[string, int](cacheForgetDelay),
+		awsConfig:             cfg,
+		region:                region,
+		dm:                    dm.NewDeviceManager(),
+		ec2:                   svc,
+		sm:                    smClient,
+		bm:                    bm,
+		rm:                    newRetryManager(),
+		vwp:                   vwp,
+		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
+		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
 	}
 }
 
@@ -408,6 +428,12 @@ func newBatcherManager(svc EC2API) *batcherManager {
 		}),
 		volumeModificationIDBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.VolumeModification, error) {
 			return execBatchDescribeVolumesModifications(svc, names)
+		}),
+		volumeStatusIDBatcherSlow: batcher.New(1000, slowVolumeStatusBatchMaxDelay, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+			return execBatchDescribeVolumeStatus(svc, ids)
+		}),
+		volumeStatusIDBatcherFast: batcher.New(1000, fastVolumeStatusBatchMaxDelay, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+			return execBatchDescribeVolumeStatus(svc, ids)
 		}),
 	}
 }
@@ -552,11 +578,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		minIops = io1MinTotalIOPS
 		maxIopsPerGb = io1MaxIOPSPerGB
 	case VolumeTypeIO2:
-		if diskOptions.BlockExpress {
-			maxIops = io2BlockExpressMaxTotalIOPS
-		} else {
-			maxIops = io2MaxTotalIOPS
-		}
+		maxIops = io2MaxTotalIOPS
 		minIops = io2MinTotalIOPS
 		maxIopsPerGb = io2MaxIOPSPerGB
 	case VolumeTypeGP3:
@@ -591,7 +613,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	}
 
 	zone := diskOptions.AvailabilityZone
-	if zone == "" {
+	zoneID := diskOptions.AvailabilityZoneID
+	if zone == "" && zoneID == "" {
 		zone, err = c.randomAvailabilityZone(ctx)
 		klog.V(5).InfoS("[Debug] AZ is not provided. Using node AZ", "zone", zone)
 		if err != nil {
@@ -617,7 +640,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	clientToken := sha256.Sum256([]byte(tokenBase))
 
 	requestInput := &ec2.CreateVolumeInput{
-		AvailabilityZone:   aws.String(zone),
 		ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
 		Size:               aws.Int32(capacityGiB),
 		VolumeType:         types.VolumeType(createType),
@@ -626,6 +648,12 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		TagSpecifications:  []types.TagSpecification{tagSpec},
 	}
 
+	if len(zone) > 0 {
+		requestInput.AvailabilityZone = aws.String(zone)
+	}
+	if len(zoneID) > 0 {
+		requestInput.AvailabilityZoneId = aws.String(zoneID)
+	}
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
 	if len(diskOptions.OutpostArn) > 0 {
 		requestInput.OutpostArn = aws.String(diskOptions.OutpostArn)
@@ -663,6 +691,15 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			}
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
+		}
+		if isAWSErrorInvalidParameterCombination(err) {
+			return nil, ErrInvalidArgument
+		}
+		if isAWSErrorVolumeLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
+		if isAwsErrorMaxIOPSLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
 		}
 		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 	}
@@ -813,6 +850,12 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 			// Wrap error to preserve original message from AWS as to why this was an invalid argument
 			return 0, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
 		}
+		if isAWSErrorVolumeModificationSizeLimitExceeded(err) {
+			return 0, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
+		if isAwsErrorMaxIOPSLimitExceeded(err) {
+			return 0, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
 		return 0, err
 	}
 	// If the volume modification isn't immediately completed, wait for it to finish
@@ -897,6 +940,10 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 }
 
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
+	if isHyperPodNode(nodeID) {
+		return c.attachDiskHyperPod(ctx, volumeID, nodeID)
+	}
+
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return "", err
@@ -934,7 +981,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 				likelyBadDeviceNames.Store(device.Path, struct{}{})
 			}
 			if isAWSErrorAttachmentLimitExceeded(attachErr) {
-				return "", fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, attachErr)
+				return "", fmt.Errorf("%w: %w", ErrLimitExceeded, attachErr)
 			}
 			return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
 		}
@@ -956,13 +1003,71 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 	return device.Path, nil
 }
 
+func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string) (string, error) {
+	klog.V(2).InfoS("AttachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
+
+	instanceID := getInstanceIDFromHyperPodNode(nodeID)
+	accountID, err := c.getAccountID(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get account ID: %w", err)
+	}
+	clusterArn := buildHyperPodClusterArn(nodeID, c.region, accountID)
+
+	klog.V(5).InfoS("HyperPod attachment details",
+		"volumeID", volumeID,
+		"instanceID", instanceID,
+		"clusterArn", clusterArn)
+
+	// Construct real SageMaker AttachClusterNodeVolumeInput
+	input := &sagemaker.AttachClusterNodeVolumeInput{
+		ClusterArn: aws.String(clusterArn),
+		NodeId:     aws.String(instanceID),
+		VolumeId:   aws.String(volumeID),
+	}
+
+	klog.V(5).InfoS("Calling AttachClusterNodeVolume", "input", input)
+
+	resp, attachErr := c.sm.AttachClusterNodeVolume(ctx, input)
+	if attachErr != nil {
+		if isAWSHyperPodErrorAttachmentLimitExceeded(attachErr) {
+			return "", fmt.Errorf("%w: %w", ErrLimitExceeded, attachErr)
+		}
+		return "", fmt.Errorf("could not attach volume %q to node %q: %w", volumeID, nodeID, attachErr)
+	}
+
+	klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
+
+	// Wait for attachment completion
+	deviceName := aws.ToString(resp.DeviceName)
+	_, err = c.WaitForAttachmentState(
+		ctx,
+		types.VolumeAttachmentStateAttached,
+		volumeID,
+		nodeID,
+		deviceName,
+		false,
+	)
+	if err != nil {
+		return "", fmt.Errorf("error waiting for volume attachment: %w", err)
+	}
+
+	klog.V(5).InfoS("Volume attached from HyperPod node successfully",
+		"volumeID", volumeID,
+		"nodeID", nodeID,
+		"deviceName", deviceName)
+
+	return deviceName, nil
+}
+
 func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
+	if isHyperPodNode(nodeID) {
+		return c.detachDiskHyperPod(ctx, volumeID, nodeID)
+	}
 	instance, err := c.getInstance(ctx, nodeID)
 	if err != nil {
 		return err
 	}
 
-	// TODO: check if attached
 	device, err := c.dm.GetDevice(instance, volumeID)
 	if err != nil {
 		return err
@@ -1004,9 +1109,201 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 	return nil
 }
 
+func (c *cloud) detachDiskHyperPod(ctx context.Context, volumeID, nodeID string) error {
+	klog.V(2).InfoS("DetachDisk: HyperPod node detected", "volumeID", volumeID, "nodeID", nodeID)
+
+	instanceID := getInstanceIDFromHyperPodNode(nodeID)
+	accountID, err := c.getAccountID(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get account ID: %w", err)
+	}
+	clusterArn := buildHyperPodClusterArn(nodeID, c.region, accountID)
+
+	klog.V(4).InfoS("HyperPod detachment details",
+		"volumeID", volumeID,
+		"instanceID", instanceID,
+		"clusterArn", clusterArn)
+
+	// Construct real SageMaker DetachClusterNodeVolumeInput
+	input := &sagemaker.DetachClusterNodeVolumeInput{
+		ClusterArn: aws.String(clusterArn),
+		NodeId:     aws.String(instanceID),
+		VolumeId:   aws.String(volumeID),
+	}
+	klog.V(4).InfoS("Calling DetachClusterNodeVolumeInput", "input", input)
+
+	_, err = c.sm.DetachClusterNodeVolume(ctx, input)
+	if err != nil {
+		if isAWSHyperPodErrorIncorrectState(err) ||
+			isAWSHyperPodErrorInvalidAttachmentNotFound(err) ||
+			isAWSHyperPodErrorVolumeNotFound(err) {
+			metrics.AsyncEC2Metrics().ClearDetachMetric(volumeID, nodeID)
+			return ErrNotFound
+		}
+		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
+	}
+
+	klog.V(5).InfoS("[Debug] DetachVolume", "volumeID", volumeID, "nodeID", nodeID)
+	// Wait for detachment completion
+	_, err = c.WaitForAttachmentState(
+		ctx,
+		types.VolumeAttachmentStateDetached,
+		volumeID,
+		nodeID,
+		"",
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("error waiting for volume detachment: %w", err)
+	}
+
+	klog.V(5).InfoS("Volume detached from HyperPod node successfully",
+		"volumeID", volumeID,
+		"nodeID", nodeID)
+
+	return nil
+}
+
+type volumeInitialization struct {
+	initialized                 bool
+	estimatedInitializationTime time.Time
+}
+
+// IsVolumeInitialized calls EC2 DescribeVolumeStatus and returns whether the volume is initialized.
+func (c *cloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
+	var volumeStatusItem *types.VolumeStatusItem
+	var err error
+
+	// Because volumes can take hours to initialize, we shouldn't poll DescribeVolumeStatus (DVS) as aggressively as we
+	// do for other EC2 APIs.
+	//
+	// We use a volumeInitializations cache to keep track of initializing volumes that we should poll at a slower rate.
+	//
+	// Furthermore, if initializationRate was set during volume creation, DVS returns an estimated initialization time.
+	// We cache that estimate and defer polling of DVS until we reach that time.
+	// We clamp to a minimum of 1 min because as of July 2025 it can take up to 5 min for volume initialization info to update.
+
+	// Check volumeInitializations cache to potentially delay EC2 DescribeVolumeStatus call
+	volInit, ok := c.volumeInitializations.Get(volumeID)
+	switch {
+	// Case 1: We've never called DVS for volume. Call DVS ASAP.
+	case !ok:
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, true /* callASAP */)
+	// Case 2: We already know volume is initialized. Don't call DVS.
+	case volInit.initialized:
+		return true, nil
+	// Case 3: We know volume is initializing, but there is no SLA. Call DVS eventually during next slow batch.
+	case volInit.estimatedInitializationTime.IsZero():
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, false /* callASAP */)
+	// Case 4: We have an estimated time for initialization. Wait to call DVS again until then unless RPC ctx is done.
+	case !volInit.initialized:
+		util.WaitUntilTimeOrContext(ctx, volInit.estimatedInitializationTime)
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
+		volumeStatusItem, err = c.describeVolumeStatus(volumeID, true /* callASAP */)
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Parse volume status
+	if volumeStatusItem == nil || volumeStatusItem.VolumeStatus == nil || volumeStatusItem.VolumeStatus.Details == nil {
+		return false, errors.New("IsVolumeInitialized: EC2 DescribeVolumeStatus response missing volume status details")
+	}
+	isVolInitializing := isVolumeStatusInitializing(*volumeStatusItem)
+
+	// Update cache
+	var newExpectedInitTime time.Time
+	if isVolInitializing && volumeStatusItem.InitializationStatusDetails != nil && volumeStatusItem.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds != nil {
+		secondsLeft := *volumeStatusItem.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds
+		klog.V(4).InfoS("IsVolumeInitialized: volume still initializing according to EC2 DescribeVolumeStatus", "volumeID", volumeID, "estimatedTimeToCompleteInSeconds", secondsLeft)
+		// Clamp to a minimum of 1 min because as of July 2025 it can take up to 5 min for volume initialization info to update.
+		if secondsLeft < 60 {
+			secondsLeft = 60
+		}
+		newExpectedInitTime = time.Now().Add(time.Duration(secondsLeft) * time.Second)
+	}
+	c.volumeInitializations.Set(volumeID, &volumeInitialization{initialized: !isVolInitializing, estimatedInitializationTime: newExpectedInitTime})
+
+	if isVolInitializing {
+		klog.V(4).InfoS("IsVolumeInitialized: volume not initialized yet", "volumeID", volumeID)
+	} else {
+		klog.V(4).InfoS("IsVolumeInitialized: volume is initialized", "volumeID", volumeID)
+	}
+
+	return !isVolInitializing, nil
+}
+
+func isVolumeStatusInitializing(vsi types.VolumeStatusItem) bool {
+	for _, detail := range vsi.VolumeStatus.Details {
+		if detail.Name == types.VolumeStatusNameInitializationState && detail.Status != nil && *detail.Status == VolumeStatusInitializingState {
+			return true
+		}
+	}
+	return false
+}
+
+func execBatchDescribeVolumeStatus(svc EC2API, input []string) (map[string]*types.VolumeStatusItem, error) {
+	klog.V(7).InfoS("execBatchDescribeVolumeStatus", "volumeIds", input)
+	request := &ec2.DescribeVolumeStatusInput{
+		VolumeIds: input,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+	defer cancel()
+
+	var volumeStatusItems []types.VolumeStatusItem
+	var nextToken *string
+	for {
+		response, err := svc.DescribeVolumeStatus(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+		volumeStatusItems = append(volumeStatusItems, response.VolumeStatuses...)
+		nextToken = response.NextToken
+		if aws.ToString(nextToken) == "" {
+			break
+		}
+		request.NextToken = nextToken
+	}
+
+	result := make(map[string]*types.VolumeStatusItem)
+
+	for _, m := range volumeStatusItems {
+		volumeStatus := m
+		result[*volumeStatus.VolumeId] = &volumeStatus
+	}
+
+	klog.V(7).InfoS("execBatchDescribeVolumeStatus: success", "result", result)
+	return result, nil
+}
+
+// describeVolumeStatus will return the VolumeStatusItem associated with volumeID from EC2 DescribeVolumeStatus
+// Set callASAP to true if you need status within seconds (Otherwise it may take minutes).
+func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.VolumeStatusItem, error) {
+	ch := make(chan batcher.BatchResult[*types.VolumeStatusItem])
+
+	var b *batcher.Batcher[string, *types.VolumeStatusItem]
+	if callASAP {
+		b = c.bm.volumeStatusIDBatcherFast
+	} else {
+		b = c.bm.volumeStatusIDBatcherSlow
+	}
+	b.AddTask(volumeID, ch)
+
+	r := <-ch
+
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	return r.Result, nil
+}
+
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
+	isHyperPod := isHyperPodNode(expectedInstance)
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
 		request := &ec2.DescribeVolumesInput{
@@ -1041,11 +1338,20 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 		var attachmentState types.VolumeAttachmentState
 
 		for _, a := range volume.Attachments {
-			if a.InstanceId != nil {
-				if aws.ToString(a.InstanceId) == expectedInstance {
-					attachmentState = a.State
-					attachment = &a
+			if isHyperPod {
+				if a.AssociatedResource != nil {
+					instanceID, err := getInstanceIDFromAssociatedResource(aws.ToString(a.AssociatedResource))
+					if err != nil {
+						return false, err
+					}
+					if instanceID == getInstanceIDFromHyperPodNode(expectedInstance) {
+						attachmentState = a.State
+						attachment = &a
+					}
 				}
+			} else if a.InstanceId != nil && aws.ToString(a.InstanceId) == expectedInstance {
+				attachmentState = a.State
+				attachment = &a
 			}
 		}
 
@@ -1053,7 +1359,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 			attachmentState = types.VolumeAttachmentStateDetached
 		}
 
-		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached {
+		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached && !isHyperPod {
 			device := aws.ToString(attachment.Device)
 			if device != expectedDevice {
 				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
@@ -1149,6 +1455,36 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}
 
 	return disk, nil
+}
+
+func isHyperPodNode(nodeID string) bool {
+	return strings.HasPrefix(nodeID, "hyperpod-")
+}
+
+// Only for hyperpod node, getInstanceIDFromHyperPodNode extracts the EC2 instance ID from a HyperPod node ID.
+func getInstanceIDFromHyperPodNode(nodeID string) string {
+	parts := strings.SplitN(nodeID, "-", 3)
+	return parts[2]
+}
+
+// Only for hyperpod node, buildHyperPodClusterArn: arn:aws:sagemaker:region:account:cluster/clusterID.
+func buildHyperPodClusterArn(nodeID string, region string, accountID string) string {
+	parts := strings.Split(nodeID, "-")
+	return fmt.Sprintf("arn:aws:sagemaker:%s:%s:cluster/%s", region, accountID, parts[1])
+}
+
+// For hyperpod node, AssociatedResource is in arn:aws:sagemaker:region:account:cluster/clusterID-instanceId format.
+func getInstanceIDFromAssociatedResource(arn string) (string, error) {
+	parts := strings.Split(arn, "-")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid ARN format: %s", arn)
+	}
+	lastTwo := parts[len(parts)-2:]
+	instanceID := strings.Join(lastTwo, "-")
+	if !strings.HasPrefix(instanceID, "i-") {
+		return "", fmt.Errorf("invalid instance ID format: %s", instanceID)
+	}
+	return instanceID, nil
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
@@ -1284,6 +1620,9 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		o.Retryer = c.rm.createSnapshotRetryer
 	})
 	if err != nil {
+		if isAwsErrorSnapshotLimitExceeded(err) {
+			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		}
 		return nil, fmt.Errorf("error creating snapshot of volume %s: %w", volumeID, err)
 	}
 	if res == nil {
@@ -1595,6 +1934,54 @@ func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
 	return err
 }
 
+// getAccountID returns the account ID of the AWS Account for the IAM credentials in use.
+//
+// In the first call (or any calls made before the first call succeeds), getAccountID
+// will attempt to determine the Account ID via sts:GetCallerIdentity.
+// This attempt will retry indefinitely, however getAccountID will return when ctx is cancelled,
+// leaving the account ID thread to run in the background.
+//
+// In subsequent calls (after the first success), getAccountID will use a cached value.
+func (c *cloud) getAccountID(ctx context.Context) (string, error) {
+	accountIDRetrieved := make(chan struct{}, 1)
+
+	// Start background thread if it isn't already.
+	// Intentionally runs in the background until account ID is retrieved, so we don't pass the context.
+	//nolint:contextcheck
+	go func() {
+		c.accountIDOnce.Do(func() {
+			for c.accountID == "" {
+				cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(c.region))
+				if err != nil {
+					klog.ErrorS(err, "Failed to create AWS config for account ID retrieval")
+				}
+
+				stsClient := sts.NewFromConfig(cfg)
+				resp, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
+				if err != nil {
+					klog.ErrorS(err, "Failed to get AWS account ID, required for HyperPod operations, will retry")
+					time.Sleep(getCallerIdentityRetryDelay)
+				} else {
+					c.accountID = *resp.Account
+					klog.V(5).InfoS("Retrieved AWS account ID for HyperPod operations", "accountID", c.accountID)
+				}
+			}
+		})
+
+		// Once.Do blocks until the function exits, even if we aren't the first caller.
+		// So the account ID must be available now.
+		accountIDRetrieved <- struct{}{}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+
+	case <-accountIDRetrieved:
+		return c.accountID, nil
+	}
+}
+
 // isAWSError returns a boolean indicating whether the error is AWS-related
 // and has the given code. More information on AWS error codes at:
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
@@ -1656,6 +2043,13 @@ func isAWSErrorIdempotentParameterMismatch(err error) bool {
 	return isAWSError(err, "IdempotentParameterMismatch")
 }
 
+// isAWSErrorInvalidParameterCombination returns a boolean indicating whether the
+// given error is an AWS InvalidParameterCombination error.
+// This error is reported when the combination of parameters passed to ec2 makes the request invalid.
+func isAWSErrorInvalidParameterCombination(err error) bool {
+	return isAWSError(err, "InvalidParameterCombination")
+}
+
 // isAWSErrorBlockDeviceInUse returns a boolean indicating whether the
 // given error appears to be a block device name already in use error.
 func isAWSErrorBlockDeviceInUse(err error) bool {
@@ -1672,6 +2066,85 @@ func isAWSErrorBlockDeviceInUse(err error) bool {
 // This error is reported when the maximum number of attachments for an instance is exceeded.
 func isAWSErrorAttachmentLimitExceeded(err error) bool {
 	return isAWSError(err, "AttachmentLimitExceeded")
+}
+
+// isAWSHyperPodErrorAttachmentLimitExceeded checks if the error is an AttachmentLimitExceeded error.
+// This error is reported when the maximum number of attachments for an instance is exceeded.
+func isAWSHyperPodErrorAttachmentLimitExceeded(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: AttachmentLimitExceeded") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorVolumeNotFound returns a boolean indicating whether the
+// given error is a ValidationException error. This error is
+// reported when the specified volume doesn't exist.
+func isAWSHyperPodErrorVolumeNotFound(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidVolume.NotFound") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorIncorrectState returns a boolean indicating whether the
+// given error is a ValidationException error. This error is
+// reported when the resource is not in a correct state for the request.
+func isAWSHyperPodErrorIncorrectState(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: IncorrectState") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSHyperPodErrorInvalidAttachmentNotFound returns a boolean indicating whether the
+// given error is a ValidationException error. This error is reported
+// when attempting to detach a volume from an instance to which it is not attached.
+func isAWSHyperPodErrorInvalidAttachmentNotFound(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		if apiErr.ErrorCode() == ValidationException && strings.Contains(
+			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidAttachment.NotFound") {
+			return true
+		}
+	}
+	return false
+}
+
+// isAWSErrorModificationSizeLimitExceeded checks if the error is a VolumeModificationSizeLimitExceeded error.
+// This error is reported when the limit on a volume modification storage in a region is exceeded.
+func isAWSErrorVolumeModificationSizeLimitExceeded(err error) bool {
+	return isAWSError(err, "VolumeModificationSizeLimitExceeded")
+}
+
+// isAWSErrorVolumeLimitExceeded checks if the error is a VolumeLimitExceeded error.
+// This error is reported when the limit on the amount of volume storage is exceeded.
+func isAWSErrorVolumeLimitExceeded(err error) bool {
+	return isAWSError(err, "VolumeLimitExceeded")
+}
+
+// isAwsErrorMaxIOPSLimitExceeded checks if the error is a MaxIOPSLimitExceeded error.
+// This error is reported when the limit on the IOPS usage for a region is exceeded.
+func isAwsErrorMaxIOPSLimitExceeded(err error) bool {
+	return isAWSError(err, "MaxIOPSLimitExceeded")
+}
+
+// isAwsErrorSnapshotLimitExceeded checks if the error is a SnapshotLimitExceeded error.
+// This error is reported when the limit on the number of snapshots that can be created is exceeded.
+func isAwsErrorSnapshotLimitExceeded(err error) bool {
+	return isAWSError(err, "SnapshotLimitExceeded")
 }
 
 // isAWSErrorInvalidParameter returns a boolean indicating whether the
@@ -1825,6 +2298,8 @@ func (c *cloud) AvailabilityZones(ctx context.Context) (map[string]struct{}, err
 
 func needsVolumeModification(volume types.Volume, newSizeGiB int32, options *ModifyDiskOptions) bool {
 	oldSizeGiB := *volume.Size
+	//nolint:staticcheck // staticcheck suggests merging all of the below conditionals into one line,
+	// but that would be extremely difficult to read
 	needsModification := false
 
 	if oldSizeGiB < newSizeGiB {

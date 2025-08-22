@@ -29,8 +29,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
+	smtypes "github.com/aws/aws-sdk-go-v2/service/sagemaker/types"
 	"github.com/aws/smithy-go"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/golang/mock/gomock"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -42,11 +46,14 @@ import (
 const (
 	defaultZone     = "test-az"
 	expZone         = "us-west-2b"
+	expZoneID       = "use2-az2"
 	defaultVolumeID = "vol-test-1234"
 	defaultNodeID   = "node-1234"
 	defaultPath     = "/dev/xvdaa"
 
 	defaultCreateDiskDeadline = time.Second * 5
+
+	testInitializationSleep = 200 * time.Microsecond
 )
 
 func generateVolumes(volIDCount, volTagCount int) []types.Volume {
@@ -107,10 +114,7 @@ func TestNewCloud(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		ec2Cloud, err := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
-		if err != nil {
-			t.Fatalf("error %v", err)
-		}
+		ec2Cloud := NewCloud(tc.region, tc.awsSdkDebugLog, tc.userAgentExtra, tc.batchingEnabled, tc.deprecatedMetrics)
 		ec2CloudAscloud, ok := ec2Cloud.(*cloud)
 		if !ok {
 			t.Fatalf("could not assert object ec2Cloud as cloud type, %v", ec2Cloud)
@@ -123,6 +127,7 @@ func TestNewCloud(t *testing.T) {
 		}
 	}
 }
+
 func TestBatchDescribeVolumes(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -975,6 +980,22 @@ func TestCreateDisk(t *testing.T) {
 			expErr:               nil,
 		},
 		{
+			name:       "success: normal with provided zone-id",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(1),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZoneID: expZoneID,
+			},
+			expDisk: &Disk{
+				VolumeID:           "vol-test",
+				CapacityGiB:        1,
+				AvailabilityZoneID: expZoneID,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expErr:               nil,
+		},
+		{
 			name:       "success: normal with encrypted volume",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1243,14 +1264,13 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
-			name:       "success: large io2 Block Express with too high iopsPerGB",
+			name:       "success: large io2 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(3333),
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:    VolumeTypeIO2,
 				IOPSPerGB:     100000,
-				BlockExpress:  true,
 			},
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
@@ -1366,6 +1386,30 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
 		},
+		{
+			name:       "failure: create volume returned volume limit exceeded error",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expDisk:              nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr:   errors.New("VolumeLimitExceeded"),
+			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("VolumeLimitExceeded")),
+		},
+		{
+			name:       "failure: create volume returned max iops limit exceeded error",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expDisk:              nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr:   errors.New("MaxIOPSLimitExceeded"),
+			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("MaxIOPSLimitExceeded")),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1406,7 +1450,7 @@ func TestCreateDisk(t *testing.T) {
 				if len(tc.diskOptions.SnapshotID) > 0 {
 					mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
 				}
-				if len(tc.diskOptions.AvailabilityZone) == 0 {
+				if len(tc.diskOptions.AvailabilityZone) == 0 && len(tc.diskOptions.AvailabilityZoneID) == 0 {
 					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
 						AvailabilityZones: []types.AvailabilityZone{
 							{ZoneName: aws.String(defaultZone)},
@@ -1690,7 +1734,7 @@ func TestAttachDisk(t *testing.T) {
 			volumeID: defaultVolumeID,
 			nodeID:   defaultNodeID,
 			path:     defaultPath,
-			expErr: fmt.Errorf("%w: %w", ErrAttachmentLimitExceeded, &smithy.GenericAPIError{
+			expErr: fmt.Errorf("%w: %w", ErrLimitExceeded, &smithy.GenericAPIError{
 				Code:    "AttachmentLimitExceeded",
 				Message: "Volume attachment limit exceeded",
 			}),
@@ -1801,6 +1845,123 @@ func TestAttachDisk(t *testing.T) {
 			mockCtrl.Finish()
 		})
 	}
+
+	hyperPodTestCases := []struct {
+		name       string
+		volumeID   string
+		nodeID     string
+		setupMocks func(*MockEC2API, *MockSageMakerAPI, string, string)
+		expDevice  string
+		expErr     error
+	}{
+		{
+			name:     "success: HyperPod AttachVolume normal",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-123456789012-i-1234567890",
+			setupMocks: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
+
+				// Setup SageMaker mock
+				mockSM.EXPECT().AttachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&sagemaker.AttachClusterNodeVolumeOutput{
+					DeviceName: aws.String("/dev/xvdba"),
+					Status:     smtypes.VolumeAttachmentStatusAttached,
+				}, nil)
+
+				// Setup EC2 mock for volume state checking
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, instanceID, "/dev/xvdba", "attached"),
+					nil,
+				).AnyTimes()
+			},
+			expDevice: "/dev/xvdba",
+			expErr:    nil,
+		},
+		{
+			name:     "fail: HyperPod attachment limit exceeded",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			setupMocks: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().AttachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, &smithy.GenericAPIError{
+					Code:    "ValidationException",
+					Message: "HyperPod - Ec2ErrCode: AttachmentLimitExceeded : Ec2ErrMsg: Volume attachment limit exceeded",
+				})
+
+				// Setup EC2 mock for volume state checking
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
+					nil,
+				).AnyTimes()
+			},
+			expErr: errors.New("limit exceeded: api error ValidationException: HyperPod - Ec2ErrCode: AttachmentLimitExceeded : Ec2ErrMsg: Volume attachment limit exceeded"),
+		},
+		{
+			name:     "fail: HyperPod attachment generic error",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			setupMocks: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().AttachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, errors.New("AttachVolume error"))
+
+				// Setup EC2 mock for volume state checking
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
+					nil,
+				).AnyTimes()
+			},
+			expErr: errors.New("could not attach volume \"vol-test\" to node \"hyperpod-cluster1-i-1234567890\": AttachVolume error"),
+		},
+	}
+
+	for _, tc := range hyperPodTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create mock EC2 client (needed for base cloud struct)
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+
+			// Create mock SageMaker client
+			mockSM := NewMockSageMakerAPI(mockCtrl)
+
+			// Create cloud with both mocks
+			c := &cloud{
+				region:    "us-west-2",
+				accountID: "123456789012",
+				ec2:       mockEC2,
+				sm:        mockSM,
+				dm:        dm.NewDeviceManager(),
+				rm:        newRetryManager(),
+				vwp:       testVolumeWaitParameters(),
+			}
+
+			tc.setupMocks(mockEC2, mockSM, tc.volumeID, tc.nodeID)
+
+			ctx := t.Context()
+			devicePath, err := c.AttachDisk(ctx, tc.volumeID, tc.nodeID)
+
+			// Verify results
+			if tc.expErr != nil {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expErr.Error())
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expDevice, devicePath)
+			}
+
+			mockCtrl.Finish()
+		})
+	}
 }
 
 func TestDetachDisk(t *testing.T) {
@@ -1879,6 +2040,167 @@ func TestDetachDisk(t *testing.T) {
 			}
 
 			mockCtrl.Finish()
+		})
+	}
+
+	hyperPodTestCases := []struct {
+		name     string
+		volumeID string
+		nodeID   string
+		mockFunc func(*MockEC2API, *MockSageMakerAPI, string, string)
+		expErr   error
+	}{
+		{
+			name:     "success: HyperPod DetachVolume normal",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
+
+				// Setup SageMaker mock
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&sagemaker.DetachClusterNodeVolumeOutput{
+					Status: smtypes.VolumeAttachmentStatusDetached,
+				}, nil)
+
+				// Setup EC2 mock for volume state checking
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, instanceID, "", "detached"),
+					nil,
+				).AnyTimes()
+			},
+			expErr: nil,
+		},
+		{
+			name:     "fail: HyperPod DetachVolume returned generic error",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, errors.New("DetachVolume error"))
+
+				// Setup EC2 mock for volume state checking
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
+					nil,
+				).AnyTimes()
+			},
+			expErr: errors.New("could not detach volume \"vol-test\" from node \"hyperpod-cluster1-i-1234567890\": DetachVolume error"),
+		},
+		{
+			name:     "fail: HyperPod DetachVolume returned IncorrectState error",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, &smithy.GenericAPIError{
+					Code:    "ValidationException",
+					Message: "HyperPod - Ec2ErrCode: IncorrectState : Ec2ErrMsg: State is not correct",
+				})
+			},
+			expErr: ErrNotFound,
+		},
+		{
+			name:     "fail: HyperPod DetachVolume returned InvalidAttachment.NotFound error",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, &smithy.GenericAPIError{
+					Code:    "ValidationException",
+					Message: "HyperPod - Ec2ErrCode: InvalidAttachment.NotFound : Ec2ErrMsg: Attachment not found",
+				})
+			},
+			expErr: ErrNotFound,
+		},
+		{
+			name:     "fail: HyperPod DetachVolume returned InvalidVolume.NotFound error",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock to return error
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil, &smithy.GenericAPIError{
+					Code:    "ValidationException",
+					Message: "HyperPod - Ec2ErrCode: InvalidVolume.NotFound : Ec2ErrMsg: Volume not found",
+				})
+			},
+			expErr: ErrNotFound,
+		},
+		{
+			name:     "fail: HyperPod detachment timeout",
+			volumeID: "vol-test",
+			nodeID:   "hyperpod-cluster1-i-1234567890",
+			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
+				// Setup SageMaker mock
+				mockSM.EXPECT().DetachClusterNodeVolume(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&sagemaker.DetachClusterNodeVolumeOutput{
+					Status: smtypes.VolumeAttachmentStatusDetaching,
+				}, nil)
+
+				// Setup EC2 mock to simulate timeout by always returning "attached"
+				volumeRequest := createVolumeRequest(volumeID)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "attached"),
+					nil,
+				).AnyTimes()
+			},
+			expErr: errors.New("error waiting for volume detachment: timed out waiting for the condition"),
+		},
+	}
+
+	// Run HyperPod test cases
+	for _, tc := range hyperPodTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create mock controllers
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			// Create mock clients
+			mockEC2 := NewMockEC2API(mockCtrl)
+			mockSM := NewMockSageMakerAPI(mockCtrl)
+
+			// Setup mocks
+			tc.mockFunc(mockEC2, mockSM, tc.volumeID, tc.nodeID)
+
+			// Create cloud with mocks
+			c := &cloud{
+				region:    "us-west-2",
+				accountID: "123456789012",
+				ec2:       mockEC2,
+				sm:        mockSM,
+				dm:        dm.NewDeviceManager(),
+				rm:        newRetryManager(),
+				vwp:       testVolumeWaitParameters(),
+			}
+
+			ctx := t.Context()
+			err := c.DetachDisk(ctx, tc.volumeID, tc.nodeID)
+
+			// Verify results
+			if tc.expErr != nil {
+				require.Error(t, err)
+				assert.Equal(t, tc.expErr.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -2071,6 +2393,130 @@ func TestGetDiskByID(t *testing.T) {
 			}
 
 			mockCtrl.Finish()
+		})
+	}
+}
+
+func TestIsHyperPodNode(t *testing.T) {
+	tests := []struct {
+		name     string
+		nodeID   string
+		expected bool
+	}{
+		{
+			name:     "success: valid hyperpod node ID",
+			nodeID:   "hyperpod-abc123-i-0123456789abcdef0",
+			expected: true,
+		},
+		{
+			name:     "success: regular EC2 instance ID",
+			nodeID:   "i-0123456789abcdef0",
+			expected: false,
+		},
+		{
+			name:     "success: empty string",
+			nodeID:   "",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isHyperPodNode(tt.nodeID); got != tt.expected {
+				t.Errorf("isHyperPodNode() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetInstanceIDFromHyperPodNode(t *testing.T) {
+	tests := []struct {
+		name   string
+		nodeID string
+		expID  string
+	}{
+		{
+			name:   "success: valid hyperpod node ID",
+			nodeID: "hyperpod-abc123-i-0123456789abcdef0",
+			expID:  "i-0123456789abcdef0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getInstanceIDFromHyperPodNode(tt.nodeID)
+			assert.Equal(t, tt.expID, result)
+		})
+	}
+}
+
+func TestBuildHyperPodClusterArn(t *testing.T) {
+	testCases := []struct {
+		name        string
+		nodeID      string
+		region      string
+		accountID   string
+		expectedArn string
+	}{
+		{
+			name:        "success: valid HyperPod node",
+			nodeID:      "hyperpod-abc123-i-1234567890abcdef0",
+			region:      "test-region",
+			accountID:   "123456789012",
+			expectedArn: "arn:aws:sagemaker:test-region:123456789012:cluster/abc123",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			result := buildHyperPodClusterArn(tc.nodeID, tc.region, tc.accountID)
+			assert.Equal(t, tc.expectedArn, result)
+		})
+	}
+}
+
+func TestGetInstanceIDFromAssociatedResource(t *testing.T) {
+	tests := []struct {
+		name        string
+		arn         string
+		expectedID  string
+		expectError bool
+	}{
+		{
+			name:       "valid ARN",
+			arn:        "arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1-i-1234567890abcdef0",
+			expectedID: "i-1234567890abcdef0",
+		},
+		{
+			name:        "invalid ARN format - too few parts",
+			arn:         "invalid",
+			expectError: true,
+		},
+		{
+			name:        "invalid instance ID format",
+			arn:         "arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1-invalid-id",
+			expectError: true,
+		},
+		{
+			name:        "empty ARN",
+			arn:         "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getInstanceIDFromAssociatedResource(tt.arn)
+			if (err != nil) != tt.expectError {
+				t.Errorf("getInstanceIDFromAssociatedResource() error = %v, expectError %v", err, tt.expectError)
+				return
+			}
+			if got != tt.expectedID {
+				t.Errorf("getInstanceIDFromAssociatedResource() = %v, expectedID %v", got, tt.expectedID)
+			}
 		})
 	}
 }
@@ -3262,13 +3708,14 @@ func TestListSnapshots(t *testing.T) {
 
 func TestWaitForAttachmentState(t *testing.T) {
 	testCases := []struct {
-		name             string
-		volumeID         string
-		expectedState    types.VolumeAttachmentState
-		expectedInstance string
-		expectedDevice   string
-		alreadyAssigned  bool
-		expectError      bool
+		name               string
+		volumeID           string
+		expectedState      types.VolumeAttachmentState
+		expectedInstance   string
+		expectedDevice     string
+		alreadyAssigned    bool
+		expectError        bool
+		associatedResource *string
 	}{
 		{
 			name:             "success: attached",
@@ -3360,6 +3807,42 @@ func TestWaitForAttachmentState(t *testing.T) {
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
+		{
+			name:               "success: HyperPod attached",
+			volumeID:           "vol-test-1234",
+			expectedState:      types.VolumeAttachmentStateAttached,
+			expectedInstance:   "hyperpod-cluster1-i-1234567890",
+			associatedResource: aws.String("arn:aws:sagemaker:us-east-1:123456789012:cluster/cluster1-i-1234567890"),
+			alreadyAssigned:    false,
+			expectError:        false,
+		},
+		{
+			name:               "success: HyperPod detached",
+			volumeID:           "vol-test-1234",
+			expectedState:      types.VolumeAttachmentStateDetached,
+			expectedInstance:   "hyperpod-cluster1-i-1234567890",
+			associatedResource: aws.String("arn:aws:sagemaker:us-east-1:123456789012:cluster/cluster1-i-1234567890"),
+			alreadyAssigned:    false,
+			expectError:        false,
+		},
+		{
+			name:               "failure: HyperPod with mismatch AssociatedResource",
+			volumeID:           "vol-test-1234",
+			expectedState:      types.VolumeAttachmentStateAttached,
+			expectedInstance:   "hyperpod-cluster1-i-1234567890",
+			associatedResource: aws.String("arn:aws:sagemaker:us-east-1:123456789012:cluster/cluster1-i-0987654321"),
+			alreadyAssigned:    false,
+			expectError:        true,
+		},
+		{
+			name:               "failure: HyperPod with invalid instanceId in AssociatedResource",
+			volumeID:           "vol-test-1234",
+			expectedState:      types.VolumeAttachmentStateAttached,
+			expectedInstance:   "hyperpod-cluster1-i-1234567890",
+			associatedResource: aws.String("arn:aws:sagemaker:us-east-1:123456789012:cluster/cluster1-invalid-id"),
+			alreadyAssigned:    false,
+			expectError:        true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -3389,6 +3872,16 @@ func TestWaitForAttachmentState(t *testing.T) {
 				MultiAttachEnabled: aws.Bool(false),
 			}
 
+			hyperpodAttachedVol := types.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []types.VolumeAttachment{{State: types.VolumeAttachmentStateAttached, AssociatedResource: tc.associatedResource}},
+			}
+
+			hyperpodDetachedVol := types.Volume{
+				VolumeId:    aws.String(tc.volumeID),
+				Attachments: []types.VolumeAttachment{{State: types.VolumeAttachmentStateDetached, AssociatedResource: tc.associatedResource}},
+			}
+
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
@@ -3409,6 +3902,14 @@ func TestWaitForAttachmentState(t *testing.T) {
 			case "success: multiple attachments with Multi-Attach enabled":
 				multipleAttachmentsVol.MultiAttachEnabled = aws.Bool(true)
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
+			case "success: HyperPod attached":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+			case "success: HyperPod detached":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodDetachedVol}}, nil).AnyTimes()
+			case "failure: HyperPod with mismatch AssociatedResource":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+			case "failure: HyperPod with invalid instanceId in AssociatedResource":
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
 			case "failure: multiple attachments with Multi-Attach disabled":
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
 			case "failure: disk still attaching":
@@ -3445,6 +3946,188 @@ func TestWaitForAttachmentState(t *testing.T) {
 	}
 }
 
+func TestIsVolumeInitialized(t *testing.T) {
+	volID := "vol-test"
+	volumeStatusInitialized := types.VolumeStatusItem{
+		InitializationStatusDetails: nil,
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{{
+				Name:   types.VolumeStatusNameInitializationState,
+				Status: ptr.String("completed"),
+			}},
+		},
+		VolumeId: ptr.String(volID),
+	}
+	volumeStatusInitializingNoEta := types.VolumeStatusItem{
+		InitializationStatusDetails: &types.InitializationStatusDetails{
+			EstimatedTimeToCompleteInSeconds: nil,
+			InitializationType:               types.InitializationTypeDefault,
+			Progress:                         nil,
+		},
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{{
+				Name:   types.VolumeStatusNameInitializationState,
+				Status: ptr.String("initializing"),
+			}},
+		},
+		VolumeId: ptr.String(volID),
+	}
+	volumeStatusInitializingYesEta := volumeStatusInitializingNoEta
+	volumeStatusInitializingYesEta.InitializationStatusDetails = &types.InitializationStatusDetails{
+		EstimatedTimeToCompleteInSeconds: ptr.Int64(60 * 10),
+		InitializationType:               types.InitializationTypeProvisionedRate,
+		Progress:                         ptr.Int64(64),
+	}
+
+	testCases := []struct {
+		name      string
+		dvsOutput *types.VolumeStatusItem
+		// These cache test-case variables will pre-populate volumeInitializations cache
+		cacheHit           bool
+		cachedInitialized  bool
+		cachedAddedETATime time.Duration
+		expectSleep        bool
+		expErr             error
+	}{
+		{
+			name:      "cache miss: DSV returns initialized",
+			dvsOutput: &volumeStatusInitialized,
+		},
+		{
+			name:      "cache miss: DSV returns initializing, no ETA",
+			dvsOutput: &volumeStatusInitializingNoEta,
+		},
+		{
+			name:      "cache miss: DSV returns initializing, yes ETA",
+			dvsOutput: &volumeStatusInitializingYesEta,
+		},
+		{
+			name:              "cache hit + volume initialized: don't call DSV",
+			cacheHit:          true,
+			cachedInitialized: true,
+		},
+		{
+			name:        "cache hit + no ETA: call DSV slowly",
+			cacheHit:    true,
+			dvsOutput:   &volumeStatusInitialized,
+			expectSleep: true,
+		},
+		{
+			name:               "cache hit + yes ETA: sleep then call DSV which returns initialized",
+			cacheHit:           true,
+			cachedAddedETATime: testInitializationSleep,
+			dvsOutput:          &volumeStatusInitialized,
+			expectSleep:        true,
+		},
+		{
+			name:               "cache hit + yes ETA: should have initialized, call DSV ASAP",
+			dvsOutput:          &volumeStatusInitialized,
+			cacheHit:           true,
+			cachedAddedETATime: 1,
+		},
+		{
+			name: "edge case cache miss: DSV doesn't return initialization-state, still return true",
+			dvsOutput: &types.VolumeStatusItem{
+				VolumeStatus: &types.VolumeStatusInfo{
+					Details: []types.VolumeStatusDetails{{
+						Name:   types.VolumeStatusNameIoPerformance,
+						Status: ptr.String("test-value"),
+					}},
+				},
+				VolumeId: ptr.String(volID),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Prepare volumeInitializations cache
+			volInitCache := expiringcache.New[string, volumeInitialization](cacheForgetDelay)
+			if tc.cacheHit {
+				vi := &volumeInitialization{
+					initialized: tc.cachedInitialized,
+				}
+				if tc.cachedAddedETATime != 0 {
+					vi.estimatedInitializationTime = time.Now().Add(tc.cachedAddedETATime)
+				}
+				volInitCache.Set(volID, vi)
+			}
+
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := &cloud{
+				region:                "test-region",
+				ec2:                   mockEC2,
+				volumeInitializations: volInitCache,
+				bm: &batcherManager{
+					volumeStatusIDBatcherFast: batcher.New(500, 0, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+						return execBatchDescribeVolumeStatus(mockEC2, ids)
+					}),
+					volumeStatusIDBatcherSlow: batcher.New(500, testInitializationSleep, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
+						return execBatchDescribeVolumeStatus(mockEC2, ids) // TODO remove test sleeps once Go 1.25 releases with testing/synctest package
+					}),
+				},
+			}
+
+			// If tc.dvsOutput nil, we should NOT expect a DVS call.
+			if tc.dvsOutput != nil {
+				mockEC2.EXPECT().DescribeVolumeStatus(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{*tc.dvsOutput}}, nil).AnyTimes()
+			}
+
+			startTime := time.Now()
+			res, err := c.IsVolumeInitialized(t.Context(), volID)
+
+			if (err == nil) != (tc.expErr == nil) || !errors.Is(err, tc.expErr) {
+				t.Fatalf("IsVolumeInitialized() didn't return expected err. Expected %v got %v", tc.expErr, err)
+			}
+
+			if tc.dvsOutput != nil && res != !isVolumeStatusInitializing(*tc.dvsOutput) {
+				t.Fatalf("IsVolumeInitialized() returned wrong result. Expected %t got %t", !isVolumeStatusInitializing(*tc.dvsOutput), res)
+			}
+
+			if tc.expectSleep && time.Since(startTime) < (testInitializationSleep/2) {
+				t.Fatalf("IsVolumeInitialized() polled DescribeVolumeStatus too early when we know volume %s is not ready yet", volID)
+			}
+
+			// Check cache after test
+			if tc.dvsOutput != nil {
+				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, *tc.dvsOutput)
+			} else {
+				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, volumeStatusInitialized)
+			}
+		})
+	}
+}
+
+func confirmInitializationCacheUpdated(tb testing.TB, cache expiringcache.ExpiringCache[string, volumeInitialization], volID string, dvsOutput types.VolumeStatusItem) {
+	tb.Helper()
+
+	wasVolumeInitializing := isVolumeStatusInitializing(dvsOutput)
+
+	val, ok := cache.Get(volID)
+	switch {
+	// Check 1: Cache entry should always exist
+	case !ok:
+		tb.Fatalf("IsVolumeInitialized() did not cache DescribeVolumeStatus result for volume %s", volID)
+	// Check 2: Cache entry should match initialization state of DescribeVolumeStatus output
+	case wasVolumeInitializing == val.initialized:
+		tb.Fatalf("IsVolumeInitialized() did not cache DescribeVolumeStatus result correctly for volume %s. Expected initialized to be %t got %t", volID, wasVolumeInitializing, val.initialized)
+	// Check 3: Cache should have estimated initialization time if volume initializing at provisioned rate
+	case dvsOutput.InitializationStatusDetails != nil &&
+		dvsOutput.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds != nil &&
+		val.estimatedInitializationTime.IsZero():
+		tb.Fatalf("IsVolumeInitialized() did not cache DescribeVolumeStatus result correctly for volume %s. Expected estimatedInitializationTime to be non-zero because volume created with initializationRate", volID)
+	// Check 4: Cache should not have estimated initialization time if volume status didn't have estimated initialization time
+	case wasVolumeInitializing &&
+		dvsOutput.InitializationStatusDetails != nil &&
+		dvsOutput.InitializationStatusDetails.EstimatedTimeToCompleteInSeconds != nil &&
+		val.estimatedInitializationTime.IsZero():
+		tb.Fatalf("IsVolumeInitialized() did not cache DescribeVolumeStatus result correctly for volume %s. Expected estimatedInitializationTime to be zero because volume not created with initializationRate", volID)
+	default:
+		return
+	}
+}
+
 func testVolumeWaitParameters() volumeWaitParameters {
 	testBackoff := wait.Backoff{
 		Duration: 100 * time.Millisecond,
@@ -3462,13 +4145,15 @@ func testVolumeWaitParameters() volumeWaitParameters {
 
 func newCloud(mockEC2 EC2API) Cloud {
 	c := &cloud{
-		region:               "test-region",
-		dm:                   dm.NewDeviceManager(),
-		ec2:                  mockEC2,
-		rm:                   newRetryManager(),
-		vwp:                  testVolumeWaitParameters(),
-		likelyBadDeviceNames: expiringcache.New[string, sync.Map](cacheForgetDelay),
-		latestClientTokens:   expiringcache.New[string, int](cacheForgetDelay),
+		region:                "test-region",
+		accountID:             "123456789012",
+		dm:                    dm.NewDeviceManager(),
+		ec2:                   mockEC2,
+		rm:                    newRetryManager(),
+		vwp:                   testVolumeWaitParameters(),
+		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
+		volumeInitializations: expiringcache.New[string, volumeInitialization](cacheForgetDelay),
 	}
 	return c
 }
@@ -3547,9 +4232,10 @@ func createDescribeVolumesOutput(volumeIDs []*string, nodeID, path, state string
 			VolumeId: volumeID,
 			Attachments: []types.VolumeAttachment{
 				{
-					Device:     aws.String(path),
-					InstanceId: aws.String(nodeID),
-					State:      types.VolumeAttachmentState(state),
+					Device:             aws.String(path),
+					InstanceId:         aws.String(nodeID),
+					State:              types.VolumeAttachmentState(state),
+					AssociatedResource: aws.String("arn:aws:sagemaker:us-east-1:123456789012:cluster/cluster1-i-1234567890"),
 				},
 			},
 		})

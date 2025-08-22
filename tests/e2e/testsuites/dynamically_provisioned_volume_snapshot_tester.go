@@ -49,7 +49,7 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 	By("deploying the pod")
 	tpod.Create()
 	defer tpod.Cleanup()
-	By("checking that the pods command exits with no error")
+	By("checking that the pod's command exits with no error")
 	tpod.WaitForSuccess()
 
 	By("taking snapshots")
@@ -72,9 +72,10 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 	By("deploying a second pod with a volume restored from the snapshot")
 	trpod.Create()
 	defer trpod.Cleanup()
-	By("checking that the pods command exits with no error")
+	By("checking that the second pod's command exits with no error")
 	trpod.WaitForSuccess()
 
+	By("validating that expected events happened via AWS API")
 	if t.ValidateFunc != nil {
 		t.ValidateFunc(snapshot)
 	}

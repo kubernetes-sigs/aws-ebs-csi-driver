@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -429,7 +430,8 @@ func mapDevicePathsToVolumeIDs(devicePaths []string, lsblkOutput []byte) (map[st
 }
 
 func executeLsblk() ([]byte, error) {
-	cmd := exec.Command("lsblk", "-nd", "--json", "-o", "NAME,SERIAL")
+	// TODO: Pass context down from Prometheus handler
+	cmd := exec.CommandContext(context.TODO(), "lsblk", "-nd", "--json", "-o", "NAME,SERIAL")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("executeLsblk: error running lsblk: %w", err)
