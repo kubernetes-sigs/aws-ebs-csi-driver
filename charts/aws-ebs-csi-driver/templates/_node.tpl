@@ -92,7 +92,11 @@ spec:
             {{- with .Values.node.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.node.logLevel }}
+            {{- end }}
             {{- if .Values.node.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
@@ -181,7 +185,11 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            {{- end }}
             {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
             - {{ . }}
             {{- end }}

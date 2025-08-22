@@ -88,7 +88,7 @@ spec:
             {{- with .Values.controller.httpEndpoint }}
             - --http-endpoint={{ . }}
             {{- end }}
-            {{- if .Values.controller.sdkDebugLog }}
+            {{- if or .Values.controller.sdkDebugLog .Values.debugLogs }}
             - --aws-sdk-debug-log=true
             {{- end}}
             {{- if .Values.controller.batching }}
@@ -103,7 +103,11 @@ spec:
             {{- if .Values.controller.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.controller.logLevel }}
+            {{- end }}
             {{- range .Values.controller.additionalArgs }}
             - {{ . }}
             {{- end }}
@@ -211,7 +215,11 @@ spec:
             - --timeout=60s
             {{- end }}
             - --csi-address=$(ADDRESS)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.provisioner.logLevel }}
+            {{- end }}
             - --feature-gates=Topology=true
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
@@ -278,7 +286,11 @@ spec:
             - --timeout=6m
             {{- end }}
             - --csi-address=$(ADDRESS)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.attacher.logLevel }}
+            {{- end }}
             - --leader-election={{ .Values.sidecars.attacher.leaderElection.enabled | required "leader election state for csi-attacher is required, must be set to true || false." }}
             {{- if .Values.sidecars.attacher.leaderElection.enabled }}
             {{- if .Values.sidecars.attacher.leaderElection.leaseDuration }}
@@ -336,7 +348,11 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.snapshotter.logLevel }}
+            {{- end }}
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
             {{- end}}
@@ -388,7 +404,11 @@ spec:
             - --timeout=60s
             {{- end }}
             - --csi-address=$(ADDRESS)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.volumemodifier.logLevel }}
+            {{- end }}
             - --leader-election={{ .Values.sidecars.volumemodifier.leaderElection.enabled | required "leader election state for csi-volumemodifier is required, must be set to true || false." }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.enabled }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.leaseDuration }}
@@ -451,7 +471,11 @@ spec:
             - --extra-modify-metadata
             {{- end}}
             - --csi-address=$(ADDRESS)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
             - --v={{ .Values.sidecars.resizer.logLevel }}
+            {{- end }}
             - --handle-volume-inuse-error=false
             {{- with .Values.sidecars.resizer.leaderElection }}
             - --leader-election={{ .enabled | default true }}

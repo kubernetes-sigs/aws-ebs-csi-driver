@@ -524,6 +524,8 @@ useOldCSIDriver: false
 nodeAllocatableUpdatePeriodSeconds: 10
 # Deploy EBS CSI Driver without controller and associated resources
 nodeComponentOnly: false
+# Set maximum verbosity for logs of each container and other recommended debugging parameters such as enabling AWS SDK debug logging
+debugLogs: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml

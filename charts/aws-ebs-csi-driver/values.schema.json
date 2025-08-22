@@ -126,6 +126,11 @@
       "description": "Instruct the AWS SDK to use AWS FIPS endpoints, and deploy container built with BoringCrypto (a FIPS-validated cryptographic library) instead of the Go default. The EBS CSI Driver FIPS images have not undergone FIPS certification, and no official guarantee is made about the compliance of these images under the FIPS standard. Users relying on these images for FIPS compliance should perform their own independent evaluation",
       "default": "false"
     },
+    "debugLogs": {
+      "type": "boolean",
+      "description": "Set maximum verbosity for logs of each container and other recommended debugging parameters such as enabling AWS SDK debug logging",
+      "default": "false"
+    },
     "fullnameOverride": {
       "type": ["string", "null"],
       "default": ""
