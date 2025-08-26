@@ -21,11 +21,14 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 	"k8s.io/klog/v2"
 )
 
 const (
-	namespace = "aws_ebs_csi_"
+	namespace        = "aws_ebs_csi_"
+	metricsRateLimit = 5  // requests per second
+	metricsRateBurst = 10 // burst capacity
 )
 
 var (
@@ -164,6 +167,17 @@ func (m *metricRecorder) ObserveHistogram(name string, helpText string, value fl
 	}
 }
 
+// rateLimitMiddleware applies rate limiting to metric HTTP requests.
+func rateLimitMiddleware(limiter *rate.Limiter, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !limiter.Allow() {
+			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // InitializeMetricsHandler starts a new HTTP server to expose the metrics.
 func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFile string) {
 	if m == nil {
@@ -171,8 +185,10 @@ func (m *metricRecorder) InitializeMetricsHandler(address, path, certFile, keyFi
 		return
 	}
 
+	limiter := rate.NewLimiter(metricsRateLimit, metricsRateBurst)
 	mux := http.NewServeMux()
-	mux.Handle(path, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
+	metricsHandler := promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
+	mux.Handle(path, rateLimitMiddleware(limiter, metricsHandler))
 
 	server := &http.Server{
 		Addr:        address,
