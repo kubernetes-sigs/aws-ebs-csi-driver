@@ -193,6 +193,14 @@ fi
 ## Cleanup
 
 if [[ "${HELM_CT_TEST}" != true ]]; then
+  # If there are more than 3 restarts in any single container fail the test and print table with restarts.
+  if [[ $(kubectl get pods -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver" -o json |
+    jq -r '.items[].status.containerStatuses[]?.restartCount // 0' |
+    sort -nr | head -n 1) -gt 3 ]]; then
+    loudecho "ERROR: Container restart count exceeds threshold"
+    kubectl get pods -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver" -o custom-columns="POD:.metadata.name,CONTAINER:.spec.containers[*].name,RESTARTS:.status.containerStatuses[*].restartCount" --kubeconfig "${KUBECONFIG}"
+    TEST_PASSED=1
+  fi
   uninstall_driver
 fi
 
