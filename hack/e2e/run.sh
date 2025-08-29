@@ -128,8 +128,6 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   set -e
   set +x
 else
-  loudecho "Testing focus ${GINKGO_FOCUS}"
-
   if [[ $TEST_PATH == "./tests/e2e-kubernetes/..." ]]; then
     pushd "${BASE_DIR}/../../tests/e2e-kubernetes"
     packageVersion=$(echo $(cut -d '.' -f 1,2 <<<$K8S_VERSION))
