@@ -221,3 +221,7 @@ func (d *fakeCloud) WaitForAttachmentState(ctx context.Context, expectedState ty
 func (d *fakeCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
 	return true, nil
 }
+
+func (d *fakeCloud) DryRun(ctx context.Context) error {
+	return nil
+}
