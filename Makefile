@@ -1,4 +1,4 @@
-# Copyright 2023 The Kubernetes Authors.
+# Copyright 2025 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -142,6 +142,14 @@ e2e/multi-az: bin/helm bin/ginkgo
 	TEST_PATH=./tests/e2e/... \
 	GINKGO_FOCUS="\[ebs-csi-e2e\] \[multi-az\]" \
 	GINKGO_PARALLEL=5 \
+	./hack/e2e/run.sh
+
+.PHONY: e2e/disruptive
+e2e/disruptive: bin/helm bin/ginkgo
+	TEST_PATH=./tests/e2e/... \
+	GINKGO_FOCUS="\[ebs-csi-e2e\] \[disruptive\]" \
+	GINKGO_PARALLEL=1 \
+	EBS_INSTALL_SNAPSHOT=false \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external
