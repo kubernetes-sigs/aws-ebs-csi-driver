@@ -29,6 +29,9 @@ test-e2e-single-az)
 test-e2e-multi-az)
   TEST="multi-az"
   ;;
+test-e2e-disruptive)
+  TEST="disruptive"
+  ;;
 test-e2e-external)
   TEST="external"
   ;;
