@@ -15,7 +15,7 @@
 # See
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 # for info on BUILDPLATFORM, TARGETOS, TARGETARCH, etc.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.25@sha256:91e2cd436f7adbfad0a0cbb7bf8502fa863ed8461414ceebe36c6304731e0fd9 AS builder
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.25@sha256:5502b0e56fca23feba76dbc5387ba59c593c02ccc2f0f7355871ea9a0852cebe AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 RUN go env -w GOCACHE=/gocache GOMODCACHE=/gomodcache
 COPY go.* .
