@@ -78,7 +78,7 @@ if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
   kubectl apply --kubeconfig "${KUBECONFIG}" -f - <<<${SNAPSHOT_CONTROLLER_MANIFEST}
 fi
 
-if [[ "${HELM_CT_TEST}" != true ]]; then
+if [[ "${HELM_CT_TEST}" != true ]] && [ -z "${SKIP_DRIVER_INSTALL+x}" ]; then
   startSec=$(date +'%s')
   install_driver
   endSec=$(date +'%s')
@@ -201,7 +201,9 @@ if [[ "${HELM_CT_TEST}" != true ]]; then
     kubectl get pods -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver" -o custom-columns="POD:.metadata.name,CONTAINER:.spec.containers[*].name,RESTARTS:.status.containerStatuses[*].restartCount" --kubeconfig "${KUBECONFIG}"
     TEST_PASSED=1
   fi
-  uninstall_driver
+  if [ -z "${SKIP_DRIVER_INSTALL+x}" ]; then
+    uninstall_driver
+  fi
 fi
 
 if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
