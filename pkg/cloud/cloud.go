@@ -120,6 +120,10 @@ const (
 	KubernetesTagKeyPrefix = "kubernetes.io"
 	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
 	AwsEbsDriverTagKey = util.DriverName + "/cluster"
+	// AllowIopsIncreaseOnResize is the tag key for allowing IOPS increase on resizing if IopsPerGB is set to ensure desired ratio is maintained.
+	AllowAutoIopsIncreaseOnResizeKey = "allowautoiopsincreaseonresize"
+	// IopsPerGBKey represents the tag key for IOPS per GB.
+	IopsPerGBKey = "iopspergb"
 )
 
 // Batcher.
@@ -590,22 +594,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType = VolumeTypeGP3
 	}
 
-	switch createType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
-	case VolumeTypeIO1:
-		maxIops = io1MaxTotalIOPS
-		minIops = io1MinTotalIOPS
-		maxIopsPerGb = io1MaxIOPSPerGB
-	case VolumeTypeIO2:
-		maxIops = io2MaxTotalIOPS
-		minIops = io2MinTotalIOPS
-		maxIopsPerGb = io2MaxIOPSPerGB
-	case VolumeTypeGP3:
-		maxIops = gp3MaxTotalIOPS
-		minIops = gp3MinTotalIOPS
-		maxIopsPerGb = gp3MaxIOPSPerGB
-		throughput = diskOptions.Throughput
-	default:
+	maxIops, minIops, maxIopsPerGb, throughput, err = getVolumeLimits(createType, diskOptions.Throughput)
+	if err != nil {
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
@@ -840,27 +830,58 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 	if err != nil {
 		return 0, err
 	}
-	needsModification, volumeSize, err := c.validateModifyVolume(ctx, volumeID, newSizeGiB, options)
+	request := &ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeID},
+	}
+	volume, err := c.getVolume(ctx, request)
+	if err != nil {
+		return 0, err
+	}
+	needsModification, volumeSize, err := c.validateModifyVolume(ctx, volumeID, newSizeGiB, options, *volume)
 
 	if err != nil || !needsModification {
 		return volumeSize, err
 	}
-
 	req := &ec2.ModifyVolumeInput{
 		VolumeId: aws.String(volumeID),
 	}
 	if newSizeBytes != 0 {
 		req.Size = aws.Int32(newSizeGiB)
 	}
-	if options.IOPS != 0 {
-		req.Iops = aws.Int32(options.IOPS)
-	}
 	if options.VolumeType != "" {
 		req.VolumeType = types.VolumeType(options.VolumeType)
+	} else {
+		req.VolumeType = volume.VolumeType
 	}
 	if options.Throughput != 0 {
 		req.Throughput = aws.Int32(options.Throughput)
 	}
+	maxIops, minIops, maxIopsPerGb, _, err := getVolumeLimits(string(req.VolumeType), options.Throughput)
+	if err != nil {
+		return 0, err
+	}
+
+	if options.IOPS != 0 {
+		sizeToUse := newSizeGiB
+		if req.Size != nil {
+			sizeToUse = *req.Size
+		}
+		req.Iops = aws.Int32(capIOPS(string(req.VolumeType), sizeToUse, options.IOPS, minIops, maxIops, maxIopsPerGb, false)) //TODO: See if we want to set allowIncrease to always true instead of false on modify?
+	}
+
+	iopsPerGBIsSet, allowautoincreaseIsSet, iopsPerGbVal, err := c.CheckIfIopsIncreaseOnExpansion(ctx, volumeID)
+	if err != nil {
+		return 0, err
+	}
+
+	if iopsPerGBIsSet && allowautoincreaseIsSet && options.IOPS == 0 {
+		sizeToUse := newSizeGiB
+		if req.Size != nil {
+			sizeToUse = *req.Size
+		}
+		req.Iops = aws.Int32(capIOPS(string(req.VolumeType), sizeToUse, (sizeToUse * iopsPerGbVal), minIops, maxIops, maxIopsPerGb, false))
+	}
+
 	response, err := c.ec2.ModifyVolume(ctx, req, func(o *ec2.Options) {
 		o.Retryer = c.rm.modifyVolumeRetryer
 	})
@@ -2363,16 +2384,7 @@ func needsVolumeModification(volume types.Volume, newSizeGiB int32, options *Mod
 	return needsModification
 }
 
-func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int32, options *ModifyDiskOptions) (bool, int32, error) {
-	request := &ec2.DescribeVolumesInput{
-		VolumeIds: []string{volumeID},
-	}
-
-	volume, err := c.getVolume(ctx, request)
-	if err != nil {
-		return true, 0, err
-	}
-
+func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSizeGiB int32, options *ModifyDiskOptions, volume types.Volume) (bool, int32, error) {
 	if volume.Size == nil {
 		return true, 0, fmt.Errorf("volume %q has no size", volumeID)
 	}
@@ -2403,7 +2415,7 @@ func (c *cloud) validateModifyVolume(ctx context.Context, volumeID string, newSi
 	// At this point, we know we are starting a new volume modification
 	// If we're asked to modify a volume to its current state, ignore the request and immediately return a success
 	// This is because as of March 2024, EC2 ModifyVolume calls that don't change any parameters still modify the volume
-	if !needsVolumeModification(*volume, newSizeGiB, options) {
+	if !needsVolumeModification(volume, newSizeGiB, options) {
 		klog.V(5).InfoS("[Debug] Skipping modification for volume due to matching stats", "volumeID", volumeID)
 		// Wait for any existing modifications to prevent race conditions where DescribeVolume(s) returns the new
 		// state before the volume is actually finished modifying
@@ -2462,4 +2474,75 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
 	}
 	return iops
+}
+
+// Setting volume IOPS Supported AWS limits depending on volume type.
+func getVolumeLimits(volumeType string, throughput int32) (maxIops int32, minIops int32, maxIopsPerGb int32, throughputOut int32, err error) {
+	switch strings.ToLower(volumeType) {
+	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
+	case VolumeTypeIO1:
+		maxIops = io1MaxTotalIOPS
+		minIops = io1MinTotalIOPS
+		maxIopsPerGb = io1MaxIOPSPerGB
+	case VolumeTypeIO2:
+		maxIops = io2MaxTotalIOPS
+		minIops = io2MinTotalIOPS
+		maxIopsPerGb = io2MaxIOPSPerGB
+	case VolumeTypeGP3:
+		maxIops = gp3MaxTotalIOPS
+		minIops = gp3MinTotalIOPS
+		maxIopsPerGb = gp3MaxIOPSPerGB
+		throughputOut = throughput
+	default:
+		return 0, 0, 0, 0, fmt.Errorf("invalid AWS VolumeType %q", volumeType)
+	}
+	return maxIops, minIops, maxIopsPerGb, throughputOut, nil
+}
+
+// Checks if a volume's IOPS can be increased on expansion to adhere to IopsPerGB ratio.
+func (c *cloud) CheckIfIopsIncreaseOnExpansion(ctx context.Context, volumeID string) (iopsPerGBIsSet bool, allowautoincreaseIsSet bool, iopsPerGbVal int32, err error) {
+	req := &ec2.DescribeTagsInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("resource-id"),
+				Values: []string{volumeID},
+			},
+			{
+				Name:   aws.String("resource-type"),
+				Values: []string{"volume"},
+			},
+		},
+	}
+
+	existingTags, err := c.ec2.DescribeTags(ctx, req)
+	if err != nil {
+		klog.ErrorS(err, "failed to describe tags", "volumeID", volumeID)
+		return false, false, 0, err
+	}
+
+	if existingTags.Tags != nil {
+		for _, tag := range existingTags.Tags {
+			klog.InfoS(*tag.Key, ":", tag.Value)
+			switch *tag.Key {
+			case IopsPerGBKey:
+				iopsPerGBIsSet = true
+				iopsPerGbVal64, err := strconv.ParseInt(*tag.Value, 10, 32)
+				if err != nil {
+					return false, false, 0, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
+				}
+				iopsPerGbVal = int32(iopsPerGbVal64)
+			case AllowAutoIopsIncreaseOnResizeKey:
+				isSet, err := strconv.ParseBool(*tag.Value)
+				if err != nil {
+					return false, false, 0, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
+				}
+				if isSet {
+					allowautoincreaseIsSet = true
+				} else {
+					allowautoincreaseIsSet = false
+				}
+			}
+		}
+	}
+	return iopsPerGBIsSet, allowautoincreaseIsSet, iopsPerGbVal, nil
 }
