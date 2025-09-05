@@ -663,7 +663,7 @@
           "default": false
         },
         "metadataSources": {
-          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds' and 'kubernetes'",
+          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds', 'kubernetes', and 'metadatalabeler'",
           "type": ["string", "null"],
           "default": null
         },
@@ -1145,6 +1145,41 @@
                   "default": 15
                 }
               }
+            }
+          }
+        },
+        "metadataLabeler": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "additionalArgs": {
+              "type": "array",
+              "description": "Additional arguments passed to the metadataLabeler container",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            "resources": {
+              "type": ["object", "null"],
+              "default": null
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Deploy EBS CSI Controller with metadata labeler container",
+              "default": false
+            },
+            "logLevel": {
+              "type": "integer",
+              "description": "Set the level of verbosity of the logs",
+              "default": 4
+            },
+            "env": {
+              "type": "array",
+              "default": []
+            },
+            "securityContext": {
+              "type": "object"
             }
           }
         },
