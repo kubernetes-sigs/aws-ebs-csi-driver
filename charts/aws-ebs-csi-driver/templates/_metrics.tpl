@@ -43,7 +43,7 @@ spec:
     matchNames:
       - {{ .Release.Namespace }}
   endpoints:
-    - targetPort: {{ .Port }}
+    - port: metrics
       path: /metrics
       interval: {{ .ServiceMonitor.interval | default "15s"}}
       {{- if .ServiceMonitor.relabelings }}
