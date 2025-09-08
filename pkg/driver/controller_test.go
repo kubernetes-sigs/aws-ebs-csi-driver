@@ -2138,6 +2138,70 @@ func TestCreateVolume(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.ResourceExhausted)
 			},
 		},
+		{
+			name: "success user tags override cluster tags",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					volumeName  = "test-vol"
+					clusterID   = "test-cluster"
+					userNameTag = "user-specified-name"
+				)
+				req := &csi.CreateVolumeRequest{
+					Name:               volumeName,
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						"tagSpecification_1": "Name=" + userNameTag,
+					},
+				}
+
+				ctx := t.Context()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+				}
+
+				// Expected tags: user tag should override cluster tag
+				expectedTags := map[string]string{
+					cloud.VolumeNameTagKey:                 volumeName,
+					cloud.AwsEbsDriverTagKey:               "true",
+					ResourceLifecycleTagPrefix + clusterID: ResourceLifecycleOwned,
+					NameTag:                                userNameTag, // User tag overrides cluster tag
+					KubernetesClusterTag:                   clusterID,
+				}
+
+				diskOptions := &cloud.DiskOptions{
+					CapacityBytes: stdVolSize,
+					Tags:          expectedTags,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(diskOptions)).Return(mockDisk, nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options: &Options{
+						KubernetesClusterID: clusterID,
+					},
+				}
+
+				_, err := awsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)

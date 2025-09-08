@@ -265,6 +265,14 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
 
+	// fill volume tags - set cluster tags first so user tags can override them
+	if d.options.KubernetesClusterID != "" {
+		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.options.KubernetesClusterID
+		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
+		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
+		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
+	}
+
 	for k, v := range addTags {
 		volumeTags[k] = v
 	}
@@ -332,14 +340,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
 	zoneID := pickAvailabilityZoneID(req.GetAccessibilityRequirements())
 	outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
-
-	// fill volume tags
-	if d.options.KubernetesClusterID != "" {
-		resourceLifecycleTag := ResourceLifecycleTagPrefix + d.options.KubernetesClusterID
-		volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
-		volumeTags[NameTag] = d.options.KubernetesClusterID + "-dynamic-" + volName
-		volumeTags[KubernetesClusterTag] = d.options.KubernetesClusterID
-	}
 
 	opts := &cloud.DiskOptions{
 		CapacityBytes:            volSizeBytes,
