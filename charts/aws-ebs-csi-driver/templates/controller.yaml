@@ -270,6 +270,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3302
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.provisioner.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -333,6 +339,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3303
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.attacher.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -386,6 +398,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3306
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.snapshotter.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -451,6 +469,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3307
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.volumemodifier.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -522,6 +546,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3304
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.resizer.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -549,6 +579,12 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics
+              containerPort: 3305
+              protocol: TCP
+          {{- end }}
           {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
