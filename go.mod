@@ -116,4 +116,4 @@ require (
 // This can probably be removed next k8s.io dependency bump (v0.33.4?)
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250628140032-d90c4fd18f59
 
-go 1.24.5
+go 1.24.6
