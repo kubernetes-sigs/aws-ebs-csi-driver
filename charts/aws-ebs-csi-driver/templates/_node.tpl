@@ -152,6 +152,11 @@ spec:
             - name: healthz
               containerPort: 9808
               protocol: TCP
+            {{- if .Values.node.enableMetrics }}
+            - name: metrics
+              containerPort: 3302
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
