@@ -340,6 +340,10 @@ update/shfmt: bin/shfmt
 update/generate-license-header:
 	./hack/generate-license-header.sh
 
+.PHONY: generate-limits-table
+generate-limits-table:
+	go run hack/generate-limits-table.go > pkg/cloud/volume_limits_table.go
+
 ## Verifiers
 # Linters and similar
 
