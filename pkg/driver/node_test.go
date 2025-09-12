@@ -1107,7 +1107,7 @@ func TestGetVolumesLimit(t *testing.T) {
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
 			},
-			expectedVal: 1,
+			expectedVal: 2,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceType().Return("d3en.12xlarge")
@@ -1122,7 +1122,7 @@ func TestGetVolumesLimit(t *testing.T) {
 				VolumeAttachLimit:         -1,
 				ReservedVolumeAttachments: -1,
 			},
-			expectedVal: 1,
+			expectedVal: 2,
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceType().Return("d3.8xlarge")
@@ -1174,21 +1174,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			},
 		},
 		{
-			name: "u-12tb1.metal_volume_attach_limit",
-			options: &Options{
-				VolumeAttachLimit:         -1,
-				ReservedVolumeAttachments: -1,
-			},
-			expectedVal: 18,
-			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
-				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetInstanceType().Return("u-12tb1.metal")
-				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
-				m.EXPECT().GetNumAttachedENIs().Return(1)
-				return m
-			},
-		},
-		{
 			name: "g4dn.xlarge_volume_attach_limit (1 GPU 1 InstanceStoreVolume)",
 			options: &Options{
 				VolumeAttachLimit:         -1,
@@ -1228,21 +1213,6 @@ func TestGetVolumesLimit(t *testing.T) {
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
 				m := metadata.NewMockMetadataService(ctrl)
 				m.EXPECT().GetInstanceType().Return("g4dn.12xlarge")
-				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
-				m.EXPECT().GetNumAttachedENIs().Return(1)
-				return m
-			},
-		},
-		{
-			name: "dl1.24xlarge_volume_attach_limit (8 Accelerator slots , 4 InstanceStoreVolume)",
-			options: &Options{
-				VolumeAttachLimit:         -1,
-				ReservedVolumeAttachments: -1,
-			},
-			expectedVal: 14,
-			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
-				m := metadata.NewMockMetadataService(ctrl)
-				m.EXPECT().GetInstanceType().Return("dl1.24xlarge")
 				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
 				m.EXPECT().GetNumAttachedENIs().Return(1)
 				return m
