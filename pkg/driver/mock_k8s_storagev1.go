@@ -315,3 +315,17 @@ func (mr *MockStorageV1InterfaceMockRecorder) VolumeAttachments() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VolumeAttachments", reflect.TypeOf((*MockStorageV1Interface)(nil).VolumeAttachments))
 }
+
+// VolumeAttributesClasses mocks base method.
+func (m *MockStorageV1Interface) VolumeAttributesClasses() v12.VolumeAttributesClassInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VolumeAttributesClasses")
+	ret0, _ := ret[0].(v12.VolumeAttributesClassInterface)
+	return ret0
+}
+
+// VolumeAttributesClasses indicates an expected call of VolumeAttributesClasses.
+func (mr *MockStorageV1InterfaceMockRecorder) VolumeAttributesClasses() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VolumeAttributesClasses", reflect.TypeOf((*MockStorageV1Interface)(nil).VolumeAttributesClasses))
+}
