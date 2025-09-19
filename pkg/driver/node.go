@@ -778,45 +778,31 @@ func (d *NodeService) getVolumesLimit() int64 {
 	}
 
 	instanceType := d.metadata.GetInstanceType()
-	klog.V(4).InfoS("getVolumesLimit:", "instanceType", instanceType)
+	availableAttachments, limitType := cloud.GetVolumeLimits(instanceType)
+	klog.V(4).InfoS("getVolumesLimit: Retrieved inputs", "instanceType", instanceType, "attachmentLimit", availableAttachments, "limitType", limitType)
 
-	isNitro := cloud.IsNitroInstanceType(instanceType)
-	availableAttachments := cloud.GetMaxAttachments(isNitro)
-	klog.V(4).InfoS("getVolumesLimit:", "availableAttachments", availableAttachments)
-
+	// Calculate reserved volume attachments (additional EBS volumes)
 	reservedVolumeAttachments := d.options.ReservedVolumeAttachments
 	if reservedVolumeAttachments == -1 {
-		reservedVolumeAttachments = d.metadata.GetNumBlockDeviceMappings() + 1 // +1 for the root device
-		klog.V(4).InfoS("getVolumesLimit:", "numBlockDevices", (reservedVolumeAttachments - 1))
+		// Auto-detect number of reserved volume attachments - plus 1 to account for the root volume
+		reservedVolumeAttachments = d.metadata.GetNumBlockDeviceMappings() + 1
 	}
-	klog.V(4).InfoS("getVolumesLimit:", "reservedVolumeAttachments", reservedVolumeAttachments)
-
-	dedicatedLimit := cloud.GetDedicatedLimitForInstanceType(instanceType)
-	maxEBSAttachments, hasMaxVolumeLimit := cloud.GetEBSLimitForInstanceType(instanceType)
-	if hasMaxVolumeLimit {
-		availableAttachments = min(maxEBSAttachments, availableAttachments)
-	}
-	// For special dedicated limit instance types, the limit is only for EBS volumes
-	// For (all other) Nitro instances, attachments are shared between EBS volumes, ENIs and NVMe instance stores
-	if dedicatedLimit != 0 {
-		availableAttachments = dedicatedLimit
-		klog.V(4).InfoS("getVolumesLimit:", "dedicatedLimit", dedicatedLimit)
-	} else if isNitro {
-		enis := d.metadata.GetNumAttachedENIs()
-		klog.V(4).InfoS("getVolumesLimit:", "ENIs", enis)
-		reservedSlots := cloud.GetReservedSlotsForInstanceType(instanceType)
-		klog.V(4).InfoS("getVolumesLimit:", "reservedSlots", reservedSlots)
-		if hasMaxVolumeLimit {
-			availableAttachments = availableAttachments - (enis - 1) - reservedSlots
-		} else {
-			availableAttachments = availableAttachments - enis - reservedSlots
-		}
-	}
+	klog.V(4).InfoS("getVolumesLimit: Removing reserved attachments", "reservedVolumeAttachments", reservedVolumeAttachments)
 	availableAttachments -= reservedVolumeAttachments
+
+	// For shared attachment types, subtract ENIs
+	if limitType == util.AttachmentShared {
+		enis := d.metadata.GetNumAttachedENIs()
+		klog.V(4).InfoS("getVolumesLimit: Removing ENIs on shared limit", "enis", enis)
+		availableAttachments -= (enis - 1)
+	}
+
+	// Safety measure: Never return a limit of below 1, as Kubernetes will treat it as infinite
 	if availableAttachments <= 0 {
 		availableAttachments = 1
 	}
 
+	klog.V(4).InfoS("getVolumesLimit: Returning calculated limit", "availableAttachments", availableAttachments)
 	return int64(availableAttachments)
 }
 
