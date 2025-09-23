@@ -1,3 +1,116 @@
+# v1.49.0
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+Add dry-run EC2 API call to `ebs-csi-driver` controller readiness/liveness probes ([#2590](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2590), [@AndrewSirenko](https://github.com/AndrewSirenko))
+
+Starting in `v1.49.0`, the EBS CSI Driver Controller's readiness and liveness probes will periodically check the ability to perform AWS API calls by performing a dry run of the EC2 `DescribeAvailabilityZones` API. **Installation of the EBS CSI Driver on clusters with broken networking/DNS, incorrectly configured IAM, or other issues preventing access to the AWS API may fail.** If installation of the EBS CSI Driver fails due to the `ebs-csi-controller` probes, access the logs of the controller pods for details of the error.
+
+### Feature
+
+- Rate limit metrics endpoint to 5 requests/second with burst of 10 - Excessive requests will receive HTTP 429 ([#2638](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2638), [@torredil](https://github.com/torredil))
+
+### Bug or Regression
+
+- Update several incorrect EBS volume limits via generating table from DescribeInstanceTypes API ([#2660](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2660), [@ConnorJC3](https://github.com/ConnorJC3))
+- Fix cluster tags incorrectly overriding user-specified tags from StorageClass parameters ([#2655](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2655), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+- github.com/Masterminds/semver/v3: [v3.4.0](https://github.com/Masterminds/semver/tree/v3.4.0)
+- github.com/go-openapi/swag/cmdutils: [v0.24.0](https://github.com/go-openapi/swag/tree/cmdutils/v0.24.0)
+- github.com/go-openapi/swag/conv: [v0.24.0](https://github.com/go-openapi/swag/tree/conv/v0.24.0)
+- github.com/go-openapi/swag/fileutils: [v0.24.0](https://github.com/go-openapi/swag/tree/fileutils/v0.24.0)
+- github.com/go-openapi/swag/jsonname: [v0.24.0](https://github.com/go-openapi/swag/tree/jsonname/v0.24.0)
+- github.com/go-openapi/swag/jsonutils: [v0.24.0](https://github.com/go-openapi/swag/tree/jsonutils/v0.24.0)
+- github.com/go-openapi/swag/loading: [v0.24.0](https://github.com/go-openapi/swag/tree/loading/v0.24.0)
+- github.com/go-openapi/swag/mangling: [v0.24.0](https://github.com/go-openapi/swag/tree/mangling/v0.24.0)
+- github.com/go-openapi/swag/netutils: [v0.24.0](https://github.com/go-openapi/swag/tree/netutils/v0.24.0)
+- github.com/go-openapi/swag/stringutils: [v0.24.0](https://github.com/go-openapi/swag/tree/stringutils/v0.24.0)
+- github.com/go-openapi/swag/typeutils: [v0.24.0](https://github.com/go-openapi/swag/tree/typeutils/v0.24.0)
+- github.com/go-openapi/swag/yamlutils: [v0.24.0](https://github.com/go-openapi/swag/tree/yamlutils/v0.24.0)
+- golang.org/x/tools/go/expect: v0.1.0-deprecated
+- golang.org/x/tools/go/packages/packagestest: v0.1.1-deprecated
+- gonum.org/v1/gonum: v0.16.0
+- sigs.k8s.io/structured-merge-diff/v6: v6.3.0
+
+### Changed
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.27.0 → v1.29.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/detectors/gcp/v1.27.0...detectors/gcp/v1.29.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.31.0 → v1.31.9](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.31.0...config/v1.31.9)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.4 → v1.18.13](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.4...credentials/v1.18.13)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.3 → v1.18.7](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.3...feature/ec2/imds/v1.18.7)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.3 → v1.4.7](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.3...internal/configsources/v1.4.7)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.3 → v2.7.7](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.3...internal/endpoints/v2/v2.7.7)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.244.0 → v1.253.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.244.0...service/ec2/v1.253.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.0 → v1.13.1](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.0...service/internal/accept-encoding/v1.13.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.3 → v1.13.7](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.3...service/internal/presigned-url/v1.13.7)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.209.0 → v1.215.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.209.0...service/sagemaker/v1.215.1)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.28.0 → v1.29.3](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.28.0...service/sso/v1.29.3)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.33.0 → v1.34.5](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.33.0...service/ssooidc/v1.34.5)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.37.0 → v1.38.4](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.37.0...service/sts/v1.38.4)
+- github.com/aws/aws-sdk-go-v2: [v1.38.0 → v1.39.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.0...v1.39.0)
+- github.com/aws/smithy-go: [v1.22.5 → v1.23.0](https://github.com/aws/smithy-go/compare/v1.22.5...v1.23.0)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.7.0 → v0.8.0](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.7.0...v0.8.0)
+- github.com/go-jose/go-jose/v4: [v4.0.5 → v4.1.1](https://github.com/go-jose/go-jose/compare/v4.0.5...v4.1.1)
+- github.com/go-openapi/jsonpointer: [v0.21.2 → v0.22.0](https://github.com/go-openapi/jsonpointer/compare/v0.21.2...v0.22.0)
+- github.com/go-openapi/jsonreference: [v0.21.0 → v0.21.1](https://github.com/go-openapi/jsonreference/compare/v0.21.0...v0.21.1)
+- github.com/go-openapi/swag: [v0.23.1 → v0.24.1](https://github.com/go-openapi/swag/compare/v0.23.1...v0.24.1)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.27.1 → v2.27.2](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.27.1...v2.27.2)
+- github.com/mailru/easyjson: [v0.9.0 → v0.9.1](https://github.com/mailru/easyjson/compare/v0.9.0...v0.9.1)
+- github.com/modern-go/reflect2: [v1.0.2 → 35a7c28](https://github.com/modern-go/reflect2/compare/v1.0.2...35a7c28)
+- github.com/onsi/ginkgo/v2: [v2.23.4 → v2.25.3](https://github.com/onsi/ginkgo/compare/v2.23.4...v2.25.3)
+- github.com/onsi/gomega: [v1.38.0 → v1.38.2](https://github.com/onsi/gomega/compare/v1.38.0...v1.38.2)
+- github.com/prometheus/client_golang: [v1.23.0 → v1.23.2](https://github.com/prometheus/client_golang/compare/v1.23.0...v1.23.2)
+- github.com/prometheus/common: [v0.65.0 → v0.66.1](https://github.com/prometheus/common/compare/v0.65.0...v0.66.1)
+- github.com/rogpeppe/go-internal: [v1.13.1 → v1.14.1](https://github.com/rogpeppe/go-internal/compare/v1.13.1...v1.14.1)
+- github.com/spf13/cobra: [v1.9.1 → v1.10.1](https://github.com/spf13/cobra/compare/v1.9.1...v1.10.1)
+- github.com/spf13/pflag: [v1.0.7 → v1.0.10](https://github.com/spf13/pflag/compare/v1.0.7...v1.0.10)
+- github.com/stretchr/testify: [v1.10.0 → v1.11.1](https://github.com/stretchr/testify/compare/v1.10.0...v1.11.1)
+- go.opentelemetry.io/auto/sdk: v1.1.0 → v1.2.1
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.62.0 → v0.63.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel/metric: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel/sdk/metric: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel/sdk: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel/trace: v1.37.0 → v1.38.0
+- go.opentelemetry.io/otel: v1.37.0 → v1.38.0
+- go.opentelemetry.io/proto/otlp: v1.7.1 → v1.8.0
+- go.yaml.in/yaml/v2: v2.4.2 → v2.4.3
+- golang.org/x/crypto: v0.41.0 → v0.42.0
+- golang.org/x/exp: 7e4ce0a → 509febe
+- golang.org/x/mod: v0.26.0 → v0.27.0
+- golang.org/x/net: v0.43.0 → v0.44.0
+- golang.org/x/oauth2: v0.30.0 → v0.31.0
+- golang.org/x/sync: v0.16.0 → v0.17.0
+- golang.org/x/sys: v0.35.0 → v0.36.0
+- golang.org/x/telemetry: 8d8967a → 1a19826
+- golang.org/x/term: v0.34.0 → v0.35.0
+- golang.org/x/text: v0.28.0 → v0.29.0
+- golang.org/x/time: v0.12.0 → v0.13.0
+- golang.org/x/tools: v0.35.0 → v0.36.0
+- google.golang.org/genproto/googleapis/api: 5f3141c → 9219d12
+- google.golang.org/genproto/googleapis/rpc: 5f3141c → 9219d12
+- google.golang.org/grpc: v1.74.2 → v1.75.1
+- google.golang.org/protobuf: v1.36.7 → v1.36.9
+- k8s.io/api: v0.33.4 → v0.34.1
+- k8s.io/apimachinery: v0.33.4 → v0.34.1
+- k8s.io/client-go: v0.33.4 → v0.34.1
+- k8s.io/component-base: v0.33.4 → v0.34.1
+- k8s.io/csi-translation-lib: v0.33.1 → v0.34.1
+- k8s.io/gengo/v2: a7b603a → 85fd79d
+- k8s.io/kube-openapi: d90c4fd → 589584f
+- k8s.io/kubectl: v0.33.1 → v0.34.1
+- k8s.io/mount-utils: v0.33.4 → v0.34.1
+- k8s.io/utils: 4c0f3b2 → 0af2bda
+
+### Removed
+_Nothing has changed._
+
 # v1.48.0
 
 ## Changes by Kind
