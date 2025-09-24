@@ -111,6 +111,7 @@ spec:
             preStop:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
           image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.14.0-eksbuild.5
           imagePullPolicy: IfNotPresent
@@ -148,6 +149,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.5
           imagePullPolicy: IfNotPresent
@@ -165,6 +167,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: kubelet-dir
           hostPath:

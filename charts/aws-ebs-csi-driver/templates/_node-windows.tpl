@@ -172,6 +172,7 @@ spec:
             preStop:
               exec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.nodeDriverRegistrar.image.repository .Values.sidecars.nodeDriverRegistrar.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.nodeDriverRegistrar.image.pullPolicy }}
@@ -233,6 +234,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
@@ -253,6 +255,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.imagePullSecrets }}
