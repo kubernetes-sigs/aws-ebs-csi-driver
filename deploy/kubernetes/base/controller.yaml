@@ -138,6 +138,7 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
           image: public.ecr.aws/csi-components/csi-provisioner:v5.3.0-eksbuild.4
           imagePullPolicy: IfNotPresent
@@ -171,6 +172,7 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-attacher
           image: public.ecr.aws/csi-components/csi-attacher:v4.9.0-eksbuild.4
           imagePullPolicy: IfNotPresent
@@ -200,6 +202,7 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-snapshotter
           image: public.ecr.aws/csi-components/csi-snapshotter:v8.3.0-eksbuild.2
           imagePullPolicy: IfNotPresent
@@ -229,6 +232,7 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-resizer
           image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.4
           imagePullPolicy: IfNotPresent
@@ -261,6 +265,7 @@ spec:
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.5
           imagePullPolicy: IfNotPresent
@@ -279,6 +284,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+          terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: socket-dir
           emptyDir: {}

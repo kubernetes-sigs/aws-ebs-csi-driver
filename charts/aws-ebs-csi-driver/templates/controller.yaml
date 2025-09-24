@@ -207,6 +207,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy }}
@@ -284,6 +285,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-attacher
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
@@ -353,6 +355,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         {{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
@@ -412,6 +415,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         {{- end }}
         {{- if (.Values.controller.volumeModificationFeature).enabled }}
         - name: volumemodifier
@@ -483,6 +487,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         {{- end }}
         - name: csi-resizer
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
@@ -560,6 +565,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
@@ -593,6 +599,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.imagePullSecrets }}
