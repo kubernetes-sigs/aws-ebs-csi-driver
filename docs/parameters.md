@@ -32,7 +32,7 @@ The AWS EBS CSI Driver supports [tagging](tagging.md) through `StorageClass.para
 |----------------------------|----------------|---------------|-----------------|
 | io1                        | 100            | 64000         | 50              |
 | io2                        | 100            | 256000        | 1000            |
-| gp3                        | 3000           | 16000         | 500             |
+| gp3                        | 3000           | 80000         | 500             |
 
 ## Volume Availability Zone and Topologies
 

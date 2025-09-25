@@ -72,7 +72,7 @@ const (
 	io2MinTotalIOPS = 100
 	io2MaxTotalIOPS = 256000
 	io2MaxIOPSPerGB = 1000
-	gp3MaxTotalIOPS = 16000
+	gp3MaxTotalIOPS = 80000
 	gp3MinTotalIOPS = 3000
 	gp3MaxIOPSPerGB = 500
 )
