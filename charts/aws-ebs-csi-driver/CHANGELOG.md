@@ -1,5 +1,11 @@
 # Helm chart
 
+## 2.49.1
+
+### Feature
+
+- Add `terminationMessagePolicy: FallbackToLogsOnError` to all containers to use log messages as termination message ([#2672](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2672), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## 2.49.0
 
 ### Feature
