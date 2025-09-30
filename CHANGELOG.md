@@ -296,7 +296,7 @@ _Nothing has changed._
 ### Removed
 _Nothing has changed._
 
-# 1.45.0
+# v1.45.0
 
 ## Changes by Kind
 
@@ -391,7 +391,7 @@ v0.7.0)
 - github.com/golang/groupcache: [2c02b82](https://github.com/golang/groupcache/tree/2c02b82)
 - github.com/imdario/mergo: [v0.3.16](https://github.com/imdario/mergo/tree/v0.3.16)
 
-# 1.44.0
+# v1.44.0
 
 ## Changes by Kind
 
@@ -579,7 +579,7 @@ v0.7.0)
 - sigs.k8s.io/kustomize/kustomize/v5: v5.6.0
 - sigs.k8s.io/kustomize/kyaml: v0.19.0
 
-# 1.43.0
+# v1.43.0
 
 ## Changes by Kind
 
@@ -660,7 +660,7 @@ v0.7.0)
 - go.uber.org/atomic: v1.7.0
 - gopkg.in/square/go-jose.v2: v2.6.0
 
-# 1.42.0
+# v1.42.0
 
 ## Changes by Kind
 
@@ -1537,7 +1537,7 @@ As part of this change, e2fsprogs will be upgraded from `1.42.9` to `1.46.5` and
 * Cherry-pick from v1.23.1: Do not call ModifyVolume if the volume is already in the desired state ([#1741](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/1741), [@ConnorJC3](https://github.com/ConnorJC3))
 * Upgrade volume-modifier-for-k8s sidecar to 0.1.3 for Leader election conflict with csi-resizer bug fix ([#14](https://github.com/awslabs/volume-modifier-for-k8s/pull/14), [@torredil](https://github.com/torredil))
 
-# 1.22.0
+# v1.22.0
 ### Urgent Upgrade Notes
 *(No, really, you MUST read this before you upgrade)*
 
