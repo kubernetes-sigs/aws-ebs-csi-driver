@@ -351,4 +351,52 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 		}
 		test.Run(cs, snapshotrcs, ns)
 	})
+
+	It("should validate GP3 volume IOPS are not capped at 16000 when requesting 16001", func() {
+		testTag := generateTagName()
+
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.IopsKey:       "16001",
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+						ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTag, testTagValue),
+					},
+					ClaimSize:   "34Gi", // To make sure we don't hit IOPS:Gb max error
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: ebsDriver,
+			Pods:      []testsuites.PodDetails{pod},
+			ValidateFunc: func() {
+				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + testTag),
+							Values: []string{testTagValue},
+						},
+					},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe volume: %v", err))
+				}
+
+				if len(result.Volumes) != 1 {
+					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
+				}
+
+				vol := result.Volumes[0]
+				if *vol.Iops == 16000 {
+					Fail(fmt.Sprintf("IOPS was capped at 16000, indicating error message may have changed"))
+				}
+			},
+		}
+		test.Run(cs, ns)
+	})
 })
