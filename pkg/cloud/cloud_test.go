@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"sync"
@@ -1431,11 +1432,17 @@ func TestCreateDisk(t *testing.T) {
 			defer ctxCancel()
 
 			if tc.expCreateVolumeInput != nil {
-				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.CreateVolumeOutput{
-					VolumeId:   aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
-					Size:       aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
-					OutpostArn: aws.String(tc.diskOptions.OutpostArn),
-				}, tc.expCreateVolumeErr)
+				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+						if input.DryRun != nil && *input.DryRun {
+							return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
+						}
+						return &ec2.CreateVolumeOutput{
+							VolumeId:   aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+							Size:       aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+							OutpostArn: aws.String(tc.diskOptions.OutpostArn),
+						}, tc.expCreateVolumeErr
+					}).AnyTimes()
 				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
 					Volumes: []types.Volume{
 						{
@@ -1456,6 +1463,24 @@ func TestCreateDisk(t *testing.T) {
 							{ZoneName: aws.String(defaultZone)},
 						},
 					}, nil)
+				}
+			}
+
+			if tc.expCreateVolumeInput == nil {
+				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+						if input.DryRun != nil && *input.DryRun {
+							return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
+						}
+						return nil, errors.New("unexpected non-dry-run call")
+					}).AnyTimes()
+
+				if len(tc.diskOptions.AvailabilityZone) == 0 && len(tc.diskOptions.AvailabilityZoneID) == 0 {
+					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
+						AvailabilityZones: []types.AvailabilityZone{
+							{ZoneName: aws.String(defaultZone)},
+						},
+					}, nil).AnyTimes()
 				}
 			}
 
@@ -1514,6 +1539,13 @@ func TestCreateDiskClientToken(t *testing.T) {
 	c := newCloud(mockEC2)
 
 	gomock.InOrder(
+		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+				if input.DryRun != nil && *input.DryRun {
+					return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
+				}
+				return nil, errors.New("unexpected non-dry-run call")
+			}),
 		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				assert.Equal(t, expectedClientToken1, *input.ClientToken)
@@ -4171,6 +4203,280 @@ func TestDryRun(t *testing.T) {
 	}
 }
 
+func TestExtractMaxIOPSFromError(t *testing.T) {
+	testCases := []struct {
+		name            string
+		err             error
+		expectedMaxIOPS int32
+		volumeType      string
+		expErr          bool
+	}{
+		{
+			name:            "Success: Properly gets expectedMaxIOPS from gp3 Error",
+			err:             errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 80000."),
+			expectedMaxIOPS: 80000,
+			volumeType:      "gp3",
+		},
+		{
+			name:            "Success: Properly gets expectedMaxIOPS from io2 Error",
+			err:             errors.New("An error occurred (InvalidParameterCombination) when calling the CreateVolume operation: io2 volumes configured with greater than 64 TiB or 256K IOPS or 1000:1 IOPS:GB ratio are not supported."),
+			expectedMaxIOPS: 256000,
+			volumeType:      "io2",
+		},
+		{
+			name:            "Success: Properly gets expectedMaxIOPS from io1 Error",
+			err:             errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 64000."),
+			expectedMaxIOPS: 64000,
+			volumeType:      "io1",
+		},
+		{
+			name:            "Failure: Returns error if it cannot get expectedMaxIOPS",
+			err:             errors.New("Bad Error Message"),
+			expectedMaxIOPS: 0,
+			volumeType:      "gp3",
+			expErr:          true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := extractMaxIOPSFromError(tc.err.Error(), tc.volumeType)
+
+			if result != tc.expectedMaxIOPS {
+				t.Fatalf("extractMaxIOPSFromError() failed: expected %d, got %d", tc.expectedMaxIOPS, result)
+			}
+
+			if tc.expErr {
+				if err == nil {
+					t.Fatalf("extractMaxIOPSFromError() failed: expected error, got nothing")
+				}
+			}
+		})
+	}
+}
+
+func TestGetVolumeLimits(t *testing.T) {
+	testCases := []struct {
+		name            string
+		volumeType      string
+		cacheKey        string
+		cachedLimits    *iopsLimits
+		createVolumeErr error
+		expectedLimits  iopsLimits
+		expectError     bool
+		expectCaching   bool
+		azParams        getVolumeLimitsParams
+	}{
+		{
+			name:       "cache hit: gp3 with az",
+			volumeType: VolumeTypeGP3,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			cacheKey: "gp3|us-west-2a||",
+			cachedLimits: &iopsLimits{
+				maxIops:      80000,
+				minIops:      3000,
+				maxIopsPerGb: 500,
+			},
+			expectedLimits: iopsLimits{
+				maxIops:      80000,
+				minIops:      3000,
+				maxIopsPerGb: 500,
+			},
+			expectCaching: true,
+		},
+		{
+			name:       "cache hit: io1 with zone id",
+			volumeType: VolumeTypeIO1,
+			azParams: getVolumeLimitsParams{
+				availabilityZoneId: *aws.String("use2-az1"),
+			},
+			cacheKey: "io1||use2-az1|",
+			cachedLimits: &iopsLimits{
+				maxIops:      64000,
+				minIops:      100,
+				maxIopsPerGb: 50,
+			},
+			expectedLimits: iopsLimits{
+				maxIops:      64000,
+				minIops:      100,
+				maxIopsPerGb: 50,
+			},
+			expectCaching: true,
+		},
+		{
+			name:       "cache miss: gp3 dry run success extracts max IOPS",
+			volumeType: VolumeTypeGP3,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 16000."),
+			expectedLimits: iopsLimits{
+				maxIops:      16000,
+				minIops:      3000,
+				maxIopsPerGb: 500,
+			},
+			expectCaching: true,
+		},
+		{
+			name:       "cache miss: io2 dry run success extracts max IOPS",
+			volumeType: VolumeTypeIO2,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: errors.New("An error occurred (InvalidParameterCombination) when calling the CreateVolume operation: io2 volumes configured with greater than 64 TiB or 256K IOPS or 1000:1 IOPS:GB ratio are not supported."),
+			expectedLimits: iopsLimits{
+				maxIops:      256000,
+				minIops:      100,
+				maxIopsPerGb: 1000,
+			},
+			expectCaching: true,
+		},
+		{
+			name:       "cache miss: io1 fallback to hardcoded limits",
+			volumeType: VolumeTypeIO1,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: errors.New("Generic error message"),
+			expectedLimits: iopsLimits{
+				maxIops:      io1FallbackMaxIOPS,
+				minIops:      100,
+				maxIopsPerGb: 50,
+			},
+			expectCaching: false,
+		},
+		{
+			name:       "cache miss: gp2 no IOPS limits",
+			volumeType: VolumeTypeGP2,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: errors.New("Generic error"),
+			expectedLimits: iopsLimits{
+				maxIops:      0,
+				minIops:      0,
+				maxIopsPerGb: 0,
+			},
+			expectCaching: false,
+		},
+		{
+			name:       "cache miss: with outpost arn",
+			volumeType: VolumeTypeGP3,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+				outpostArn:       *aws.String("arn:aws:outposts:us-west-2:123456789012:outpost/op-1234567890abcdef0"),
+			},
+			createVolumeErr: errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 8000."),
+			expectedLimits: iopsLimits{
+				maxIops:      8000,
+				minIops:      3000,
+				maxIopsPerGb: 500,
+			},
+			expectCaching: true,
+		},
+		{
+			name:       "invalid volume type",
+			volumeType: "invalid",
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: errors.New("Generic error"),
+			expectError:     true,
+			expectCaching:   false,
+		},
+		{
+			name:       "cache miss: dry run unexpected success, use fallback limits",
+			volumeType: VolumeTypeGP3,
+			azParams: getVolumeLimitsParams{
+				availabilityZone: *aws.String("us-west-2a"),
+			},
+			createVolumeErr: nil,
+			expectedLimits: iopsLimits{
+				maxIops:      gp3FallbackMaxIOPS,
+				minIops:      3000,
+				maxIopsPerGb: 500,
+			},
+			expectCaching: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+
+			c := &cloud{
+				region:           "us-west-2",
+				ec2:              mockEC2,
+				latestIOPSLimits: expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
+			}
+
+			if tc.cachedLimits != nil {
+				c.latestIOPSLimits.Set(tc.cacheKey, tc.cachedLimits)
+			}
+
+			if tc.cachedLimits == nil {
+				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+						if input.DryRun == nil || !*input.DryRun {
+							t.Error("Expected DryRun to be true")
+						}
+						if input.Iops == nil || *input.Iops != math.MaxInt32 {
+							t.Error("Expected IOPS to be set to MaxInt32")
+						}
+						return nil, tc.createVolumeErr
+					})
+			}
+
+			ctx := context.Background()
+			limits, err := c.getVolumeLimits(ctx, tc.volumeType, tc.azParams)
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if limits.maxIops != tc.expectedLimits.maxIops {
+				t.Errorf("Expected maxIops %d, got %d", tc.expectedLimits.maxIops, limits.maxIops)
+			}
+			if limits.minIops != tc.expectedLimits.minIops {
+				t.Errorf("Expected minIops %d, got %d", tc.expectedLimits.minIops, limits.minIops)
+			}
+			if limits.maxIopsPerGb != tc.expectedLimits.maxIopsPerGb {
+				t.Errorf("Expected maxIopsPerGb %d, got %d", tc.expectedLimits.maxIopsPerGb, limits.maxIopsPerGb)
+			}
+
+			// Verify cache is updated for non-cached scenarios
+			if tc.cachedLimits == nil && !tc.expectError {
+				cacheKey := fmt.Sprintf("%s|%s|%s|%s", tc.volumeType, tc.azParams.availabilityZone, tc.azParams.availabilityZoneId, tc.azParams.outpostArn)
+
+				cachedValue, ok := c.latestIOPSLimits.Get(cacheKey)
+				if tc.expectCaching {
+					if !ok {
+						t.Error("Expected value to be cached")
+					} else if *cachedValue != limits {
+						t.Error("Cached value doesn't match returned value")
+					}
+				} else {
+					if ok {
+						t.Error("Expected value NOT to be cached when using fallback")
+					}
+				}
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func confirmInitializationCacheUpdated(tb testing.TB, cache expiringcache.ExpiringCache[string, volumeInitialization], volID string, dvsOutput types.VolumeStatusItem) {
 	tb.Helper()
 
@@ -4226,6 +4532,7 @@ func newCloud(mockEC2 EC2API) Cloud {
 		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
 		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
 		volumeInitializations: expiringcache.New[string, volumeInitialization](cacheForgetDelay),
+		latestIOPSLimits:      expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
 	}
 	return c
 }

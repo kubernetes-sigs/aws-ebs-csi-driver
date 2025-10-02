@@ -22,7 +22,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,15 +68,15 @@ const (
 // AWS provisioning limits.
 // Source: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html
 const (
-	io1MinTotalIOPS = 100
-	io1MaxTotalIOPS = 64000
-	io1MaxIOPSPerGB = 50
-	io2MinTotalIOPS = 100
-	io2MaxTotalIOPS = 256000
-	io2MaxIOPSPerGB = 1000
-	gp3MaxTotalIOPS = 16000
-	gp3MinTotalIOPS = 3000
-	gp3MaxIOPSPerGB = 500
+	io1MinTotalIOPS    = 100
+	io1FallbackMaxIOPS = 64000
+	io1MaxIOPSPerGB    = 50
+	io2MinTotalIOPS    = 100
+	io2FallbackMaxIOPS = 256000
+	io2MaxIOPSPerGB    = 1000
+	gp3FallbackMaxIOPS = 16000
+	gp3MinTotalIOPS    = 3000
+	gp3MaxIOPSPerGB    = 500
 )
 
 var (
@@ -90,8 +92,9 @@ var (
 )
 
 const (
-	cacheForgetDelay        = 1 * time.Hour
-	volInitCacheForgetDelay = 6 * time.Hour
+	cacheForgetDelay          = 1 * time.Hour
+	volInitCacheForgetDelay   = 6 * time.Hour
+	iopsLimitCacheForgetDelay = 12 * time.Hour
 
 	dryRunInterval = 3 * time.Hour
 
@@ -186,6 +189,17 @@ const (
 	ValidationException = "ValidationException"
 )
 
+// Regex Patterns.
+var (
+	// For getting IOPS limit from gp3/io1 error.
+	// Error example it is used for: "An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 80000".
+	nonIo2ErrRegex = regexp.MustCompile(`(?i)volume iops.*is too high.*maximum is (\d+)`)
+
+	// For getting IOPS limit from io2 error.
+	// Error example it is used for: "An error occurred (InvalidParameterCombination) when calling the CreateVolume operation: io2 volumes configured with greater than 64 TiB or 256K IOPS or 1000:1 IOPS:GB ratio are not supported".
+	io2ErrRegex = regexp.MustCompile(`(?i)(\d+)K IOPS`)
+)
+
 var invalidParameterErrorCodes = map[string]struct{}{
 	"InvalidParameter":            {},
 	"InvalidParameterCombination": {},
@@ -234,6 +248,20 @@ type ModifyDiskOptions struct {
 	VolumeType string
 	IOPS       int32
 	Throughput int32
+}
+
+// iopsLimits represents the IOPS limits set by EBS of a volume dependent on the volume type.
+type iopsLimits struct {
+	maxIops      int32
+	minIops      int32
+	maxIopsPerGb int32
+}
+
+// getVolumeLimitsParams represents the AZ parameters that getVolumeLimits will use to make the DryRun CreateVolume call.
+type getVolumeLimitsParams struct {
+	availabilityZone   string
+	availabilityZoneId string
+	outpostArn         string
 }
 
 // ModifyTagsOptions represents parameter to modify the tags of an existing EBS volume.
@@ -339,6 +367,7 @@ type cloud struct {
 	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
 	latestClientTokens    expiringcache.ExpiringCache[string, int]
 	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
+	latestIOPSLimits      expiringcache.ExpiringCache[string, iopsLimits]
 	accountID             string
 	accountIDOnce         sync.Once
 	attemptDryRun         atomic.Bool
@@ -412,6 +441,7 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
 		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
 		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
+		latestIOPSLimits:      expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
 	}
 
 	// Ensure an EC2 Dry-run API call is made on startup and every dryRunInterval
@@ -572,9 +602,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		iops          int32
 		throughput    int32
 		err           error
-		maxIops       int32
-		minIops       int32
-		maxIopsPerGb  int32
 		requestedIops int32
 	)
 
@@ -590,36 +617,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType = VolumeTypeGP3
 	}
 
-	switch createType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
-	case VolumeTypeIO1:
-		maxIops = io1MaxTotalIOPS
-		minIops = io1MinTotalIOPS
-		maxIopsPerGb = io1MaxIOPSPerGB
-	case VolumeTypeIO2:
-		maxIops = io2MaxTotalIOPS
-		minIops = io2MinTotalIOPS
-		maxIopsPerGb = io2MaxIOPSPerGB
-	case VolumeTypeGP3:
-		maxIops = gp3MaxTotalIOPS
-		minIops = gp3MinTotalIOPS
-		maxIopsPerGb = gp3MaxIOPSPerGB
-		throughput = diskOptions.Throughput
-	default:
-		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
-	}
-
 	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
 		return nil, errors.New("CreateDisk: multi-attach is only supported for io2 volumes")
-	}
-
-	if maxIops > 0 {
-		if diskOptions.IOPS > 0 {
-			requestedIops = diskOptions.IOPS
-		} else if diskOptions.IOPSPerGB > 0 {
-			requestedIops = diskOptions.IOPSPerGB * capacityGiB
-		}
-		iops = capIOPS(createType, capacityGiB, requestedIops, minIops, maxIops, maxIopsPerGb, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	tags := make([]types.Tag, 0, len(diskOptions.Tags))
@@ -676,6 +675,26 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	// EBS doesn't handle empty outpost arn, so we have to include it only when it's non-empty
 	if len(diskOptions.OutpostArn) > 0 {
 		requestInput.OutpostArn = aws.String(diskOptions.OutpostArn)
+	}
+
+	azParams := getVolumeLimitsParams{
+		availabilityZone:   zone,
+		availabilityZoneId: zoneID,
+		outpostArn:         diskOptions.OutpostArn,
+	}
+
+	iopsLimit, err := c.getVolumeLimits(ctx, createType, azParams)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
+	}
+
+	if iopsLimit.maxIops > 0 {
+		if diskOptions.IOPS > 0 {
+			requestedIops = diskOptions.IOPS
+		} else if diskOptions.IOPSPerGB > 0 {
+			requestedIops = diskOptions.IOPSPerGB * capacityGiB
+		}
+		iops = capIOPS(createType, capacityGiB, requestedIops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	if len(diskOptions.KmsKeyID) > 0 {
@@ -2438,7 +2457,7 @@ func getVolumeAttachmentsList(volume types.Volume) []string {
 }
 
 // Calculate actual IOPS for a volume and cap it at supported AWS limits.
-func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32, minTotalIOPS, maxTotalIOPS, maxIOPSPerGB int32, allowIncrease bool) int32 {
+func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32, iopsLimits iopsLimits, allowIncrease bool) int32 {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
 	if requestedIops == 0 {
 		return 0
@@ -2446,20 +2465,131 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 
 	iops := requestedIops
 
-	if iops < minTotalIOPS {
+	if iops < iopsLimits.minIops {
 		if allowIncrease {
-			iops = minTotalIOPS
+			iops = iopsLimits.minIops
 			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 		}
 	}
-	if iops > maxTotalIOPS {
-		iops = maxTotalIOPS
+	if iops > iopsLimits.maxIops {
+		iops = iopsLimits.maxIops
 		klog.V(5).InfoS("[Debug] Capped IOPS, volume at the max supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 	}
-	maxIopsByCapacity := maxIOPSPerGB * requestedCapacityGiB
-	if iops > maxIopsByCapacity && maxIopsByCapacity >= minTotalIOPS {
+	maxIopsByCapacity := iopsLimits.maxIopsPerGb * requestedCapacityGiB
+	if iops > maxIopsByCapacity && maxIopsByCapacity >= iopsLimits.minIops {
 		iops = maxIopsByCapacity
-		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", maxIOPSPerGB, "limit", iops)
+		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", iopsLimits.maxIopsPerGb, "limit", iops)
 	}
 	return iops
+}
+
+// Gets IOPS limits for a specific volume type in a specific Zone and caches it. If the limits are cached, simply return limits.
+func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams getVolumeLimitsParams) (iopsLimits iopsLimits, err error) {
+	cacheKey := fmt.Sprintf("%s|%s|%s|%s", volumeType, azParams.availabilityZone, azParams.availabilityZoneId, azParams.outpostArn)
+	if value, ok := c.latestIOPSLimits.Get(cacheKey); ok {
+		return *value, nil
+	}
+
+	dryRunRequestInput := &ec2.CreateVolumeInput{
+		VolumeType: types.VolumeType(volumeType),
+		Size:       aws.Int32(4),
+		Iops:       aws.Int32(math.MaxInt32),
+		DryRun:     aws.Bool(true),
+		// Required by default EBS CSI Driver IAM policy.
+		TagSpecifications: []types.TagSpecification{
+			{
+				ResourceType: types.ResourceTypeVolume,
+				Tags: []types.Tag{
+					{
+						Key:   aws.String(VolumeNameTagKey),
+						Value: aws.String("IopsLimitDryRun"),
+					},
+				},
+			},
+		},
+	}
+	if azParams.availabilityZone != "" {
+		dryRunRequestInput.AvailabilityZone = aws.String(azParams.availabilityZone)
+	}
+	if azParams.availabilityZoneId != "" {
+		dryRunRequestInput.AvailabilityZoneId = aws.String(azParams.availabilityZoneId)
+	}
+	if azParams.outpostArn != "" {
+		dryRunRequestInput.OutpostArn = aws.String(azParams.outpostArn)
+	}
+
+	volType := strings.ToLower(string(dryRunRequestInput.VolumeType))
+	_, err = c.ec2.CreateVolume(ctx, dryRunRequestInput, func(o *ec2.Options) {
+		o.APIOptions = nil // Don't add our logging/metrics middleware because we expect errors.
+	})
+	useFallBackLimits := (err == nil) // If DryRun unexpectedly succeeds, we use fallback values.
+
+	if err != nil {
+		maxIops, err := extractMaxIOPSFromError(err.Error(), volType)
+		// Default To Hardcoded Limits if we can't get the max IOPS from the error message.
+		if err != nil {
+			klog.V(5).InfoS("[Debug] error getting IOPS limit, defaulting to hardcoded values", "volumeType", volumeType, "error", err.Error())
+			useFallBackLimits = true
+		} else {
+			iopsLimits.maxIops = maxIops
+		}
+	}
+
+	if useFallBackLimits {
+		switch volType {
+		case VolumeTypeIO1:
+			iopsLimits.maxIops = io1FallbackMaxIOPS
+		case VolumeTypeIO2:
+			iopsLimits.maxIops = io2FallbackMaxIOPS
+		case VolumeTypeGP3:
+			iopsLimits.maxIops = gp3FallbackMaxIOPS
+		}
+	}
+
+	// Set minIops and maxIopsPerGb because we do not fetch these from DryRun Error, we can also catch invalid volume.
+	switch volType {
+	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
+	case VolumeTypeIO1:
+		iopsLimits.minIops = io1MinTotalIOPS
+		iopsLimits.maxIopsPerGb = io1MaxIOPSPerGB
+	case VolumeTypeIO2:
+		iopsLimits.minIops = io2MinTotalIOPS
+		iopsLimits.maxIopsPerGb = io2MaxIOPSPerGB
+	case VolumeTypeGP3:
+		iopsLimits.minIops = gp3MinTotalIOPS
+		iopsLimits.maxIopsPerGb = gp3MaxIOPSPerGB
+	default:
+		return iopsLimits, fmt.Errorf("invalid AWS VolumeType %q", volumeType)
+	}
+
+	if !useFallBackLimits {
+		c.latestIOPSLimits.Set(cacheKey, &iopsLimits)
+	}
+
+	return iopsLimits, nil
+}
+
+// Get what the maxIops is from DryRun error message.
+func extractMaxIOPSFromError(errorMsg string, volumeType string) (int32, error) {
+	// io1 and gp3 have the same error message but io2 has different one, using by default.
+	if volumeType == VolumeTypeIO2 {
+		if matches := io2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
+			if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
+				result := val * 1000
+				// No real overflow concern here but adding for safety.
+				if result > math.MaxInt32 || result < math.MinInt32 {
+					return 0, fmt.Errorf("maximum IOPS value exceeds maximum value of int32: %d", val)
+				}
+				return int32(result), nil
+			}
+		}
+	} else {
+		if matches := nonIo2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
+			if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
+				return int32(val), nil
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("error getting IOPS limit, defaulting to hardcoded values for volume type %s", volumeType)
 }
