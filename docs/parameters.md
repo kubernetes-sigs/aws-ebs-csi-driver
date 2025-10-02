@@ -27,12 +27,8 @@ The AWS EBS CSI Driver supports [tagging](tagging.md) through `StorageClass.para
 * `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
 * If the requested IOPS (either directly from `iops` or from `iopsPerGB` multiplied by the volume's capacity) produces a value above the maximum IOPS allowed for the [volume type](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), the IOPS will be capped at the maximum value allowed. If the value is lower than the minimal supported IOPS value per volume, either an error is returned (the default behavior), or the value is increased to fit into the supported range when `allowautoiopspergbincrease` is `"true"`.
 * You may specify either the "iops" or "iopsPerGb" parameters, not both. Specifying both parameters will result in an invalid StorageClass.
-
-| Volume Type                | Min total IOPS | Max total IOPS | Max IOPS per GB |
-|----------------------------|----------------|---------------|-----------------|
-| io1                        | 100            | 64000         | 50              |
-| io2                        | 100            | 256000        | 1000            |
-| gp3                        | 3000           | 16000         | 500             |
+* When using `iopsPerGb`, the maximum supported IOPS will be automatically detected via a dry-run `CreateVolume` API call.
+* To see the performance characteristics of the various volume types go to the [Amazon EBS Volume Types documentation](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volume-types.html).
 
 ## Volume Availability Zone and Topologies
 
