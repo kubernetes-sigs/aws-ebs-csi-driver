@@ -1,3 +1,51 @@
+# v1.50.0
+
+## Changes by Kind
+
+### Feature
+
+- Retrieve maximum IOPS limit dynamically via `CreateVolume` dry-run to support increased IOPS limits for GP3 and other volume types ([#2682](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2682), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.25.1](https://github.com/go-openapi/swag/tree/jsonutils/fixtures_test/v0.25.1)
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.31.9 → v1.31.12](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.31.9...config/v1.31.12)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.13 → v1.18.16](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.13...credentials/v1.18.16)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.7 → v1.18.9](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.7...feature/ec2/imds/v1.18.9)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.7 → v1.4.9](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.7...internal/configsources/v1.4.9)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.7 → v2.7.9](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.7...internal/endpoints/v2/v2.7.9)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.253.0 → v1.254.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.253.0...service/ec2/v1.254.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.7 → v1.13.9](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.7...service/internal/presigned-url/v1.13.9)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.215.1 → v1.215.3](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.215.1...service/sagemaker/v1.215.3)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.29.3 → v1.29.6](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.29.3...service/sso/v1.29.6)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.34.5 → v1.35.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.34.5...service/ssooidc/v1.35.1)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.38.4 → v1.38.6](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.38.4...service/sts/v1.38.6)
+- github.com/aws/aws-sdk-go-v2: [v1.39.0 → v1.39.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.39.0...v1.39.2)
+- github.com/go-openapi/jsonpointer: [v0.22.0 → v0.22.1](https://github.com/go-openapi/jsonpointer/compare/v0.22.0...v0.22.1)
+- github.com/go-openapi/jsonreference: [v0.21.1 → v0.21.2](https://github.com/go-openapi/jsonreference/compare/v0.21.1...v0.21.2)
+- github.com/go-openapi/swag/cmdutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/cmdutils/v0.24.0...cmdutils/v0.25.1)
+- github.com/go-openapi/swag/conv: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/conv/v0.24.0...conv/v0.25.1)
+- github.com/go-openapi/swag/fileutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/fileutils/v0.24.0...fileutils/v0.25.1)
+- github.com/go-openapi/swag/jsonname: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/jsonname/v0.24.0...jsonname/v0.25.1)
+- github.com/go-openapi/swag/jsonutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/jsonutils/v0.24.0...jsonutils/v0.25.1)
+- github.com/go-openapi/swag/loading: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/loading/v0.24.0...loading/v0.25.1)
+- github.com/go-openapi/swag/mangling: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/mangling/v0.24.0...mangling/v0.25.1)
+- github.com/go-openapi/swag/netutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/netutils/v0.24.0...netutils/v0.25.1)
+- github.com/go-openapi/swag/stringutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/stringutils/v0.24.0...stringutils/v0.25.1)
+- github.com/go-openapi/swag/typeutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/typeutils/v0.24.0...typeutils/v0.25.1)
+- github.com/go-openapi/swag/yamlutils: [v0.24.0 → v0.25.1](https://github.com/go-openapi/swag/compare/yamlutils/v0.24.0...yamlutils/v0.25.1)
+- github.com/go-openapi/swag: [v0.24.1 → v0.25.1](https://github.com/go-openapi/swag/compare/v0.24.1...v0.25.1)
+- google.golang.org/genproto/googleapis/api: 9219d12 → 57b25ae
+- google.golang.org/genproto/googleapis/rpc: 9219d12 → 57b25ae
+- google.golang.org/protobuf: v1.36.9 → v1.36.10
+- k8s.io/utils: 0af2bda → bc988d5
+
+### Removed
+_Nothing has changed._
+
 # v1.49.0
 
 ## Changes by Kind
