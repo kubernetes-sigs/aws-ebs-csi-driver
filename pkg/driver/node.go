@@ -267,7 +267,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		formatOptions = append(formatOptions, "-C", ext4ClusterSize)
 	}
 	if fsType == FSTypeXfs && d.options.LegacyXFSProgs {
-		formatOptions = append(formatOptions, "-m", "bigtime=0,inobtcount=0,reflink=0")
+		formatOptions = append(formatOptions, "-m", "bigtime=0,inobtcount=0,reflink=0", "-i", "nrext64=0")
 	}
 	err = d.mounter.FormatAndMountSensitiveWithFormatOptions(source, target, fsType, mountOptions, nil, formatOptions)
 	if err != nil {
