@@ -24,7 +24,8 @@ The AWS EBS CSI Driver supports [tagging](tagging.md) through `StorageClass.para
 | "volumeInitializationRate"   | integer                                           |         |  When creating a volume from a snapshot, this parameter can be used to request a provisioned initialization rate, in MiB/s.                             |
 
 ## Restrictions
-* `gp3` is currently not supported on outposts. Outpost customers need to use a different type for their volumes.
+
+* The EBS CSI Driver defaults to `gp3` volumes when no volume type is specified. If the outpost does not support `gp3` volumes, specify a supported volume type via a `StorageClass`.
 * If the requested IOPS (either directly from `iops` or from `iopsPerGB` multiplied by the volume's capacity) produces a value above the maximum IOPS allowed for the [volume type](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html), the IOPS will be capped at the maximum value allowed. If the value is lower than the minimal supported IOPS value per volume, either an error is returned (the default behavior), or the value is increased to fit into the supported range when `allowautoiopspergbincrease` is `"true"`.
 * You may specify either the "iops" or "iopsPerGb" parameters, not both. Specifying both parameters will result in an invalid StorageClass.
 
@@ -38,7 +39,7 @@ The AWS EBS CSI Driver supports [tagging](tagging.md) through `StorageClass.para
 
 The EBS CSI Driver supports the [`WaitForFirstConsumer` volume binding mode in Kubernetes](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode). When using `WaitForFirstConsumer` binding mode the volume will automatically be created in the appropriate Availability Zone and with the appropriate topology. The `WaitForFirstConsumer` binding mode is recommended whenever possible for dynamic provisioning.
 
-When using static provisioning, or if `WaitForFirstConsumer` is not suitable for a specific usecase, the Availability Zone can be specified via the standard CSI topology mechanisms. The EBS CSI Driver supports specifying the Availability Zone via either the key `topology.kubernetes.io/zone` or the key `topology.ebs.csi.aws.com/zone`.
+When using static provisioning, or if `WaitForFirstConsumer` is not suitable for a specific usecase, the Availability Zone can be specified via the standard CSI topology mechanisms. The EBS CSI Driver supports specifying the Availability Zone via either the key `topology.kubernetes.io/zone` or the key `topology.ebs.csi.aws.com/zone`. Addtionally you can specify the topology of your volume by Availability Zone ID using `topology.k8s.aws/zone-id` or by Outpost ARN using `topology.ebs.csi.aws.com/outpost-id`
 
 On Kubernetes, the Availability Zone of dynamically provisioned volumes can be restricted with the [`StorageClass`'s `allowedTopologies` parameter](https://kubernetes.io/docs/concepts/storage/storage-classes/#allowed-topologies), for example:
 
