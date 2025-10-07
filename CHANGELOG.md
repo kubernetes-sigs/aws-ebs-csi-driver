@@ -1,3 +1,22 @@
+# v1.50.1
+
+## Changes by Kind
+
+### Feature
+
+- Setting legacyXFS to true now disables nrext64. ([#2690](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2690), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
 # v1.50.0
 
 ## Changes by Kind
@@ -42,6 +61,25 @@
 - google.golang.org/genproto/googleapis/rpc: 9219d12 → 57b25ae
 - google.golang.org/protobuf: v1.36.9 → v1.36.10
 - k8s.io/utils: 0af2bda → bc988d5
+
+### Removed
+_Nothing has changed._
+
+# v1.49.1
+
+## Changes by Kind
+
+### Feature
+
+- Setting legacyXFS to true now disables nrext64. ([#2690](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2690), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
 
 ### Removed
 _Nothing has changed._
