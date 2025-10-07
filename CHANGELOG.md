@@ -1,3 +1,22 @@
+# v1.49.1
+
+## Changes by Kind
+
+### Feature
+
+- Setting legacyXFS to true now disables nrext64. ([#2690](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2690), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
 # v1.49.0
 
 ## Changes by Kind
