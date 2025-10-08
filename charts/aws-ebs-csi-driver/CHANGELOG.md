@@ -1,5 +1,9 @@
 # Helm chart
 
+## 2.49.2
+
+- Bump driver version to `v1.49.1`
+
 ## 2.49.1
 
 ### Feature
