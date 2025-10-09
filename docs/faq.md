@@ -8,7 +8,28 @@ There's a known issue where a mismatch between the reported and actual attachmen
 
 Today, CSI plugins report node attachment capacity only once, at startup, via the `NodeGetInfo` RPC. This static reporting fails to reflect any subsequent changes in capacity (which may occur when dynamically allocated ENIs or non-CSI devices consume attachment slots).
 
-### What steps can be taken to mitigate this issue?
+### `MutableCSINodeAllocatableCount` Kubernetes Feature
+
+Kubernetes v1.34 and later implement the [beta `MutableCSINodeAllocatableCount` feature](https://kubernetes.io/blog/2025/09/11/kubernetes-v1-34-mutable-csi-node-allocatable-count/), which enables Kubernetes to dynamically update the volume limit by calling `NodeGetInfo`.
+
+When this feature is enabled:
+- `kubelet` will periodically query the EBS CSI Driver node pods for an updated limit every 10 seconds
+  * The frequency can be tuned via the Helm/EKS Addon `nodeAllocatableUpdatePeriodSeconds`, or disabled entirely by setting the parameter to `0` or `null`
+- `kubelet` will automatically mark pods that fail to attach their volumes due to a limit issue as failed
+  * This will cause the pod(s) to be re-created if they are managed by a higher-level controller such as a `Deployment` or `StatefulSet`
+
+In order to take advantage of this feature, the following prerequisites must be met:
+- Kubernetes v1.34 or later
+- `MutableCSINodeAllocatableCount` feature gate enabled on both `kube-apiserver` and `kubelet` components
+  * On EKS, this feature gate will be enabled by default in EKS 1.34 and later, see [the AWS blog](https://aws.amazon.com/blogs/storage/improve-kubernetes-pod-scheduling-accuracy-using-amazon-ebs/) for more information
+- EBS CSI Driver version `v1.46.0` or later
+- The EBS CSI Driver must be using [IMDS Metadata](install.md#imds-ec2-metadata)
+  * IMDS must be the only enabled or preferred metadata source
+  * The EBS CSI Driver node pods must be able to access IMDS (when using IMDSv2, a hop limit of 2 or greater is required)
+
+_Note: If the Kubernetes version is upgraded or the feature gate is enabled after the driver is installed, a re-installation or upgrade is necessary to enable the feature (this will cause the appropriate configuration to be rendered in the Kubernetes `CSIDriver` object)._
+
+### What steps can be taken to mitigate this issue (Clusters where `MutableCSINodeAllocatableCount` is not available)?
 
 While a long-term fix is worked on (see [kubernetes/enhancements#4875](https://github.com/kubernetes/enhancements/pull/4875)), you can adopt one or more of the following solutions to mitigate this issue:
 
@@ -198,10 +219,14 @@ The driver supports the use of [IMDSv2](https://docs.aws.amazon.com/AWSEC2/lates
 
 To use IMDSv2 with the driver in a containerized environment like Amazon EKS, please ensure that the hop limit for IMDSv2 responses is set to 2 or greater. This is because the default hop limit of 1 is incompatible with containerized applications on Kubernetes that run in a separate network namespace from the instance.
 
-## CreateVolume (`StorageClass`) Parameters
+## XFS on Older Kernels (e.g. Amazon Linux 2)
 
-### `ext4BigAlloc` and `ext4ClusterSize`
+The EBS CSI Driver ships with a recent release of `xfsprogs`. For clusters running on older kernels, such as Amazon Linux 2 nodes, XFS volumes may fail to format and/or mount due to the presence of new XFS features not supported by the kernel in use. This failure will typically include an error message similar to:
+```
+wrong fs type, bad option, bad superblock on /dev/nvme2n1, missing codepage or helper program, or other error
+```
+_Note: This error is also possible for other reasons, such as a corrupted volume. To 100% confirm the issue, check the kernel logs for occurances of `XFS (nvmeXXX): Superblock has unknown incompatible features (0xXX) enabled.`_ 
 
-Warnings:
-- Ext4's `bigalloc` is an experimental feature, under active development. Please pay particular attention to your node's kernel version. See the [ext4(5) man-page](https://man7.org/linux/man-pages/man5/ext4.5.html) for details.
-- Linux kernel release 4.15 added support for resizing ext4 filesystems using clustered allocation. **Resizing volumes mounted to nodes running a Linux kernel version prior to 4.15 will fail.** 
+As a workaround, the `--legacy-xfs` CLI option can be set to `true` to format XFS volumes with features not supported on older kernels disabled. When deploying via Helm or as an EKS Addon, this parameter can be enabled via the `node.legacyXFS` parameter. **This parameter only affects volumes formatted after it is enabled. Already formatted volumes will need to be re-created.**
+
+When using this parameter, newer XFS features may not be available (such as reflinks). Additionally, volumes formatted with this feature enabled will likely experience issues if still in use in 2038.

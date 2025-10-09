@@ -1,5 +1,12 @@
 # v1.50.1
 
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This version of the EBS CSI Driver includes an upgraded `xfsprogs` version that enables the `nrext64` feature, which is not supported on some older kernels such as the default kernel shipped with Amazon Linux 2. **As a result, newly formatted XFS volumes may fail to mount on nodes with older kernel versions.**
+
+A workaround is available via the `--legacy-xfs` and `node.legacyXFS` parameters, see [the full FAQ entry](docs/faq.md#xfs-on-older-kernels-eg-amazon-linux-2) for more details.
+
 ## Changes by Kind
 
 ### Feature
@@ -18,6 +25,13 @@ _Nothing has changed._
 _Nothing has changed._
 
 # v1.50.0
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This version of the EBS CSI Driver includes an upgraded `xfsprogs` version that enables the `nrext64` feature, which is not supported on some older kernels such as the default kernel shipped with Amazon Linux 2. **As a result, newly formatted XFS volumes may fail to mount on nodes with older kernel versions.**
+
+A workaround is available in `v1.50.1` and later.
 
 ## Changes by Kind
 
@@ -67,6 +81,13 @@ _Nothing has changed._
 
 # v1.49.1
 
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This version of the EBS CSI Driver includes an upgraded `xfsprogs` version that enables the `nrext64` feature, which is not supported on some older kernels such as the default kernel shipped with Amazon Linux 2. **As a result, newly formatted XFS volumes may fail to mount on nodes with older kernel versions.**
+
+This can be worked around via the `--legacy-xfs` and `node.legacyXFS` parameters, see [the full FAQ entry](docs/faq.md#xfs-on-older-kernels-eg-amazon-linux-2) for more details.
+
 ## Changes by Kind
 
 ### Feature
@@ -85,6 +106,13 @@ _Nothing has changed._
 _Nothing has changed._
 
 # v1.49.0
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This version of the EBS CSI Driver includes an upgraded `xfsprogs` version that enables the `nrext64` feature, which is not supported on some older kernels such as the default kernel shipped with Amazon Linux 2. **As a result, newly formatted XFS volumes may fail to mount on nodes with older kernel versions.**
+
+A workaround is available in `v1.49.1`/`v1.50.1` and later.
 
 ## Changes by Kind
 
