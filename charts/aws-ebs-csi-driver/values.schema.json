@@ -303,6 +303,16 @@
               "type": ["string", "null"],
               "description": "Unhealthy pod eviction policy for the EBS CSI Controller Pod's PodDisruptionBudget",
               "default": null
+            },
+            "maxUnavailable": {
+              "type": ["integer", "string", "null"],
+              "description": "Maximum number or percentage of unavailable pods for the PodDisruptionBudget. If non-null, no default value is used for both maxUnavailable and minAvailable.",
+              "default": null
+            },
+            "minAvailable": {
+              "type": ["integer", "string", "null"],
+              "description": "Minimum number or percentage of available pods for the PodDisruptionBudget. If non-null, no default value is used for both maxUnavailable and minAvailable.",
+              "default": null
             }
           }
         },
