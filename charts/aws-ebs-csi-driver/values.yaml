@@ -259,6 +259,10 @@ controller:
     # pod restarts or evictions.
     enabled: true
     # unhealthyPodEvictionPolicy:
+    # Configure the maxUnavailable or minAvailable for the PDB
+    # If either parameter is non-null, no default is used for both
+    # maxUnavailable:
+    # minAvailable:
   priorityClassName: system-cluster-critical
   # AWS region to use. If not specified then the region will be looked up via the AWS EC2 metadata
   # service.

@@ -14,9 +14,15 @@ spec:
   {{- if .Values.controller.podDisruptionBudget.unhealthyPodEvictionPolicy }}
   unhealthyPodEvictionPolicy: {{ .Values.controller.podDisruptionBudget.unhealthyPodEvictionPolicy }}
   {{- end }}
+  {{- if or .Values.controller.podDisruptionBudget.maxUnavailable .Values.controller.podDisruptionBudget.minAvailable }}
+  maxUnavailable: {{ .Values.controller.podDisruptionBudget.maxUnavailable }}
+  minAvailable: {{ .Values.controller.podDisruptionBudget.minAvailable }}
+  {{- else }}
+  {{- /* Default behavior if neither maxUnavailable nor minAvailable are specified in values */}}
   {{- if le (.Values.controller.replicaCount | int) 2 }}
   maxUnavailable: 1
   {{- else }}
   minAvailable: 2
+  {{- end }}
   {{- end }}
 {{- end -}}
