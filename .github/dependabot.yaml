@@ -31,8 +31,8 @@ multi-ecosystem-groups:
   all-dependencies:
     schedule:
       interval: weekly
-      day: Wednesday
-      time: "06:00"
+      day: Friday
+      time: "15:30"
       timezone: "America/New_York"
     labels:
       - "area/dependency"
