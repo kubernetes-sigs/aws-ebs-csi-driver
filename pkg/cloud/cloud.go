@@ -715,34 +715,65 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		requestInput.VolumeInitializationRate = aws.Int32(diskOptions.VolumeInitializationRate)
 	}
 
+	var volumeID string
 	response, err := c.ec2.CreateVolume(ctx, requestInput, func(o *ec2.Options) {
 		o.Retryer = c.rm.createVolumeRetryer
 	})
 	if err != nil {
-		if isAWSErrorSnapshotNotFound(err) {
+		switch {
+		case isAWSErrorSnapshotNotFound(err):
 			return nil, ErrNotFound
-		}
-		if isAWSErrorIdempotentParameterMismatch(err) {
+		case isAWSErrorIdempotentParameterMismatch(err):
 			nextTokenNumber := 2
 			if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
 				nextTokenNumber = *tokenNumber + 1
 			}
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
-		}
-		if isAWSErrorInvalidParameterCombination(err) {
+		case isAWSErrorInvalidParameterCombination(err):
 			return nil, ErrInvalidArgument
-		}
-		if isAWSErrorVolumeLimitExceeded(err) {
+		case isAWSErrorVolumeLimitExceeded(err):
+			// EC2 API does NOT handle idempotency correctly when a theoretical volume
+			// would put the caller over a limit for their account
+			//
+			// To avoid leaking volumes, make a DescribeVolumes call here
+			request := &ec2.DescribeVolumesInput{
+				Filters: []types.Filter{
+					{
+						Name:   aws.String("tag:" + VolumeNameTagKey),
+						Values: []string{volumeName},
+					},
+				},
+			}
+			// Call DescribeVolumes directly as there is a high chance this volume
+			// will return a NotFound error and would poison a batch call
+			volumes, describeErr := describeVolumes(ctx, c.ec2, request)
+			if describeErr != nil {
+				if isAWSErrorVolumeNotFound(describeErr) {
+					return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+				} else {
+					return nil, describeErr
+				}
+			}
+
+			// Volume with requested name exists, continue with it
+			if l := len(volumes); l > 1 {
+				return nil, ErrMultiDisks
+			} else if l < 1 {
+				// This should in theory be impossible, but if the API
+				// changes is broken it would cause a panic, so handle it
+				return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+			}
+			volumeID = aws.ToString(volumes[0].VolumeId)
+		case isAwsErrorMaxIOPSLimitExceeded(err):
 			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
+		default:
+			return nil, fmt.Errorf("could not create volume in EC2: %w", err)
 		}
-		if isAwsErrorMaxIOPSLimitExceeded(err) {
-			return nil, fmt.Errorf("%w: %w", ErrLimitExceeded, err)
-		}
-		return nil, fmt.Errorf("could not create volume in EC2: %w", err)
+	} else {
+		volumeID = aws.ToString(response.VolumeId)
 	}
 
-	volumeID := aws.ToString(response.VolumeId)
 	if len(volumeID) == 0 {
 		return nil, errors.New("volume ID was not returned by CreateVolume")
 	}
