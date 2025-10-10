@@ -30,11 +30,11 @@ updates:
 multi-ecosystem-groups:
   all-dependencies:
     schedule:
-      interval: weekly
-      day: Friday
-      time: "15:30"
-      timezone: "America/New_York"
+      interval: daily
     labels:
       - "area/dependency"
       - "ok-to-test"
       - "release-note-none"
+      # Auto merge if CI passes
+      - "lgtm"
+      - "approved"
