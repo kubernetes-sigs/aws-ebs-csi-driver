@@ -948,7 +948,7 @@ func hasNotReadyTaint(n *corev1.Node) bool {
 	return false
 }
 
-// Struct for JSON patch operations.
+// JSONPatch struct for JSON patch operations.
 type JSONPatch struct {
 	OP    string      `json:"op,omitempty"`
 	Path  string      `json:"path,omitempty"`

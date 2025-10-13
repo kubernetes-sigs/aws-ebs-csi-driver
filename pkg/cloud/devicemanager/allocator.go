@@ -26,14 +26,14 @@ import (
 // can be used for anything that NameAllocator user wants.
 type ExistingNames map[string]string
 
-// On AWS, we should assign new (not yet used) device names to attached volumes.
-// If we reuse a previously used name, we may get the volume "attaching" forever,
-// see https://aws.amazon.com/premiumsupport/knowledge-center/ebs-stuck-attaching/.
 // NameAllocator finds available device name, taking into account already
 // assigned device names from ExistingNames map. It tries to find the next
 // device name to the previously assigned one (from previous NameAllocator
 // call), so all available device names are used eventually and it minimizes
 // device name reuse.
+// On AWS, we should assign new (not yet used) device names to attached volumes.
+// If we reuse a previously used name, we may get the volume "attaching" forever,
+// see https://aws.amazon.com/premiumsupport/knowledge-center/ebs-stuck-attaching/.
 type NameAllocator interface {
 	GetNext(existingNames ExistingNames, likelyBadNames *sync.Map) (name string, err error)
 }

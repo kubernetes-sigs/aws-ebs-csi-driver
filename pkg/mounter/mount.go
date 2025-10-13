@@ -17,6 +17,8 @@ limitations under the License.
 // Package mounter implements OS-specific functionality for interacting with mounts.
 //
 // The package should any implementation of mount related functionality that is not portable across platforms.
+//
+//nolint:godoclint
 package mounter
 
 import (

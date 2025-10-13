@@ -40,7 +40,7 @@ const (
 	GiB              = int64(1024 * 1024 * 1024)
 	DefaultBlockSize = 4096
 
-	// Volume attachment type constants.
+	// AttachmentShared volume attachment type constant.
 	AttachmentShared    = "shared"
 	AttachmentDedicated = "dedicated"
 )

@@ -249,7 +249,7 @@ func (m *NodeMounter) IsCorruptedMnt(err error) bool {
 	return mountutils.IsCorruptedMnt(err)
 }
 
-// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// MakeFile function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) MakeFile(path string) error {
 	f, err := os.OpenFile(path, os.O_CREATE, os.FileMode(0644))
@@ -264,7 +264,7 @@ func (m *NodeMounter) MakeFile(path string) error {
 	return nil
 }
 
-// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// MakeDir function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) MakeDir(path string) error {
 	err := os.MkdirAll(path, os.FileMode(0755))
@@ -276,7 +276,7 @@ func (m *NodeMounter) MakeDir(path string) error {
 	return nil
 }
 
-// This function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
+// PathExists function is mirrored in ./sanity_test.go to make sure sanity test covered this block of code
 // Please mirror the change to func MakeFile in ./sanity_test.go.
 func (m *NodeMounter) PathExists(path string) (bool, error) {
 	return mountutils.PathExists(path)
