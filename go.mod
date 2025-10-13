@@ -12,7 +12,7 @@ require (
 	github.com/container-storage-interface/spec v1.11.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/kubernetes-csi/csi-proxy/client v1.2.1
+	github.com/kubernetes-csi/csi-proxy/client v1.3.0
 	github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
 	github.com/kubernetes-csi/csi-test/v5 v5.3.1
 	github.com/prometheus/client_golang v1.23.2
