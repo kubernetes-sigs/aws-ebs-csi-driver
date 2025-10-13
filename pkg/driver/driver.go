@@ -53,7 +53,7 @@ const (
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
 	// Deprecated: Use the WellKnownZoneTopologyKey instead.
 	ZoneTopologyKey = "topology." + util.DriverName + "/zone"
-	// This name is purposefully consistent with the CCM's ZoneID topology key.
+	// ZoneIDTopologyKey name is purposefully consistent with the CCM's ZoneID topology key.
 	// This key is only used for provisioning by az-id and will not be used for node topology
 	// to prevent any backwards compatibility issues.
 	ZoneIDTopologyKey = "topology.k8s.aws/zone-id"

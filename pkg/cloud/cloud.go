@@ -132,7 +132,9 @@ const (
 
 	snapshotIDBatcher snapshotBatcherType = iota
 	snapshotTagBatcher
+)
 
+const (
 	batchDescribeTimeout = 30 * time.Second
 
 	// Minimizes RPC latency and EC2 API calls. Tuned via scalability tests.

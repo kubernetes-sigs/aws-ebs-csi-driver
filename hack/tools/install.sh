@@ -19,15 +19,15 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.31.6"
+AWSCLI_VERSION="2.31.13"
 # https://github.com/helm/chart-testing
-CT_VERSION="v3.13.0"
+CT_VERSION="v3.14.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.214.0"
+EKSCTL_VERSION="v0.215.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.26.0"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v2.4.0"
+GOLANGCI_LINT_VERSION="v2.5.0"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.3.3"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
@@ -40,7 +40,7 @@ HELM_VERSION="v3.19.0"
 KOPS_VERSION="v1.33.1"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20250902173658-9560e3922fc0"
+KUBETEST2_VERSION="v0.0.0-20251009082706-955b996ee1ac"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh

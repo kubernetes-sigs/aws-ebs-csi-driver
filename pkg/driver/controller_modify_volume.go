@@ -36,7 +36,7 @@ import (
 
 const (
 	ModificationKeyVolumeType = "type"
-	// Retained for backwards compatibility, but not recommended.
+	// DeprecatedModificationKeyVolumeType is retained for backwards compatibility, but not recommended.
 	DeprecatedModificationKeyVolumeType = "volumeType"
 
 	ModificationKeyIOPS = "iops"
