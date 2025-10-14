@@ -60,7 +60,7 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 	defer tvsc.DeleteSnapshot(snapshot)
 	tvsc.ReadyToUse(snapshot)
 
-	t.RestoredPod.Volumes[0].DataSource = &DataSource{Name: snapshot.Name}
+	t.RestoredPod.Volumes[0].DataSource = &DataSource{Name: snapshot.Name, Kind: VolumeSnapshotKind}
 	trpod := NewTestPod(client, namespace, t.RestoredPod.Cmd)
 	rvolume := t.RestoredPod.Volumes[0]
 	trpvc, rpvcCleanup := rvolume.SetupDynamicPersistentVolumeClaim(client, namespace, t.CSIDriver)

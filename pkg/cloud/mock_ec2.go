@@ -55,6 +55,26 @@ func (mr *MockEC2APIMockRecorder) AttachVolume(ctx, params interface{}, optFns .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachVolume", reflect.TypeOf((*MockEC2API)(nil).AttachVolume), varargs...)
 }
 
+// CopyVolumes mocks base method.
+func (m *MockEC2API) CopyVolumes(ctx context.Context, params *ec2.CopyVolumesInput, optFns ...func(*ec2.Options)) (*ec2.CopyVolumesOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CopyVolumes", varargs...)
+	ret0, _ := ret[0].(*ec2.CopyVolumesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopyVolumes indicates an expected call of CopyVolumes.
+func (mr *MockEC2APIMockRecorder) CopyVolumes(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyVolumes", reflect.TypeOf((*MockEC2API)(nil).CopyVolumes), varargs...)
+}
+
 // CreateSnapshot mocks base method.
 func (m *MockEC2API) CreateSnapshot(ctx context.Context, params *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
 	m.ctrl.T.Helper()

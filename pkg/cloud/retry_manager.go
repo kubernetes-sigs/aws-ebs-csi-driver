@@ -33,6 +33,7 @@ const (
 // Separate retryers ensures that throttling one API doesn't unintentionally throttle others with separate token buckets.
 type retryManager struct {
 	createVolumeRetryer                            aws.Retryer
+	copyVolumeRetryer                              aws.Retryer
 	deleteVolumeRetryer                            aws.Retryer
 	attachVolumeRetryer                            aws.Retryer
 	detachVolumeRetryer                            aws.Retryer
@@ -46,6 +47,7 @@ type retryManager struct {
 func newRetryManager() *retryManager {
 	return &retryManager{
 		createVolumeRetryer:                            newAdaptiveRetryer(),
+		copyVolumeRetryer:                              newAdaptiveRetryer(),
 		attachVolumeRetryer:                            newAdaptiveRetryer(),
 		deleteVolumeRetryer:                            newAdaptiveRetryer(),
 		detachVolumeRetryer:                            newAdaptiveRetryer(),

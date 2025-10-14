@@ -128,7 +128,6 @@ func TestNewCloud(t *testing.T) {
 		}
 	}
 }
-
 func TestBatchDescribeVolumes(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -833,9 +832,11 @@ func TestCreateDisk(t *testing.T) {
 		expDisk              *Disk
 		expErr               error
 		expCreateVolumeErr   error
+		expCopyVolumesErr    error
 		expDescVolumeErr     error
 		expCreateTagsErr     error
 		expCreateVolumeInput *ec2.CreateVolumeInput
+		expCopyVolumesInput  *ec2.CopyVolumesInput
 	}{
 		{
 			name:       "success: normal",
@@ -845,6 +846,23 @@ func TestCreateDisk(t *testing.T) {
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: normal clone",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
 			expDisk: &Disk{
 				VolumeID:         "vol-test",
 				CapacityGiB:      1,
@@ -871,6 +889,26 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone with iops",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(500),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				IOPS:             6000,
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      500,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(6000),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: normal with gp2 options",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -887,6 +925,24 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone with gp2 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+				VolumeType:       VolumeTypeGP2,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              nil,
+		},
+		{
 			name:       "success: normal with io2 options",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -901,6 +957,27 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone with io2 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+				VolumeType:       VolumeTypeIO2,
+				IOPSPerGB:        100,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops: aws.Int32(100),
 			},
 			expErr: nil,
@@ -925,6 +1002,27 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone io1 with IOPS parameter",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(200),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+				VolumeType:       VolumeTypeIO1,
+				IOPSPerGB:        100,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      200,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(100),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: io2 with IOPS parameter",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -939,6 +1037,27 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone io2 with IOPS parameter",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+				VolumeType:       VolumeTypeIO2,
+				IOPSPerGB:        100,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops: aws.Int32(100),
 			},
 			expErr: nil,
@@ -959,6 +1078,29 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops:       aws.Int32(3000),
+				Throughput: aws.Int32(125),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone gp3 options",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(400),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				SourceVolumeID:   "test-vol-id",
+				AvailabilityZone: defaultZone,
+				VolumeType:       VolumeTypeGP3,
+				IOPS:             3000,
+				Throughput:       125,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      400,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops:       aws.Int32(3000),
 				Throughput: aws.Int32(125),
 			},
@@ -1015,6 +1157,25 @@ func TestCreateDisk(t *testing.T) {
 			expErr:               nil,
 		},
 		{
+			name:       "success: clone with encrypted volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				Encrypted:        true,
+				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              nil,
+		},
+		{
 			name:       "success: outpost volume",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1031,6 +1192,25 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expErr:               nil,
+		},
+		{
+			name:       "success: outpost clone",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "arn:aws:outposts:us-west-2:111111111111:outpost/op-0aaa000a0aaaa00a0",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              nil,
 		},
 		{
 			name:       "success: empty outpost arn",
@@ -1050,6 +1230,24 @@ func TestCreateDisk(t *testing.T) {
 			expErr:               nil,
 		},
 		{
+			name:       "success: empty outpost arn clone",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: expZone,
+				OutpostArn:       "",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              nil,
+		},
+		{
 			name:       "fail: ec2.CreateVolume returned CreateVolume error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
@@ -1060,6 +1258,19 @@ func TestCreateDisk(t *testing.T) {
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expErr:               errors.New("could not create volume in EC2: CreateVolume generic error"),
 			expCreateVolumeErr:   errors.New("CreateVolume generic error"),
+		},
+		{
+			name:       "fail: ec2.CopyVolume returned CopyVolume error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              errors.New("could not create volume in EC2: CopyVolumes generic error"),
+			expCopyVolumesErr:   errors.New("CopyVolumes generic error"),
 		},
 		{
 			name:       "fail: ec2.CreateVolume returned snapshot not found error",
@@ -1077,6 +1288,19 @@ func TestCreateDisk(t *testing.T) {
 			},
 		},
 		{
+			name:       "fail: ec2.CopyVolumes returned source volume not found error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              fmt.Errorf("could not create volume in EC2: %w", errors.New("copyResponse does not contain volume information")),
+			expCopyVolumesErr:   errors.New("copyResponse does not contain volume information"),
+		},
+		{
 			name:       "fail: ec2.CreateVolume returned Idempotent Parameter Mismatch error",
 			volumeName: "vol-test-name-error",
 			diskOptions: &DiskOptions{
@@ -1087,6 +1311,19 @@ func TestCreateDisk(t *testing.T) {
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("an error occurred: IdempotentParameterMismatch")),
 			expCreateVolumeErr:   fmt.Errorf("an error occurred: %w", errors.New("IdempotentParameterMismatch")),
+		},
+		{
+			name:       "fail: ec2.CopyVolumes returned Idempotent Parameter Mismatch error",
+			volumeName: "vol-test-name-error",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              fmt.Errorf("could not create volume in EC2: %w", errors.New("an error occurred: IdempotentParameterMismatch")),
+			expCopyVolumesErr:   fmt.Errorf("an error occurred: %w", errors.New("IdempotentParameterMismatch")),
 		},
 		{
 			name:       "fail: ec2.DescribeVolumes error after volume created",
@@ -1102,6 +1339,20 @@ func TestCreateDisk(t *testing.T) {
 			expDescVolumeErr:     errors.New("DescribeVolumes generic error"),
 		},
 		{
+			name:       "fail: clone ec2.DescribeVolumes error after volume created",
+			volumeName: "vol-test-name-error",
+			volState:   "creating",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: expZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              errors.New("timed out waiting for volume to create: DescribeVolumes generic error"),
+			expDescVolumeErr:    errors.New("DescribeVolumes generic error"),
+		},
+		{
 			name:       "fail: Volume is not ready to use, volume stuck in creating status and controller context deadline exceeded",
 			volumeName: "vol-test-name-error",
 			volState:   "creating",
@@ -1112,6 +1363,19 @@ func TestCreateDisk(t *testing.T) {
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
 			expErr:               errors.New("timed out waiting for volume to create: timed out waiting for the condition"),
+		},
+		{
+			name:       "fail: Clone Volume is not ready to use, volume stuck in creating status and controller context deadline exceeded",
+			volumeName: "vol-test-name-error",
+			volState:   "creating",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{},
+			expErr:              errors.New("timed out waiting for volume to create: timed out waiting for the condition"),
 		},
 		{
 			name:       "success: normal from snapshot",
@@ -1146,6 +1410,28 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(100),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone io1 with too low iopsPerGB and AllowIOPSPerGBIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:          util.GiBToBytes(4),
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:             VolumeTypeIO1,
+				IOPSPerGB:              1,
+				AllowIOPSPerGBIncrease: true,
+				AvailabilityZone:       defaultZone,
+				SourceVolumeID:         "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops: aws.Int32(100),
 			},
 			expErr: nil,
@@ -1188,6 +1474,27 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone small io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(4),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:       VolumeTypeIO1,
+				IOPSPerGB:        10000,
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(200),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: large io1 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1202,6 +1509,27 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(64000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone large io1 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(4000),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:       VolumeTypeIO1,
+				IOPSPerGB:        10000,
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops: aws.Int32(64000),
 			},
 			expErr: nil,
@@ -1227,6 +1555,28 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone io2 with too low iopsPerGB and AllowIOPSPerGBIncrease",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:          util.GiBToBytes(4),
+				Tags:                   map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:             VolumeTypeIO2,
+				IOPSPerGB:              1,
+				AllowIOPSPerGBIncrease: true,
+				AvailabilityZone:       defaultZone,
+				SourceVolumeID:         "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(100),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: small io2 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1246,6 +1596,27 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone small io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(4),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:       VolumeTypeIO2,
+				IOPSPerGB:        10000,
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "test-vol-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(2000),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: large io2 with too high iopsPerGB",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1260,6 +1631,27 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: defaultZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(64000),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone large io2 with too high iopsPerGB",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(4000),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:       VolumeTypeIO2,
+				IOPSPerGB:        100000,
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "vol-test-name",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4000,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
 				Iops: aws.Int32(64000),
 			},
 			expErr: nil,
@@ -1302,6 +1694,26 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: clone create default volume with throughput",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				Throughput:       250,
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   "vol-test-id",
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Throughput: aws.Int32(250),
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: multi-attach with IO2",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1319,6 +1731,29 @@ func TestCreateDisk(t *testing.T) {
 			expCreateVolumeInput: &ec2.CreateVolumeInput{
 				Iops: aws.Int32(2000),
 			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone multi-attach with IO2",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(4),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:         VolumeTypeIO2,
+				MultiAttachEnabled: true,
+				IOPSPerGB:          10000,
+				AvailabilityZone:   defaultZone,
+				SourceVolumeID:     "vol-test-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(2000),
+			},
+
 			expErr: nil,
 		},
 		{
@@ -1464,6 +1899,29 @@ func TestCreateDisk(t *testing.T) {
 						},
 					}, nil)
 				}
+			} else if tc.expCopyVolumesInput != nil {
+				mockEC2.EXPECT().CopyVolumes(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.CopyVolumesOutput{
+					Volumes: []types.Volume{
+						{
+							VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+							Size:             aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+							State:            types.VolumeState(volState),
+							AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+							OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
+						},
+					},
+				}, tc.expCopyVolumesErr)
+				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+					Volumes: []types.Volume{
+						{
+							VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+							Size:             aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+							State:            types.VolumeState(volState),
+							AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+							OutpostArn:       aws.String(tc.diskOptions.OutpostArn),
+						},
+					},
+				}, tc.expDescVolumeErr).AnyTimes()
 			}
 
 			if tc.expCreateVolumeInput == nil {

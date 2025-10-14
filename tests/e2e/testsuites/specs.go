@@ -56,6 +56,7 @@ const (
 
 const (
 	VolumeSnapshotKind        = "VolumeSnapshot"
+	PersistentVolumeClaimKind = "PersistentVolumeClaim"
 	VolumeSnapshotContentKind = "VolumeSnapshotContent"
 	SnapshotAPIVersion        = "snapshot.storage.k8s.io/v1"
 	APIVersionv1              = "v1"
@@ -78,6 +79,7 @@ type VolumeDeviceDetails struct {
 
 type DataSource struct {
 	Name string
+	Kind string
 }
 
 func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func()) {
@@ -145,9 +147,11 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 	var tpvc *TestPersistentVolumeClaim
 	if volume.DataSource != nil {
 		dataSource := &v1.TypedLocalObjectReference{
-			Name:     volume.DataSource.Name,
-			Kind:     VolumeSnapshotKind,
-			APIGroup: &SnapshotAPIGroup,
+			Name: volume.DataSource.Name,
+			Kind: volume.DataSource.Kind,
+		}
+		if volume.DataSource.Kind == VolumeSnapshotKind {
+			dataSource.APIGroup = &SnapshotAPIGroup
 		}
 		tpvc = NewTestPersistentVolumeClaimWithDataSource(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass, dataSource, volume.AccessMode)
 	} else {
