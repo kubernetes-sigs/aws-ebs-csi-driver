@@ -1,3 +1,37 @@
+# v1.51.0
+
+### Feature
+
+- Add support for creating instant, point-in-time copies of EBS volumes within the same Availability Zone ([#2716](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2716), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/alecthomas/units: [b94a6e3 → 0f3dac3](https://github.com/alecthomas/units/compare/b94a6e3...0f3dac3)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.254.1 → v1.256.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.254.1...service/ec2/v1.256.0)
+- github.com/go-jose/go-jose/v4: [v4.1.1 → v4.1.2](https://github.com/go-jose/go-jose/compare/v4.1.1...v4.1.2)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.27.2 → v2.27.3](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.27.2...v2.27.3)
+- github.com/prometheus/common: [v0.66.1 → v0.67.1](https://github.com/prometheus/common/compare/v0.66.1...v0.67.1)
+- golang.org/x/crypto: v0.42.0 → v0.43.0
+- golang.org/x/mod: v0.27.0 → v0.28.0
+- golang.org/x/net: v0.44.0 → v0.46.0
+- golang.org/x/oauth2: v0.31.0 → v0.32.0
+- golang.org/x/sys: v0.36.0 → v0.37.0
+- golang.org/x/telemetry: 1a19826 → aef8a43
+- golang.org/x/term: v0.35.0 → v0.36.0
+- golang.org/x/text: v0.29.0 → v0.30.0
+- golang.org/x/time: v0.13.0 → v0.14.0
+- golang.org/x/tools: v0.36.0 → v0.37.0
+- google.golang.org/genproto/googleapis/api: 57b25ae → 49b9836
+- google.golang.org/genproto/googleapis/rpc: 57b25ae → 49b9836
+- google.golang.org/grpc: v1.75.1 → v1.76.0
+
+### Removed
+_Nothing has changed._
+
 # v1.50.1
 
 ### Urgent Upgrade Notes
