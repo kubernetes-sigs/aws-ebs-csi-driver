@@ -858,7 +858,8 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 	informer := factory.Core().V1().Nodes().Informer()
 
 	var mutex sync.Mutex
-	ctx, cancel := context.WithTimeout(context.Background(), maxWatchDuration)
+	// Add additional 90 seconds to the context for the last-try taint removal
+	ctx, cancel := context.WithTimeout(context.Background(), maxWatchDuration+90*time.Second)
 	defer cancel()
 	attemptTaintRemoval := func(n *corev1.Node) {
 		if !hasNotReadyTaint(n) {
@@ -890,7 +891,7 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 				}
 				return false, nil // Continue retrying
 			}
-			klog.V(2).InfoS("Successfully removed agent-not-ready taint", "node", n.Name)
+			// We either removed the taint, or there was no taint to remove
 			return true, nil
 		})
 
@@ -914,26 +915,48 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 		klog.ErrorS(err, "Taint‑watcher: failed to add event handler")
 		return
 	}
+	if err := informer.SetWatchErrorHandlerWithContext(func(handlerCtx context.Context, r *cache.Reflector, err error) {
+		if apierrors.IsUnauthorized(err) || apierrors.IsForbidden(err) {
+			// Informer doesn't have permission - cancel context
+			// to avoid spamming logs with informer errors
+			klog.V(8).InfoS("Taint-watcher: permission error, silently cancelling context")
+			cancel()
+		} else {
+			cache.DefaultWatchErrorHandler(handlerCtx, r, err)
+		}
+	}); err != nil {
+		klog.ErrorS(err, "Taint‑watcher: failed to add error handler")
+		return
+	}
 
 	factory.Start(ctx.Done())
 	if ok := cache.WaitForCacheSync(ctx.Done(), informer.HasSynced); !ok {
-		klog.ErrorS(nil, "Taint-watcher: cache sync failed")
-	}
-
-	// Immediate scan in case the taint is already present and no event fires.
-	if obj, exists, err := informer.GetStore().GetByKey(nodeName); err == nil && exists {
-		if n, ok := obj.(*corev1.Node); ok {
-			attemptTaintRemoval(n)
+		if ctx.Err() != nil {
+			// Context likely cancelled because of permissions error - log at higher
+			// verbosity in this case to avoid spamming logs of users that have
+			// modified their permissions to opt out
+			klog.V(8).InfoS("Taint-watcher: cache sync cancelled (likely permissions error)")
+		} else {
+			klog.ErrorS(nil, "Taint-watcher: cache sync failed")
 		}
-	}
+	} else {
+		// Immediate scan in case the taint is already present and no event fires
+		if obj, exists, err := informer.GetStore().GetByKey(nodeName); err == nil && exists {
+			if n, ok := obj.(*corev1.Node); ok {
+				attemptTaintRemoval(n)
+			}
+		}
 
-	<-time.After(maxWatchDuration)
-	klog.V(8).InfoS("Taint-watcher timeout reached; stopping")
+		// Informer is operational - wait for maxWatchDuration for it to handle Node updates
+		<-time.After(maxWatchDuration)
+		klog.V(8).InfoS("Taint-watcher: timeout reached; stopping")
+	}
 
 	// Try to remove the taint one last time in case we got extremely unlucky with the informer
+	// We still try this even if the informer failed, as we may only be missing the watch permission
 	lastChanceNode, err := clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get node for last chance", "node", nodeName)
+		klog.ErrorS(err, "Failed to get node for last chance taint removal", "node", nodeName)
 	} else {
 		attemptTaintRemoval(lastChanceNode)
 	}
@@ -1013,7 +1036,7 @@ func checkAllocatable(ctx context.Context, clientset kubernetes.Interface, nodeN
 	for _, driver := range csiNode.Spec.Drivers {
 		if driver.Name == util.DriverName {
 			if driver.Allocatable != nil && driver.Allocatable.Count != nil {
-				klog.InfoS("CSINode Allocatable value is set", "nodeName", nodeName, "count", *driver.Allocatable.Count)
+				klog.V(4).InfoS("CSINode Allocatable value is set", "nodeName", nodeName, "count", *driver.Allocatable.Count)
 				return nil
 			}
 			return fmt.Errorf("isAllocatableSet: allocatable value not set for driver on node %s", nodeName)
