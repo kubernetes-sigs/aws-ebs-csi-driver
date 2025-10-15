@@ -105,10 +105,8 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
   (
     while true; do
       if kubectl get pod ebs-csi-driver-test -n kube-system --kubeconfig "${KUBECONFIG}" &>/dev/null; then
-        echo "Pod found, waiting for it to become ready..."
         if kubectl wait --for=condition=ready pod ebs-csi-driver-test -n kube-system --timeout=300s --kubeconfig "${KUBECONFIG}"; then
-          echo "Pod is ready, fetching logs..."
-          kubectl logs -f ebs-csi-driver-test -n kube-system -c kubetest2 --kubeconfig "${KUBECONFIG}"
+          kubectl logs -f ebs-csi-driver-test -n kube-system -c kubetest2 --kubeconfig "${KUBECONFIG}" >"${REPORT_DIR}/helm-test-pod.txt"
         fi
       fi
       sleep 30
@@ -156,7 +154,7 @@ else
   else
     set -x
     set +e
-    "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" -v \
+    "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" \
       --focus="${GINKGO_FOCUS}" \
       --skip="${GINKGO_SKIP}" \
       --junit-report="${REPORT_DIR}/junit.xml" \
@@ -172,10 +170,7 @@ else
   PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
 
   while IFS= read -r POD; do
-    loudecho "Printing pod ${POD} container logs"
-    set +e
-    kubectl logs "${POD}" -n kube-system --all-containers --ignore-errors --kubeconfig "${KUBECONFIG}"
-    set -e
+    kubectl logs "${POD}" -n kube-system --all-containers --ignore-errors --kubeconfig "${KUBECONFIG}" >"${REPORT_DIR}/${POD}.txt"
   done <<<"${PODS}"
 fi
 
