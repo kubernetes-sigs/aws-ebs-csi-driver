@@ -4911,6 +4911,7 @@ func TestControllerExpandVolume(t *testing.T) {
 			}
 
 			mockCloud := cloud.NewMockCloud(mockCtl)
+			mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(tc.req.GetVolumeId())).AnyTimes()
 			mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(tc.req.GetVolumeId()), gomock.Any(), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
 
 			awsDriver := ControllerService{

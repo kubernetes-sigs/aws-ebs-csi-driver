@@ -3338,6 +3338,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int32(1),
 				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       types.VolumeTypeGp3,
 			},
 			modifiedVolume: &ec2.ModifyVolumeOutput{
 				VolumeModification: &types.VolumeModification{
@@ -3358,6 +3359,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int32(1),
 				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       types.VolumeTypeGp3,
 			},
 			modifiedVolume: &ec2.ModifyVolumeOutput{
 				VolumeModification: &types.VolumeModification{
@@ -3387,6 +3389,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int32(2),
 				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       types.VolumeTypeGp3,
 			},
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
 				VolumesModifications: []types.VolumeModification{
@@ -3472,6 +3475,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				Size:             aws.Int32(1),
 				AvailabilityZone: aws.String(defaultZone),
+				VolumeType:       types.VolumeTypeGp3,
 			},
 			descModVolume: &ec2.DescribeVolumesModificationsOutput{
 				VolumesModifications: []types.VolumeModification{
@@ -3496,6 +3500,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				VolumeId:         aws.String("vol-test"),
 				AvailabilityZone: aws.String(defaultZone),
 				VolumeType:       types.VolumeTypeGp2,
+				Size:             aws.Int32(1),
 			},
 			modifiedVolumeError: errors.New("GenericErr"),
 			expErr:              errors.New("GenericErr"),
@@ -3572,6 +3577,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				AvailabilityZone: aws.String(defaultZone),
 				Size:             aws.Int32(13),
 				Iops:             aws.Int32(3000),
+				VolumeType:       types.VolumeTypeGp3,
 			},
 			reqSizeGiB: 13,
 			modifyDiskOptions: &ModifyDiskOptions{
@@ -3620,6 +3626,12 @@ func TestResizeOrModifyDisk(t *testing.T) {
 						}, tc.existingVolumeError)
 				}
 			}
+
+			mockEC2.EXPECT().DescribeTags(gomock.Any(), gomock.Any()).Return(&ec2.DescribeTagsOutput{}, nil).AnyTimes()
+
+			// Mock CreateVolume for getVolumeLimits dry-run calls
+			mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "DryRunOperation"}).AnyTimes()
+
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
 				mockEC2.EXPECT().ModifyVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
 			}
@@ -5080,5 +5092,86 @@ func createDescribeVolumesOutput(volumeIDs []*string, nodeID, path, state string
 
 	return &ec2.DescribeVolumesOutput{
 		Volumes: volumes,
+	}
+}
+
+func TestCheckIfIopsIncreaseOnExpansion(t *testing.T) {
+	testCases := []struct {
+		name                      string
+		tags                      []types.Tag
+		expectedAllowAutoIncrease bool
+		expectedIopsPerGb         int32
+		expectedError             bool
+	}{
+		{
+			name: "both tags present with valid values",
+			tags: []types.Tag{
+				{Key: aws.String(IOPSPerGBKey), Value: aws.String("10")},
+				{Key: aws.String(AllowAutoIOPSIncreaseOnModifyKey), Value: aws.String("true")},
+			},
+			expectedAllowAutoIncrease: true,
+			expectedIopsPerGb:         10,
+			expectedError:             false,
+		},
+		{
+			name: "only IOPSPerGB tag present",
+			tags: []types.Tag{
+				{Key: aws.String(IOPSPerGBKey), Value: aws.String("5")},
+			},
+			expectedAllowAutoIncrease: false,
+			expectedIopsPerGb:         5,
+			expectedError:             false,
+		},
+		{
+			name: "only AllowAutoIOPSIncrease tag present",
+			tags: []types.Tag{
+				{Key: aws.String(AllowAutoIOPSIncreaseOnModifyKey), Value: aws.String("false")},
+			},
+			expectedAllowAutoIncrease: false,
+			expectedIopsPerGb:         0,
+			expectedError:             false,
+		},
+		{
+			name:                      "no relevant tags",
+			tags:                      []types.Tag{},
+			expectedAllowAutoIncrease: false,
+			expectedIopsPerGb:         0,
+			expectedError:             false,
+		},
+		{
+			name: "invalid IOPSPerGB value",
+			tags: []types.Tag{
+				{Key: aws.String(IOPSPerGBKey), Value: aws.String("invalid")},
+			},
+			expectedAllowAutoIncrease: false,
+			expectedIopsPerGb:         0,
+			expectedError:             true,
+		},
+		{
+			name: "invalid AllowAutoIOPSIncrease value",
+			tags: []types.Tag{
+				{Key: aws.String(AllowAutoIOPSIncreaseOnModifyKey), Value: aws.String("invalid")},
+			},
+			expectedAllowAutoIncrease: false,
+			expectedIopsPerGb:         0,
+			expectedError:             true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &cloud{}
+
+			allowAutoIncrease, iopsPerGb, err := c.checkIfIopsIncreaseOnExpansion(tc.tags)
+
+			if tc.expectedError {
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrInvalidArgument)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedAllowAutoIncrease, allowAutoIncrease)
+				assert.Equal(t, tc.expectedIopsPerGb, iopsPerGb)
+			}
+		})
 	}
 }

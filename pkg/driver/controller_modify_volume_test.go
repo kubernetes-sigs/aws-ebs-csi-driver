@@ -151,9 +151,12 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 		{
 			name: "basic params",
 			params: map[string]string{
-				ModificationKeyVolumeType: validType,
-				ModificationKeyIOPS:       validIops,
-				ModificationKeyThroughput: validThroughput,
+				ModificationKeyVolumeType:        validType,
+				ModificationKeyIOPS:              validIops,
+				ModificationKeyThroughput:        validThroughput,
+				AllowAutoIOPSIncreaseOnModifyKey: "true",
+				// IopsPerGB would not be actually allowed if IOPS is set but that is not checked in this function. Just testing that it properly parses it and adds the tag.
+				IopsPerGBKey:              "1000",
 				ModificationAddTag + "_1": validTagSpecificationInput,
 				ModificationAddTag + "_2": "key2={{ .PVCName }}",
 				ModificationAddTag + "_3": "key3={{ .PVCNamespace }}",
@@ -165,9 +168,11 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 			},
 			expectedOptions: &modifyVolumeRequest{
 				modifyDiskOptions: cloud.ModifyDiskOptions{
-					VolumeType: validType,
-					IOPS:       validIopsInt,
-					Throughput: validThroughputInt,
+					VolumeType:                validType,
+					IOPS:                      validIopsInt,
+					Throughput:                validThroughputInt,
+					AllowIopsIncreaseOnResize: true,
+					IOPSPerGB:                 1000,
 				},
 				modifyTagsOptions: cloud.ModifyTagsOptions{
 					TagsToAdd: map[string]string{
@@ -175,6 +180,8 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 						"key2": "ebs-claim",
 						"key3": "test-namespace",
 						"key4": "testPV-Name",
+						"ebs.csi.aws.com/AllowAutoIOPSIncreaseOnModify": "true",
+						"ebs.csi.aws.com/IOPSPerGb":                     "1000",
 					},
 					TagsToDelete: []string{
 						"key2",
