@@ -7,12 +7,15 @@ metadata:
   labels:
     app.kubernetes.io/name: aws-ebs-csi-driver
 rules:
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "patch", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["patch", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csinodes"]
     verbs: ["get"]

@@ -842,6 +842,10 @@ func collectMountOptions(fsType string, mntFlags []string) []string {
 // startNotReadyTaintWatcher launches a short‑lived Node informer that removes the
 // ebs.csi.aws.com/agent‑not‑ready taint. The informer is stopped after maxWatchDuration.
 func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration time.Duration) {
+	if os.Getenv("DISABLE_TAINT_WATCHER") != "" {
+		klog.V(4).InfoS("DISABLE_TAINT_WATCHER set, skipping taint watcher")
+		return
+	}
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
 		klog.V(4).InfoS("CSI_NODE_NAME missing, skipping taint watcher")
