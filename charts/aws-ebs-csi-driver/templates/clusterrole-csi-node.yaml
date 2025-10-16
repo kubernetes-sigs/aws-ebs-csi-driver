@@ -6,12 +6,19 @@ metadata:
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 rules:
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "patch", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  {{- if not .Values.node.serviceAccount.disableMutation }}
+  {{- /* We also disable some read APIs here as they are only used in the taint removal feature */}}
+  {{- /* But those are not the important part and could be re-added in the future if needed */}}
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["patch", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csinodes"]
     verbs: ["get"]
+  {{- end }}

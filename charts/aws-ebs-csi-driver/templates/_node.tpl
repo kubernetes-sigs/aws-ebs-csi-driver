@@ -123,6 +123,10 @@ spec:
             - name: AWS_USE_FIPS_ENDPOINT
               value: "true"
             {{- end }}
+            {{- if .Values.node.serviceAccount.disableMutation }}
+            - name: DISABLE_TAINT_WATCHER
+              value: "true"
+            {{- end }}
             {{- with .Values.node.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}

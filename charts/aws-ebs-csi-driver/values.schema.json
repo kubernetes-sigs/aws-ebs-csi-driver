@@ -717,6 +717,11 @@
               "type": ["object", "null"],
               "description": "Additional annotations added to the ebs-csi-node-sa service account",
               "default": null
+            },
+            "disableMutation": {
+              "type": ["boolean", "null"],
+              "description": "Disable mutating permissions for the node service account. When enabled, some features of the EBS CSI Driver node pods will not function, such as taint removal. Primarily useful in particularly security-sensitive environments, or on multi-tenant clusters that isolate tenants by node.",
+              "default": false
             }
           }
         },
