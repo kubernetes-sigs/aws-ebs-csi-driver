@@ -26,7 +26,7 @@ parameters:
   type: gp2
   tagSpecification_1: "ebs-scale-test={{ .Env.SCALABILITY_TEST_RUN_NAME }}"
 ---
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 kind: VolumeAttributesClass
 driverName: ebs.csi.aws.com
 metadata:
