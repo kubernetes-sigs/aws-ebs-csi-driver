@@ -1823,16 +1823,61 @@ func TestCreateDisk(t *testing.T) {
 			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
 		},
 		{
-			name:       "failure: create volume returned volume limit exceeded error",
+			name:       "success: create volume returned volume limit exceeded error, but volume exists",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes: util.GiBToBytes(1),
 				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 			},
-			expDisk:              nil,
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expCreateVolumeErr:   errors.New("VolumeLimitExceeded"),
-			expErr:               fmt.Errorf("could not create volume in EC2: %w", errors.New("VolumeLimitExceeded")),
+			expCreateVolumeErr: &smithy.GenericAPIError{
+				Code:    "VolumeLimitExceeded",
+				Message: "Volume limit exceeded",
+			},
+		},
+		{
+			name:       "failure: create volume returned volume limit exceeded error, describe returns not found",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr: &smithy.GenericAPIError{
+				Code:    "VolumeLimitExceeded",
+				Message: "Volume limit exceeded",
+			},
+			expDescVolumeErr: &smithy.GenericAPIError{
+				Code:    "InvalidVolume.NotFound",
+				Message: "Volume not found",
+			},
+			expErr: fmt.Errorf("%w: %w", ErrLimitExceeded, &smithy.GenericAPIError{
+				Code:    "VolumeLimitExceeded",
+				Message: "Volume limit exceeded",
+			}),
+		},
+		{
+			name:       "failure: create volume returned volume limit exceeded error, describe returns existing volume",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes: util.GiBToBytes(1),
+				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      1,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr: &smithy.GenericAPIError{
+				Code:    "VolumeLimitExceeded",
+				Message: "Volume limit exceeded",
+			},
 		},
 		{
 			name:       "failure: create volume returned max iops limit exceeded error",
