@@ -24,9 +24,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -102,7 +104,7 @@ func DefaultKubernetesAPIClient(kubeconfig string) KubernetesAPIClient {
 	}
 }
 
-func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error) {
+func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler bool) (*Metadata, error) {
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
 		return nil, errors.New("CSI_NODE_NAME env var not set")
@@ -114,17 +116,66 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, fmt.Errorf("error getting Node %v: %w", nodeName, err)
 	}
 
-	providerID := node.Spec.ProviderID
-	if providerID == "" {
-		return nil, errors.New("node providerID empty, cannot parse")
+	numAttachedENIs := 1        // Default: All nodes have at least 1 attached ENI
+	numBlockDeviceMappings := 0 // Default: 0
+	sageMakerLabels := false
+
+	if val, ok := node.GetLabels()[LabelSageMakerENICount]; ok {
+		if num, err := strconv.Atoi(val); err == nil {
+			sageMakerLabels = true
+			numAttachedENIs = num
+			klog.V(2).InfoS("Using ENI count from SageMaker label", "count", numAttachedENIs)
+		} else {
+			klog.ErrorS(err, "Invalid ENI count in SageMaker label, using default",
+				"value", val,
+				"default", numAttachedENIs)
+		}
 	}
 
-	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|(hyperpod-[a-z0-9]+-)?i-[a-z0-9]+$"
+	if val, ok := node.GetLabels()[LabelSageMakerBlockDeviceMappingsCount]; ok {
+		if num, err := strconv.Atoi(val); err == nil {
+			numBlockDeviceMappings = num
+			klog.V(2).InfoS("Using block device mapping count from SageMaker label", "count", numBlockDeviceMappings)
+		} else {
+			klog.ErrorS(err, "Invalid block device mapping count in SageMaker label, using default",
+				"value", val,
+				"default", numBlockDeviceMappings)
+			sageMakerLabels = false
+		}
+	}
 
-	re := regexp.MustCompile(awsInstanceIDRegex)
-	instanceID := re.FindString(providerID)
-	if instanceID == "" {
-		return nil, errors.New("did not find aws instance ID in node providerID string")
+	if metadataLabeler && !sageMakerLabels {
+		backoff := wait.Backoff{
+			Duration: 1 * time.Second,
+			Factor:   1.5,
+			Steps:    6,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		backoffErr := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
+			if numAttachedENIs, numBlockDeviceMappings, err = getEC2ENIsVolumes(node); err != nil {
+				klog.ErrorS(err, "get ENI and volume labels failed, retrying...")
+				node, err = clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+				//nolint: nilerr // Want to catch retry all errs until context times out
+				if err != nil {
+					return false, nil
+				}
+				return false, nil
+			}
+			return true, nil
+		})
+
+		if backoffErr != nil {
+			klog.ErrorS(backoffErr, "get ENI and volume labels failed after multiple retries")
+			return nil, backoffErr
+		}
+	}
+
+	instanceID, err := parseProviderID(node)
+	if err != nil {
+		return nil, err
 	}
 
 	var instanceType string
@@ -153,31 +204,6 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		return nil, errors.New("could not retrieve AZ from topology label")
 	}
 
-	numAttachedENIs := 1        // Default: All nodes have at least 1 attached ENI
-	numBlockDeviceMappings := 0 // Default: 0
-
-	if val, ok := node.GetLabels()[LabelSageMakerENICount]; ok {
-		if num, err := strconv.Atoi(val); err == nil {
-			numAttachedENIs = num
-			klog.V(2).InfoS("Using ENI count from SageMaker label", "count", numAttachedENIs)
-		} else {
-			klog.ErrorS(err, "Invalid ENI count in SageMaker label, using default",
-				"value", val,
-				"default", numAttachedENIs)
-		}
-	}
-
-	if val, ok := node.GetLabels()[LabelSageMakerBlockDeviceMappingsCount]; ok {
-		if num, err := strconv.Atoi(val); err == nil {
-			numBlockDeviceMappings = num
-			klog.V(2).InfoS("Using block device mapping count from SageMaker label", "count", numBlockDeviceMappings)
-		} else {
-			klog.ErrorS(err, "Invalid block device mapping count in SageMaker label, using default",
-				"value", val,
-				"default", numBlockDeviceMappings)
-		}
-	}
-
 	instanceInfo := Metadata{
 		InstanceID:             instanceID,
 		InstanceType:           instanceType,
@@ -187,5 +213,54 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 		NumBlockDeviceMappings: numBlockDeviceMappings,
 	}
 
+	// Only let metadata.UpdateMetadata work for metadataLabeler data source
+	if metadataLabeler {
+		instanceInfo.K8sAPIClient = clientset
+	}
+
 	return &instanceInfo, nil
+}
+
+func getEC2ENIsVolumes(node *corev1.Node) (int, int, error) {
+	eni, err := getLabelAsInt(node, ENIsLabel, 1)
+	if err != nil {
+		return 0, 0, err
+	}
+	vol, err := getLabelAsInt(node, VolumesLabel, 0)
+	if err != nil {
+		return 0, 0, err
+	}
+	return eni, vol, nil
+}
+
+func getLabelAsInt(node *corev1.Node, label string, defaultValue int) (int, error) {
+	val, ok := node.GetLabels()[label]
+	if !ok {
+		klog.V(2).InfoS("Label not found on node", "node", node.Name, "label", label)
+		return defaultValue, fmt.Errorf("%s label not found on node", label)
+	}
+
+	result, err := strconv.Atoi(val)
+	if err != nil {
+		klog.ErrorS(err, "failed to convert label to int", "label", label)
+		return defaultValue, err
+	}
+	return result, nil
+}
+
+func parseProviderID(node *corev1.Node) (string, error) {
+	providerID := node.Spec.ProviderID
+	if providerID == "" {
+		return "", errors.New("node providerID empty, cannot parse")
+	}
+
+	awsInstanceIDRegex := "s\\.i-[a-z0-9]+|(hyperpod-[a-z0-9]+-)?i-[a-z0-9]+$"
+
+	re := regexp.MustCompile(awsInstanceIDRegex)
+	instanceID := re.FindString(providerID)
+	if instanceID == "" {
+		return "", errors.New("did not find aws instance ID in node providerID string")
+	}
+
+	return instanceID, nil
 }
