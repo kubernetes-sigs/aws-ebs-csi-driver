@@ -677,18 +677,15 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		outpostArn:         diskOptions.OutpostArn,
 	}
 
-	iopsLimit, err := c.getVolumeLimits(ctx, createType, azParams)
-	if err != nil {
-		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
-	}
+	iopsLimits := c.getVolumeLimits(ctx, createType, azParams)
 
 	if diskOptions.IOPS > 0 {
 		iops = diskOptions.IOPS
 	} else if diskOptions.IOPSPerGB > 0 {
 		iops = diskOptions.IOPSPerGB * capacityGiB
 	}
-	if iopsLimit.maxIops > 0 && iops > 0 {
-		iops = capIOPS(createType, capacityGiB, iops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
+	if iops > 0 {
+		iops = capIOPS(createType, capacityGiB, iops, iopsLimits, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	if isClone {
@@ -724,7 +721,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			c.latestClientTokens.Set(volumeName, &nextTokenNumber)
 			return nil, ErrIdempotentParameterMismatch
 		case isAWSErrorInvalidParameterCombination(err):
-			return nil, ErrInvalidArgument
+			return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
 		case isAWSErrorVolumeLimitExceeded(err):
 			// EC2 API does NOT handle idempotency correctly when a theoretical volume
 			// would put the caller over a limit for their account
@@ -1005,16 +1002,8 @@ func (c *cloud) ResizeOrModifyDisk(ctx context.Context, volumeID string, newSize
 		if volume.OutpostArn != nil {
 			azParams.outpostArn = *volume.OutpostArn
 		}
-		iopsLimit, err := c.getVolumeLimits(ctx, string(volTypeToUse), azParams)
-		if err != nil {
-			return 0, err
-		}
-		// Even if volume type does not support IOPS, still pass value and let EC2 handle error.
-		if iopsLimit.maxIops == 0 {
-			req.Iops = aws.Int32(iopsForModify)
-		} else {
-			req.Iops = aws.Int32(capIOPS(string(volTypeToUse), sizeToUse, iopsForModify, iopsLimit, true))
-		}
+		iopsLimits := c.getVolumeLimits(ctx, string(volTypeToUse), azParams)
+		req.Iops = aws.Int32(capIOPS(string(volTypeToUse), sizeToUse, iopsForModify, iopsLimits, true))
 		options.IOPS = *req.Iops
 	}
 
@@ -2622,7 +2611,7 @@ func volumeModificationDone(state string) bool {
 	return state == string(types.VolumeModificationStateCompleted) || state == string(types.VolumeModificationStateOptimizing)
 }
 
-// Calculate actual IOPS for a volume and cap it at supported AWS limits.
+// Calculate actual IOPS for a volume and cap it at supported AWS limits. Any limit of 0 is considered "infinite" (i.e. is not applied).
 func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32, iopsLimits iopsLimits, allowIncrease bool) int32 {
 	// If requestedIops is zero the user did not request a specific amount, and the default will be used instead
 	if requestedIops == 0 {
@@ -2631,18 +2620,16 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 
 	iops := requestedIops
 
-	if iops < iopsLimits.minIops {
-		if allowIncrease {
-			iops = iopsLimits.minIops
-			klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
-		}
+	if iopsLimits.minIops > 0 && iops < iopsLimits.minIops && allowIncrease {
+		iops = iopsLimits.minIops
+		klog.V(5).InfoS("[Debug] Increased IOPS to the min supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 	}
-	if iops > iopsLimits.maxIops {
+	if iopsLimits.maxIops > 0 && iops > iopsLimits.maxIops {
 		iops = iopsLimits.maxIops
 		klog.V(5).InfoS("[Debug] Capped IOPS, volume at the max supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 	}
 	maxIopsByCapacity := iopsLimits.maxIopsPerGb * requestedCapacityGiB
-	if iops > maxIopsByCapacity && maxIopsByCapacity >= iopsLimits.minIops {
+	if maxIopsByCapacity > 0 && iops > maxIopsByCapacity && maxIopsByCapacity >= iopsLimits.minIops {
 		iops = maxIopsByCapacity
 		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", iopsLimits.maxIopsPerGb, "limit", iops)
 	}
@@ -2650,10 +2637,10 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 }
 
 // Gets IOPS limits for a specific volume type in a specific Zone and caches it. If the limits are cached, simply return limits.
-func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams getVolumeLimitsParams) (iopsLimits iopsLimits, err error) {
+func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams getVolumeLimitsParams) (iopsLimits iopsLimits) {
 	cacheKey := fmt.Sprintf("%s|%s|%s|%s", volumeType, azParams.availabilityZone, azParams.availabilityZoneId, azParams.outpostArn)
 	if value, ok := c.latestIOPSLimits.Get(cacheKey); ok {
-		return *value, nil
+		return *value
 	}
 
 	dryRunRequestInput := &ec2.CreateVolumeInput{
@@ -2685,7 +2672,7 @@ func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams
 	}
 
 	volType := strings.ToLower(string(dryRunRequestInput.VolumeType))
-	_, err = c.ec2.CreateVolume(ctx, dryRunRequestInput, func(o *ec2.Options) {
+	_, err := c.ec2.CreateVolume(ctx, dryRunRequestInput, func(o *ec2.Options) {
 		o.APIOptions = nil // Don't add our logging/metrics middleware because we expect errors.
 	})
 	useFallBackLimits := (err == nil) // If DryRun unexpectedly succeeds, we use fallback values.
@@ -2714,7 +2701,6 @@ func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams
 
 	// Set minIops and maxIopsPerGb because we do not fetch these from DryRun Error, we can also catch invalid volume.
 	switch volType {
-	case VolumeTypeGP2, VolumeTypeSC1, VolumeTypeST1, VolumeTypeStandard:
 	case VolumeTypeIO1:
 		iopsLimits.minIops = io1MinTotalIOPS
 		iopsLimits.maxIopsPerGb = io1MaxIOPSPerGB
@@ -2725,18 +2711,22 @@ func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams
 		iopsLimits.minIops = gp3MinTotalIOPS
 		iopsLimits.maxIopsPerGb = gp3MaxIOPSPerGB
 	default:
-		return iopsLimits, fmt.Errorf("invalid AWS VolumeType %q", volumeType)
+		klog.V(5).InfoS("[Debug] No known limits for volume type, not performing capping", "volumeType", volumeType)
 	}
 
 	if !useFallBackLimits {
 		c.latestIOPSLimits.Set(cacheKey, &iopsLimits)
 	}
 
-	return iopsLimits, nil
+	return iopsLimits
 }
 
 // Get what the maxIops is from DryRun error message.
 func extractMaxIOPSFromError(errorMsg string, volumeType string) (int32, error) {
+	// Volume does not support IOPS, so return a limit of 0 (considered infinite in capIOPS).
+	if strings.Contains(errorMsg, "parameter iops is not supported") {
+		return 0, nil
+	}
 	// io1 and gp3 have the same error message but io2 has different one, using by default.
 	if volumeType == VolumeTypeIO2 {
 		if matches := io2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {

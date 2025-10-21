@@ -1808,21 +1808,6 @@ func TestCreateDisk(t *testing.T) {
 			expErr: errors.New("CreateDisk: multi-attach is only supported for io2 volumes"),
 		},
 		{
-			name:       "failure: invalid VolumeType",
-			volumeName: "vol-test-name",
-			diskOptions: &DiskOptions{
-				CapacityBytes: util.GiBToBytes(1),
-				Tags:          map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
-				VolumeType:    "invalidVolumeType",
-			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      1,
-				AvailabilityZone: defaultZone,
-			},
-			expErr: fmt.Errorf("invalid AWS VolumeType %q", "invalidVolumeType"),
-		},
-		{
 			name:       "success: create volume returned volume limit exceeded error, but volume exists",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -4778,7 +4763,6 @@ func TestGetVolumeLimits(t *testing.T) {
 		cachedLimits    *iopsLimits
 		createVolumeErr error
 		expectedLimits  iopsLimits
-		expectError     bool
 		expectCaching   bool
 		azParams        getVolumeLimitsParams
 	}{
@@ -4897,9 +4881,11 @@ func TestGetVolumeLimits(t *testing.T) {
 			azParams: getVolumeLimitsParams{
 				availabilityZone: *aws.String("us-west-2a"),
 			},
-			createVolumeErr: errors.New("Generic error"),
-			expectError:     true,
-			expectCaching:   false,
+			createVolumeErr: errors.New("The parameter iops is not supported for gp2 volumes."),
+			expectedLimits: iopsLimits{
+				maxIops: 0,
+			},
+			expectCaching: true,
 		},
 		{
 			name:       "cache miss: dry run unexpected success, use fallback limits",
@@ -4946,18 +4932,7 @@ func TestGetVolumeLimits(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			limits, err := c.getVolumeLimits(ctx, tc.volumeType, tc.azParams)
-
-			if tc.expectError {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
+			limits := c.getVolumeLimits(ctx, tc.volumeType, tc.azParams)
 
 			if limits.maxIops != tc.expectedLimits.maxIops {
 				t.Errorf("Expected maxIops %d, got %d", tc.expectedLimits.maxIops, limits.maxIops)
@@ -4970,7 +4945,7 @@ func TestGetVolumeLimits(t *testing.T) {
 			}
 
 			// Verify cache is updated for non-cached scenarios
-			if tc.cachedLimits == nil && !tc.expectError {
+			if tc.cachedLimits == nil {
 				cacheKey := fmt.Sprintf("%s|%s|%s|%s", tc.volumeType, tc.azParams.availabilityZone, tc.azParams.availabilityZoneId, tc.azParams.outpostArn)
 
 				cachedValue, ok := c.latestIOPSLimits.Get(cacheKey)
