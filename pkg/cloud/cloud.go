@@ -598,11 +598,9 @@ func extractVolumeKey(v *types.Volume, batcher volumeBatcherType) (string, error
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var (
-		createType    string
-		iops          int32
-		throughput    int32
-		err           error
-		requestedIops int32
+		createType string
+		iops       int32
+		err        error
 	)
 
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
@@ -688,13 +686,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	if iopsLimit.maxIops > 0 {
-		if diskOptions.IOPS > 0 {
-			requestedIops = diskOptions.IOPS
-		} else if diskOptions.IOPSPerGB > 0 {
-			requestedIops = diskOptions.IOPSPerGB * capacityGiB
-		}
-		iops = capIOPS(createType, capacityGiB, requestedIops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
+	if diskOptions.IOPS > 0 {
+		iops = diskOptions.IOPS
+	} else if diskOptions.IOPSPerGB > 0 {
+		iops = diskOptions.IOPSPerGB * capacityGiB
+	}
+	if iopsLimit.maxIops > 0 && iops > 0 {
+		iops = capIOPS(createType, capacityGiB, iops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	if len(diskOptions.KmsKeyID) > 0 {
@@ -704,8 +702,8 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if iops > 0 {
 		requestInput.Iops = aws.Int32(iops)
 	}
-	if throughput > 0 {
-		requestInput.Throughput = aws.Int32(throughput)
+	if diskOptions.Throughput > 0 {
+		requestInput.Throughput = aws.Int32(diskOptions.Throughput)
 	}
 	snapshotID := diskOptions.SnapshotID
 	if len(snapshotID) > 0 {
