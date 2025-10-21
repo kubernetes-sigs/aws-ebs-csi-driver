@@ -1,5 +1,9 @@
 # Helm chart
 
+## 2.51.1
+
+- Bump driver version to `v1.51.1`.
+
 ## 2.51.0
 
 - Bump driver version to `v1.51.0`.
@@ -7,6 +11,10 @@
 ### Feature
 
 - Add Helm parameters to customize PDB `maxUnavailable` and `minAvailable` ([#2703](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2703), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## 2.50.2
+
+- Bump driver version to `v1.50.2`.
 
 ## 2.50.1
 
