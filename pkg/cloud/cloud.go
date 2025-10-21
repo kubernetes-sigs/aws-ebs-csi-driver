@@ -603,14 +603,12 @@ func extractVolumeKey(v *types.Volume, batcher volumeBatcherType) (string, error
 
 func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (*Disk, error) {
 	var (
-		createType    string
-		iops          int32
-		throughput    int32
-		err           error
-		requestedIops int32
-		size          int32
-		outpostArn    string
-		volumeID      string
+		createType string
+		iops       int32
+		err        error
+		size       int32
+		outpostArn string
+		volumeID   string
 	)
 
 	isClone := diskOptions.SourceVolumeID != ""
@@ -678,13 +676,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, fmt.Errorf("invalid AWS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	if iopsLimit.maxIops > 0 {
-		if diskOptions.IOPS > 0 {
-			requestedIops = diskOptions.IOPS
-		} else if diskOptions.IOPSPerGB > 0 {
-			requestedIops = diskOptions.IOPSPerGB * capacityGiB
-		}
-		iops = capIOPS(createType, capacityGiB, requestedIops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
+	if diskOptions.IOPS > 0 {
+		iops = diskOptions.IOPS
+	} else if diskOptions.IOPSPerGB > 0 {
+		iops = diskOptions.IOPSPerGB * capacityGiB
+	}
+	if iopsLimit.maxIops > 0 && iops > 0 {
+		iops = capIOPS(createType, capacityGiB, iops, iopsLimit, diskOptions.AllowIOPSPerGBIncrease)
 	}
 
 	if isClone {
@@ -696,7 +694,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 			TagSpecifications:  []types.TagSpecification{tagSpec},
 		}
-		size, outpostArn, volumeID, err = c.createCloneHelper(ctx, copyRequestInput, iops, throughput)
+		size, outpostArn, volumeID, err = c.createCloneHelper(ctx, copyRequestInput, iops, diskOptions.Throughput)
 	} else {
 		createRequestInput := &ec2.CreateVolumeInput{
 			ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
@@ -706,7 +704,7 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 			TagSpecifications:  []types.TagSpecification{tagSpec},
 		}
-		size, outpostArn, volumeID, err = c.createVolumeHelper(ctx, diskOptions, createRequestInput, iops, throughput, zone, zoneID)
+		size, outpostArn, volumeID, err = c.createVolumeHelper(ctx, diskOptions, createRequestInput, iops, diskOptions.Throughput, zone, zoneID)
 	}
 	if err != nil {
 		if isAWSErrorSnapshotNotFound(err) {
