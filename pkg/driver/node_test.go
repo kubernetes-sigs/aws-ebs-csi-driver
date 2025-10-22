@@ -1002,6 +1002,62 @@ func TestNodeStageVolume(t *testing.T) {
 			options:     &Options{LegacyXFSProgs: true},
 			expectedErr: nil,
 		},
+		{
+			name: "node_local_volume_success",
+			req: &csi.NodeStageVolumeRequest{
+				VolumeId:          "local-ebs://dev/xvdba",
+				StagingTargetPath: "/staging/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "ext4",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				PublishContext: map[string]string{
+					DevicePathKey: "/dev/xvdba",
+					VolumeIDKey:   "vol-real",
+				},
+			},
+			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
+				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-real"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				return m
+			},
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				return m
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "node_local_volume_unsupported_capability",
+			req: &csi.NodeStageVolumeRequest{
+				VolumeId:          "local-ebs://dev/xvdba",
+				StagingTargetPath: "/staging/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "ext4",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+					},
+				},
+			},
+			mounterMock:  nil,
+			metadataMock: nil,
+			expectedErr:  status.Error(codes.InvalidArgument, "Volume capability not supported"),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1685,6 +1741,60 @@ func TestNodePublishVolume(t *testing.T) {
 				return m
 			},
 			expectedErr: status.Error(codes.NotFound, "Failed to find device path /dev/xvdba. device path error"),
+		},
+		{
+			name: "node_local_volume_block_success",
+			req: &csi.NodePublishVolumeRequest{
+				VolumeId:          "local-ebs://dev/xvdba",
+				StagingTargetPath: "/staging/path",
+				TargetPath:        "/target/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				PublishContext: map[string]string{
+					DevicePathKey: "/dev/xvdba",
+					VolumeIDKey:   "vol-real",
+				},
+			},
+			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
+				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-real"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
+				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				return m
+			},
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				return m
+			},
+		},
+		{
+			name: "node_local_volume_unsupported_capability",
+			req: &csi.NodePublishVolumeRequest{
+				VolumeId:          "local-ebs://dev/xvdba",
+				StagingTargetPath: "/staging/path",
+				TargetPath:        "/target/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Block{
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+					},
+				},
+				PublishContext: map[string]string{
+					DevicePathKey: "/dev/xvdba",
+				},
+			},
+			expectedErr: status.Error(codes.InvalidArgument, "Volume capability not supported"),
 		},
 	}
 	for _, tc := range testCases {
