@@ -1,4 +1,25 @@
+# v1.51.1
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix throughput handling when creating volumes ([#2733](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2733), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
 # v1.51.0
+
+**WARNING: This version contains a bug that breaks handling of throughput. It is strongly recommended to skip directly to `v1.51.1` or later.**
 
 ### Feature
 
