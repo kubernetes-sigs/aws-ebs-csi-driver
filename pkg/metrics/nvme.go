@@ -283,7 +283,23 @@ func convertHistogram(hist Histogram) (uint64, map[float64]uint64) {
 
 // getNVMEMetrics retrieves NVMe metrics by reading the log page from the NVMe device at the given path.
 func getNVMEMetrics(devicePath string) ([]byte, error) {
-	f, err := os.OpenFile(devicePath, os.O_RDWR, 0)
+	bufferLen := binary.Size(EBSMetrics{})
+	if bufferLen > math.MaxUint32 || bufferLen <= 0 {
+		return nil, fmt.Errorf("getNVMEMetrics: invalid buffer size: %d", bufferLen)
+	}
+
+	// Allocate before opening the device so we hold it open for as little time as possible
+	data := make([]byte, bufferLen)
+	cmd := nvmePassthruCommand{
+		opcode:  0x02,
+		addr:    uint64(uintptr(unsafe.Pointer(&data[0]))),
+		nsid:    1,
+		dataLen: uint32(bufferLen),
+		cdw10:   0xD0 | (1024 << 16),
+	}
+
+	// Write handle is not needed to call ioctl on linux, thus open RDONLY
+	f, err := os.OpenFile(devicePath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, fmt.Errorf("getNVMEMetrics: error opening device: %w", err)
 	}
@@ -293,38 +309,14 @@ func getNVMEMetrics(devicePath string) ([]byte, error) {
 		}
 	}()
 
-	data, err := nvmeReadLogPage(f.Fd(), 0xD0)
-	if err != nil {
-		return nil, fmt.Errorf("getNVMEMetrics: error reading log page %w", err)
-	}
-
-	return data, nil
-}
-
-// nvmeReadLogPage reads an NVMe log page via an ioctl system call.
-func nvmeReadLogPage(fd uintptr, logID uint8) ([]byte, error) {
-	data := make([]byte, 4096) // 4096 bytes is the length of the log page.
-	bufferLen := len(data)
-
-	if bufferLen > math.MaxUint32 {
-		return nil, errors.New("nvmeReadLogPage: bufferLen exceeds MaxUint32")
-	}
-
-	cmd := nvmePassthruCommand{
-		opcode:  0x02,
-		addr:    uint64(uintptr(unsafe.Pointer(&data[0]))),
-		nsid:    1,
-		dataLen: uint32(bufferLen),
-		cdw10:   uint32(logID) | (1024 << 16),
-	}
-
-	status, _, errno := unix.Syscall(unix.SYS_IOCTL, fd, 0xC0484E41, uintptr(unsafe.Pointer(&cmd)))
+	status, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), 0xC0484E41, uintptr(unsafe.Pointer(&cmd)))
 	if errno != 0 {
-		return nil, fmt.Errorf("nvmeReadLogPage: ioctl error %w", errno)
+		return nil, fmt.Errorf("getNVMEMetrics: ioctl error %w", errno)
 	}
 	if status != 0 {
-		return nil, fmt.Errorf("nvmeReadLogPage: ioctl command failed with status %d", status)
+		return nil, fmt.Errorf("getNVMEMetrics: ioctl command failed with status %d", status)
 	}
+
 	return data, nil
 }
 
