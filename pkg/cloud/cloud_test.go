@@ -5115,6 +5115,119 @@ func createDescribeVolumesOutput(volumeIDs []*string, nodeID, path, state string
 	}
 }
 
+func TestGetVolumeIDByNodeAndDevice(t *testing.T) {
+	testCases := []struct {
+		name          string
+		nodeID        string
+		deviceName    string
+		instance      *types.Instance
+		instanceErr   error
+		expectedVolID string
+		expectError   bool
+	}{
+		{
+			name:       "success: volume found at device",
+			nodeID:     "i-1234567890",
+			deviceName: "/dev/xvdf",
+			instance: &types.Instance{
+				InstanceId:     aws.String("i-1234567890"),
+				RootDeviceName: aws.String("/dev/xvda"),
+				BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
+					{
+						DeviceName: aws.String("/dev/xvdf"),
+						Ebs: &types.EbsInstanceBlockDevice{
+							VolumeId: aws.String("vol-test-123"),
+						},
+					},
+				},
+			},
+			expectedVolID: "vol-test-123",
+			expectError:   false,
+		},
+		{
+			name:       "fail: device is root device",
+			nodeID:     "i-1234567890",
+			deviceName: "/dev/xvda",
+			instance: &types.Instance{
+				InstanceId:     aws.String("i-1234567890"),
+				RootDeviceName: aws.String("/dev/xvda"),
+				BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
+					{
+						DeviceName: aws.String("/dev/xvda"),
+						Ebs: &types.EbsInstanceBlockDevice{
+							VolumeId: aws.String("vol-root-123"),
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:       "fail: volume not found at device",
+			nodeID:     "i-1234567890",
+			deviceName: "/dev/xvdz",
+			instance: &types.Instance{
+				InstanceId:     aws.String("i-1234567890"),
+				RootDeviceName: aws.String("/dev/xvda"),
+				BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
+					{
+						DeviceName: aws.String("/dev/xvdf"),
+						Ebs: &types.EbsInstanceBlockDevice{
+							VolumeId: aws.String("vol-test-123"),
+						},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name:        "fail: getInstance error",
+			nodeID:      "i-1234567890",
+			deviceName:  "/dev/xvdf",
+			instanceErr: errors.New("instance not found"),
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := t.Context()
+
+			expectedInput := &ec2.DescribeInstancesInput{
+				InstanceIds: []string{tc.nodeID},
+			}
+
+			if tc.instanceErr != nil {
+				mockEC2.EXPECT().DescribeInstances(t.Context(), gomock.Eq(expectedInput)).Return(nil, tc.instanceErr)
+			} else if tc.instance != nil {
+				mockEC2.EXPECT().DescribeInstances(t.Context(), gomock.Eq(expectedInput)).Return(
+					&ec2.DescribeInstancesOutput{
+						Reservations: []types.Reservation{
+							{
+								Instances: []types.Instance{*tc.instance},
+							},
+						},
+					}, nil)
+			}
+
+			volumeID, err := c.GetVolumeIDByNodeAndDevice(ctx, tc.nodeID, tc.deviceName)
+
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedVolID, volumeID)
+			}
+
+			mockCtrl.Finish()
+		})
+	}
+}
+
 func TestCheckIfIopsIncreaseOnExpansion(t *testing.T) {
 	testCases := []struct {
 		name                      string

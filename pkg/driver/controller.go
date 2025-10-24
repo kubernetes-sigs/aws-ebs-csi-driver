@@ -473,12 +473,20 @@ func validateDeleteVolumeRequest(req *csi.DeleteVolumeRequest) error {
 
 func (d *ControllerService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerPublishVolume: called", "args", util.SanitizeRequest(req))
-	if err := validateControllerPublishVolumeRequest(req); err != nil {
-		return nil, err
-	}
 
 	volumeID := req.GetVolumeId()
 	nodeID := req.GetNodeId()
+
+	if isNodeLocalVolume(volumeID) {
+		if !d.options.EnableNodeLocalVolumes {
+			return nil, status.Error(codes.InvalidArgument, "node-local volumes are not enabled")
+		}
+		return d.controllerPublishVolumeNodeLocal(ctx, req)
+	}
+
+	if err := validateControllerPublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
 
 	if !d.inFlight.Insert(volumeID + nodeID) {
 		return nil, status.Error(codes.Aborted, fmt.Sprintf(internal.VolumeOperationAlreadyExistsErrorMsg, volumeID))
@@ -536,6 +544,32 @@ func validateControllerPublishVolumeRequest(req *csi.ControllerPublishVolumeRequ
 	return nil
 }
 
+func (d *ControllerService) controllerPublishVolumeNodeLocal(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+	volumeID := req.GetVolumeId()
+	nodeID := req.GetNodeId()
+
+	deviceName := strings.TrimPrefix(volumeID, NodeLocalVolumeHandlePrefix)
+	if deviceName == "" || deviceName == volumeID {
+		return nil, status.Error(codes.InvalidArgument, "invalid node-local volume handle format")
+	}
+	deviceName = "/" + deviceName
+	realVolumeID, err := d.cloud.GetVolumeIDByNodeAndDevice(ctx, nodeID, deviceName)
+	if err != nil {
+		if errors.Is(err, cloud.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "Failed to find volume at device %s on node %s: %v", deviceName, nodeID, err)
+		}
+		return nil, status.Errorf(codes.Internal, "Failed to get volume at device %s on node %s: %v", deviceName, nodeID, err)
+	}
+
+	klog.InfoS("ControllerPublishVolume: resolved node-local volume", "volumeID", volumeID, "realVolumeID", realVolumeID, "nodeID", nodeID, "deviceName", deviceName)
+
+	pvInfo := map[string]string{
+		DevicePathKey: deviceName,
+		VolumeIDKey:   realVolumeID,
+	}
+	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
+}
+
 func (d *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerUnpublishVolume: called", "args", util.SanitizeRequest(req))
 
@@ -545,6 +579,11 @@ func (d *ControllerService) ControllerUnpublishVolume(ctx context.Context, req *
 
 	volumeID := req.GetVolumeId()
 	nodeID := req.GetNodeId()
+
+	if isNodeLocalVolume(volumeID) {
+		klog.V(2).InfoS("ControllerUnpublishVolume: node-local mode, skipping detach", "volumeID", volumeID, "nodeID", nodeID)
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	}
 
 	if !d.inFlight.Insert(volumeID + nodeID) {
 		return nil, status.Error(codes.Aborted, fmt.Sprintf(internal.VolumeOperationAlreadyExistsErrorMsg, volumeID))
@@ -615,15 +654,30 @@ func (d *ControllerService) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
-		if errors.Is(err, cloud.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "Volume not found")
+	// Node-local volumes don't need GetDiskByID validation
+	if !isNodeLocalVolume(volumeID) {
+		if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
+			if errors.Is(err, cloud.ErrNotFound) {
+				return nil, status.Error(codes.NotFound, "Volume not found")
+			}
+			return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 		}
-		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
 	var confirmed *csi.ValidateVolumeCapabilitiesResponse_Confirmed
-	if isValidVolumeCapabilities(volCaps) {
+	if isNodeLocalVolume(volumeID) {
+		// For node-local volumes, allow RWX
+		valid := true
+		for _, c := range volCaps {
+			if !isValidCapabilityForNodeLocal(c) {
+				valid = false
+				break
+			}
+		}
+		if valid {
+			confirmed = &csi.ValidateVolumeCapabilitiesResponse_Confirmed{VolumeCapabilities: volCaps}
+		}
+	} else if isValidVolumeCapabilities(volCaps) {
 		confirmed = &csi.ValidateVolumeCapabilitiesResponse_Confirmed{VolumeCapabilities: volCaps}
 	}
 	return &csi.ValidateVolumeCapabilitiesResponse{
@@ -636,6 +690,10 @@ func (d *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	if isNodeLocalVolume(volumeID) {
+		return nil, status.Error(codes.InvalidArgument, "node-local volumes cannot be expanded")
 	}
 
 	capRange := req.GetCapacityRange()
@@ -675,6 +733,10 @@ func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	if isNodeLocalVolume(volumeID) {
+		return nil, status.Error(codes.InvalidArgument, "node-local volumes cannot be modified")
 	}
 
 	options, err := parseModifyVolumeParameters(req.GetMutableParameters())
@@ -727,6 +789,15 @@ func isValidCapability(c *csi.VolumeCapability) bool {
 		klog.InfoS("isValidCapability: access mode is not supported", "accessMode", accessMode)
 		return false
 	}
+}
+
+func isNodeLocalVolume(volumeID string) bool {
+	return strings.HasPrefix(volumeID, NodeLocalVolumeHandlePrefix)
+}
+
+func isValidCapabilityForNodeLocal(c *csi.VolumeCapability) bool {
+	accessMode := c.GetAccessMode().GetMode()
+	return accessMode == SingleNodeWriter || accessMode == MultiNodeMultiWriter
 }
 
 func isBlock(capability *csi.VolumeCapability) bool {
@@ -884,8 +955,13 @@ func validateCreateSnapshotRequest(req *csi.CreateSnapshotRequest) error {
 		return status.Error(codes.InvalidArgument, "Snapshot name not provided")
 	}
 
-	if len(req.GetSourceVolumeId()) == 0 {
+	volumeID := req.GetSourceVolumeId()
+	if len(volumeID) == 0 {
 		return status.Error(codes.InvalidArgument, "Snapshot volume source ID not provided")
+	}
+
+	if isNodeLocalVolume(volumeID) {
+		return status.Error(codes.InvalidArgument, "node-local volumes cannot be snapshotted")
 	}
 	return nil
 }
