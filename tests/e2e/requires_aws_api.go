@@ -416,7 +416,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 						ebscsidriver.IopsKey:       sourceIops,
 						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
 					},
-					ClaimSize:   "10Gi", // Must be higher than minimum to be within max IOPS ratio.
+					ClaimSize:   "7Gi", // Must be higher than minimum to be within max IOPS ratio.
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
 				},
 			},
@@ -428,7 +428,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 					CreateVolumeParameters: map[string]string{
 						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
 					},
-					ClaimSize:   "10Gi",
+					ClaimSize:   "7Gi",
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
 				},
 			},
