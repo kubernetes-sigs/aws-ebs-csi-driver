@@ -90,6 +90,18 @@ sidecars:
         type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+  metadataLabeler:
+    # ALPHA: Enable the metadata-labeler sidecar to label Kubernetes Nodes with
+    # information from the EC2 API (e.g. number of ENIs)
+    # Also requires using metadata-labeler as the node's metadata source
+    enabled: false
+    logLevel: 2
+    # Additional parameters provided by metadataLabeler.
+    additionalArgs: []
+    resources: {}
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
   livenessProbe:
     image:
       pullPolicy: IfNotPresent
@@ -425,6 +437,7 @@ node:
   # Enable the linux daemonset creation
   enableLinux: true
   enableWindows: true
+  # Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds', 'kubernetes', and (ALPHA) 'metadata-labeler'
   metadataSources:
   # Warning: This option will be removed in a future release. It is a temporary workaround for users unable to immediately migrate off of older kernel versions.
   # Formats XFS volumes with bigtime=0,inobtcount=0,reflink=0, for mounting onto nodes with linux kernel version <= 5.4.
@@ -527,9 +540,9 @@ volumeSnapshotClasses: []
 # This parameter should always be false for new installations
 useOldCSIDriver: false
 # nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval.
-# Kubernetes enforces a minimum update interval of 10 seconds.
+# Kubernetes enforces a minimum update interval of 10 seconds. A value of -1 uses a automatically determined value dependent on metadata sources.
 # This parameter is supported in Kubernetes 1.33+ and requires the MutableCSINodeAllocatableCount feature gate to be enabled in kubelet and kube-apiserver.
-nodeAllocatableUpdatePeriodSeconds: 10
+nodeAllocatableUpdatePeriodSeconds: -1
 # Deploy EBS CSI Driver without controller and associated resources
 nodeComponentOnly: false
 # Set maximum verbosity for logs of each container and other recommended debugging parameters such as enabling AWS SDK debug logging

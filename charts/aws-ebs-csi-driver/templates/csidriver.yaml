@@ -9,8 +9,10 @@ spec:
   attachRequired: true
   podInfoOnMount: false
   {{- if semverCompare ">=1.33.0-0" .Capabilities.KubeVersion.Version }}
-  {{- with .Values.nodeAllocatableUpdatePeriodSeconds }}
-  nodeAllocatableUpdatePeriodSeconds: {{ . }}
+  {{- if eq (.Values.nodeAllocatableUpdatePeriodSeconds | int) -1 }}
+  nodeAllocatableUpdatePeriodSeconds: {{ (regexMatch "metadata-labeler" (.Values.node.metadataSources | default "")) | ternary "300" "10" }}
+  {{- else if .Values.nodeAllocatableUpdatePeriodSeconds }}
+  nodeAllocatableUpdatePeriodSeconds: {{ .Values.nodeAllocatableUpdatePeriodSeconds }}
   {{- end }}
   {{- end }}
   {{- if not .Values.useOldCSIDriver }}

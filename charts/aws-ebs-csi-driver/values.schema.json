@@ -108,8 +108,8 @@
     },
     "nodeAllocatableUpdatePeriodSeconds": {
       "type": ["integer", "null"],
-      "description": "nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval. Kubernetes enforces a minimum update interval of 10 seconds. This parameter is supported in Kubernetes 1.33+, the MutableCSINodeAllocatableCount feature gate must be enabled in kubelet and kube-apiserver.",
-      "default": 10
+      "description": "nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval. Kubernetes enforces a minimum update interval of 10 seconds. A value of -1 uses a automatically determined value dependent on metadata sources. This parameter is supported in Kubernetes 1.33+, the MutableCSINodeAllocatableCount feature gate must be enabled in kubelet and kube-apiserver.",
+      "default": -1
     },
     "nodeComponentOnly": {
       "type": "boolean",
@@ -673,7 +673,7 @@
           "default": false
         },
         "metadataSources": {
-          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds' and 'kubernetes'",
+          "description": "Comma separated list of metadata sources that override the default used by the EBS CSI Driver. Valid sources include 'imds', 'kubernetes', and (ALPHA) 'metadata-labeler'",
           "type": ["string", "null"],
           "default": null
         },
@@ -1160,6 +1160,41 @@
                   "default": 15
                 }
               }
+            }
+          }
+        },
+        "metadataLabeler": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "additionalArgs": {
+              "type": "array",
+              "description": "Additional arguments passed to the metadataLabeler container",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            "resources": {
+              "type": ["object", "null"],
+              "default": null
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "ALPHA: Enable the metadata-labeler sidecar to label Kubernetes Nodes with information from the EC2 API (e.g. number of ENIs). Also requires using metadata-labeler as the node's metadata source.",
+              "default": false
+            },
+            "logLevel": {
+              "type": "integer",
+              "description": "Set the level of verbosity of the logs",
+              "default": 4
+            },
+            "env": {
+              "type": "array",
+              "default": []
+            },
+            "securityContext": {
+              "type": "object"
             }
           }
         },

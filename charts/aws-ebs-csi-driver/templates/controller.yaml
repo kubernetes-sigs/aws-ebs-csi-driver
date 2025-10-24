@@ -489,6 +489,40 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         {{- end }}
+        {{- if .Values.sidecars.metadataLabeler.enabled }}
+        - name: metadata-labeler
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - metadataLabeler
+            - --v={{ .Values.sidecars.metadataLabeler.logLevel }}
+            {{- range .Values.sidecars.metadataLabeler.additionalArgs }}
+            - {{ . }}
+            {{- end }}
+          env:
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.metadataLabeler.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          {{- with .Values.controller.envFrom }}
+          envFrom:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with default .Values.controller.resources .Values.sidecars.metadataLabeler.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.metadataLabeler.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
         - name: csi-resizer
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy }}
