@@ -772,9 +772,13 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		return nil, errors.New("disk size was not returned by CreateVolume")
 	}
 
-	if err := c.waitForVolume(ctx, volumeID); err != nil {
+	volume, err := c.waitForVolume(ctx, volumeID)
+	if err != nil {
 		return nil, fmt.Errorf("timed out waiting for volume to create: %w", err)
 	}
+
+	klog.V(7).InfoS("CreateDisk: volume created successfully", "volumeName", volumeName, "volume", volume)
+
 	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: diskOptions.SnapshotID, SourceVolumeID: diskOptions.SourceVolumeID, OutpostArn: outpostArn}, nil
 }
 
@@ -2107,25 +2111,29 @@ func (c *cloud) listSnapshots(ctx context.Context, request *ec2.DescribeSnapshot
 }
 
 // waitForVolume waits for volume to be in the "available" state.
-func (c *cloud) waitForVolume(ctx context.Context, volumeID string) error {
+func (c *cloud) waitForVolume(ctx context.Context, volumeID string) (*types.Volume, error) {
 	time.Sleep(c.vwp.creationInitialDelay)
 
 	request := &ec2.DescribeVolumesInput{
 		VolumeIds: []string{volumeID},
 	}
 
+	var volume *types.Volume
 	err := wait.ExponentialBackoffWithContext(ctx, c.vwp.creationBackoff, func(ctx context.Context) (done bool, err error) {
 		vol, err := c.getVolume(ctx, request)
 		if err != nil {
 			return true, err
 		}
 		if vol.State != "" {
-			return vol.State == types.VolumeStateAvailable, nil
+			if vol.State == types.VolumeStateAvailable {
+				volume = vol
+				return true, nil
+			}
 		}
 		return false, nil
 	})
 
-	return err
+	return volume, err
 }
 
 // getAccountID returns the account ID of the AWS Account for the IAM credentials in use.
