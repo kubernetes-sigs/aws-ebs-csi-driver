@@ -10,16 +10,16 @@ images:
     newTag: v5.3.0
   - name: public.ecr.aws/csi-components/external-attacher
     newName: registry.k8s.io/sig-storage/csi-attacher
-    newTag: v4.9.0
+    newTag: v4.10.0
   - name: public.ecr.aws/csi-components/livenessprobe
     newName: registry.k8s.io/sig-storage/livenessprobe
-    newTag: v2.16.0
+    newTag: v2.17.0
   - name: public.ecr.aws/csi-components/csi-snapshotter
     newName: registry.k8s.io/sig-storage/csi-snapshotter
-    newTag: v8.3.0
+    newTag: v8.4.0
   - name: public.ecr.aws/csi-components/external-resizer
     newName: registry.k8s.io/sig-storage/csi-resizer
     newTag: v1.14.0
   - name: public.ecr.aws/csi-components/csi-node-driver-registrar
     newName: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    newTag: v2.14.0
+    newTag: v2.15.0

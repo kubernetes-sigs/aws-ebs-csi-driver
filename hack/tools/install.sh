@@ -19,13 +19,13 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.31.13"
+AWSCLI_VERSION="2.31.22"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.14.0"
 # https://github.com/eksctl-io/eksctl
 EKSCTL_VERSION="v0.215.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.26.0"
+GINKGO_VERSION="v2.27.1"
 # https://github.com/golangci/golangci-lint
 GOLANGCI_LINT_VERSION="v2.5.0"
 # https://github.com/hairyhenderson/gomplate
@@ -37,10 +37,10 @@ HELM_VERSION="v3.19.0"
 # https://github.com/kubernetes/kops
 # Commit is preferred over version if non-empty, and can
 # be used to test new Kubernetes releases earlier
-KOPS_VERSION="v1.34.0-alpha.1"
+KOPS_VERSION="v1.34.0"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20251009082706-955b996ee1ac"
+KUBETEST2_VERSION="v0.0.0-20251014213334-5f25e2927c68"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh
