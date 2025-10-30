@@ -167,12 +167,16 @@ else
     set +x
   fi
 
+  loudecho "Debug 1"
+
   PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
 
   while IFS= read -r POD; do
     kubectl logs "${POD}" -n kube-system --all-containers --ignore-errors --kubeconfig "${KUBECONFIG}" >"${REPORT_DIR}/${POD}.txt"
   done <<<"${PODS}"
 fi
+
+loudecho "Debug 2"
 
 # Collect periodic performance metrics - this should only run in Prow
 if [[ "${COLLECT_METRICS}" == true ]] && [ -n "${PROW_JOB_ID:-}" ]; then
@@ -184,6 +188,8 @@ if [[ "${COLLECT_METRICS}" == true ]] && [ -n "${PROW_JOB_ID:-}" ]; then
     "aws-ebs-csi-driver" \
     "$VERSION"
 fi
+
+loudecho "Debug 3"
 
 ## Cleanup
 
@@ -201,6 +207,8 @@ if [[ "${HELM_CT_TEST}" != true ]]; then
   fi
 fi
 
+loudecho "Debug 4"
+
 if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
   loudecho "Removing snapshot controller and CRDs"
   kubectl delete --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
@@ -209,6 +217,8 @@ if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
   kubectl delete --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
   kubectl delete --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
 fi
+
+loudecho "Debug 5"
 
 ## Output result
 
