@@ -167,11 +167,13 @@ else
     set +x
   fi
 
-  PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
+  PODS=$(kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-ebs-csi-driver" -o json --kubeconfig "${KUBECONFIG}" | jq -r .items[].metadata.name)
 
-  while IFS= read -r POD; do
-    kubectl logs "${POD}" -n kube-system --all-containers --ignore-errors --kubeconfig "${KUBECONFIG}" >"${REPORT_DIR}/${POD}.txt"
-  done <<<"${PODS}"
+  if [[ -n "${PODS}" ]]; then
+    while IFS= read -r POD; do
+      kubectl logs "${POD}" -n kube-system --all-containers --ignore-errors --kubeconfig "${KUBECONFIG}" >"${REPORT_DIR}/${POD}.txt"
+    done <<<"${PODS}"
+  fi
 fi
 
 # Collect periodic performance metrics - this should only run in Prow
