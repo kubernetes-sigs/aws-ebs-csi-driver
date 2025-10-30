@@ -1,5 +1,12 @@
 # Helm chart
 
+## 2.52.0
+
+### Feature
+
+- Bump driver version to `v1.52.0`.
+- Add ALPHA metadata-labeler sidecar and metadata source ([#2591](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2591), [@sylviah23](https://github.com/sylviah23))
+
 ## 2.51.1
 
 - Bump driver version to `v1.51.1`.
