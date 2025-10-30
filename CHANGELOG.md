@@ -1,3 +1,51 @@
+# v1.52.0
+
+## Changes by Kind
+
+### Feature
+
+- Add ALPHA metadata-labeler sidecar and metadata source ([#2591](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2591), [@sylviah23](https://github.com/sylviah23))
+
+### Bug or Regression
+
+- Improve handling of volume types that do not have hardcoded IOPS limits and/or do not support IOPS ([#2732](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2732), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Other (Cleanup or Flake)
+
+- Added logging of volume attributes at controller.logLevel 7+ after successful volume creation for improved observability. ([#2737](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2737), [@torredil](https://github.com/torredil))
+- Minor tweaks to NVMe metrics collector performance ([#2722](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2722), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.31.12 → v1.31.15](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.31.12...config/v1.31.15)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.16 → v1.18.19](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.16...credentials/v1.18.19)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.9 → v1.18.11](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.9...feature/ec2/imds/v1.18.11)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.9 → v1.4.11](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.9...internal/configsources/v1.4.11)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.9 → v2.7.11](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.9...internal/endpoints/v2/v2.7.11)
+- github.com/aws/aws-sdk-go-v2/internal/ini: [v1.8.3 → v1.8.4](https://github.com/aws/aws-sdk-go-v2/compare/internal/ini/v1.8.3...internal/ini/v1.8.4)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.256.0 → v1.258.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.256.0...service/ec2/v1.258.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.1 → v1.13.2](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.1...service/internal/accept-encoding/v1.13.2)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.9 → v1.13.11](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.9...service/internal/presigned-url/v1.13.11)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.215.3 → v1.217.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.215.3...service/sagemaker/v1.217.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.29.6 → v1.29.8](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.29.6...service/sso/v1.29.8)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.1 → v1.35.3](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.1...service/ssooidc/v1.35.3)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.38.6 → v1.38.9](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.38.6...service/sts/v1.38.9)
+- github.com/aws/aws-sdk-go-v2: [v1.39.2 → v1.39.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.39.2...v1.39.4)
+- github.com/aws/smithy-go: [v1.23.0 → v1.23.1](https://github.com/aws/smithy-go/compare/v1.23.0...v1.23.1)
+- github.com/container-storage-interface/spec: [v1.11.0 → v1.12.0](https://github.com/container-storage-interface/spec/compare/v1.11.0...v1.12.0)
+- github.com/kubernetes-csi/csi-proxy/client: [v1.2.1 → v1.3.0](https://github.com/kubernetes-csi/csi-proxy/compare/client/v1.2.1...client/v1.3.0)
+- github.com/prometheus/common: [v0.67.1 → v0.67.2](https://github.com/prometheus/common/compare/v0.67.1...v0.67.2)
+- github.com/prometheus/procfs: [v0.17.0 → v0.19.1](https://github.com/prometheus/procfs/compare/v0.17.0...v0.19.1)
+- google.golang.org/genproto/googleapis/api: 49b9836 → 3a174f9
+- google.golang.org/genproto/googleapis/rpc: 49b9836 → 3a174f9
+
+### Removed
+_Nothing has changed._
+
 # v1.51.1
 
 ## Changes by Kind
