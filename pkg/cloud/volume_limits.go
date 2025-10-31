@@ -49,8 +49,8 @@ func GetVolumeLimits(instanceType string) (int, string) {
 		return limit.maxAttachments, limit.attachmentType
 	}
 
-	// Default to shared limit of 28
-	return 28, util.AttachmentShared
+	// Default to shared limit of 27
+	return 27, util.AttachmentShared
 }
 
 // KnownInstanceTypes returns all known instance types from the limits table.
