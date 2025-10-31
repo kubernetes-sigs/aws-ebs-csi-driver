@@ -1,3 +1,22 @@
+# v1.52.1
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix off-by-one error in volume limits for default nitro instances which would get PVCs stuck attempting to attach to a full instance. ([#2749](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2749), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
+
+### Removed
+_Nothing has changed._
+
 # v1.52.0
 
 ## Changes by Kind
@@ -42,6 +61,25 @@ _Nothing has changed._
 - github.com/prometheus/procfs: [v0.17.0 → v0.19.1](https://github.com/prometheus/procfs/compare/v0.17.0...v0.19.1)
 - google.golang.org/genproto/googleapis/api: 49b9836 → 3a174f9
 - google.golang.org/genproto/googleapis/rpc: 49b9836 → 3a174f9
+
+### Removed
+_Nothing has changed._
+
+# v1.51.2
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix off-by-one error in volume limits for default nitro instances which would get PVCs stuck attempting to attach to a full instance. ([#2749](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2749), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
 
 ### Removed
 _Nothing has changed._
@@ -97,6 +135,25 @@ _Nothing has changed._
 - google.golang.org/genproto/googleapis/api: 57b25ae → 49b9836
 - google.golang.org/genproto/googleapis/rpc: 57b25ae → 49b9836
 - google.golang.org/grpc: v1.75.1 → v1.76.0
+
+### Removed
+_Nothing has changed._
+
+# v1.50.3
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix off-by-one error in volume limits for default nitro instances which would get PVCs stuck attempting to attach to a full instance. ([#2749](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2749), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
 
 ### Removed
 _Nothing has changed._
@@ -201,6 +258,25 @@ A workaround is available in `v1.50.1` and later.
 - google.golang.org/genproto/googleapis/rpc: 9219d12 → 57b25ae
 - google.golang.org/protobuf: v1.36.9 → v1.36.10
 - k8s.io/utils: 0af2bda → bc988d5
+
+### Removed
+_Nothing has changed._
+
+# v1.49.2
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix off-by-one error in volume limits for default nitro instances which would get PVCs stuck attempting to attach to a full instance. ([#2749](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2749), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+_Nothing has changed._
 
 ### Removed
 _Nothing has changed._
