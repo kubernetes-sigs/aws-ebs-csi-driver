@@ -1074,6 +1074,21 @@ func TestGetVolumesLimit(t *testing.T) {
 			},
 		},
 		{
+			name: "m5.large_volume_attach_limit",
+			options: &Options{
+				VolumeAttachLimit:         -1,
+				ReservedVolumeAttachments: -1,
+			},
+			expectedVal: 27,
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetNumBlockDeviceMappings().Return(0)
+				m.EXPECT().GetInstanceType().Return("m5.large")
+				m.EXPECT().GetNumAttachedENIs().Return(0)
+				return m
+			},
+		},
+		{
 			name: "ReservedVolumeAttachments_specified",
 			options: &Options{
 				VolumeAttachLimit:         -1,
