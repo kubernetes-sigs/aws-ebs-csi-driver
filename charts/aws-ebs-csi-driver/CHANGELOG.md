@@ -5,6 +5,7 @@
 ### Feature
 
 - Bump driver version to `v1.52.0`.
+- Add Helm parameter `node.serviceAccount.disableMutation` to disable mutating RBAC permissions to the `ebs-csi-node` service account. When enabled, driver features such as taint removal may not function. ([#2723](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2723), [@ConnorJC3](https://github.com/ConnorJC3))
 - Add ALPHA metadata-labeler sidecar and metadata source ([#2591](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2591), [@sylviah23](https://github.com/sylviah23))
 
 ## 2.51.1
