@@ -132,7 +132,7 @@ The following statements give the EBS CSI Driver access to clone volumes:
 {
   "Effect": "Allow",
   "Action": [
-    "ec2:CopyVolumes"
+    "ec2:CreateTags"
   ],
   "Resource": "arn:aws:ec2:*:*:volume/*",
   "Condition": {
