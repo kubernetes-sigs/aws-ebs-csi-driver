@@ -110,7 +110,7 @@ spec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
           terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
-          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.14.0-eksbuild.5
+          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.15.0-eksbuild.2
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -145,7 +145,7 @@ spec:
               memory: 40Mi
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.16.0-eksbuild.5
+          image: public.ecr.aws/csi-components/livenessprobe:v2.17.0-eksbuild.2
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=unix:/csi/csi.sock
