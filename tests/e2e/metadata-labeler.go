@@ -171,7 +171,7 @@ var _ = framework.Describe("[ebs-csi-e2e] [Disruptive] Metadata Labeler Sidecar"
 
 // getAllocatableCount returns the limit of volumes that the node supports.
 func getAllocatableCount(volumes, enis int) int32 {
-	return int32(28 - volumes - enis)
+	return int32(27 - volumes - enis)
 }
 
 // getVolENIs gets the expected metadata of each instance from the ec2 API
