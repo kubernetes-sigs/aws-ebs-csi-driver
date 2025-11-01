@@ -229,3 +229,7 @@ func (d *fakeCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (b
 func (d *fakeCloud) DryRun(ctx context.Context) error {
 	return nil
 }
+
+func (d *fakeCloud) GetVolumeIDByNodeAndDevice(ctx context.Context, nodeID, deviceName string) (string, error) {
+	return "", cloud.ErrNotFound
+}

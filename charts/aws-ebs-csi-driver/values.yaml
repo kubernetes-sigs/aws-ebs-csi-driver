@@ -199,6 +199,8 @@ controller:
   batching: true
   volumeModificationFeature:
     enabled: false
+  # Enable support for node-local volumes that use pre-attached EBS volumes
+  enableNodeLocalVolumes: false
   # Additional parameters provided by aws-ebs-csi-driver controller.
   additionalArgs: []
   sdkDebugLog: false

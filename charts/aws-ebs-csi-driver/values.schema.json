@@ -482,6 +482,11 @@
               "default": false
             }
           }
+        },
+        "enableNodeLocalVolumes": {
+          "type": "boolean",
+          "description": "Enable support for node-local volumes that use pre-attached EBS volumes",
+          "default": false
         }
       }
     },

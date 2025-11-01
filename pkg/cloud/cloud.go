@@ -1637,6 +1637,27 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	return disk, nil
 }
 
+func (c *cloud) GetVolumeIDByNodeAndDevice(ctx context.Context, nodeID string, deviceName string) (string, error) {
+	instance, err := c.getInstance(ctx, nodeID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get instance %s: %w", nodeID, err)
+	}
+
+	if instance.RootDeviceName != nil && *instance.RootDeviceName == deviceName {
+		return "", fmt.Errorf("device %s is the root device: %w", deviceName, ErrInvalidRequest)
+	}
+
+	for _, bdm := range instance.BlockDeviceMappings {
+		if bdm.DeviceName != nil && *bdm.DeviceName == deviceName {
+			if bdm.Ebs != nil && bdm.Ebs.VolumeId != nil {
+				return *bdm.Ebs.VolumeId, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("volume not found at device %s on node %s: %w", deviceName, nodeID, ErrNotFound)
+}
+
 func isHyperPodNode(nodeID string) bool {
 	return strings.HasPrefix(nodeID, "hyperpod-")
 }
