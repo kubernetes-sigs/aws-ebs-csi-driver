@@ -36,12 +36,17 @@ FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:lat
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:1809@sha256:517651cbf291f9e38da7e06a415dbd71860a77977ff127b32be856e7594e2052 AS windows-ltsc2019
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2019@sha256:ea1b43fa8972684a5a284a6f441f91991fa7545d6912d2aecbf6c5ba60e73155 AS windows-ltsc2019
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2022@sha256:3dda26d0d133bad3fe1edfb10ad3d98149e5504e27cc15bd4a4bed1042c483ca AS windows-ltsc2022
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2022@sha256:580b7fa4040be7b47d79c25fb73e3d6da2e68f32b95d9d4dfb70bde33564fc4a AS windows-ltsc2022
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
+ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
+ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
+
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2025@sha256:252ba371c2f50ae797d81ae9d87405b55119714817fead9f406218b556e3ddeb AS windows-ltsc2025
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
