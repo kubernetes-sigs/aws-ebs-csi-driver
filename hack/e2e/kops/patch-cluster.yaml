@@ -44,18 +44,10 @@ spec:
           "Effect": "Allow",
           "Action": [
             "ec2:CreateSnapshot",
-            "ec2:ModifyVolume"
-          ],
-          "Resource": "arn:aws:ec2:*:*:volume/*"
-        },
-        {
-          "Effect": "Allow",
-          "Action": [
+            "ec2:ModifyVolume",
             "ec2:CopyVolumes"
           ],
-          "Resource": [
-            "arn:aws:ec2:*:*:volume/vol-*"
-          ]
+          "Resource": "arn:aws:ec2:*:*:volume/*"
         },
         {
           "Effect": "Allow",
@@ -108,8 +100,7 @@ spec:
         {
           "Effect": "Allow",
           "Action": [
-            "ec2:CreateVolume",
-            "ec2:CopyVolumes"
+            "ec2:CreateVolume"
           ],
           "Resource": "arn:aws:ec2:*:*:volume/*",
           "Condition": {
