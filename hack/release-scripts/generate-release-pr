@@ -112,10 +112,17 @@ update_installmd() {
 
 update_chart_and_overlays() {
   log "Updating helm chart and generates kustomize"
-  prev_minor_patch_version=$(echo "$PREV_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
-  new_minor_patch_version=$(echo "$NEW_DRIVER_VERSION" | sed 's/v[0-9]*\.//')
+  new_driver_version_no_prefix=$(echo "$NEW_DRIVER_VERSION" | sed 's/v//')
 
-  $SED "s/$prev_minor_patch_version$/$new_minor_patch_version/g" -i "$CHART_PATH"
+  # Set appVersion to new driver version
+  yq ".appVersion=\"$new_driver_version_no_prefix\"" -i "$CHART_PATH"
+  # If minor version has changed, set chart version to appVersion with 2 as major version
+  # If not (patch release), just bump the chart patch version
+  if [ "${PREV_DRIVER_VERSION%.*}" != "${NEW_DRIVER_VERSION%.*}" ]; then
+    yq ".version = (\"$new_driver_version_no_prefix\" | split(\".\") | .[0] = \"2\" | join(\".\"))" -i "$CHART_PATH"
+  else
+    yq '.version |= (split(".") | .[2] |= (to_number + 1) | join("."))' -i "$CHART_PATH"
+  fi
 
   (
     cd "$ROOT_DIRECTORY"
