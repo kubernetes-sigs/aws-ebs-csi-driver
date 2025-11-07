@@ -41,7 +41,7 @@ jobs:
           cat base-coverage.tmp | grep -v "mock_" > base-coverage.out
 
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: base-coverage
           path: base-coverage.out
@@ -64,7 +64,7 @@ jobs:
           cat pr-coverage.tmp | grep -v "mock_" > pr-coverage.out
 
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: pr-coverage
           path: pr-coverage.out
