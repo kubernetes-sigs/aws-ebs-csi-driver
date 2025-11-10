@@ -4724,6 +4724,12 @@ func TestExtractMaxIOPSFromError(t *testing.T) {
 			volumeType:      "io2",
 		},
 		{
+			name:            "Success: Properly gets expectedMaxIOPS from other possible io2 Error",
+			err:             errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 300000 is too high; maximum is 256000."),
+			expectedMaxIOPS: 256000,
+			volumeType:      "io2",
+		},
+		{
 			name:            "Success: Properly gets expectedMaxIOPS from io1 Error",
 			err:             errors.New("An error occurred (InvalidParameterValue) when calling the CreateVolume operation: Volume iops of 200000 is too high; maximum is 64000."),
 			expectedMaxIOPS: 64000,
