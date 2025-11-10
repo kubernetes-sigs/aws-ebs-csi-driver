@@ -304,5 +304,9 @@ spec:
         {{- with .Values.node.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- if .Values.node.dnsConfig }}
+      dnsConfig:
+        {{- toYaml .Values.node.dnsConfig | nindent 8 }}
+      {{- end }}
 {{- end }}
 {{- end }}

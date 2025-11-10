@@ -784,6 +784,11 @@
           },
           "description": "Enable opentelemetry tracing for the plugin running on the daemonset",
           "default": null
+        },
+        "dnsConfig": {
+          "type": ["object", "null"],
+          "description": "DNS configuration for the node pods",
+          "default": null
         }
       }
     },

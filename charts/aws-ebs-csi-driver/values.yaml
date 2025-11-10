@@ -362,7 +362,7 @@ controller:
   #  otelServiceName: ebs-csi-controller
   #  otelExporterEndpoint: "http://localhost:4317"
 
-  # Enable dnsConfig for the controller and node pods
+  # dnsConfig for the controller pods
   dnsConfig: {}
 node:
   # Enable SELinux-only optimizations on the EBS CSI Driver node pods
@@ -493,6 +493,9 @@ node:
   otelTracing: {}
   #  otelServiceName: ebs-csi-node
   #  otelExporterEndpoint: "http://localhost:4317"
+
+  # dnsConfig for the node pods
+  dnsConfig: {}
 additionalDaemonSets:
 # Additional node DaemonSets, using the node config structure
 # See docs/additional-daemonsets.md for more information
