@@ -27,6 +27,9 @@ const (
 	// DevicePathKey represents key for device path in PublishContext
 	// devicePath is the device path where the volume is attached to.
 	DevicePathKey = "devicePath"
+	// VolumeIDKey represents key for volume ID in PublishContext
+	// Used for node-local volumes to pass the real volume ID.
+	VolumeIDKey = "volumeID"
 )
 
 // constants of keys in VolumeContext.
@@ -171,6 +174,12 @@ const (
 const (
 	DefaultCSIEndpoint                       = "unix://tmp/csi.sock"
 	DefaultModifyVolumeRequestHandlerTimeout = 2 * time.Second
+)
+
+// constants for node-local volumes.
+const (
+	// NodeLocalVolumeHandlePrefix is the prefix for node-local volume handles.
+	NodeLocalVolumeHandlePrefix = "local-ebs://"
 )
 
 // constants for fstypes.

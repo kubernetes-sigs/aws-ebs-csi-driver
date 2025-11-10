@@ -94,6 +94,9 @@ spec:
             {{- if .Values.controller.batching }}
             - --batching=true
             {{- end}}
+            {{- if .Values.controller.enableNodeLocalVolumes }}
+            - --enable-node-local-volumes=true
+            {{- end}}
             {{- with .Values.controller.loggingFormat }}
             - --logging-format={{ . }}
             {{- end }}

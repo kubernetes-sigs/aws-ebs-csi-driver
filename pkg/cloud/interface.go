@@ -32,6 +32,7 @@ type Cloud interface {
 	IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error)
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
+	GetVolumeIDByNodeAndDevice(ctx context.Context, nodeID string, deviceName string) (volumeID string, err error)
 	CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error)
 	DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error)
 	GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error)

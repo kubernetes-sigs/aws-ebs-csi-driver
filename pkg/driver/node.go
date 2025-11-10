@@ -120,8 +120,14 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
 	}
 
-	if !isValidVolumeCapabilities([]*csi.VolumeCapability{volCap}) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+	if isNodeLocalVolume(volumeID) {
+		if !isValidCapabilityForNodeLocal(volCap) {
+			return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		}
+	} else {
+		if !isValidVolumeCapabilities([]*csi.VolumeCapability{volCap}) {
+			return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		}
 	}
 	volumeContext := req.GetVolumeContext()
 	if isValidVolumeContext := isValidVolumeContext(volumeContext); !isValidVolumeContext {
@@ -199,7 +205,14 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 	}
 
-	source, err := d.mounter.FindDevicePath(devicePath, volumeID, partition, d.metadata.GetRegion())
+	effectiveVolumeID := volumeID
+	if isNodeLocalVolume(volumeID) {
+		if realVolumeID, ok := req.GetPublishContext()[VolumeIDKey]; ok && realVolumeID != "" {
+			effectiveVolumeID = realVolumeID
+		}
+	}
+
+	source, err := d.mounter.FindDevicePath(devicePath, effectiveVolumeID, partition, d.metadata.GetRegion())
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Failed to find device path %s. %v", devicePath, err)
 	}
@@ -432,8 +445,14 @@ func (d *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
 	}
 
-	if !isValidVolumeCapabilities([]*csi.VolumeCapability{volCap}) {
-		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+	if isNodeLocalVolume(volumeID) {
+		if !isValidCapabilityForNodeLocal(volCap) {
+			return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		}
+	} else {
+		if !isValidVolumeCapabilities([]*csi.VolumeCapability{volCap}) {
+			return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
+		}
 	}
 
 	if ok := d.inFlight.Insert(volumeID); !ok {
@@ -631,7 +650,14 @@ func (d *NodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		}
 	}
 
-	source, err := d.mounter.FindDevicePath(devicePath, volumeID, partition, d.metadata.GetRegion())
+	effectiveVolumeID := volumeID
+	if isNodeLocalVolume(volumeID) {
+		if realVolumeID, ok := req.GetPublishContext()[VolumeIDKey]; ok && realVolumeID != "" {
+			effectiveVolumeID = realVolumeID
+		}
+	}
+
+	source, err := d.mounter.FindDevicePath(devicePath, effectiveVolumeID, partition, d.metadata.GetRegion())
 	if err != nil {
 		return status.Errorf(codes.NotFound, "Failed to find device path %s. %v", devicePath, err)
 	}

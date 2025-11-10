@@ -4232,6 +4232,31 @@ func TestCreateSnapshot(t *testing.T) {
 				checkExpectedErrorCode(t, err, codes.ResourceExhausted)
 			},
 		},
+		{
+			name: "fail with node-local volume",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				req := &csi.CreateSnapshotRequest{
+					Name:           "test-snapshot",
+					Parameters:     nil,
+					SourceVolumeId: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateSnapshot(t.Context(), req)
+
+				checkExpectedErrorCode(t, err, codes.InvalidArgument)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -4728,6 +4753,52 @@ func TestControllerPublishVolume(t *testing.T) {
 				ControllerService.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
+		{
+			name:             "Success with node-local volume",
+			volumeID:         NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().GetVolumeIDByNodeAndDevice(gomock.Eq(ctx), gomock.Eq(expInstanceID), gomock.Eq("/dev/xvdf")).Return("vol-real", nil)
+			},
+			expResp: &csi.ControllerPublishVolumeResponse{
+				PublishContext: map[string]string{DevicePathKey: "/dev/xvdf", VolumeIDKey: "vol-real"},
+			},
+			errorCode: codes.OK,
+			setupFunc: func(ControllerService *ControllerService) {
+				ControllerService.options.EnableNodeLocalVolumes = true
+			},
+		},
+		{
+			name:             "Fail with node-local volume invalid format",
+			volumeID:         NodeLocalVolumeHandlePrefix,
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			errorCode:        codes.InvalidArgument,
+			setupFunc: func(ControllerService *ControllerService) {
+				ControllerService.options.EnableNodeLocalVolumes = true
+			},
+		},
+		{
+			name:             "Fail with node-local volume not found",
+			volumeID:         NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			mockAttach: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string, nodeID string) {
+				mockCloud.EXPECT().GetVolumeIDByNodeAndDevice(gomock.Eq(ctx), gomock.Eq(expInstanceID), gomock.Eq("/dev/xvdf")).Return("", cloud.ErrNotFound)
+			},
+			errorCode: codes.NotFound,
+			setupFunc: func(ControllerService *ControllerService) {
+				ControllerService.options.EnableNodeLocalVolumes = true
+			},
+		},
+		{
+			name:             "Fail with node-local volume when feature disabled",
+			volumeID:         NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			nodeID:           expInstanceID,
+			volumeCapability: stdVolCap,
+			errorCode:        codes.InvalidArgument,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4824,6 +4895,13 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				driver.inFlight.Insert("vol-test" + expInstanceID)
 			},
 		},
+		{
+			name:      "Success with node-local volume skips detach",
+			volumeID:  NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			nodeID:    expInstanceID,
+			errorCode: codes.OK,
+			expResp:   &csi.ControllerUnpublishVolumeResponse{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4895,6 +4973,16 @@ func TestControllerExpandVolume(t *testing.T) {
 			},
 			expError: true,
 		},
+		{
+			name: "fail node-local volume cannot be expanded",
+			req: &csi.ControllerExpandVolumeRequest{
+				VolumeId: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: 5 * util.GiB,
+				},
+			},
+			expError: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4939,6 +5027,178 @@ func TestControllerExpandVolume(t *testing.T) {
 			if sizeGiB != expSizeGiB {
 				t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
 			}
+		})
+	}
+}
+
+func TestControllerModifyVolume(t *testing.T) {
+	testCases := []struct {
+		name     string
+		req      *csi.ControllerModifyVolumeRequest
+		expError bool
+	}{
+		{
+			name: "fail node-local volume cannot be modified",
+			req: &csi.ControllerModifyVolumeRequest{
+				VolumeId: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+				MutableParameters: map[string]string{
+					"iops": "4000",
+				},
+			},
+			expError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			mockCtl := gomock.NewController(t)
+			defer mockCtl.Finish()
+
+			mockCloud := cloud.NewMockCloud(mockCtl)
+
+			awsDriver := ControllerService{
+				cloud:                 mockCloud,
+				inFlight:              internal.NewInFlight(),
+				options:               &Options{},
+				modifyVolumeCoalescer: newModifyVolumeCoalescer(mockCloud, &Options{}),
+			}
+
+			_, err := awsDriver.ControllerModifyVolume(ctx, tc.req)
+			if tc.expError {
+				require.Error(t, err)
+				assert.Equal(t, codes.InvalidArgument, status.Code(err))
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateVolumeCapabilities(t *testing.T) {
+	stdVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+		},
+	}
+	multiWriterVolCap := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Block{
+				Block: &csi.VolumeCapability_BlockVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+			},
+		},
+	}
+
+	testCases := []struct {
+		name      string
+		volumeID  string
+		volCaps   []*csi.VolumeCapability
+		setupFunc func(*ControllerService)
+		mockFunc  func(*cloud.MockCloud, context.Context, string)
+		expected  bool
+	}{
+		{
+			name:     "Success with regular volume",
+			volumeID: "vol-test",
+			volCaps:  stdVolCap,
+			mockFunc: func(mockCloud *cloud.MockCloud, ctx context.Context, volumeID string) {
+				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Eq(volumeID)).Return(&cloud.Disk{}, nil)
+			},
+			expected: true,
+		},
+		{
+			name:     "Success with node-local volume and RWO",
+			volumeID: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			volCaps:  stdVolCap,
+			expected: true,
+		},
+		{
+			name:     "Success with node-local volume and RWX",
+			volumeID: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			volCaps:  multiWriterVolCap,
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           tc.volumeID,
+				VolumeCapabilities: tc.volCaps,
+			}
+			ctx := t.Context()
+
+			awsDriver, mockCtl, mockCloud := createControllerService(t)
+			defer mockCtl.Finish()
+
+			if tc.setupFunc != nil {
+				tc.setupFunc(&awsDriver)
+			}
+
+			if tc.mockFunc != nil {
+				tc.mockFunc(mockCloud, ctx, req.GetVolumeId())
+			}
+
+			resp, err := awsDriver.ValidateVolumeCapabilities(ctx, req)
+			require.NoError(t, err)
+			if tc.expected {
+				assert.NotNil(t, resp.GetConfirmed())
+			} else {
+				assert.Nil(t, resp.GetConfirmed())
+			}
+		})
+	}
+}
+
+func TestIsNodeLocalVolume(t *testing.T) {
+	testCases := []struct {
+		name     string
+		volumeID string
+		expected bool
+	}{
+		{"Regular volume", "vol-test", false},
+		{"Node-local volume", NodeLocalVolumeHandlePrefix + "dev/xvdf", true},
+		{"Empty string", "", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := isNodeLocalVolume(tc.volumeID)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestIsValidCapabilityForNodeLocal(t *testing.T) {
+	testCases := []struct {
+		name       string
+		accessMode csi.VolumeCapability_AccessMode_Mode
+		expected   bool
+	}{
+		{"SINGLE_NODE_WRITER", csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER, true},
+		{"MULTI_NODE_MULTI_WRITER", csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER, true},
+		{"SINGLE_NODE_READER_ONLY", csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY, false},
+		{"MULTI_NODE_READER_ONLY", csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY, false},
+		{"MULTI_NODE_SINGLE_WRITER", csi.VolumeCapability_AccessMode_MULTI_NODE_SINGLE_WRITER, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			volCap := &csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: tc.accessMode,
+				},
+			}
+			result := isValidCapabilityForNodeLocal(volCap)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }

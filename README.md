@@ -14,6 +14,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 * **Volume Snapshots** - Create and restore [snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) taken from a volume in Kubernetes.
 * **Volume Resizing** - Expand the volume by specifying a new size in the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims) (PVC).
 * **Volume Modification** - Change the properties (type, iops, or throughput) [via a `VolumeAttributesClass`](examples/kubernetes/modify-volume).
+* **Node-Local Volumes** - Mount pre-attached, node-specific EBS volumes using a single cluster-wide PV/PVC for node-local caching scenarios.
 
 ## Container Images
 
@@ -51,6 +52,7 @@ The EBS CSI Driver implements the [Container Storage Interface specification](ht
 * [Driver Installation](docs/install.md)
 * [Driver Launch Options](docs/options.md)
 * [StorageClass Parameters](docs/parameters.md)
+* [Node-Local Volumes](docs/node-local-volumes.md)
 * [Frequently Asked Questions](docs/faq.md)
 * [Volume Tagging](docs/tagging.md)
 * [Volume Modification](docs/modify-volume.md)
