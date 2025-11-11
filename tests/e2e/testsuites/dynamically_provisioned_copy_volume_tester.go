@@ -25,7 +25,6 @@ import (
 // Waiting for the PV provisioner to create a new PV
 // Testing if the Pod(s) can write and read to mounted volumes
 // Create a copy of the volume using PVC as data source, validate the data is copied, and then write and read to it again
-// And finally delete the snapshot
 // This test only supports a single volume.
 type DynamicallyProvisionedCopyVolumeTest struct {
 	CSIDriver    driver.PVTestDriver
