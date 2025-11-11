@@ -93,6 +93,21 @@ func main() {
 		klog.ErrorS(err, "failed to validate and apply logging configuration")
 	}
 
+	// If only the --version flag was requested, print version and exit before
+	// performing any initialization that may require contacting external
+	// services (IMDS/Kubernetes API). This allows `--version` to work in
+	// environments without metadata available (e.g., local/lab machines).
+	if *version {
+		versionInfo, versionErr := driver.GetVersionJSON()
+		if versionErr != nil {
+			klog.ErrorS(err, "failed to get version")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		//nolint:forbidigo // Print version info without klog/timestamp
+		fmt.Println(versionInfo)
+		os.Exit(0)
+	}
+
 	var cloud cloudPkg.Cloud
 	var k8sClient kubernetes.Interface
 	var md metadata.MetadataService
@@ -158,17 +173,6 @@ func main() {
 	default:
 		klog.Errorf("Unknown driver mode %s: Expected %s, %s, %s, %s, or pre-stop-hook", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode, driver.MetadataLabelerMode)
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
-	}
-
-	if *version {
-		versionInfo, versionErr := driver.GetVersionJSON()
-		if versionErr != nil {
-			klog.ErrorS(err, "failed to get version")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-		//nolint:forbidigo // Print version info without klog/timestamp
-		fmt.Println(versionInfo)
-		os.Exit(0)
 	}
 
 	if *toStderr {
