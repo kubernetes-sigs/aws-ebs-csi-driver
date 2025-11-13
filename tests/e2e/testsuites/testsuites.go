@@ -170,7 +170,7 @@ func (t *TestVolumeSnapshotClass) CreateStaticVolumeSnapshotContent(snapshotID s
 				Name:      volumeSnapshotNameStatic,
 				Namespace: t.namespace.Name,
 			},
-			Driver: util.DriverName,
+			Driver: util.GetDriverName(),
 			Source: volumesnapshotv1.VolumeSnapshotContentSource{
 				SnapshotHandle: aws.String(snapshotID),
 			},
@@ -374,7 +374,7 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 
 			keyFound := false
 			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions {
-				if v.Key == "topology"+util.DriverName+"/zone" {
+				if v.Key == "topology"+util.GetDriverName()+"/zone" {
 					keyFound = true
 					Expect(v.Key).To(Equal(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key))
 				}

@@ -18,8 +18,6 @@ package driver
 
 import (
 	"time"
-
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 )
 
 // constants of keys in PublishContext.
@@ -192,12 +190,6 @@ const (
 	FSTypeXfs = "xfs"
 	// FSTypeNtfs represents the ntfs filesystem type.
 	FSTypeNtfs = "ntfs"
-)
-
-// constants for node k8s API use.
-const (
-	// AgentNotReadyNodeTaintKey contains the key of taints to be removed on driver startup.
-	AgentNotReadyNodeTaintKey = util.DriverName + "/agent-not-ready"
 )
 
 type fileSystemConfig struct {

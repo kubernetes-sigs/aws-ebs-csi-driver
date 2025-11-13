@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -35,6 +36,12 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 )
+
+func init() {
+	// Ensure variables are initialized
+	// TODO: Figure out a cleaner way to do this in tests
+	initVariables()
+}
 
 func TestPatchNewNodes(t *testing.T) {
 	testCases := []struct {
@@ -176,7 +183,7 @@ func mockAddPV(newPV *corev1.PersistentVolume, instances []*types.Instance) []*t
 
 	var volumeID string
 
-	if newPV.Spec.CSI != nil && newPV.Spec.CSI.Driver == "ebs.csi.aws.com" {
+	if newPV.Spec.CSI != nil && newPV.Spec.CSI.Driver == util.GetDriverName() {
 		volumeID = newPV.Spec.CSI.VolumeHandle
 	} else if newPV.Spec.AWSElasticBlockStore != nil {
 		volumeID = newPV.Spec.AWSElasticBlockStore.VolumeID
@@ -280,7 +287,7 @@ func TestGetMetadata(t *testing.T) {
 				Spec: corev1.PersistentVolumeSpec{
 					PersistentVolumeSource: corev1.PersistentVolumeSource{
 						CSI: &corev1.CSIPersistentVolumeSource{
-							Driver:       "ebs.csi.aws.com",
+							Driver:       util.GetDriverName(),
 							VolumeHandle: "vol-003",
 						},
 					},

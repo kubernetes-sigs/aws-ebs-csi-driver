@@ -1064,7 +1064,7 @@ func checkAllocatable(ctx context.Context, clientset kubernetes.Interface, nodeN
 	}
 
 	for _, driver := range csiNode.Spec.Drivers {
-		if driver.Name == util.DriverName {
+		if driver.Name == util.GetDriverName() {
 			if driver.Allocatable != nil && driver.Allocatable.Count != nil {
 				klog.V(4).InfoS("CSINode Allocatable value is set", "nodeName", nodeName, "count", *driver.Allocatable.Count)
 				return nil

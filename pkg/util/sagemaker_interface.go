@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloud
+package util
+
+// This interface is primarily used in cloud, but defined in util
+// so it can be imported in the plugin package without causing an import loop
 
 import (
 	"context"

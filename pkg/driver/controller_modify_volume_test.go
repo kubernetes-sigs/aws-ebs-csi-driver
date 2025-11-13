@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +40,16 @@ const (
 	invalidTagSpecification     = "CSIVolumeName=extra-tag-value"
 	invalidParameter            = "invalid_parameter"
 )
+
+func init() {
+	// Ensure variables are initialized
+	// TODO: Figure out a cleaner way to do this in tests
+	initVariables()
+	// Need to set these here because we rely on them in ParseModifyVolumeParameters
+	// TODO: Figure out a cleaner method
+	cloud.AllowAutoIOPSIncreaseOnModifyKey = util.GetDriverName() + "/AllowAutoIOPSIncreaseOnModify"
+	cloud.IOPSPerGBKey = util.GetDriverName() + "/IOPSPerGb"
+}
 
 func TestMergeModifyVolumeRequest(t *testing.T) {
 	testCases := []struct {
@@ -180,8 +191,8 @@ func TestParseModifyVolumeParameters(t *testing.T) {
 						"key2": "ebs-claim",
 						"key3": "test-namespace",
 						"key4": "testPV-Name",
-						"ebs.csi.aws.com/AllowAutoIOPSIncreaseOnModify": "true",
-						"ebs.csi.aws.com/IOPSPerGb":                     "1000",
+						util.GetDriverName() + "/AllowAutoIOPSIncreaseOnModify": "true",
+						util.GetDriverName() + "/IOPSPerGb":                     "1000",
 					},
 					TagsToDelete: []string{
 						"key2",
