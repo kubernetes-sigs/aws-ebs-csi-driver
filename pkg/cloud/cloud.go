@@ -2751,12 +2751,13 @@ func (c *cloud) getVolumeLimits(ctx context.Context, volumeType string, azParams
 			},
 		},
 	}
+	// We only want either the Zone or ZoneID otherwise the DryRun call will fail with InvalidParameterCombination due to having both.
 	if azParams.availabilityZone != "" {
 		dryRunRequestInput.AvailabilityZone = aws.String(azParams.availabilityZone)
-	}
-	if azParams.availabilityZoneId != "" {
+	} else if azParams.availabilityZoneId != "" {
 		dryRunRequestInput.AvailabilityZoneId = aws.String(azParams.availabilityZoneId)
 	}
+
 	if azParams.outpostArn != "" {
 		dryRunRequestInput.OutpostArn = aws.String(azParams.outpostArn)
 	}
@@ -2817,23 +2818,19 @@ func extractMaxIOPSFromError(errorMsg string, volumeType string) (int32, error) 
 	if strings.Contains(errorMsg, "parameter iops is not supported") {
 		return 0, nil
 	}
-	// io1 and gp3 have the same error message but io2 has different one, using by default.
-	if volumeType == VolumeTypeIO2 {
-		if matches := io2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
-			if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
-				result := val * 1000
-				// No real overflow concern here but adding for safety.
-				if result > math.MaxInt32 || result < math.MinInt32 {
-					return 0, fmt.Errorf("maximum IOPS value exceeds maximum value of int32: %d", val)
-				}
-				return int32(result), nil
-			}
+	// io1 and gp3 have the same error message but io2 has different one depending on the availability zone.
+	if matches := nonIo2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
+		if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
+			return int32(val), nil
 		}
-	} else {
-		if matches := nonIo2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
-			if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
-				return int32(val), nil
+	} else if matches := io2ErrRegex.FindStringSubmatch(errorMsg); len(matches) > 1 {
+		if val, err := strconv.ParseInt(matches[1], 10, 32); err == nil {
+			result := val * 1000
+			// No real overflow concern here but adding for safety.
+			if result > math.MaxInt32 || result < math.MinInt32 {
+				return 0, fmt.Errorf("maximum IOPS value exceeds maximum value of int32: %d", val)
 			}
+			return int32(result), nil
 		}
 	}
 
