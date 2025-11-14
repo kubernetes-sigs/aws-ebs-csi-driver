@@ -72,8 +72,10 @@ linters:
       - legacy
     rules:
       # gosec recommends ignoring test files
+      # also, allow init() in unit tests
       - linters:
           - gosec
+          - gochecknoinits
         path: (.+)_test.go
       - linters:
           - gosec

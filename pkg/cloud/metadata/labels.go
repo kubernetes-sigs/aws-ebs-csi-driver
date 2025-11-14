@@ -37,12 +37,6 @@ import (
 )
 
 const (
-	// VolumesLabel is the label name for the number of volumes on a node.
-	VolumesLabel = util.DriverName + "/non-csi-ebs-volumes-count"
-
-	// ENIsLabel is the label name for the number of ENIs on a node.
-	ENIsLabel = util.DriverName + "/enis-count"
-
 	// ControllerMetadataLabelerInterval is the interval metadata-labeler mode refreshes node labels with volume and ENI count.
 	ControllerMetadataLabelerInterval = 60 * time.Minute
 
@@ -53,15 +47,32 @@ const (
 	numWorkersPatchLabels = 10
 )
 
+// Initialized in ContinuousUpdateLabelsLeaderElection (depends on driver name).
+var (
+	// VolumesLabel is the label name for the number of volumes on a node.
+	VolumesLabel string
+
+	// ENIsLabel is the label name for the number of ENIs on a node.
+	ENIsLabel string
+)
+
 type enisVolumes struct {
 	ENIs    int
 	Volumes int
 }
 
+// initVariables initializes variables that depend on driver name.
+// Separated into a spearate function from ContinuousUpdateLabelsLeaderElection so it can be called in tests.
+func initVariables() {
+	VolumesLabel = util.GetDriverName() + "/non-csi-ebs-volumes-count"
+	ENIsLabel = util.GetDriverName() + "/enis-count"
+}
+
 // ContinuousUpdateLabelsLeaderElection uses leader election so that only one controller pod calls continuousUpdateLabels().
 func ContinuousUpdateLabelsLeaderElection(clientset kubernetes.Interface, cloud cloud.Cloud, updateTime time.Duration) error {
+	initVariables()
 	var (
-		lockName = "metadata-labeler-" + util.DriverName
+		lockName = "metadata-labeler-" + util.GetDriverName()
 	)
 	le := leaderelection.NewLeaderElection(clientset, lockName, func(ctx context.Context) {
 		err := continuousUpdateLabels(ctx, clientset, cloud, updateTime)
@@ -125,7 +136,7 @@ func volumeIDIndexFunc(obj interface{}) ([]string, error) {
 	var volumeIDs []string
 	var volumeID string
 
-	if pv.Spec.CSI != nil && pv.Spec.CSI.Driver == util.DriverName {
+	if pv.Spec.CSI != nil && pv.Spec.CSI.Driver == util.GetDriverName() {
 		volumeID = pv.Spec.CSI.VolumeHandle
 	} else if pv.Spec.AWSElasticBlockStore != nil {
 		volumeID = pv.Spec.AWSElasticBlockStore.VolumeID

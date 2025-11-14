@@ -1,0 +1,104 @@
+/*
+Copyright 2025 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// This file is a sample plugin. Rename it to plugin.go and customize to impelement a plugin.
+// See docs/plugins/ and the .go files in this package for more information.
+
+package plugin
+
+import(
+	"context"
+	"os"
+
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/spf13/pflag"
+	"k8s.io/klog/v2"
+)
+
+//nolint:gochecknoinits
+func init() {
+	// ONLY call loadplugin in init()
+	// Do not perform any other initialization, as the plugin may not be needed
+	// (e.g. when the --version CLI flag is used). If the plugin is needed, Init()
+	// will be called to perform initialization.
+	loadPlugin(&samplePlugin{})
+}
+
+type samplePlugin struct {
+	// Embedding ebsCsiPluginBase prevents future build failures if new functions
+	// are added to the EbsCsiPlugin interface as it contains stub implementations.
+	ebsCsiPluginBase
+
+	// This plugin customizes the EC2 API via ec2ClientBase.
+	// This struct is from a set of helper structs that allow customizing
+	// a subset of the APIs, and stubbing out the rest.
+	ec2Client sampleEC2Client
+
+	// Used for CreateVolume sample implementation.
+	controllerName string
+	// Used for CLI flag sample implementation.
+	cliValue string
+}
+
+type sampleEC2Client struct {
+	ec2ClientBase
+
+	// Used for CreateVolume sample implementation.
+	controllerName string
+}
+
+// Perform plugin initialization, 
+func (p *samplePlugin) InitFlags(fs *pflag.FlagSet) {
+	klog.InfoS("Plugin: Initializing flags")
+	fs.StringVar(&p.cliValue, "plugin-example", "exmaple-value", "Plugin sample flag (will be printed in Init).")
+}
+
+// Perform plugin initialization, 
+func (p *samplePlugin) Init(region string, _ *prometheus.Registry) error {
+	klog.InfoS("Plugin: Initializing", "region", region, "cliFlag", p.cliValue)
+	var err error
+	p.controllerName, err = os.Hostname()
+	return err
+}
+
+func (p *samplePlugin) GetDriverName() string {
+	klog.InfoS("Plugin: Returning driver name")
+	return "ebs-with-plugin.csi.aws.com"
+}
+
+func (p *samplePlugin) GetEC2Client(cfg aws.Config, optFns ...func(*ec2.Options)) util.EC2API {
+	klog.InfoS("Plugin: GetEC2Client called")
+	client := &sampleEC2Client{
+		controllerName: p.controllerName,
+	}
+	client.init(cfg, optFns...)
+	return client
+}
+
+// Add a tag to all created volumes with which EBS CSI controller pod created the volume.
+func (b *sampleEC2Client) CreateVolume(ctx context.Context, params *ec2.CreateVolumeInput, optFns ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+	params.TagSpecifications[0].Tags = append(params.TagSpecifications[0].Tags, types.Tag{
+		Key: aws.String("ebs-csi-sample-plugin"),
+		Value: aws.String(b.controllerName),
+	})
+	klog.InfoS("Plugin: Added tag to CreateVolume")
+	return b.client.CreateVolume(ctx, params, optFns...)
+}
+

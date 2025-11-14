@@ -57,6 +57,12 @@ const (
 	testInitializationSleep = 200 * time.Microsecond
 )
 
+func init() {
+	// Ensure variables are initialized
+	// TODO: Figure out a cleaner way to do this in tests
+	initVariables()
+}
+
 func generateVolumes(volIDCount, volTagCount int) []types.Volume {
 	volumes := make([]types.Volume, 0, volIDCount+volTagCount)
 
@@ -5017,7 +5023,7 @@ func testVolumeWaitParameters() volumeWaitParameters {
 	}
 }
 
-func newCloud(mockEC2 EC2API) Cloud {
+func newCloud(mockEC2 util.EC2API) Cloud {
 	c := &cloud{
 		region:                "test-region",
 		accountID:             "123456789012",

@@ -38,7 +38,7 @@ type ebsCSIDriver struct {
 // InitEbsCSIDriver returns ebsCSIDriver that implements DynamicPVTestDriver interface.
 func InitEbsCSIDriver() PVTestDriver {
 	return &ebsCSIDriver{
-		driverName: util.DriverName,
+		driverName: util.GetDriverName(),
 	}
 }
 

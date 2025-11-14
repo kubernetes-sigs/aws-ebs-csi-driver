@@ -18,6 +18,6 @@ package metrics
 
 import "k8s.io/klog/v2"
 
-func registerNVMECollector(_ *metricRecorder, _, _ string) {
+func registerNVMECollector(_ *MetricRecorder, _, _ string) {
 	klog.InfoS("NVMe metric collection is not supported on this platform")
 }

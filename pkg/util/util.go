@@ -27,16 +27,15 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
+	"testing"
 	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"k8s.io/klog/v2"
 )
 
 const (
-	// DriverName is the domain for all EBS CSI Driver related components.
-	// In util package to avoid cyclic dependency conflicts.
-	DriverName = "ebs.csi.aws.com"
-
 	GiB              = int64(1024 * 1024 * 1024)
 	DefaultBlockSize = 4096
 
@@ -49,7 +48,36 @@ var (
 	isAlphanumericRegex = regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString
 	// MAC Address Regex Source: https://stackoverflow.com/a/4260512
 	isMACAddressRegex = regexp.MustCompile(`([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})`)
+
+	// DriverName is the domain for all EBS CSI Driver related components.
+	// Variable instead of constant to allow initialization from plugin.
+	driverName = ""
 )
+
+func SetDriverName(name string) {
+	setName := sync.OnceValue(func() string {
+		driverName = name
+		return driverName
+	})()
+	if setName != name {
+		klog.ErrorS(nil, "Attempted to change driver name after it was already set")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+}
+
+func GetDriverName() string {
+	if driverName == "" {
+		// Return a hardcoded value in unit tests, as main.go won't be called to setup the name
+		if testing.Testing() {
+			return "test.ebs.csi.aws.com"
+		}
+		// SetDriverName hasn't been initialized in main.go yet - this will result in a very
+		// difficult to debug bug, so immediately exit if code is added that calls this too early
+		klog.ErrorS(nil, "Attempted to load driver name too early")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+	return driverName
+}
 
 // RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB.
 func RoundUpBytes(volumeSizeBytes int64) int64 {

@@ -33,7 +33,7 @@ func TestAsyncCollector(t *testing.T) {
 	t.Parallel()
 
 	// Setup env
-	recorder := InitializeRecorder(false)
+	recorder, _ := InitializeRecorder(false)
 	recorder.InitializeAsyncEC2Metrics(0)
 	reg := recorder.registry
 	a := assert.New(t)

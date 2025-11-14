@@ -29,6 +29,9 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/plugin"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/prometheus/client_golang/prometheus"
 	flag "github.com/spf13/pflag"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/component-base/featuregate"
@@ -79,6 +82,11 @@ func main() {
 	options.Mode = driver.Mode(cmd)
 	options.AddFlags(fs)
 
+	plugin := plugin.GetPlugin()
+	if plugin != nil {
+		plugin.InitFlags(fs)
+	}
+
 	if err := fs.Parse(args); err != nil {
 		klog.ErrorS(err, "Failed to parse options")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
@@ -106,6 +114,31 @@ func main() {
 		//nolint:forbidigo // Print version info without klog/timestamp
 		fmt.Println(versionInfo)
 		os.Exit(0)
+	}
+
+	// Start tracing as soon as possible
+	if options.EnableOtelTracing {
+		exporter, exporterErr := driver.InitOtelTracing()
+		if exporterErr != nil {
+			klog.ErrorS(err, "failed to initialize otel tracing")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+		}
+		// Exporter will flush traces on shutdown
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if shutdownErr := exporter.Shutdown(ctx); shutdownErr != nil {
+				klog.ErrorS(exporterErr, "could not shutdown otel exporter")
+			}
+		}()
+	}
+
+	var r *metrics.MetricRecorder
+	var registry *prometheus.Registry
+	// Create registry object so it's ready to pass to the plugin
+	if options.HTTPEndpoint != "" {
+		r, registry = metrics.InitializeRecorder(options.DeprecatedMetrics)
+		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
 	}
 
 	var cloud cloudPkg.Cloud
@@ -141,6 +174,21 @@ func main() {
 		} else if region == "" {
 			region = md.GetRegion()
 		}
+
+		driverName := "ebs.csi.aws.com"
+		if plugin != nil {
+			err = plugin.Init(region, registry)
+			if err != nil {
+				klog.ErrorS(err, "Failed to initialize plugin")
+				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+			}
+
+			if pluginDriverName := plugin.GetDriverName(); pluginDriverName != "" {
+				driverName = pluginDriverName
+			}
+		}
+		// Set driver name here as it needs to be available in NewCloud
+		util.SetDriverName(driverName)
 
 		cloud = cloudPkg.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 	}
@@ -179,27 +227,7 @@ func main() {
 		klog.SetOutput(os.Stderr)
 	}
 
-	// Start tracing as soon as possible
-	if options.EnableOtelTracing {
-		exporter, exporterErr := driver.InitOtelTracing()
-		if exporterErr != nil {
-			klog.ErrorS(err, "failed to initialize otel tracing")
-			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
-		}
-		// Exporter will flush traces on shutdown
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			if shutdownErr := exporter.Shutdown(ctx); shutdownErr != nil {
-				klog.ErrorS(exporterErr, "could not shutdown otel exporter")
-			}
-		}()
-	}
-
-	if options.HTTPEndpoint != "" {
-		r := metrics.InitializeRecorder(options.DeprecatedMetrics)
-		r.InitializeMetricsHandler(options.HTTPEndpoint, "/metrics", options.MetricsCertFile, options.MetricsKeyFile)
-
+	if r != nil {
 		if options.Mode == driver.ControllerMode || options.Mode == driver.AllMode {
 			// TODO inject metrics in cloud for clean unit tests
 			r.InitializeAPIMetrics(options.DeprecatedMetrics)

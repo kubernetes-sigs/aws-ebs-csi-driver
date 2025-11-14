@@ -42,6 +42,7 @@ import (
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/metrics"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/plugin"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -121,12 +122,16 @@ const (
 	SnapshotNameTagKey = "CSIVolumeSnapshotName"
 	// KubernetesTagKeyPrefix is the prefix of the key value that is reserved for Kubernetes.
 	KubernetesTagKeyPrefix = "kubernetes.io"
+)
+
+// Tags that depend on driver name (initialized in NewCloud).
+var (
 	// AwsEbsDriverTagKey is the tag to identify if a volume/snapshot is managed by ebs csi driver.
-	AwsEbsDriverTagKey = util.DriverName + "/cluster"
+	AwsEbsDriverTagKey string
 	// AllowAutoIOPSIncreaseOnModifyKey is the tag key for allowing IOPS increase on resizing if IOPSPerGB is set to ensure desired ratio is maintained.
-	AllowAutoIOPSIncreaseOnModifyKey = util.DriverName + "/AllowAutoIOPSIncreaseOnModify"
+	AllowAutoIOPSIncreaseOnModifyKey string
 	// IOPSPerGBKey represents the tag key for IOPS per GB.
-	IOPSPerGBKey = util.DriverName + "/IOPSPerGb"
+	IOPSPerGBKey string
 )
 
 // Batcher.
@@ -374,8 +379,8 @@ type batcherManager struct {
 type cloud struct {
 	awsConfig             aws.Config
 	region                string
-	ec2                   EC2API
-	sm                    SageMakerAPI
+	ec2                   util.EC2API
+	sm                    util.SageMakerAPI
 	dm                    dm.DeviceManager
 	bm                    *batcherManager
 	rm                    *retryManager
@@ -390,6 +395,14 @@ type cloud struct {
 }
 
 var _ Cloud = &cloud{}
+
+// initVariables initializes variables that depend on driver name.
+// Separated into a separate function from NewCloud so it can be called in tests.
+func initVariables() {
+	AwsEbsDriverTagKey = util.GetDriverName() + "/cluster"
+	AllowAutoIOPSIncreaseOnModifyKey = util.GetDriverName() + "/AllowAutoIOPSIncreaseOnModify"
+	IOPSPerGBKey = util.GetDriverName() + "/IOPSPerGb"
+}
 
 // NewCloud returns a new instance of AWS cloud
 // It panics if session is invalid.
@@ -414,7 +427,8 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		}
 	}
 
-	svc := ec2.NewFromConfig(cfg, func(o *ec2.Options) {
+	plugin := plugin.GetPlugin()
+	ec2Options := func(o *ec2.Options) {
 		o.APIOptions = append(o.APIOptions,
 			RecordRequestsMiddleware(deprecatedMetrics),
 			LogServerErrorsMiddleware(), // This middlware should always be last so it sees an unmangled error
@@ -426,10 +440,8 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		}
 
 		o.RetryMaxAttempts = retryMaxAttempt
-	})
-
-	// Create SageMaker client
-	smClient := sagemaker.NewFromConfig(cfg, func(o *sagemaker.Options) {
+	}
+	smOptions := func(o *sagemaker.Options) {
 		o.RetryMaxAttempts = retryMaxAttempt
 
 		// Allow custom SageMaker endpoint for testing
@@ -437,19 +449,34 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		if endpoint != "" {
 			o.BaseEndpoint = &endpoint
 		}
-	})
+	}
+
+	var ec2Client util.EC2API
+	var smClient util.SageMakerAPI
+	if plugin != nil {
+		ec2Client = plugin.GetEC2Client(cfg, ec2Options)
+		smClient = plugin.GetSageMakerClient(cfg, smOptions)
+	}
+
+	// Default clients if plugin is not in use or does not implement client override.
+	if ec2Client == nil {
+		ec2Client = ec2.NewFromConfig(cfg, ec2Options)
+	}
+	if smClient == nil {
+		smClient = sagemaker.NewFromConfig(cfg, smOptions)
+	}
 
 	var bm *batcherManager
 	if batchingEnabled {
 		klog.V(4).InfoS("NewCloud: batching enabled")
-		bm = newBatcherManager(svc)
+		bm = newBatcherManager(ec2Client)
 	}
 
 	c := &cloud{
 		awsConfig:             cfg,
 		region:                region,
 		dm:                    dm.NewDeviceManager(),
-		ec2:                   svc,
+		ec2:                   ec2Client,
 		sm:                    smClient,
 		bm:                    bm,
 		rm:                    newRetryManager(),
@@ -468,13 +495,14 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		}
 	}()
 
+	initVariables()
 	return c
 }
 
 // newBatcherManager initializes a new instance of batcherManager.
 // Each batcher's `entries` set to maximum results returned by relevant EC2 API call without pagination.
 // Each batcher's `delay` minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
-func newBatcherManager(svc EC2API) *batcherManager {
+func newBatcherManager(svc util.EC2API) *batcherManager {
 	return &batcherManager{
 		volumeIDBatcher: batcher.New(500, batchMaxDelay, func(ids []string) (map[string]*types.Volume, error) {
 			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
@@ -504,7 +532,7 @@ func newBatcherManager(svc EC2API) *batcherManager {
 }
 
 // execBatchDescribeVolumes executes a batched DescribeVolumes API call depending on the type of batcher.
-func execBatchDescribeVolumes(svc EC2API, input []string, batcher volumeBatcherType) (map[string]*types.Volume, error) {
+func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBatcherType) (map[string]*types.Volume, error) {
 	var request *ec2.DescribeVolumesInput
 
 	switch batcher {
@@ -847,7 +875,7 @@ func (c *cloud) createVolumeHelper(ctx context.Context, diskOptions *DiskOptions
 }
 
 // execBatchDescribeVolumesModifications executes a batched DescribeVolumesModifications API call.
-func execBatchDescribeVolumesModifications(svc EC2API, input []string) (map[string]*types.VolumeModification, error) {
+func execBatchDescribeVolumesModifications(svc util.EC2API, input []string) (map[string]*types.VolumeModification, error) {
 	klog.V(7).InfoS("execBatchDescribeVolumeModifications", "volumeIds", input)
 	request := &ec2.DescribeVolumesModificationsInput{
 		VolumeIds: input,
@@ -1063,7 +1091,7 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 }
 
 // execBatchDescribeInstances executes a batched DescribeInstances API call.
-func execBatchDescribeInstances(svc EC2API, input []string) (map[string]*types.Instance, error) {
+func execBatchDescribeInstances(svc util.EC2API, input []string) (map[string]*types.Instance, error) {
 	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: input,
@@ -1423,7 +1451,7 @@ func isVolumeStatusInitializing(vsi types.VolumeStatusItem) bool {
 	return false
 }
 
-func execBatchDescribeVolumeStatus(svc EC2API, input []string) (map[string]*types.VolumeStatusItem, error) {
+func execBatchDescribeVolumeStatus(svc util.EC2API, input []string) (map[string]*types.VolumeStatusItem, error) {
 	klog.V(7).InfoS("execBatchDescribeVolumeStatus", "volumeIds", input)
 	request := &ec2.DescribeVolumeStatusInput{
 		VolumeIds: input,
@@ -1689,7 +1717,7 @@ func getInstanceIDFromAssociatedResource(arn string) (string, error) {
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
-func execBatchDescribeSnapshots(svc EC2API, input []string, batcher snapshotBatcherType) (map[string]*types.Snapshot, error) {
+func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapshotBatcherType) (map[string]*types.Snapshot, error) {
 	var request *ec2.DescribeSnapshotsInput
 
 	switch batcher {
@@ -1994,7 +2022,7 @@ func (c *cloud) DryRun(ctx context.Context) error {
 	return nil
 }
 
-func describeVolumes(ctx context.Context, svc EC2API, request *ec2.DescribeVolumesInput) ([]types.Volume, error) {
+func describeVolumes(ctx context.Context, svc util.EC2API, request *ec2.DescribeVolumesInput) ([]types.Volume, error) {
 	var volumes []types.Volume
 	var nextToken *string
 	for {
@@ -2029,7 +2057,7 @@ func (c *cloud) getVolume(ctx context.Context, request *ec2.DescribeVolumesInput
 	}
 }
 
-func describeInstances(ctx context.Context, svc EC2API, request *ec2.DescribeInstancesInput) ([]types.Instance, error) {
+func describeInstances(ctx context.Context, svc util.EC2API, request *ec2.DescribeInstancesInput) ([]types.Instance, error) {
 	instances := []types.Instance{}
 	var nextToken *string
 	for {
@@ -2133,7 +2161,7 @@ func (c *cloud) getInstancesPatchingBatch(ctx context.Context, nodeIDs []string)
 	return instances, nil
 }
 
-func describeSnapshots(ctx context.Context, svc EC2API, request *ec2.DescribeSnapshotsInput) ([]types.Snapshot, error) {
+func describeSnapshots(ctx context.Context, svc util.EC2API, request *ec2.DescribeSnapshotsInput) ([]types.Snapshot, error) {
 	var snapshots []types.Snapshot
 	var nextToken *string
 	for {
@@ -2499,7 +2527,7 @@ func (c *cloud) waitForVolumeModification(ctx context.Context, volumeID string) 
 	return nil
 }
 
-func describeVolumesModifications(ctx context.Context, svc EC2API, request *ec2.DescribeVolumesModificationsInput) ([]types.VolumeModification, error) {
+func describeVolumesModifications(ctx context.Context, svc util.EC2API, request *ec2.DescribeVolumesModificationsInput) ([]types.VolumeModification, error) {
 	volumeModifications := []types.VolumeModification{}
 	var nextToken *string
 	for {

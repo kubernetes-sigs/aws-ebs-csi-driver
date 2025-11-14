@@ -24,13 +24,13 @@ import (
 func TestMetricRecorder(t *testing.T) {
 	tests := []struct {
 		name     string
-		exec     func(m *metricRecorder)
+		exec     func(m *MetricRecorder)
 		expected string
 		recorder bool
 	}{
 		{
 			name: "TestMetricRecorder: IncreaseCounterMetric",
-			exec: func(m *metricRecorder) {
+			exec: func(m *MetricRecorder) {
 				m.IncreaseCount("test_total", "help text", map[string]string{"key": "value"})
 			},
 			expected: `
@@ -42,7 +42,7 @@ test_total{key="value"} 1
 		},
 		{
 			name: "TestMetricRecorder: ObserveHistogramMetric",
-			exec: func(m *metricRecorder) {
+			exec: func(m *MetricRecorder) {
 				m.ObserveHistogram("test", "help text", 1.5, map[string]string{"key": "value"}, []float64{1, 2, 3})
 			},
 			expected: `
@@ -59,7 +59,7 @@ test_count{key="value"} 1
 		},
 		{
 			name: "TestMetricRecorder: Re-register metric",
-			exec: func(m *metricRecorder) {
+			exec: func(m *MetricRecorder) {
 				m.IncreaseCount("test_re_register_total", "help text", map[string]string{"key": "value1"})
 				m.registerCounterVec("test_re_register_total", "help text", []string{"key"})
 				m.IncreaseCount("test_re_register_total", "help text", map[string]string{"key": "value1"})

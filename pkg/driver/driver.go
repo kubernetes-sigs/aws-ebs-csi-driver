@@ -49,18 +49,23 @@ const (
 )
 
 const (
-	AwsPartitionKey          = "topology." + util.DriverName + "/partition"
-	AwsAccountIDKey          = "topology." + util.DriverName + "/account-id"
-	AwsRegionKey             = "topology." + util.DriverName + "/region"
-	AwsOutpostIDKey          = "topology." + util.DriverName + "/outpost-id"
 	WellKnownZoneTopologyKey = "topology.kubernetes.io/zone"
-	// Deprecated: Use the WellKnownZoneTopologyKey instead.
-	ZoneTopologyKey = "topology." + util.DriverName + "/zone"
 	// ZoneIDTopologyKey name is purposefully consistent with the CCM's ZoneID topology key.
 	// This key is only used for provisioning by az-id and will not be used for node topology
 	// to prevent any backwards compatibility issues.
 	ZoneIDTopologyKey = "topology.k8s.aws/zone-id"
 	OSTopologyKey     = "kubernetes.io/os"
+)
+
+// Initialized in NewDriver (depend on driver name).
+var (
+	AgentNotReadyNodeTaintKey string
+	AwsPartitionKey           string
+	AwsAccountIDKey           string
+	AwsRegionKey              string
+	AwsOutpostIDKey           string
+	// Deprecated: Use the WellKnownZoneTopologyKey instead.
+	ZoneTopologyKey string
 )
 
 type Driver struct {
@@ -71,8 +76,21 @@ type Driver struct {
 	csi.UnimplementedIdentityServer
 }
 
+// initVariables initializes variables that depend on driver name.
+// Separated into a spearate function from NewDriver so it can be called in tests.
+func initVariables() {
+	AwsPartitionKey = "topology." + util.GetDriverName() + "/partition"
+	AwsAccountIDKey = "topology." + util.GetDriverName() + "/account-id"
+	AwsRegionKey = "topology." + util.GetDriverName() + "/region"
+	AwsOutpostIDKey = "topology." + util.GetDriverName() + "/outpost-id"
+	// Deprecated: Use the WellKnownZoneTopologyKey instead.
+	ZoneTopologyKey = "topology." + util.GetDriverName() + "/zone"
+	AgentNotReadyNodeTaintKey = util.GetDriverName() + "/agent-not-ready"
+}
+
 func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
-	klog.InfoS("Driver Information", "Driver", util.DriverName, "Version", driverVersion)
+	klog.InfoS("Driver Information", "Driver", util.GetDriverName(), "Version", driverVersion)
+	initVariables()
 
 	if err := ValidateDriverOptions(o); err != nil {
 		return nil, fmt.Errorf("invalid driver options: %w", err)

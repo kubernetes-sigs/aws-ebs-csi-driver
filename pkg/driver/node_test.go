@@ -2678,7 +2678,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
-								Name: util.DriverName,
+								Name: util.GetDriverName(),
 								Allocatable: &v1.VolumeNodeResources{
 									Count: &count,
 								},
@@ -2734,7 +2734,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
-								Name: util.DriverName,
+								Name: util.GetDriverName(),
 								Allocatable: &v1.VolumeNodeResources{
 									Count: &count,
 								},
@@ -2836,7 +2836,7 @@ func TestStartNotReadyTaintWatcher(t *testing.T) {
 				Spec: v1.CSINodeSpec{
 					Drivers: []v1.CSINodeDriver{
 						{
-							Name: util.DriverName,
+							Name: util.GetDriverName(),
 							Allocatable: &v1.VolumeNodeResources{
 								Count: &count,
 							},

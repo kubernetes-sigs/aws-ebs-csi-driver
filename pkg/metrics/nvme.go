@@ -173,7 +173,7 @@ func NewNVMECollector(path, instanceID string) *NVMECollector {
 	}
 }
 
-func registerNVMECollector(r *metricRecorder, csiMountPointPath, instanceID string) {
+func registerNVMECollector(r *MetricRecorder, csiMountPointPath, instanceID string) {
 	collector := NewNVMECollector(csiMountPointPath, instanceID)
 	r.registry.MustRegister(collector)
 }
