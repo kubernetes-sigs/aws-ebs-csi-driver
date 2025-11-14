@@ -20,6 +20,8 @@
 # Prevent race conditions by frontloading tool download
 # TODO: Find a way to lock pip installs to prevent pip concurrency bugs from hurting us
 make bin/aws
+aws ecr delete-repository --repository-name "aws-ebs-csi-driver" --region "us-west-2" --force
+exit 1
 
 case ${1} in
 test-e2e-single-az)
