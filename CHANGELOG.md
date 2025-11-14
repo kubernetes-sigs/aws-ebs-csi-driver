@@ -29,6 +29,8 @@ _Nothing has changed._
 
 - Improve handling of volume types that do not have hardcoded IOPS limits and/or do not support IOPS ([#2732](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2732), [@ConnorJC3](https://github.com/ConnorJC3))
 
+- Improve error handling of taint removal; Fix last chance taint removal not functioning ([#2699](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2699), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ### Other (Cleanup or Flake)
 
 - Added logging of volume attributes at controller.logLevel 7+ after successful volume creation for improved observability. ([#2737](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2737), [@torredil](https://github.com/torredil))
