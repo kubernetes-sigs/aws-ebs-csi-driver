@@ -180,9 +180,9 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 
 	var instanceType string
 	if val, ok := node.GetLabels()[corev1.LabelInstanceTypeStable]; ok {
-		if strings.HasPrefix(val, "ml.") {
+		if after, ok0 := strings.CutPrefix(val, "ml."); ok0 {
 			// sagemaker instance type has 'ml.' prefix, remove 'ml.' prefix
-			instanceType = strings.TrimPrefix(val, "ml.")
+			instanceType = after
 		} else {
 			instanceType = val
 		}

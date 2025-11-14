@@ -104,7 +104,7 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 	informer := factory.Storage().V1().VolumeAttachments().Informer()
 
 	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			klog.V(5).InfoS("DeleteFunc: VolumeAttachment deleted", "node", nodeName)
 			va, ok := obj.(*storagev1.VolumeAttachment)
 			if !ok {
@@ -116,7 +116,7 @@ func waitForVolumeAttachments(clientset kubernetes.Interface, nodeName string) e
 				}
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			klog.V(5).InfoS("UpdateFunc: VolumeAttachment updated", "node", nodeName)
 			va, ok := newObj.(*storagev1.VolumeAttachment)
 			if !ok {

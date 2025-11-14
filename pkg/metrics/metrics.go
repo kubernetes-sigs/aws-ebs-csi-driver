@@ -56,7 +56,7 @@ var (
 
 type MetricRecorder struct {
 	registry        *prometheus.Registry
-	metrics         map[string]interface{}
+	metrics         map[string]any
 	asyncEC2Metrics *AsyncEC2Collector
 }
 
@@ -71,7 +71,7 @@ func InitializeRecorder(deprecatedMetrics bool) (*MetricRecorder, *prometheus.Re
 	once.Do(func() {
 		r = &MetricRecorder{
 			registry: prometheus.NewRegistry(),
-			metrics:  make(map[string]interface{}),
+			metrics:  make(map[string]any),
 		}
 	})
 	return r, r.registry

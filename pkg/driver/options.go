@@ -54,6 +54,7 @@ type Options struct {
 	ExtraTags map[string]string
 	// ExtraVolumeTags is a map of tags that will be attached to each dynamically provisioned
 	// volume.
+	//
 	// Deprecated: Use ExtraTags instead.
 	ExtraVolumeTags map[string]string
 	// ID of the kubernetes cluster.

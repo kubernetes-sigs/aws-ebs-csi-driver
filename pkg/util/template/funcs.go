@@ -22,19 +22,19 @@ import (
 )
 
 // Disable functions.
-func html(...interface{}) (string, error) {
+func html(...any) (string, error) {
 	return "", errors.New("cannot call 'html' function")
 }
 
-func js(...interface{}) (string, error) {
+func js(...any) (string, error) {
 	return "", errors.New("cannot call 'js' function")
 }
 
-func call(...interface{}) (string, error) {
+func call(...any) (string, error) {
 	return "", errors.New("cannot call 'call' function")
 }
 
-func urlquery(...interface{}) (string, error) {
+func urlquery(...any) (string, error) {
 	return "", errors.New("cannot call 'urlquery' function")
 }
 

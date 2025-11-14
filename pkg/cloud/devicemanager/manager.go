@@ -19,6 +19,7 @@ package devicemanager
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -203,9 +204,7 @@ func (d *deviceManager) getDeviceNamesInUse(instance *types.Instance) map[string
 		inUse[name] = aws.ToString(blockDevice.Ebs.VolumeId)
 	}
 
-	for name, volumeID := range d.inFlight.GetNames(nodeID) {
-		inUse[name] = volumeID
-	}
+	maps.Copy(inUse, d.inFlight.GetNames(nodeID))
 
 	return inUse
 }
