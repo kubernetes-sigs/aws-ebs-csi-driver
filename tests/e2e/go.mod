@@ -3,7 +3,7 @@ module github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e
 require (
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.20
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.269.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.270.0
 	github.com/google/uuid v1.6.0
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/kubernetes-sigs/aws-ebs-csi-driver v1.52.1
