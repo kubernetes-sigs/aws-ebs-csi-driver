@@ -50,7 +50,7 @@ import (
 // waits for a defined duration (maxDelay) before triggering a batch execution. The actual task execution
 // logic is provided by the execFunc, which processes tasks and returns their corresponding results. Tasks are
 // queued via the taskChan and stored in pendingTasks until batch execution.
-type Batcher[InputType comparable, ResultType interface{}] struct {
+type Batcher[InputType comparable, ResultType any] struct {
 	// execFunc is the function responsible for executing a batch of tasks.
 	// It returns a map associating each task with its result.
 	execFunc func(inputs []InputType) (map[InputType]ResultType, error)
@@ -72,14 +72,14 @@ type Batcher[InputType comparable, ResultType interface{}] struct {
 
 // BatchResult encapsulates the response of a batched task.
 // A task will either have a result or an error, but not both.
-type BatchResult[ResultType interface{}] struct {
+type BatchResult[ResultType any] struct {
 	Result ResultType
 	Err    error
 }
 
 // taskEntry represents a single task waiting to be batched and its associated result channel.
 // The result channel is used to communicate the task's result back to the caller.
-type taskEntry[InputType comparable, ResultType interface{}] struct {
+type taskEntry[InputType comparable, ResultType any] struct {
 	task       InputType
 	resultChan chan BatchResult[ResultType]
 }
@@ -87,7 +87,7 @@ type taskEntry[InputType comparable, ResultType interface{}] struct {
 // New creates and returns a Batcher configured with the specified maxEntries and maxDelay parameters.
 // Upon instantiation, it immediately launches the internal task manager as a goroutine to oversee batch operations.
 // The provided execFunc is used to execute batch requests.
-func New[InputType comparable, ResultType interface{}](entries int, delay time.Duration, fn func(inputs []InputType) (map[InputType]ResultType, error)) *Batcher[InputType, ResultType] {
+func New[InputType comparable, ResultType any](entries int, delay time.Duration, fn func(inputs []InputType) (map[InputType]ResultType, error)) *Batcher[InputType, ResultType] {
 	klog.V(7).InfoS("New: initializing Batcher", "maxEntries", entries, "maxDelay", delay)
 
 	b := &Batcher[InputType, ResultType]{

@@ -34,7 +34,7 @@ type VolumeSnapshotProps struct {
 	VolumeSnapshotContentName string
 }
 
-func Evaluate(tm []string, props interface{}, warnOnly bool) (map[string]string, error) {
+func Evaluate(tm []string, props any, warnOnly bool) (map[string]string, error) {
 	md := make(map[string]string)
 	for _, s := range tm {
 		st := strings.SplitN(s, "=", 2)
@@ -59,7 +59,7 @@ func Evaluate(tm []string, props interface{}, warnOnly bool) (map[string]string,
 	return md, nil
 }
 
-func execTemplate(value string, props interface{}, t *template.Template) (string, error) {
+func execTemplate(value string, props any, t *template.Template) (string, error) {
 	tmpl, err := t.Parse(value)
 	if err != nil {
 		return "", err

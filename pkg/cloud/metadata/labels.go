@@ -127,7 +127,7 @@ func continuousUpdateLabels(ctx context.Context, k8sClient kubernetes.Interface,
 	return nil
 }
 
-func volumeIDIndexFunc(obj interface{}) ([]string, error) {
+func volumeIDIndexFunc(obj any) ([]string, error) {
 	pv, ok := obj.(*v1.PersistentVolume)
 	if !ok {
 		return []string{}, nil
@@ -172,7 +172,7 @@ func getNonCSIManagedVolumes(pvInformer cache.SharedIndexInformer, volumes []ec2
 // patchNewNodes patches metadata labels for new nodes that join the cluster.
 func patchNewNodes(ctx context.Context, clientset kubernetes.Interface, cloud cloud.Cloud, nodesInformer, pvInformer cache.SharedIndexInformer) error {
 	var handler cache.ResourceEventHandlerFuncs
-	handler.AddFunc = func(obj interface{}) {
+	handler.AddFunc = func(obj any) {
 		if nodeObj, ok := obj.(*v1.Node); ok {
 			klog.V(4).InfoS("New node added to cluster", "node", nodeObj.Name)
 			node := &v1.NodeList{

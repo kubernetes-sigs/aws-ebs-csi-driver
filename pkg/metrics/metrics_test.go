@@ -92,8 +92,8 @@ test_re_register_total{key="value2"} 1
 }
 
 func getMetricNameFromExpected(expected string) string {
-	lines := strings.Split(expected, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(expected, "\n")
+	for line := range lines {
 		if strings.Contains(line, "{") {
 			return strings.Split(line, "{")[0]
 		}

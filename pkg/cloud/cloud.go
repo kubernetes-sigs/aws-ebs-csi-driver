@@ -2111,10 +2111,7 @@ func (c *cloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*
 	var allInstances []*types.Instance
 
 	for i := 0; i < len(nodeIDs); i += maxInstancesDescribed {
-		end := i + maxInstancesDescribed
-		if end > len(nodeIDs) {
-			end = len(nodeIDs)
-		}
+		end := min(i+maxInstancesDescribed, len(nodeIDs))
 
 		batch := nodeIDs[i:end]
 		batchInstances, err := c.getInstancesPatchingBatch(ctx, batch)

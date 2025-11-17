@@ -57,7 +57,7 @@ func (d *nameAllocator) GetNext(existingNames ExistingNames, likelyBadNames *syn
 	}
 
 	finalResortName := ""
-	likelyBadNames.Range(func(name, _ interface{}) bool {
+	likelyBadNames.Range(func(name, _ any) bool {
 		if name, ok := name.(string); ok {
 			if _, existing := existingNames[name]; !existing {
 				finalResortName = name

@@ -231,8 +231,8 @@ type TestRequest struct {
 func TestSanitizeRequest(t *testing.T) {
 	tests := []struct {
 		name     string
-		req      interface{}
-		expected interface{}
+		req      any
+		expected any
 	}{
 		{
 			name: "Request with Secrets",

@@ -192,7 +192,7 @@ func NormalizeWindowsPath(path string) string {
 
 // SanitizeRequest takes a request object and returns a copy of the request with
 // the "Secrets" field cleared.
-func SanitizeRequest(req interface{}) interface{} {
+func SanitizeRequest(req any) any {
 	v := reflect.ValueOf(&req).Elem()
 	e := reflect.New(v.Elem().Type()).Elem()
 

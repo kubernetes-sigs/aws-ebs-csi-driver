@@ -351,8 +351,8 @@ func getCSIManagedDevices(path string) ([]string, error) {
 		return nil, fmt.Errorf("getCSIManagedDevices: error reading mountinfo: %w", err)
 	}
 
-	lines := strings.Split(string(mountinfo), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(string(mountinfo), "\n")
+	for line := range lines {
 		fields := strings.Fields(line)
 
 		// https://man7.org/linux/man-pages/man5/proc.5.html

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strconv"
 	"strings"
@@ -241,9 +242,7 @@ func parseModifyVolumeParameters(params map[string]string) (*modifyVolumeRequest
 	if err := validateExtraTags(addTags, false); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid tag value: %v", err)
 	}
-	for k, v := range noValidationTags {
-		addTags[k] = v
-	}
+	maps.Copy(addTags, noValidationTags)
 	options.modifyTagsOptions.TagsToAdd = addTags
 	return &options, nil
 }

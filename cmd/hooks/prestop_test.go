@@ -180,7 +180,7 @@ func TestPreStopHook(t *testing.T) {
 				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
 				gomock.InOrder(
 					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes(),
-					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal interface{}) (watch.Interface, error) {
+					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
 						deleteSignal <- true
 						return fakeWatcher, nil
 					}).AnyTimes(),
@@ -306,7 +306,7 @@ func TestPreStopHook(t *testing.T) {
 				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
 				gomock.InOrder(
 					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes(),
-					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal interface{}) (watch.Interface, error) {
+					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
 						deleteSignal <- true
 						return fakeWatcher, nil
 					}).AnyTimes(),
