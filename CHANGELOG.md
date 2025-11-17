@@ -1,3 +1,74 @@
+# v1.53.0
+
+## Changes by Kind
+
+### Feature
+
+- Add node-local volume support, enabling a single cluster-wide PV/PVC to mount node-specific EBS volumes with ReadWriteMany access. ([#2726](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2726), [@torredil](https://github.com/torredil))
+- Add support for custom build-time plugins to extend or modify EBS CSI Driver behavior. ([#2786](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2786), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+- github.com/gkampitakis/ciinfo: [v0.3.2](https://github.com/gkampitakis/ciinfo/tree/v0.3.2)
+- github.com/gkampitakis/go-diff: [v1.3.2](https://github.com/gkampitakis/go-diff/tree/v1.3.2)
+- github.com/gkampitakis/go-snaps: [v0.5.15](https://github.com/gkampitakis/go-snaps/tree/v0.5.15)
+- github.com/go-openapi/testify/v2: [v2.0.2](https://github.com/go-openapi/testify/tree/v2.0.2)
+- github.com/goccy/go-yaml: [v1.18.0](https://github.com/goccy/go-yaml/tree/v1.18.0)
+- github.com/joshdk/go-junit: [v1.0.0](https://github.com/joshdk/go-junit/tree/v1.0.0)
+- github.com/maruel/natural: [v1.1.1](https://github.com/maruel/natural/tree/v1.1.1)
+- github.com/mfridman/tparse: [v0.18.0](https://github.com/mfridman/tparse/tree/v0.18.0)
+- github.com/tidwall/gjson: [v1.18.0](https://github.com/tidwall/gjson/tree/v1.18.0)
+- github.com/tidwall/match: [v1.1.1](https://github.com/tidwall/match/tree/v1.1.1)
+- github.com/tidwall/pretty: [v1.2.1](https://github.com/tidwall/pretty/tree/v1.2.1)
+- github.com/tidwall/sjson: [v1.2.5](https://github.com/tidwall/sjson/tree/v1.2.5)
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.31.15 → v1.31.20](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.31.15...config/v1.31.20)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.19 → v1.18.24](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.19...credentials/v1.18.24)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.11 → v1.18.13](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.11...feature/ec2/imds/v1.18.13)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.11 → v1.4.13](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.11...internal/configsources/v1.4.13)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.11 → v2.7.13](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.11...internal/endpoints/v2/v2.7.13)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.258.1 → v1.269.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.258.1...service/ec2/v1.269.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.2 → v1.13.3](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.2...service/internal/accept-encoding/v1.13.3)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.11 → v1.13.13](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.11...service/internal/presigned-url/v1.13.13)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.217.0 → v1.223.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.217.0...service/sagemaker/v1.223.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.29.8 → v1.30.3](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.29.8...service/sso/v1.30.3)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.3 → v1.35.7](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.3...service/ssooidc/v1.35.7)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.38.9 → v1.40.2](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.38.9...service/sts/v1.40.2)
+- github.com/aws/aws-sdk-go-v2: [v1.39.4 → v1.39.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.39.4...v1.39.6)
+- github.com/aws/smithy-go: [v1.23.1 → v1.23.2](https://github.com/aws/smithy-go/compare/v1.23.1...v1.23.2)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.8.0 → v0.9.0](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.8.0...v0.9.0)
+- github.com/go-openapi/jsonpointer: [v0.22.1 → v0.22.2](https://github.com/go-openapi/jsonpointer/compare/v0.22.1...v0.22.2)
+- github.com/go-openapi/jsonreference: [v0.21.2 → v0.21.3](https://github.com/go-openapi/jsonreference/compare/v0.21.2...v0.21.3)
+- github.com/kubernetes-csi/csi-lib-utils: [v0.22.0 → v0.23.0](https://github.com/kubernetes-csi/csi-lib-utils/compare/v0.22.0...v0.23.0)
+- github.com/kubernetes-csi/csi-test/v5: [v5.3.1 → v5.4.0](https://github.com/kubernetes-csi/csi-test/compare/v5.3.1...v5.4.0)
+- github.com/mailru/easyjson: [v0.9.1 → v0.9.0](https://github.com/mailru/easyjson/compare/v0.9.1...v0.9.0)
+- github.com/onsi/ginkgo/v2: [v2.25.3 → v2.27.2](https://github.com/onsi/ginkgo/compare/v2.25.3...v2.27.2)
+- github.com/prometheus/procfs: [v0.19.1 → v0.19.2](https://github.com/prometheus/procfs/compare/v0.19.1...v0.19.2)
+- go.opentelemetry.io/proto/otlp: v1.8.0 → v1.9.0
+- golang.org/x/crypto: v0.43.0 → v0.44.0
+- golang.org/x/mod: v0.28.0 → v0.29.0
+- golang.org/x/net: v0.46.0 → v0.47.0
+- golang.org/x/oauth2: v0.32.0 → v0.33.0
+- golang.org/x/sync: v0.17.0 → v0.18.0
+- golang.org/x/sys: v0.37.0 → v0.38.0
+- golang.org/x/telemetry: aef8a43 → 078029d
+- golang.org/x/term: v0.36.0 → v0.37.0
+- golang.org/x/text: v0.30.0 → v0.31.0
+- golang.org/x/tools: v0.37.0 → v0.38.0
+- google.golang.org/genproto/googleapis/api: 3a174f9 → 95abcf5
+- google.golang.org/genproto/googleapis/rpc: 3a174f9 → 95abcf5
+- k8s.io/api: v0.34.1 → v0.34.2
+- k8s.io/apimachinery: v0.34.1 → v0.34.2
+- k8s.io/client-go: v0.34.1 → v0.34.2
+- k8s.io/component-base: v0.34.1 → v0.34.2
+- k8s.io/mount-utils: v0.34.1 → v0.34.2
+
+### Removed
+- github.com/go-task/slim-sprig: [52ccab3](https://github.com/go-task/slim-sprig/tree/52ccab3)
+- sigs.k8s.io/structured-merge-diff/v4: v4.7.0
+
 # v1.52.1
 
 ## Changes by Kind
