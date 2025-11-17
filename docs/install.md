@@ -93,57 +93,6 @@ Modification of tags of existing volumes can, in some configurations, allow the 
 </pre>
 </details>
 
-<details>
-<summary>Creating a clone of a volume</summary>
-<br>
-The following statements give the EBS CSI Driver access to clone volumes:
-<pre>
-{ 
-  "Effect": "Allow",
-  "Action": [
-    "ec2:CopyVolumes"
-  ],
-  "Resource": "arn:aws:ec2:*:*:volume/vol-*"
-},
-{
-  "Effect": "Allow",
-  "Action": [
-    "ec2:CopyVolumes"
-  ],
-  "Resource": "arn:aws:ec2:*:*:volume/*",
-  "Condition": {
-    "StringLike": {
-      "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
-    }
-  }
-},
-{
-  "Effect": "Allow",
-  "Action": [
-    "ec2:CopyVolumes"
-  ],
-  "Resource": "arn:aws:ec2:*:*:volume/*",
-  "Condition": {
-    "StringLike": {
-      "aws:RequestTag/CSIVolumeName": "*"
-    }
-  }
-},
-{
-  "Effect": "Allow",
-  "Action": [
-    "ec2:CreateTags"
-  ],
-  "Resource": "arn:aws:ec2:*:*:volume/*",
-  "Condition": {
-    "StringEquals": {
-      "ec2:CreateAction": "CopyVolumes"
-    }
-  }
-}
-</pre>
-</details>
-
 There are several options to pass credentials to the EBS CSI Driver, each documented below:
 
 #### (EKS Only) EKS Pod Identity

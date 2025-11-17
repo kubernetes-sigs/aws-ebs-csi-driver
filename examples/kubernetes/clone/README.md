@@ -3,7 +3,6 @@
 ## Prerequisites
 
 1. The [aws-ebs-csi-driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) on at least v1.51.0 installed.
-2. Default managed policy will need to be adjusted see [install.md](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/install.md)  
 
 ## Usage
 
