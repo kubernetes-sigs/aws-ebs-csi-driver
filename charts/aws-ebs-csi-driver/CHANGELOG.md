@@ -1,5 +1,11 @@
 # Helm chart
 
+## 2.53.0
+
+- Add dnsConfig Helm parameter for node pods. ([#2778](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2778), [@torredil](https://github.com/torredil))
+- Check for specific ServiceMonitor CRD availability instead of generic `monitoring.coreos.com/v1` API group when creating service monitor object for metrics. ([#2779](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2779), [@torredil](https://github.com/torredil))
+- Bump driver version to `v1.53.0`.
+
 ## 2.52.1
 
 - Bump driver version to `v1.52.1`.
