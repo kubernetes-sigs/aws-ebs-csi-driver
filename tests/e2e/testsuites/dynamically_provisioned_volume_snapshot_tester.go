@@ -16,6 +16,7 @@ package testsuites
 
 import (
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
@@ -58,6 +59,23 @@ func (t *DynamicallyProvisionedVolumeSnapshotTest) Run(client clientset.Interfac
 
 	snapshot := tvsc.CreateSnapshot(tpvc.persistentVolumeClaim)
 	defer tvsc.DeleteSnapshot(snapshot)
+
+	// If tests try to lock snapshot, we unlock before cleanup
+	if t.Parameters != nil {
+		lockKeys := []string{
+			ebscsidriver.LockMode,
+			ebscsidriver.LockDuration,
+			ebscsidriver.LockExpirationDate,
+			ebscsidriver.LockCoolOffPeriod,
+		}
+		for _, lockKey := range lockKeys {
+			if _, exists := t.Parameters[lockKey]; exists {
+				defer tvsc.unlockSnapshot(snapshot)
+				break
+			}
+		}
+	}
+
 	tvsc.ReadyToUse(snapshot)
 
 	t.RestoredPod.Volumes[0].DataSource = &DataSource{Name: snapshot.Name, Kind: VolumeSnapshotKind}

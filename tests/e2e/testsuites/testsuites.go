@@ -21,6 +21,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -200,6 +203,37 @@ func (t *TestVolumeSnapshotClass) ReadyToUse(snapshot *volumesnapshotv1.VolumeSn
 		return *vs.Status.ReadyToUse, nil
 	})
 	framework.ExpectNoError(err)
+}
+
+func (t *TestVolumeSnapshotClass) unlockSnapshot(vs *volumesnapshotv1.VolumeSnapshot) {
+	By("Unlocking Volume Snapshot " + vs.Name)
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		By(fmt.Sprintf("Failed to load AWS config, skipping unlock: %v", err))
+		return
+	}
+	ec2Client := ec2.NewFromConfig(cfg)
+
+	result, err := ec2Client.DescribeSnapshots(context.Background(), &ec2.DescribeSnapshotsInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
+				Values: []string{"snapshot-" + string(vs.UID)},
+			},
+		},
+	})
+	if err != nil || len(result.Snapshots) == 0 {
+		return // Snapshot not found or error, skip unlock
+	}
+
+	snapshotId := *result.Snapshots[0].SnapshotId
+
+	_, err = ec2Client.UnlockSnapshot(context.Background(), &ec2.UnlockSnapshotInput{
+		SnapshotId: aws.String(snapshotId),
+	})
+	if err != nil {
+		By(fmt.Sprintf("Failed to unlock snapshot %s: %v", snapshotId, err))
+	}
 }
 
 func (t *TestVolumeSnapshotClass) DeleteSnapshot(vs *volumesnapshotv1.VolumeSnapshot) {
