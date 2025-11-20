@@ -289,6 +289,20 @@ func (mr *MockCloudMockRecorder) ListSnapshots(ctx, volumeID, maxResults, nextTo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshots", reflect.TypeOf((*MockCloud)(nil).ListSnapshots), ctx, volumeID, maxResults, nextToken)
 }
 
+// LockSnapshot mocks base method.
+func (m *MockCloud) LockSnapshot(ctx context.Context, lockOptions *SnapshotLockOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockSnapshot", ctx, lockOptions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LockSnapshot indicates an expected call of LockSnapshot.
+func (mr *MockCloudMockRecorder) LockSnapshot(ctx, lockOptions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSnapshot", reflect.TypeOf((*MockCloud)(nil).LockSnapshot), ctx, lockOptions)
+}
+
 // ModifyTags mocks base method.
 func (m *MockCloud) ModifyTags(ctx context.Context, volumeID string, tagOptions ModifyTagsOptions) error {
 	m.ctrl.T.Helper()

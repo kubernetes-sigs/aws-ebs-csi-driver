@@ -375,6 +375,26 @@ func (mr *MockEC2APIMockRecorder) EnableFastSnapshotRestores(ctx, params interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableFastSnapshotRestores", reflect.TypeOf((*MockEC2API)(nil).EnableFastSnapshotRestores), varargs...)
 }
 
+// LockSnapshot mocks base method.
+func (m *MockEC2API) LockSnapshot(ctx context.Context, params *ec2.LockSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.LockSnapshotOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "LockSnapshot", varargs...)
+	ret0, _ := ret[0].(*ec2.LockSnapshotOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LockSnapshot indicates an expected call of LockSnapshot.
+func (mr *MockEC2APIMockRecorder) LockSnapshot(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockSnapshot", reflect.TypeOf((*MockEC2API)(nil).LockSnapshot), varargs...)
+}
+
 // ModifyVolume mocks base method.
 func (m *MockEC2API) ModifyVolume(ctx context.Context, params *ec2.ModifyVolumeInput, optFns ...func(*ec2.Options)) (*ec2.ModifyVolumeOutput, error) {
 	m.ctrl.T.Helper()

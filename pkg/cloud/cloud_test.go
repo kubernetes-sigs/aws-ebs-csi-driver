@@ -5509,3 +5509,64 @@ func TestExecBatchCaching(t *testing.T) {
 		assert.False(t, exists, "snap-0c7e1a5f8b2d4c939 should be removed from cache after successful retry")
 	})
 }
+
+func TestLockSnapshot(t *testing.T) {
+	testCases := []struct {
+		name      string
+		input     *SnapshotLockOptions
+		mockError error
+		expectErr bool
+	}{
+		{
+			name: "success: API call succeeds",
+			input: &SnapshotLockOptions{
+				SnapshotId:   aws.String("snap-test-id"),
+				LockMode:     types.LockModeGovernance,
+				LockDuration: aws.Int32(1),
+			},
+			mockError: nil,
+			expectErr: false,
+		},
+		{
+			name: "fail: AWS API error is propagated",
+			input: &SnapshotLockOptions{
+				SnapshotId: aws.String("snap-test-id"),
+			},
+			mockError: errors.New("InvalidSnapshot.NotFound"),
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := context.Background()
+
+			expectedInput := &ec2.LockSnapshotInput{
+				SnapshotId:     tc.input.SnapshotId,
+				LockMode:       tc.input.LockMode,
+				CoolOffPeriod:  tc.input.CoolOffPeriod,
+				ExpirationDate: tc.input.ExpirationDate,
+				LockDuration:   tc.input.LockDuration,
+			}
+
+			if tc.mockError != nil {
+				mockEC2.EXPECT().LockSnapshot(ctx, expectedInput).Return(nil, tc.mockError)
+			} else {
+				mockEC2.EXPECT().LockSnapshot(ctx, expectedInput).Return(&ec2.LockSnapshotOutput{}, nil)
+			}
+
+			err := c.LockSnapshot(ctx, tc.input)
+
+			if tc.expectErr {
+				require.Error(t, err)
+				require.Equal(t, tc.mockError.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

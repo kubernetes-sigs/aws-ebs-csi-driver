@@ -4217,6 +4217,306 @@ func TestCreateSnapshot(t *testing.T) {
 			},
 		},
 		{
+			name: "success with snapshot lock governance mode",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						LockMode:     "governance",
+						LockDuration: "1",
+					},
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := t.Context()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				expSnapshotLockOptions := &cloud.SnapshotLockOptions{
+					SnapshotId:   &mockSnapshot.SnapshotID,
+					LockMode:     types.LockModeGovernance,
+					LockDuration: aws.Int32(1),
+				}
+
+				expectedSnapshotOpts := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(expectedSnapshotOpts)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().LockSnapshot(gomock.Eq(ctx), gomock.Eq(expSnapshotLockOptions)).Return(nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				resp, err := awsDriver.CreateSnapshot(t.Context(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
+			name: "success with snapshot lock compliance mode",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						LockMode:          "compliance",
+						LockDuration:      "7",
+						LockCoolOffPeriod: "24",
+					},
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := t.Context()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				expSnapshotLockOptions := &cloud.SnapshotLockOptions{
+					SnapshotId:    &mockSnapshot.SnapshotID,
+					LockMode:      types.LockModeCompliance,
+					LockDuration:  aws.Int32(7),
+					CoolOffPeriod: aws.Int32(24),
+				}
+
+				expectedSnapshotOpts := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(expectedSnapshotOpts)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().LockSnapshot(gomock.Eq(ctx), gomock.Eq(expSnapshotLockOptions)).Return(nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				resp, err := awsDriver.CreateSnapshot(t.Context(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
+			name: "success with snapshot lock governance mode with expiration date",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				expirationDate := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+				expectedTime, _ := time.Parse(time.RFC3339, expirationDate)
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						LockMode:           "governance",
+						LockExpirationDate: expirationDate,
+					},
+					SourceVolumeId: "vol-test",
+				}
+				expSnapshot := &csi.Snapshot{
+					ReadyToUse: true,
+				}
+
+				ctx := t.Context()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				expSnapshotLockOptions := &cloud.SnapshotLockOptions{
+					SnapshotId:     &mockSnapshot.SnapshotID,
+					LockMode:       types.LockModeGovernance,
+					ExpirationDate: &expectedTime,
+				}
+
+				expectedSnapshotOpts := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(expectedSnapshotOpts)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().LockSnapshot(gomock.Eq(ctx), gomock.Eq(expSnapshotLockOptions)).Return(nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				resp, err := awsDriver.CreateSnapshot(t.Context(), req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if snap := resp.GetSnapshot(); snap == nil {
+					t.Fatalf("Expected snapshot %v, got nil", expSnapshot)
+				}
+			},
+		},
+		{
+			name: "fail with snapshot lock and cleanup snapshot",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						LockMode:     "governance",
+						LockDuration: "1",
+					},
+					SourceVolumeId: "vol-test",
+				}
+
+				ctx := t.Context()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				expectedSnapshotOpts := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
+
+				expSnapshotLockOptions := &cloud.SnapshotLockOptions{
+					SnapshotId:   &mockSnapshot.SnapshotID,
+					LockMode:     types.LockModeGovernance,
+					LockDuration: aws.Int32(1),
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(expectedSnapshotOpts)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().LockSnapshot(gomock.Eq(ctx), gomock.Eq(expSnapshotLockOptions)).Return(errors.New("Failed to lock snapshot"))
+				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateSnapshot(t.Context(), req)
+				if err == nil {
+					t.Fatalf("Expected error, got nil")
+				}
+			},
+		},
+		{
+			name: "should still call LockSnapshot without all required parameters",
+			testFunc: func(t *testing.T) {
+				t.Helper()
+				const (
+					snapshotName = "test-snapshot"
+				)
+				req := &csi.CreateSnapshotRequest{
+					Name: snapshotName,
+					Parameters: map[string]string{
+						LockCoolOffPeriod: "2",
+					},
+					SourceVolumeId: "vol-test",
+				}
+
+				ctx := t.Context()
+				mockSnapshot := &cloud.Snapshot{
+					SnapshotID:     fmt.Sprintf("snapshot-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Uint64()),
+					SourceVolumeID: req.GetSourceVolumeId(),
+					Size:           1,
+					CreationTime:   time.Now(),
+				}
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				expSnapshotLockOptions := &cloud.SnapshotLockOptions{
+					SnapshotId:    &mockSnapshot.SnapshotID,
+					CoolOffPeriod: aws.Int32(2),
+				}
+
+				expectedSnapshotOpts := &cloud.SnapshotOptions{
+					Tags: map[string]string{
+						cloud.SnapshotNameTagKey: req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
+
+				mockCloud := cloud.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetSnapshotByName(gomock.Eq(ctx), gomock.Eq(req.GetName())).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().CreateSnapshot(gomock.Eq(ctx), gomock.Eq(req.GetSourceVolumeId()), gomock.Eq(expectedSnapshotOpts)).Return(mockSnapshot, nil)
+				mockCloud.EXPECT().LockSnapshot(gomock.Eq(ctx), gomock.Eq(expSnapshotLockOptions)).Return(errors.New("Failed to lock snapshot due to missing parameters"))
+				mockCloud.EXPECT().DeleteSnapshot(gomock.Eq(ctx), gomock.Eq(mockSnapshot.SnapshotID)).Return(true, nil)
+
+				awsDriver := ControllerService{
+					cloud:    mockCloud,
+					inFlight: internal.NewInFlight(),
+					options:  &Options{},
+				}
+				_, err := awsDriver.CreateSnapshot(t.Context(), req)
+				if err == nil {
+					t.Fatalf("Expected error, got nil")
+				}
+			},
+		},
+		{
 			name: "success with EnableFastSnapshotRestore - failed to get availability zones",
 			testFunc: func(t *testing.T) {
 				t.Helper()

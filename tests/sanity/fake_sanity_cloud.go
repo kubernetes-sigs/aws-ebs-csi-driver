@@ -210,6 +210,10 @@ func (d *fakeCloud) EnableFastSnapshotRestores(ctx context.Context, availability
 	return &ec2.EnableFastSnapshotRestoresOutput{}, nil
 }
 
+func (d *fakeCloud) LockSnapshot(ctx context.Context, lockOptions *cloud.SnapshotLockOptions) error {
+	return nil
+}
+
 func (d *fakeCloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (*cloud.Disk, error) {
 	return &cloud.Disk{}, nil
 }
