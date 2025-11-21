@@ -17,8 +17,12 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -44,6 +48,7 @@ const (
 	VolumeType = "type"
 	TagSpec    = "tagSpecification"
 	TagDel     = "tagDeletion"
+	Encrypted  = "encrypted"
 )
 
 var DefaultGeneratedVolumeMount = VolumeMountDetails{
@@ -180,4 +185,93 @@ func PrefixAnnotations(prefix string, parameters map[string]string) map[string]s
 		result[prefix+key] = value
 	}
 	return result
+}
+
+type ExpectedParameters struct {
+	Size       *int32
+	IOPS       *int32
+	Throughput *int32
+	VolumeType *string
+	Encrypted  *bool
+}
+
+func BuildExpectedParameters(params map[string]string, claimSize string) ExpectedParameters {
+	expected := ExpectedParameters{}
+
+	if claimSize != "" {
+		quantity, err := resource.ParseQuantity(claimSize)
+		framework.ExpectNoError(err, "failed to parse claim size")
+		sizeGiB := util.BytesToGiB(quantity.Value())
+		expected.Size = &sizeGiB
+	}
+
+	if iopsStr, ok := params[Iops]; ok {
+		iops, err := strconv.ParseInt(iopsStr, 10, 32)
+		framework.ExpectNoError(err, "failed to parse IOPS")
+		iops32 := int32(iops)
+		expected.IOPS = &iops32
+	}
+
+	if throughputStr, ok := params[Throughput]; ok {
+		throughput, err := strconv.ParseInt(throughputStr, 10, 32)
+		framework.ExpectNoError(err, "failed to parse throughput")
+		throughput32 := int32(throughput)
+		expected.Throughput = &throughput32
+	}
+
+	if volType, ok := params[VolumeType]; ok {
+		expected.VolumeType = &volType
+	}
+
+	if _, ok := params[Encrypted]; ok {
+		expected.Encrypted = aws.Bool(true)
+	}
+
+	return expected
+}
+
+func VerifyVolumeProperties(volumeID string, verification ExpectedParameters) {
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	framework.ExpectNoError(err, "failed to load AWS config")
+
+	ec2Client := ec2.NewFromConfig(cfg)
+	resp, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeID},
+	})
+	framework.ExpectNoError(err, fmt.Sprintf("failed to describe volume %s", volumeID))
+	if len(resp.Volumes) == 0 {
+		framework.Failf("volume %s not found", volumeID)
+	}
+	volume := &resp.Volumes[0]
+
+	if verification.Size != nil && volume.Size != nil {
+		if *volume.Size != *verification.Size {
+			framework.Failf("volume size mismatch: expected %d GiB, got %d GiB", *verification.Size, *volume.Size)
+		}
+	}
+
+	if verification.IOPS != nil && volume.Iops != nil {
+		if *volume.Iops != *verification.IOPS {
+			framework.Failf("volume IOPS mismatch: expected %d, got %d", *verification.IOPS, *volume.Iops)
+		}
+	}
+
+	if verification.Throughput != nil && volume.Throughput != nil {
+		if *volume.Throughput != *verification.Throughput {
+			framework.Failf("volume throughput mismatch: expected %d, got %d", *verification.Throughput, *volume.Throughput)
+		}
+	}
+
+	if verification.VolumeType != nil {
+		if string(volume.VolumeType) != *verification.VolumeType {
+			framework.Failf("volume type mismatch: expected %s, got %s", *verification.VolumeType, volume.VolumeType)
+		}
+	}
+
+	if verification.Encrypted != nil && volume.Encrypted != nil {
+		if *volume.Encrypted != *verification.Encrypted {
+			framework.Failf("volume encryption mismatch: expected %t, got %t", *verification.Encrypted, *volume.Encrypted)
+		}
+	}
+	framework.Logf("Volume %s verified successfully", volumeID)
 }

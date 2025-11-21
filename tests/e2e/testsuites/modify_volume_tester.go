@@ -112,6 +112,17 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 		err = WaitForPvToResize(c, ns, testVolume.persistentVolume.Name, updatedPvcSize, DefaultResizeTimout, DefaultK8sAPIPollingInterval)
 		framework.ExpectNoError(err, fmt.Sprintf("fail to resize pv(%s): %v", modifyingPvc.Name, err))
 	}
+
+	By("verifying volume properties")
+	volumeID := testVolume.persistentVolume.Spec.CSI.VolumeHandle
+
+	expected := BuildExpectedParameters(modifyVolumeTest.ModifyVolumeParameters, "")
+	if modifyVolumeTest.ShouldResizeVolume {
+		sizeGiB := util.BytesToGiB(updatedPvcSize.Value())
+		expected.Size = &sizeGiB
+	}
+
+	VerifyVolumeProperties(volumeID, expected)
 }
 
 func attemptInvalidModification(c clientset.Interface, ns *v1.Namespace, testVolume *TestPersistentVolumeClaim) {
