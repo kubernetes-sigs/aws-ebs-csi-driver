@@ -4,7 +4,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.39.6
 	github.com/aws/aws-sdk-go-v2/config v1.31.20
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.13
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.269.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.270.0
 	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.223.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.40.2
 	github.com/aws/smithy-go v1.23.2
