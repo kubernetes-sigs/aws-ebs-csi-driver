@@ -159,8 +159,8 @@ e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
-.PHONY: e2e/external-a1-eks
-e2e/external-a1-eks: bin/helm bin/kubetest2
+.PHONY: e2e/external-a1
+e2e/external-a1: bin/helm bin/kubetest2
 	HELM_EXTRA_FLAGS="--set=a1CompatibilityDaemonSet=true" \
 	./hack/e2e/run.sh
 

@@ -70,7 +70,7 @@ function build_and_push() {
 
   PUSH_TYPE="sub-push"
 
-  if [[ "$INSTANCE_TYPE" == "a1.large" ]]; then
+  if [[ "$INSTANCE_TYPE" == "a1.xlarge" ]]; then
     # In the case of a1compat image we need both controller image and a1 compat node image
     PUSH_TYPE="sub-push sub-push-a1compat"
   fi

@@ -24,6 +24,20 @@ spec:
   kubeScheduler:
     featureGates:
       VolumeAttributesClass: "true"
+{{- if hasPrefix "a1." (env.Getenv "INSTANCE_TYPE") }}
+  containerd:
+    version: "1.7.28"
+    runc:
+      version: "1.3.0"
+  networking:
+    cilium: null
+    flannel:
+      backend: vxlan
+    podCIDR: 100.96.0.0/11
+    serviceClusterIPRange: 100.64.0.0/13
+  kubeProxy:
+    enabled: true
+{{- end }}
   additionalPolicies:
     node: |
       [
