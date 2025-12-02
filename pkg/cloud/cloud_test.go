@@ -1287,7 +1287,7 @@ func TestCreateDisk(t *testing.T) {
 				AvailabilityZone: expZone,
 			},
 			expCreateVolumeInput: &ec2.CreateVolumeInput{},
-			expErr:               ErrNotFound,
+			expErr:               ErrSourceNotFound,
 			expCreateVolumeErr: &smithy.GenericAPIError{
 				Code:    "InvalidSnapshot.NotFound",
 				Message: "Snapshot not found",

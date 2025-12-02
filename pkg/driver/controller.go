@@ -405,16 +405,14 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if err != nil {
 		var errCode codes.Code
 		switch {
-		case errors.Is(err, cloud.ErrNotFound):
-			errCode = codes.NotFound
 		case errors.Is(err, cloud.ErrIdempotentParameterMismatch), errors.Is(err, cloud.ErrAlreadyExists):
 			errCode = codes.AlreadyExists
-		case errors.Is(err, cloud.ErrLimitExceeded):
-			errCode = codes.ResourceExhausted
 		case errors.Is(err, cloud.ErrInvalidArgument):
 			errCode = codes.InvalidArgument
+		case errors.Is(err, cloud.ErrSourceNotFound):
+			errCode = codes.NotFound
 		default:
-			errCode = codes.Internal
+			errCode = codes.Aborted
 		}
 		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}

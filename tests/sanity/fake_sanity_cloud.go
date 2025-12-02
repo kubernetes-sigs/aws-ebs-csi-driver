@@ -55,7 +55,7 @@ func (d *fakeCloud) CreateDisk(ctx context.Context, volumeID string, diskOptions
 
 	if diskOptions.SnapshotID != "" {
 		if _, exists := d.snapshots[diskOptions.SnapshotID]; !exists {
-			return nil, cloud.ErrNotFound
+			return nil, cloud.ErrSourceNotFound
 		}
 		newDisk := &cloud.Disk{
 			SnapshotID:       diskOptions.SnapshotID,
