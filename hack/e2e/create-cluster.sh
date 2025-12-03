@@ -59,7 +59,8 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
     "$KUBECONFIG" \
     "${BASE_DIR}/kops/patch-cluster.yaml" \
     "${BASE_DIR}/kops/patch-node.yaml" \
-    "s3://${KOPS_BUCKET}"
+    "s3://${KOPS_BUCKET}" \
+    "${BIN}/gomplate"
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_create_cluster \
     "$CLUSTER_NAME" \

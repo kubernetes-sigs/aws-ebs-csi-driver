@@ -32,6 +32,7 @@ function kops_create_cluster() {
   KOPS_PATCH_FILE=${10}
   KOPS_PATCH_NODE_FILE=${11}
   KOPS_STATE_FILE=${12}
+  GOMPLATE_BIN=${13}
   declare -x KOPS_TOO_NEW_VERSION=true
 
   if kops_cluster_exists "${CLUSTER_NAME}" "${KOPS_BIN}" "${KOPS_STATE_FILE}"; then
@@ -50,7 +51,10 @@ function kops_create_cluster() {
       "${CLUSTER_NAME}" >"${CLUSTER_FILE}"
 
     if test -f "$KOPS_PATCH_FILE"; then
-      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE" "Cluster" ""
+      loudecho "Templating $KOPS_PATCH_FILE to $KOPS_PATCH_FILE.processed"
+      INSTANCE_TYPE="$INSTANCE_TYPE" \
+        ${GOMPLATE_BIN} -f "$KOPS_PATCH_FILE" -o "$KOPS_PATCH_FILE.processed"
+      kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_FILE.processed" "Cluster" ""
     fi
     if test -f "$KOPS_PATCH_NODE_FILE"; then
       kops_patch_cluster_file "$CLUSTER_FILE" "$KOPS_PATCH_NODE_FILE" "InstanceGroup" "Node"
