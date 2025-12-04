@@ -83,7 +83,7 @@ func LogServerErrorsMiddleware() func(*middleware.Stack) error {
 						// under normal bursty/high-TPS workloads
 						klog.V(4).ErrorS(apiErr, "Throttle error from AWS API")
 					} else {
-						klog.ErrorS(apiErr, "Error from AWS API")
+						klog.V(3).ErrorS(apiErr, "Error from AWS API")
 					}
 				} else {
 					klog.ErrorS(err, "Unknown error attempting to contact AWS API")
