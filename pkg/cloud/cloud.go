@@ -306,10 +306,15 @@ type ListSnapshotsResponse struct {
 	NextToken string
 }
 
-// SnapshotOptions represents parameters to create an EBS volume.
+// SnapshotOptions represents parameters to create an EBS snapshot.
 type SnapshotOptions struct {
 	Tags       map[string]string
 	OutpostArn string
+}
+
+// SnapshotLockOptions represents the snapshot lock specific parameters for locking en EBS snapshot.
+type SnapshotLockOptions struct {
+	LockSnapshotInput ec2.LockSnapshotInput
 }
 
 // ec2ListSnapshotsResponse is a helper struct returned from the AWS API calling function to the main ListSnapshots function.
@@ -1865,6 +1870,15 @@ func (c *cloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOpt
 		CreationTime:   aws.ToTime(res.StartTime),
 		ReadyToUse:     res.State == types.SnapshotStateCompleted,
 	}, nil
+}
+
+func (c *cloud) LockSnapshot(ctx context.Context, lockSnapshotInput ec2.LockSnapshotInput) (*ec2.LockSnapshotOutput, error) {
+	klog.InfoS("Attempting to lock Snapshot", "request parameters: ", lockSnapshotInput)
+	response, err := c.ec2.LockSnapshot(ctx, &lockSnapshotInput)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
 }
 
 func (c *cloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error) {

@@ -126,6 +126,18 @@ const (
 const (
 	// FastSnapshotRestoreAvailabilityZones represents key for fast snapshot restore availability zones.
 	FastSnapshotRestoreAvailabilityZones = "fastsnapshotrestoreavailabilityzones"
+
+	// SnapshotLockMode represents a key for indicating whether snapshots are locked in Governance or Compliance mode.
+	SnapshotLockMode = "snapshotlockmode"
+
+	// SnapshotLockDuration is a key for the duration for which to lock the snapshots, specified in days.
+	SnapshotLockDuration = "snapshotlockduration"
+
+	// SnapshotLockExpirationDate is a key for specifying the expiration date for the snapshot lock, specified in the format "YYYY-MM-DDThh:mm:ss.sssZ".
+	SnapshotLockExpirationDate = "snapshotlockexpirationdate"
+
+	// SnapshotLockCoolOffPeriod is a key specifying the cooling-off period for compliance mode, specified in hours.
+	SnapshotLockCoolOffPeriod = "snapshotlockcooloffperiod"
 )
 
 // constants for volume tags and their values.
