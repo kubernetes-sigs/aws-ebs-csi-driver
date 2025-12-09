@@ -168,6 +168,9 @@ var (
 	// name, but different size, is found.
 	ErrDiskExistsDiffSize = errors.New("there is already a disk with same name and different size")
 
+	// ErrSourceNotFound is returned when a volume's source is not found when provisioning using a source (snapshot or volume).
+	ErrSourceNotFound = errors.New("source was not found")
+
 	// ErrNotFound is returned when a resource is not found.
 	ErrNotFound = errors.New("resource was not found")
 
@@ -745,7 +748,9 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 	if err != nil {
 		switch {
 		case isAWSErrorSnapshotNotFound(err):
-			return nil, ErrNotFound
+			return nil, ErrSourceNotFound
+		case isAWSErrorVolumeNotFound(err):
+			return nil, ErrSourceNotFound
 		case isAWSErrorIdempotentParameterMismatch(err):
 			nextTokenNumber := 2
 			if tokenNumber, ok := c.latestClientTokens.Get(volumeName); ok {
