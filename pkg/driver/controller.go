@@ -23,8 +23,11 @@ import (
 	"maps"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/awslabs/volume-modifier-for-k8s/pkg/rpc"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
@@ -857,6 +860,7 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	var vscTags []string
 	var fsrAvailabilityZones []string
 	vsProps := new(template.VolumeSnapshotProps)
+	vsLock := new(cloud.SnapshotLockOptions)
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
 		case VolumeSnapshotNameKey:
@@ -874,6 +878,26 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 			} else {
 				return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter value %s is not a valid arn", value)
 			}
+		case SnapshotLockMode:
+			vsLock.LockSnapshotInput.LockMode = types.LockMode(value)
+		case SnapshotLockDuration:
+			lockDuration, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse SnapshotLockDuration: %q", value)
+			}
+			vsLock.LockSnapshotInput.LockDuration = aws.Int32(int32(lockDuration))
+		case SnapshotLockExpirationDate:
+			expirationDate, err := time.Parse(time.RFC3339, value)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse SnapshotLockExpirationDate: %q", value)
+			}
+			vsLock.LockSnapshotInput.ExpirationDate = &expirationDate
+		case SnapshotLockCoolOffPeriod:
+			lockCoolOffPeriod, err := strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Could not parse SnapshotLockCoolOffPeriod: %q", value)
+			}
+			vsLock.LockSnapshotInput.CoolOffPeriod = aws.Int32(int32(lockCoolOffPeriod))
 		default:
 			if strings.HasPrefix(key, TagKeyPrefix) {
 				vscTags = append(vscTags, value)
@@ -934,12 +958,18 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, req *csi.CreateS
 	if len(fsrAvailabilityZones) > 0 {
 		_, err := d.cloud.EnableFastSnapshotRestores(ctx, fsrAvailabilityZones, snapshot.SnapshotID)
 		if err != nil {
-			if _, deleteErr := d.cloud.DeleteSnapshot(ctx, snapshot.SnapshotID); deleteErr != nil {
-				return nil, status.Errorf(codes.Internal, "Could not delete snapshot ID %q: %v", snapshotName, deleteErr)
-			}
-			return nil, status.Errorf(codes.Internal, "Failed to create Fast Snapshot Restores for snapshot ID %q: %v", snapshotName, err)
+			return nil, d.cleanupSnapshotOnError(ctx, snapshot.SnapshotID, snapshotName, err, "Failed to create Fast Snapshot Restores")
 		}
 	}
+
+	if vsLock.LockSnapshotInput.LockMode != "" || vsLock.LockSnapshotInput.LockDuration != nil || vsLock.LockSnapshotInput.ExpirationDate != nil || vsLock.LockSnapshotInput.CoolOffPeriod != nil {
+		vsLock.LockSnapshotInput.SnapshotId = &snapshot.SnapshotID
+		_, err := d.cloud.LockSnapshot(ctx, vsLock.LockSnapshotInput)
+		if err != nil {
+			return nil, d.cleanupSnapshotOnError(ctx, snapshot.SnapshotID, snapshotName, err, "Failed to lock snapshot")
+		}
+	}
+
 	return newCreateSnapshotResponse(snapshot), nil
 }
 
@@ -1296,4 +1326,11 @@ func validateFormattingOption(volumeCapabilities []*csi.VolumeCapability, paramN
 
 func isTrue(value string) bool {
 	return value == trueStr
+}
+
+func (d *ControllerService) cleanupSnapshotOnError(ctx context.Context, snapshotID, snapshotName string, originalErr error, errorMsg string) error {
+	if _, deleteErr := d.cloud.DeleteSnapshot(ctx, snapshotID); deleteErr != nil {
+		return status.Errorf(codes.Internal, "Could not delete snapshot ID %q: %v", snapshotName, deleteErr)
+	}
+	return status.Errorf(codes.Internal, "%s for snapshot ID %q: %v", errorMsg, snapshotName, originalErr)
 }
