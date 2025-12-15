@@ -22,7 +22,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-provisioner
-      tag: "v5.3.0-eksbuild.5"
+      tag: "v6.1.0-eksbuild.2"
     logLevel: 2
     # Additional parameters provided by csi-provisioner.
     additionalArgs: []
@@ -49,7 +49,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-attacher
-      tag: "v4.10.0-eksbuild.2"
+      tag: "v4.10.0-eksbuild.3"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -78,7 +78,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-snapshotter
-      tag: "v8.4.0-eksbuild.2"
+      tag: "v8.4.0-eksbuild.3"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -106,7 +106,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/livenessprobe
-      tag: "v2.17.0-eksbuild.2"
+      tag: "v2.17.0-eksbuild.3"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -118,7 +118,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-resizer
-      tag: "v1.14.0-eksbuild.5"
+      tag: "v2.0.0-eksbuild.3"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -145,7 +145,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-node-driver-registrar
-      tag: "v2.15.0-eksbuild.2"
+      tag: "v2.15.0-eksbuild.3"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
     additionalArgs: []
@@ -167,7 +167,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.9.0"
+      tag: "v0.9.1"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
@@ -555,4 +555,4 @@ debugLogs: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20251021-e2c2c9806f-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20251209-855adc2699-master"

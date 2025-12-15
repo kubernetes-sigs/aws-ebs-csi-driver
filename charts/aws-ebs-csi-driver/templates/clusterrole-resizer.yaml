@@ -29,7 +29,6 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["list", "watch", "create", "update", "patch"]
-  # only required if enabling the alpha volume modify feature
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattributesclasses"]
     verbs: ["get", "list", "watch"]

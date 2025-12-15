@@ -9,4 +9,5 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+  nodeAllocatableUpdatePeriodSeconds: 10
   fsGroupPolicy: File
