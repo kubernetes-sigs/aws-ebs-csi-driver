@@ -19,28 +19,28 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.31.36"
+AWSCLI_VERSION="2.32.16"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.14.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.217.0"
+EKSCTL_VERSION="v0.220.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.27.2"
+GINKGO_VERSION="v2.27.3"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v2.6.2"
+GOLANGCI_LINT_VERSION="v2.7.2"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v4.3.3"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
 GOVULNCHECK_VERSION="v1.1.4"
 # https://github.com/helm/helm
-HELM_VERSION="v4.0.0"
+HELM_VERSION="v4.0.4"
 # https://github.com/kubernetes/kops
 # Commit is preferred over version if non-empty, and can
 # be used to test new Kubernetes releases earlier
-KOPS_VERSION="v1.34.0"
+KOPS_VERSION="v1.34.1"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20251112205937-efeaebad8193"
+KUBETEST2_VERSION="v0.0.0-20251212143746-57fcb7870313"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh

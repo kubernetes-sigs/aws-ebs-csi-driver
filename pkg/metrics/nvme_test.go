@@ -34,6 +34,7 @@ func TestNewNVMECollector(t *testing.T) {
 
 	if collector == nil {
 		t.Fatal("NewNVMECollector returned nil")
+		return // Fatal will cause an exit but need this for linter
 	}
 
 	if collector.csiMountPointPath != expectedPath {

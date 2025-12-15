@@ -140,7 +140,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
-          image: public.ecr.aws/csi-components/csi-provisioner:v5.3.0-eksbuild.5
+          image: public.ecr.aws/csi-components/csi-provisioner:v6.1.0-eksbuild.2
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -176,7 +176,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-attacher
-          image: public.ecr.aws/csi-components/csi-attacher:v4.10.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-attacher:v4.10.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=6m
@@ -206,7 +206,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-snapshotter
-          image: public.ecr.aws/csi-components/csi-snapshotter:v8.4.0-eksbuild.2
+          image: public.ecr.aws/csi-components/csi-snapshotter:v8.4.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=$(ADDRESS)
@@ -236,7 +236,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-resizer
-          image: public.ecr.aws/csi-components/csi-resizer:v1.14.0-eksbuild.5
+          image: public.ecr.aws/csi-components/csi-resizer:v2.0.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s
@@ -271,7 +271,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.17.0-eksbuild.2
+          image: public.ecr.aws/csi-components/livenessprobe:v2.17.0-eksbuild.3
           imagePullPolicy: IfNotPresent
           args:
             - --csi-address=/csi/csi.sock
