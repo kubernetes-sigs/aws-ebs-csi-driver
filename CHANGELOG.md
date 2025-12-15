@@ -1,3 +1,100 @@
+# v1.54.0
+
+## Changes by Kind
+
+### `a1compat` Deprecation Warning
+
+**`v1.54.0` will be the last minor version of the EBS CSI Driver to publish an `-a1compat` image for compatibility with `a1.*` family Amazon EC2 instances.** `v1.55.0` and later will not support `a1.*` instances. The EBS CSI Driver team recommends upgrading to a more recent [AWS Graviton](https://aws.amazon.com/ec2/graviton/) instance type.
+
+### Other (Cleanup or Flake)
+
+- Adjust errors codes returned by `CreateVolume` to fix rare volume leak edge case ([#2803](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2803), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+## Dependencies
+
+### Added
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.4](https://github.com/aws/aws-sdk-go-v2/tree/service/signin/v1.0.4)
+- github.com/go-openapi/testify/enable/yaml/v2: [v2.0.2](https://github.com/go-openapi/testify/tree/enable/yaml/v2/v2.0.2)
+- github.com/golang-jwt/jwt/v5: [v5.3.0](https://github.com/golang-jwt/jwt/tree/v5.3.0)
+
+### Changed
+- cloud.google.com/go/compute/metadata: v0.7.0 → v0.9.0
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.29.0 → v1.30.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/detectors/gcp/v1.29.0...detectors/gcp/v1.30.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.31.20 → v1.32.5](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.31.20...config/v1.32.5)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.18.24 → v1.19.5](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.18.24...credentials/v1.19.5)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.13 → v1.18.16](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.13...feature/ec2/imds/v1.18.16)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.13 → v1.4.16](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.13...internal/configsources/v1.4.16)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.13 → v2.7.16](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.13...internal/endpoints/v2/v2.7.16)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.269.0 → v1.276.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.269.0...service/ec2/v1.276.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.3 → v1.13.4](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.3...service/internal/accept-encoding/v1.13.4)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.13 → v1.13.16](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.13...service/internal/presigned-url/v1.13.16)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.223.0 → v1.228.2](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.223.0...service/sagemaker/v1.228.2)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.3 → v1.30.7](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.3...service/sso/v1.30.7)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.7 → v1.35.12](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.7...service/ssooidc/v1.35.12)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.40.2 → v1.41.5](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.40.2...service/sts/v1.41.5)
+- github.com/aws/aws-sdk-go-v2: [v1.39.6 → v1.41.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.39.6...v1.41.0)
+- github.com/aws/smithy-go: [v1.23.2 → v1.24.0](https://github.com/aws/smithy-go/compare/v1.23.2...v1.24.0)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.9.0 → v0.9.1](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.9.0...v0.9.1)
+- github.com/cncf/xds/go: [2ac532f → 0feb691](https://github.com/cncf/xds/compare/2ac532f...0feb691)
+- github.com/envoyproxy/go-control-plane/envoy: [v1.32.4 → v1.35.0](https://github.com/envoyproxy/go-control-plane/compare/envoy/v1.32.4...envoy/v1.35.0)
+- github.com/envoyproxy/go-control-plane: [v0.13.4 → 75eaa19](https://github.com/envoyproxy/go-control-plane/compare/v0.13.4...75eaa19)
+- github.com/go-jose/go-jose/v4: [v4.1.2 → v4.1.3](https://github.com/go-jose/go-jose/compare/v4.1.2...v4.1.3)
+- github.com/go-openapi/jsonpointer: [v0.22.2 → v0.22.4](https://github.com/go-openapi/jsonpointer/compare/v0.22.2...v0.22.4)
+- github.com/go-openapi/jsonreference: [v0.21.3 → v0.21.4](https://github.com/go-openapi/jsonreference/compare/v0.21.3...v0.21.4)
+- github.com/go-openapi/swag/cmdutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/cmdutils/v0.25.1...cmdutils/v0.25.4)
+- github.com/go-openapi/swag/conv: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/conv/v0.25.1...conv/v0.25.4)
+- github.com/go-openapi/swag/fileutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/fileutils/v0.25.1...fileutils/v0.25.4)
+- github.com/go-openapi/swag/jsonname: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/jsonname/v0.25.1...jsonname/v0.25.4)
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/jsonutils/fixtures_test/v0.25.1...jsonutils/fixtures_test/v0.25.4)
+- github.com/go-openapi/swag/jsonutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/jsonutils/v0.25.1...jsonutils/v0.25.4)
+- github.com/go-openapi/swag/loading: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/loading/v0.25.1...loading/v0.25.4)
+- github.com/go-openapi/swag/mangling: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/mangling/v0.25.1...mangling/v0.25.4)
+- github.com/go-openapi/swag/netutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/netutils/v0.25.1...netutils/v0.25.4)
+- github.com/go-openapi/swag/stringutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/stringutils/v0.25.1...stringutils/v0.25.4)
+- github.com/go-openapi/swag/typeutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/typeutils/v0.25.1...typeutils/v0.25.4)
+- github.com/go-openapi/swag/yamlutils: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/yamlutils/v0.25.1...yamlutils/v0.25.4)
+- github.com/go-openapi/swag: [v0.25.1 → v0.25.4](https://github.com/go-openapi/swag/compare/v0.25.1...v0.25.4)
+- github.com/google/gnostic-models: [v0.7.0 → v0.7.1](https://github.com/google/gnostic-models/compare/v0.7.0...v0.7.1)
+- github.com/prometheus/common: [v0.67.2 → v0.67.4](https://github.com/prometheus/common/compare/v0.67.2...v0.67.4)
+- github.com/spf13/cobra: [v1.10.1 → v1.10.2](https://github.com/spf13/cobra/compare/v1.10.1...v1.10.2)
+- github.com/spiffe/go-spiffe/v2: [v2.5.0 → v2.6.0](https://github.com/spiffe/go-spiffe/compare/v2.5.0...v2.6.0)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.36.0 → v1.38.0
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.63.0 → v0.64.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel/metric: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel/sdk/metric: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel/sdk: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel/trace: v1.38.0 → v1.39.0
+- go.opentelemetry.io/otel: v1.38.0 → v1.39.0
+- go.uber.org/zap: v1.27.0 → v1.27.1
+- golang.org/x/crypto: v0.44.0 → v0.46.0
+- golang.org/x/mod: v0.29.0 → v0.30.0
+- golang.org/x/net: v0.47.0 → v0.48.0
+- golang.org/x/oauth2: v0.33.0 → v0.34.0
+- golang.org/x/sync: v0.18.0 → v0.19.0
+- golang.org/x/sys: v0.38.0 → v0.39.0
+- golang.org/x/telemetry: 078029d → bc8e575
+- golang.org/x/term: v0.37.0 → v0.38.0
+- golang.org/x/text: v0.31.0 → v0.32.0
+- golang.org/x/tools: v0.38.0 → v0.39.0
+- google.golang.org/genproto/googleapis/api: 95abcf5 → 97cd9d5
+- google.golang.org/genproto/googleapis/rpc: 95abcf5 → 97cd9d5
+- google.golang.org/grpc: v1.76.0 → v1.77.0
+- google.golang.org/protobuf: v1.36.10 → v1.36.11
+- k8s.io/api: v0.34.2 → v0.34.3
+- k8s.io/apimachinery: v0.34.2 → v0.34.3
+- k8s.io/client-go: v0.34.2 → v0.34.3
+- k8s.io/component-base: v0.34.2 → v0.34.3
+- k8s.io/csi-translation-lib: v0.34.1 → v0.34.3
+- k8s.io/kube-openapi: 589584f → 4e65d59
+- k8s.io/kubectl: v0.34.1 → v0.34.3
+- k8s.io/mount-utils: v0.34.2 → v0.34.3
+- sigs.k8s.io/structured-merge-diff/v6: v6.3.0 → v6.3.1
+
+### Removed
+- github.com/zeebo/errs: [v1.4.0](https://github.com/zeebo/errs/tree/v1.4.0)
+
 # v1.53.0
 
 ## Changes by Kind
