@@ -1,5 +1,17 @@
 # Helm chart
 
+## 2.54.0
+
+### `a1CompatibilityDaemonSet` Deprecation Warning
+
+**`v1.54.0` will be the last minor version of the EBS CSI Driver to publish an `-a1compat` image for compatibility with `a1.*` family Amazon EC2 instances.** `v1.55.0` and later will not support `a1.*` instances. The EBS CSI Driver team recommends upgrading to a more recent [AWS Graviton](https://aws.amazon.com/ec2/graviton/) instance type.
+
+As a result, EBS CSI Driver Helm Chart versions `2.55.0` and later will not support the `a1CompatibilityDaemonSet` parameter. The parameter will have no effect, and installation may fail when attempting to install via a method that validates the Helm schema, such as the Helm CLI.
+
+### Feature
+
+- Enable VAC v1beta1 fallback for K8s 1.31-1.33 ([#2806](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2806), [@torredil](https://github.com/torredil))
+
 ## 2.53.0
 
 - Add dnsConfig Helm parameter for node pods. ([#2778](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2778), [@torredil](https://github.com/torredil))
