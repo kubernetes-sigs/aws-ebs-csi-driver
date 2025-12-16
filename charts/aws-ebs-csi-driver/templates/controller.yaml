@@ -249,8 +249,8 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
             - --retry-interval-max=30m
             {{- end }}
-            {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
-            - --feature-gates=VolumeAttributesClass=true
+            {{- if not (or (.Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass") (.Capabilities.APIVersions.Has "storage.k8s.io/v1/VolumeAttributesClass")) }}
+            - --feature-gates=VolumeAttributesClass=false
             {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.provisioner.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3302
@@ -565,8 +565,8 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
             - --retry-interval-max=30m
             {{- end }}
-            {{- if .Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass" }}
-            - --feature-gates=VolumeAttributesClass=true
+            {{- if not (or (.Capabilities.APIVersions.Has "storage.k8s.io/v1beta1/VolumeAttributesClass") (.Capabilities.APIVersions.Has "storage.k8s.io/v1/VolumeAttributesClass")) }}
+            - --feature-gates=VolumeAttributesClass=false
             {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.resizer.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3304
