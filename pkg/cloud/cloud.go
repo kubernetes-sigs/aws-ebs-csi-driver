@@ -25,6 +25,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -380,21 +381,24 @@ type batcherManager struct {
 }
 
 type cloud struct {
-	awsConfig             aws.Config
-	region                string
-	ec2                   util.EC2API
-	sm                    util.SageMakerAPI
-	dm                    dm.DeviceManager
-	bm                    *batcherManager
-	rm                    *retryManager
-	vwp                   volumeWaitParameters
-	likelyBadDeviceNames  expiringcache.ExpiringCache[string, sync.Map]
-	latestClientTokens    expiringcache.ExpiringCache[string, int]
-	volumeInitializations expiringcache.ExpiringCache[string, volumeInitialization]
-	latestIOPSLimits      expiringcache.ExpiringCache[string, iopsLimits]
-	accountID             string
-	accountIDOnce         sync.Once
-	attemptDryRun         atomic.Bool
+	awsConfig                 aws.Config
+	region                    string
+	ec2                       util.EC2API
+	sm                        util.SageMakerAPI
+	dm                        dm.DeviceManager
+	bm                        *batcherManager
+	rm                        *retryManager
+	vwp                       volumeWaitParameters
+	likelyBadDeviceNames      expiringcache.ExpiringCache[string, sync.Map]
+	latestClientTokens        expiringcache.ExpiringCache[string, int]
+	volumeInitializations     expiringcache.ExpiringCache[string, volumeInitialization]
+	latestIOPSLimits          expiringcache.ExpiringCache[string, iopsLimits]
+	likelyNotFoundInstanceIDs expiringcache.ExpiringCache[string, struct{}]
+	likelyNotFoundVolumeIDs   expiringcache.ExpiringCache[string, struct{}]
+	likelyNotFoundSnapshotIDs expiringcache.ExpiringCache[string, struct{}]
+	accountID                 string
+	accountIDOnce             sync.Once
+	attemptDryRun             atomic.Bool
 }
 
 var _ Cloud = &cloud{}
@@ -470,26 +474,30 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 	}
 
 	var bm *batcherManager
-	if batchingEnabled {
-		klog.V(4).InfoS("NewCloud: batching enabled")
-		bm = newBatcherManager(ec2Client)
-	}
 
 	c := &cloud{
-		awsConfig:             cfg,
-		region:                region,
-		dm:                    dm.NewDeviceManager(),
-		ec2:                   ec2Client,
-		sm:                    smClient,
-		bm:                    bm,
-		rm:                    newRetryManager(),
-		vwp:                   vwp,
-		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
-		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
-		volumeInitializations: expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
-		latestIOPSLimits:      expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
+		awsConfig:                 cfg,
+		region:                    region,
+		dm:                        dm.NewDeviceManager(),
+		ec2:                       ec2Client,
+		sm:                        smClient,
+		bm:                        bm,
+		rm:                        newRetryManager(),
+		vwp:                       vwp,
+		likelyBadDeviceNames:      expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:        expiringcache.New[string, int](cacheForgetDelay),
+		volumeInitializations:     expiringcache.New[string, volumeInitialization](volInitCacheForgetDelay),
+		latestIOPSLimits:          expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
+		likelyNotFoundInstanceIDs: expiringcache.New[string, struct{}](cacheForgetDelay),
+		likelyNotFoundVolumeIDs:   expiringcache.New[string, struct{}](cacheForgetDelay),
+		likelyNotFoundSnapshotIDs: expiringcache.New[string, struct{}](cacheForgetDelay),
 	}
 
+	if batchingEnabled {
+		klog.V(4).InfoS("NewCloud: batching enabled")
+		bm = newBatcherManager(ec2Client, c)
+	}
+	c.bm = bm
 	// Ensure an EC2 Dry-run API call is made on startup and every dryRunInterval
 	c.attemptDryRun.Store(true)
 	go func() {
@@ -505,22 +513,22 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 // newBatcherManager initializes a new instance of batcherManager.
 // Each batcher's `entries` set to maximum results returned by relevant EC2 API call without pagination.
 // Each batcher's `delay` minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
-func newBatcherManager(svc util.EC2API) *batcherManager {
+func newBatcherManager(svc util.EC2API, c *cloud) *batcherManager {
 	return &batcherManager{
 		volumeIDBatcher: batcher.New(500, batchMaxDelay, func(ids []string) (map[string]*types.Volume, error) {
-			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
+			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher, &c.likelyNotFoundVolumeIDs)
 		}),
 		volumeTagBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.Volume, error) {
-			return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
+			return execBatchDescribeVolumes(svc, names, volumeTagBatcher, &c.likelyNotFoundVolumeIDs)
 		}),
 		instanceIDBatcher: batcher.New(50, batchMaxDelay, func(ids []string) (map[string]*types.Instance, error) {
-			return execBatchDescribeInstances(svc, ids)
+			return execBatchDescribeInstances(svc, ids, &c.likelyNotFoundInstanceIDs)
 		}),
 		snapshotIDBatcher: batcher.New(1000, batchMaxDelay, func(ids []string) (map[string]*types.Snapshot, error) {
-			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher)
+			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher, &c.likelyNotFoundSnapshotIDs)
 		}),
 		snapshotTagBatcher: batcher.New(1000, batchMaxDelay, func(names []string) (map[string]*types.Snapshot, error) {
-			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher)
+			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher, &c.likelyNotFoundSnapshotIDs)
 		}),
 		volumeModificationIDBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.VolumeModification, error) {
 			return execBatchDescribeVolumesModifications(svc, names)
@@ -535,7 +543,16 @@ func newBatcherManager(svc util.EC2API) *batcherManager {
 }
 
 // execBatchDescribeVolumes executes a batched DescribeVolumes API call depending on the type of batcher.
-func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBatcherType) (map[string]*types.Volume, error) {
+func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBatcherType, cache *expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Volume, error) {
+	var badVolumes []string
+	for i := len(input) - 1; i >= 0; i-- {
+		vol := input[i]
+		_, exists := (*cache).Get(vol)
+		if exists {
+			badVolumes = append(badVolumes, vol)
+			input = slices.Delete(input, i, i+1)
+		}
+	}
 	var request *ec2.DescribeVolumesInput
 
 	switch batcher {
@@ -566,7 +583,23 @@ func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBat
 
 	resp, err := describeVolumes(ctx, svc, request)
 	if err != nil {
+		volumeIDRegex := regexp.MustCompile(util.VolumeIDRegex)
+		knownErrorVols := volumeIDRegex.FindAllString(err.Error(), -1)
+		for _, volID := range knownErrorVols {
+			(*cache).Set(volID, &struct{}{})
+		}
 		return nil, err
+	}
+
+	for _, vol := range badVolumes {
+		request := &ec2.DescribeVolumesInput{
+			VolumeIds: []string{vol},
+		}
+		retryResp, err := describeVolumes(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			(*cache).Remove(*retryResp[0].VolumeId)
+			resp = append(resp, retryResp...)
+		}
 	}
 
 	result := make(map[string]*types.Volume)
@@ -1096,7 +1129,17 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 }
 
 // execBatchDescribeInstances executes a batched DescribeInstances API call.
-func execBatchDescribeInstances(svc util.EC2API, input []string) (map[string]*types.Instance, error) {
+func execBatchDescribeInstances(svc util.EC2API, input []string, cache *expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Instance, error) {
+	var badInstances []string
+	for i := len(input) - 1; i >= 0; i-- {
+		vol := input[i]
+		_, exists := (*cache).Get(vol)
+		if exists {
+			badInstances = append(badInstances, vol)
+			input = slices.Delete(input, i, i+1)
+		}
+	}
+
 	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
 	request := &ec2.DescribeInstancesInput{
 		InstanceIds: input,
@@ -1107,7 +1150,23 @@ func execBatchDescribeInstances(svc util.EC2API, input []string) (map[string]*ty
 
 	resp, err := describeInstances(ctx, svc, request)
 	if err != nil {
+		instanceIDRegex := regexp.MustCompile(util.InstanceIDRegex)
+		knownErrorInstances := instanceIDRegex.FindAllString(err.Error(), -1)
+		for _, instanceID := range knownErrorInstances {
+			(*cache).Set(instanceID, &struct{}{})
+		}
 		return nil, err
+	}
+
+	for _, instance := range badInstances {
+		request := &ec2.DescribeInstancesInput{
+			InstanceIds: []string{instance},
+		}
+		retryResp, err := describeInstances(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			(*cache).Remove(*retryResp[0].InstanceId)
+			resp = append(resp, retryResp...)
+		}
 	}
 
 	result := make(map[string]*types.Instance)
@@ -1722,7 +1781,17 @@ func getInstanceIDFromAssociatedResource(arn string) (string, error) {
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
-func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapshotBatcherType) (map[string]*types.Snapshot, error) {
+func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapshotBatcherType, cache *expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Snapshot, error) {
+	var badSnapshots []string
+	for i := len(input) - 1; i >= 0; i-- {
+		vol := input[i]
+		_, exists := (*cache).Get(vol)
+		if exists {
+			badSnapshots = append(badSnapshots, vol)
+			input = slices.Delete(input, i, i+1)
+		}
+	}
+
 	var request *ec2.DescribeSnapshotsInput
 
 	switch batcher {
@@ -1753,7 +1822,23 @@ func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapsho
 
 	resp, err := describeSnapshots(ctx, svc, request)
 	if err != nil {
+		snapshotIDRegex := regexp.MustCompile(util.SnapshotIDRegex)
+		knownErrorSnapshots := snapshotIDRegex.FindAllString(err.Error(), -1)
+		for _, snapID := range knownErrorSnapshots {
+			(*cache).Set(snapID, &struct{}{})
+		}
 		return nil, err
+	}
+
+	for _, snap := range badSnapshots {
+		request := &ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{snap},
+		}
+		retryResp, err := describeSnapshots(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			(*cache).Remove(*retryResp[0].SnapshotId)
+			resp = append(resp, retryResp...)
+		}
 	}
 
 	result := make(map[string]*types.Snapshot)

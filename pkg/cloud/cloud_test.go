@@ -240,7 +240,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			if !ok {
 				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
 			}
-			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2, cloudInstance)
 
 			tc.mockFunc(mockEC2, tc.expErr, tc.volumes)
 			volumeIDs, volumeNames := extractVolumeIdentifiers(tc.volumes)
@@ -361,7 +361,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			if !ok {
 				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
 			}
-			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2, cloudInstance)
 
 			// Setup mocks
 			var instances []types.Instance
@@ -540,7 +540,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			if !ok {
 				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
 			}
-			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2, cloudInstance)
 
 			tc.mockFunc(mockEC2, tc.expErr, tc.snapshots)
 			snapshotIDs, snapshotNames := extractSnapshotIdentifiers(tc.snapshots)
@@ -761,7 +761,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 			if !ok {
 				t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
 			}
-			cloudInstance.bm = newBatcherManager(cloudInstance.ec2)
+			cloudInstance.bm = newBatcherManager(cloudInstance.ec2, cloudInstance)
 
 			// Setup mocks
 			var volumeModifications []types.VolumeModification
@@ -5025,16 +5025,19 @@ func testVolumeWaitParameters() volumeWaitParameters {
 
 func newCloud(mockEC2 util.EC2API) Cloud {
 	c := &cloud{
-		region:                "test-region",
-		accountID:             "123456789012",
-		dm:                    dm.NewDeviceManager(),
-		ec2:                   mockEC2,
-		rm:                    newRetryManager(),
-		vwp:                   testVolumeWaitParameters(),
-		likelyBadDeviceNames:  expiringcache.New[string, sync.Map](cacheForgetDelay),
-		latestClientTokens:    expiringcache.New[string, int](cacheForgetDelay),
-		volumeInitializations: expiringcache.New[string, volumeInitialization](cacheForgetDelay),
-		latestIOPSLimits:      expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
+		region:                    "test-region",
+		accountID:                 "123456789012",
+		dm:                        dm.NewDeviceManager(),
+		ec2:                       mockEC2,
+		rm:                        newRetryManager(),
+		vwp:                       testVolumeWaitParameters(),
+		likelyBadDeviceNames:      expiringcache.New[string, sync.Map](cacheForgetDelay),
+		latestClientTokens:        expiringcache.New[string, int](cacheForgetDelay),
+		volumeInitializations:     expiringcache.New[string, volumeInitialization](cacheForgetDelay),
+		latestIOPSLimits:          expiringcache.New[string, iopsLimits](iopsLimitCacheForgetDelay),
+		likelyNotFoundInstanceIDs: expiringcache.New[string, struct{}](cacheForgetDelay),
+		likelyNotFoundVolumeIDs:   expiringcache.New[string, struct{}](cacheForgetDelay),
+		likelyNotFoundSnapshotIDs: expiringcache.New[string, struct{}](cacheForgetDelay),
 	}
 	return c
 }
