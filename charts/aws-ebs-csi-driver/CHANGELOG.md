@@ -1,5 +1,11 @@
 # Helm chart
 
+## 2.54.1
+
+### Bugfix
+
+- Fix VAC fallback on 1.33 and before by not explicitly enabling feature gate ([#2815](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2815), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## 2.54.0
 
 ### `a1CompatibilityDaemonSet` Deprecation Warning
