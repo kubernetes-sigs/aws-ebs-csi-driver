@@ -5320,3 +5320,209 @@ func TestCheckIfIopsIncreaseOnExpansion(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoveLikelyBadIds(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		input                []string
+		cachedBadIds         []string
+		expectedResultInput  []string
+		expectedResultBadIds []string
+	}{
+		{
+			name:                "success: no cached bad IDs",
+			input:               []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939", "vol-0d9f2b8e4a7c1f53301"},
+			cachedBadIds:        []string{},
+			expectedResultInput: []string{"vol-0d9f2b8e4a7c1f53301", "vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
+		},
+		{
+			name:                 "success: filter out cached bad IDs",
+			input:                []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939", "vol-0d9f2b8e4a7c1f53301"},
+			cachedBadIds:         []string{"vol-0c7e1a5f8b2d4c6939"},
+			expectedResultInput:  []string{"vol-0d9f2b8e4a7c1f53301", "vol-0f8a2c4e6b9d1e5787"},
+			expectedResultBadIds: []string{"vol-0c7e1a5f8b2d4c6939"},
+		},
+		{
+			name:                 "success: filter out multiple cached bad IDs",
+			input:                []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939", "vol-0d9f2b8e4a7c1f53301", "vol-0b4f7d2a9e6c8b1939"},
+			cachedBadIds:         []string{"vol-0c7e1a5f8b2d4c6939", "vol-0b4f7d2a9e6c8b1939"},
+			expectedResultInput:  []string{"vol-0d9f2b8e4a7c1f53301", "vol-0f8a2c4e6b9d1e5787"},
+			expectedResultBadIds: []string{"vol-0b4f7d2a9e6c8b1939", "vol-0c7e1a5f8b2d4c6939"},
+		},
+		{
+			name:                 "success: all IDs are bad",
+			input:                []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"},
+			cachedBadIds:         []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"},
+			expectedResultBadIds: []string{"vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
+		},
+		{
+			name:         "success: empty input list",
+			input:        []string{},
+			cachedBadIds: []string{"vol-0f8a2c4e6b9d1e5787"},
+		},
+		{
+			name:                "success: no cache entry exists",
+			input:               []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"},
+			expectedResultInput: []string{"vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
+		},
+		{
+			name:                "success: cache has volumes not in current request",
+			input:               []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"},
+			cachedBadIds:        []string{"vol-7f8a2c4e6b9d1e5787", "vol-7c7e1a5f8b2d4c6939"},
+			expectedResultInput: []string{"vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+
+			if tc.cachedBadIds != nil {
+				for _, badId := range tc.cachedBadIds {
+					cache.Set(badId, &struct{}{})
+				}
+			}
+			goodIds, likelyBadIds := removeLikelyBadIds(cache, tc.input)
+
+			assert.Equal(t, tc.expectedResultInput, goodIds)
+			assert.Equal(t, tc.expectedResultBadIds, likelyBadIds)
+		})
+	}
+}
+
+func TestExecBatchCaching(t *testing.T) {
+	t.Run("volumes: error adds ID to cache", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+			VolumeIds: []string{"vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
+		})).Return(nil, errors.New("InvalidVolume.NotFound: vol-0c7e1a5f8b2d4c6939")).Times(1)
+
+		_, err := execBatchDescribeVolumes(mockEC2, []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"}, volumeIDBatcher, cache)
+		require.Error(t, err)
+		_, exists := cache.Get("vol-0c7e1a5f8b2d4c6939")
+		assert.True(t, exists, "vol-0c7e1a5f8b2d4c6939 should be cached after error")
+	})
+
+	t.Run("volumes: cached bad ID retried separately on success", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+		cache.Set("vol-0c7e1a5f8b2d4c6939", &struct{}{})
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+			VolumeIds: []string{"vol-0f8a2c4e6b9d1e5787"},
+		})).Return(&ec2.DescribeVolumesOutput{
+			Volumes: []types.Volume{{VolumeId: aws.String("vol-0f8a2c4e6b9d1e5787")}},
+		}, nil).Times(1)
+		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+			VolumeIds: []string{"vol-0c7e1a5f8b2d4c6939"},
+		})).Return(&ec2.DescribeVolumesOutput{
+			Volumes: []types.Volume{{VolumeId: aws.String("vol-0c7e1a5f8b2d4c6939")}},
+		}, nil).Times(1)
+
+		result, err := execBatchDescribeVolumes(mockEC2, []string{"vol-0f8a2c4e6b9d1e5787", "vol-0c7e1a5f8b2d4c6939"}, volumeIDBatcher, cache)
+		require.NoError(t, err)
+		assert.Len(t, result, 2)
+		_, exists := cache.Get("vol-0c7e1a5f8b2d4c6939")
+		assert.False(t, exists, "vol-0c7e1a5f8b2d4c6939 should be removed from cache after successful retry")
+	})
+
+	t.Run("instances: error adds ID to cache", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+			InstanceIds: []string{"i-0c7e1a5f8b2d4c939", "i-0f8a2c4e6b9d1e787"},
+		})).Return(nil, errors.New("InvalidInstanceID.NotFound: i-0c7e1a5f8b2d4c939")).Times(1)
+
+		_, err := execBatchDescribeInstances(mockEC2, []string{"i-0f8a2c4e6b9d1e787", "i-0c7e1a5f8b2d4c939"}, cache)
+		require.Error(t, err)
+		_, exists := cache.Get("i-0c7e1a5f8b2d4c939")
+		assert.True(t, exists, "i-0c7e1a5f8b2d4c939 should be cached after error")
+	})
+
+	t.Run("instances: cached bad ID retried separately on success", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+		cache.Set("i-0c7e1a5f8b2d4c939", &struct{}{})
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+			InstanceIds: []string{"i-0f8a2c4e6b9d1e787"},
+		})).Return(&ec2.DescribeInstancesOutput{
+			Reservations: []types.Reservation{{Instances: []types.Instance{{InstanceId: aws.String("i-0f8a2c4e6b9d1e787")}}}},
+		}, nil).Times(1)
+		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+			InstanceIds: []string{"i-0c7e1a5f8b2d4c939"},
+		})).Return(&ec2.DescribeInstancesOutput{
+			Reservations: []types.Reservation{{Instances: []types.Instance{{InstanceId: aws.String("i-0c7e1a5f8b2d4c939")}}}},
+		}, nil).Times(1)
+
+		result, err := execBatchDescribeInstances(mockEC2, []string{"i-0f8a2c4e6b9d1e787", "i-0c7e1a5f8b2d4c939"}, cache)
+		require.NoError(t, err)
+		assert.Len(t, result, 2)
+		_, exists := cache.Get("i-0c7e1a5f8b2d4c939")
+		assert.False(t, exists, "i-0c7e1a5f8b2d4c939 should be removed from cache after successful retry")
+	})
+
+	t.Run("snapshots: error adds ID to cache", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{"snap-0c7e1a5f8b2d4c939", "snap-0f8a2c4e6b9d1e787"},
+		})).Return(nil, errors.New("InvalidSnapshot.NotFound: snap-0c7e1a5f8b2d4c939")).Times(1)
+
+		_, err := execBatchDescribeSnapshots(mockEC2, []string{"snap-0f8a2c4e6b9d1e787", "snap-0c7e1a5f8b2d4c939"}, snapshotIDBatcher, cache)
+		require.Error(t, err)
+		_, exists := cache.Get("snap-0c7e1a5f8b2d4c939")
+		assert.True(t, exists, "snap-0c7e1a5f8b2d4c939 should be cached after error")
+	})
+
+	t.Run("snapshots: cached bad ID retried separately on success", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		mockEC2 := NewMockEC2API(mockCtrl)
+		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
+		cache.Set("snap-0c7e1a5f8b2d4c939", &struct{}{})
+
+		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
+		defer cancel()
+		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{"snap-0f8a2c4e6b9d1e787"},
+		})).Return(&ec2.DescribeSnapshotsOutput{
+			Snapshots: []types.Snapshot{{SnapshotId: aws.String("snap-0f8a2c4e6b9d1e787")}},
+		}, nil).Times(1)
+		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{"snap-0c7e1a5f8b2d4c939"},
+		})).Return(&ec2.DescribeSnapshotsOutput{
+			Snapshots: []types.Snapshot{{SnapshotId: aws.String("snap-0c7e1a5f8b2d4c939")}},
+		}, nil).Times(1)
+
+		result, err := execBatchDescribeSnapshots(mockEC2, []string{"snap-0f8a2c4e6b9d1e787", "snap-0c7e1a5f8b2d4c939"}, snapshotIDBatcher, cache)
+		require.NoError(t, err)
+		assert.Len(t, result, 2)
+		_, exists := cache.Get("snap-0c7e1a5f8b2d4c939")
+		assert.False(t, exists, "snap-0c7e1a5f8b2d4c939 should be removed from cache after successful retry")
+	})
+}
