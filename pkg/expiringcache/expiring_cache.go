@@ -41,6 +41,8 @@ type ExpiringCache[KeyType comparable, ValueType any] interface {
 	// Set operates identically to setting a value in a map, adding an entry
 	// or overriding the existing value for a given key
 	Set(key KeyType, value *ValueType)
+	// Remove operates identically to removing a value in a map
+	Remove(key KeyType)
 }
 
 type timedValue[ValueType any] struct {
@@ -93,5 +95,16 @@ func (c *expiringCache[KeyType, ValueType]) Set(key KeyType, value *ValueType) {
 			}),
 			value: value,
 		}
+	}
+}
+
+func (c *expiringCache[KeyType, ValueType]) Remove(key KeyType) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	_, exists := c.Get(key)
+	if exists {
+		delete(c.values, key)
+	} else {
+		return
 	}
 }
