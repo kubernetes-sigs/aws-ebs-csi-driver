@@ -148,17 +148,16 @@ sidecars:
       tag: "v2.15.0-eksbuild.3"
     logLevel: 2
     # Additional parameters provided by node-driver-registrar.
-    additionalArgs: []
+    additionalArgs: 
+      - --http-endpoint=0.0.0.0:9809
     resources: {}
     securityContext:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
     livenessProbe:
-      exec:
-        command:
-          - /csi-node-driver-registrar
-          - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-          - --mode=kubelet-registration-probe
+      httpGet:
+        path: /healthz
+        port: 9809
       initialDelaySeconds: 30
       periodSeconds: 90
       timeoutSeconds: 15

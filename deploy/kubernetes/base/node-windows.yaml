@@ -115,6 +115,7 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+            - --http-endpoint=0.0.0.0:9809
             - --v=2
           env:
             - name: ADDRESS
@@ -122,11 +123,9 @@ spec:
             - name: DRIVER_REG_SOCK_PATH
               value: C:\var\lib\kubelet\plugins\ebs.csi.aws.com\csi.sock
           livenessProbe:
-            exec:
-              command:
-                - /csi-node-driver-registrar.exe
-                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-                - --mode=kubelet-registration-probe
+            httpGet:
+              path: /healthz
+              port: 9809
             initialDelaySeconds: 30
             timeoutSeconds: 15
             periodSeconds: 90
