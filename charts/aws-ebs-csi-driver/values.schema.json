@@ -1141,35 +1141,7 @@
             },
             "livenessProbe": {
               "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "exec": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "command": {
-                      "type": "array",
-                      "default": [
-                        "/csi-node-driver-registrar",
-                        "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)",
-                        "--mode=kubelet-registration-probe"
-                      ]
-                    }
-                  }
-                },
-                "initialDelaySeconds": {
-                  "type": "integer",
-                  "default": 30
-                },
-                "periodSeconds": {
-                  "type": "integer",
-                  "default": 90
-                },
-                "timeoutSeconds": {
-                  "type": "integer",
-                  "default": 15
-                }
-              }
+              "additionalProperties": true
             }
           }
         },
