@@ -1143,17 +1143,17 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "exec": {
+                "httpGet": {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "command": {
-                      "type": "array",
-                      "default": [
-                        "/csi-node-driver-registrar",
-                        "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)",
-                        "--mode=kubelet-registration-probe"
-                      ]
+                    "path": {
+                      "type": "string",
+                      "default": "/healthz"
+                    },
+                    "port": {
+                      "type": "integer",
+                      "default": 9809
                     }
                   }
                 },
