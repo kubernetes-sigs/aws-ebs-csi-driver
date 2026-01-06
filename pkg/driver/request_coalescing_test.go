@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -105,8 +106,10 @@ func testBasicRequestCoalescingSuccess(t *testing.T, executor modifyVolumeExecut
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.Eq(NewSize), gomock.Eq(&cloud.ModifyDiskOptions{
+		VolumeType: NewVolumeType,
+	})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		if newSize != NewSize {
 			t.Errorf("newSize incorrect")
@@ -168,8 +171,10 @@ func testRequestFail(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.Eq(NewSize), gomock.Eq(&cloud.ModifyDiskOptions{
+		VolumeType: NewVolumeType,
+	})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return 0, errors.New("ResizeOrModifyDisk failed")
 	})
@@ -232,13 +237,17 @@ func testPartialFail(t *testing.T, executor modifyVolumeExecutor) {
 	volumeTypeChosen := ""
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	//nolint:forbidigo // The DoAndReturn validates the inputs which vary by call
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.Eq(NewSize), gomock.AssignableToTypeOf(&cloud.ModifyDiskOptions{})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
-		if newSize != NewSize {
+		switch {
+		case newSize != NewSize:
 			t.Errorf("newSize incorrect")
-		} else if options.VolumeType == "" {
+		case options.VolumeType == "":
 			t.Errorf("no volume type")
+		case options.VolumeType != NewVolumeType1 && options.VolumeType != NewVolumeType2:
+			t.Errorf("unexpected volume type: %s", options.VolumeType)
 		}
 
 		volumeTypeChosen = options.VolumeType
@@ -325,8 +334,9 @@ func testSequentialRequests(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	//nolint:forbidigo // The DoAndReturn validates the inputs which vary by call
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.AssignableToTypeOf(int64(0)), gomock.AssignableToTypeOf(&cloud.ModifyDiskOptions{})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return newSize, nil
 	}).Times(2)
@@ -384,8 +394,10 @@ func testDuplicateRequest(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.Eq(NewSize), gomock.Eq(&cloud.ModifyDiskOptions{
+		VolumeType: "io2",
+	})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 		return newSize, nil
 	})
@@ -443,8 +455,10 @@ func testResponseReturnTiming(t *testing.T, executor modifyVolumeExecutor) {
 	defer mockCtl.Finish()
 
 	mockCloud := cloud.NewMockCloud(mockCtl)
-	mockCloud.EXPECT().GetDiskByID(gomock.Any(), gomock.Eq(volumeID)).AnyTimes()
-	mockCloud.EXPECT().ResizeOrModifyDisk(gomock.Any(), gomock.Eq(volumeID), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
+	mockCloud.EXPECT().GetDiskByID(testutil.AnyContext(), gomock.Eq(volumeID)).AnyTimes()
+	mockCloud.EXPECT().ResizeOrModifyDisk(testutil.AnyContext(), gomock.Eq(volumeID), gomock.Eq(NewSize), gomock.Eq(&cloud.ModifyDiskOptions{
+		VolumeType: NewVolumeType,
+	})).DoAndReturn(func(_ context.Context, volumeID string, newSize int64, options *cloud.ModifyDiskOptions) (int64, error) {
 		klog.InfoS("ResizeOrModifyDisk called", "volumeID", volumeID, "newSize", newSize, "options", options)
 
 		// Sleep to simulate ec2.ModifyVolume taking a long time

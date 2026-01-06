@@ -38,6 +38,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/batcher"
 	dm "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/devicemanager"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -147,7 +148,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			volumes: generateVolumes(10, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(volumeOutput, expErr).Times(1)
 			},
 			expErr: nil,
 		},
@@ -156,7 +157,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			volumes: generateVolumes(0, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(volumeOutput, expErr).Times(1)
 			},
 			expErr: nil,
 		},
@@ -165,7 +166,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			volumes: generateVolumes(10, 10),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(2)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(volumeOutput, expErr).Times(2)
 			},
 			expErr: nil,
 		},
@@ -174,7 +175,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			volumes: generateVolumes(500, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(volumeOutput, expErr).Times(1)
 			},
 			expErr: nil,
 		},
@@ -183,7 +184,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			volumes: generateVolumes(550, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
 				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(2)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(volumeOutput, expErr).Times(2)
 			},
 			expErr: nil,
 		},
@@ -191,7 +192,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			name:    "fail: EC2 API generic error",
 			volumes: generateVolumes(4, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(nil, expErr).Times(1)
 			},
 			expErr: errors.New("Generic EC2 API error"),
 		},
@@ -199,7 +200,7 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			name:    "fail: volume not found",
 			volumes: generateVolumes(1, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(nil, expErr).Times(1)
 			},
 			expErr: errors.New("volume not found"),
 		},
@@ -213,8 +214,6 @@ func TestBatchDescribeVolumes(t *testing.T) {
 				},
 			},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
-				volumeOutput := &ec2.DescribeVolumesOutput{Volumes: volumes}
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(volumeOutput, expErr).Times(0)
 			},
 			expErr: errors.New("invalid tag"),
 		},
@@ -222,7 +221,6 @@ func TestBatchDescribeVolumes(t *testing.T) {
 			name:    "fail: invalid request",
 			volumes: []types.Volume{{VolumeId: aws.String("")}},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumes []types.Volume) {
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
 			},
 			expErr: ErrInvalidRequest,
 		},
@@ -327,7 +325,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			instanceIDs: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
 				reservationOutput := &ec2.DescribeInstancesOutput{Reservations: reservations}
-				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(reservationOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeInstancesInput{})).Return(reservationOutput, expErr).Times(1)
 			},
 			expErr: nil,
 		},
@@ -335,7 +333,7 @@ func TestBatchDescribeInstances(t *testing.T) {
 			name:        "fail: EC2 API generic error",
 			instanceIDs: []string{"i-001", "i-002", "i-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
-				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+				mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeInstancesInput{})).Return(nil, expErr).Times(1)
 			},
 			expErr: errors.New("generic EC2 API error"),
 		},
@@ -343,7 +341,6 @@ func TestBatchDescribeInstances(t *testing.T) {
 			name:        "fail: invalid request",
 			instanceIDs: []string{""},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, reservations []types.Reservation) {
-				mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
 			},
 			expErr: ErrInvalidRequest,
 		},
@@ -473,7 +470,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			snapshots: generateSnapshots(3, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(snapshotOutput, expErr).Times(1)
 			},
 		},
 		{
@@ -481,7 +478,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			snapshots: generateSnapshots(0, 3),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(snapshotOutput, expErr).Times(1)
 			},
 		},
 		{
@@ -489,14 +486,14 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			snapshots: generateSnapshots(3, 4),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots}
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(snapshotOutput, expErr).Times(2)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(snapshotOutput, expErr).Times(2)
 			},
 		},
 		{
 			name:      "fail: EC2 API generic error",
 			snapshots: generateSnapshots(3, 2),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(2)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(nil, expErr).Times(2)
 			},
 			expErr: errors.New("generic EC2 API error"),
 		},
@@ -505,7 +502,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			snapshots: generateSnapshots(3, 0),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots[1:]} // Leave out first snapshot
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(snapshotOutput, nil).Times(1)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(snapshotOutput, nil).Times(1)
 			},
 			expErr: ErrNotFound,
 		},
@@ -514,7 +511,7 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			snapshots: generateSnapshots(0, 2),
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
 				snapshotOutput := &ec2.DescribeSnapshotsOutput{Snapshots: snapshots[1:]} // Leave out first snapshot
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(snapshotOutput, nil).Times(1)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(snapshotOutput, nil).Times(1)
 			},
 			expErr: ErrNotFound,
 		},
@@ -522,7 +519,6 @@ func TestBatchDescribeSnapshots(t *testing.T) {
 			name:      "fail: invalid request",
 			snapshots: []types.Snapshot{{SnapshotId: aws.String("")}},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, snapshots []types.Snapshot) {
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, nil).Times(0)
 			},
 			expErr: ErrInvalidRequest,
 		},
@@ -688,7 +684,7 @@ func TestCheckDesiredState(t *testing.T) {
 		if !ok {
 			t.Fatalf("could not assert cloudInstance as type cloud, %v", cloudInstance)
 		}
-		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+		mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{
 				{
 					VolumeId:   aws.String("vol-001"),
@@ -727,7 +723,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 			volumeIDs: []string{"vol-001", "vol-002", "vol-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
 				volumeModificationsOutput := &ec2.DescribeVolumesModificationsOutput{VolumesModifications: volumeModifications}
-				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(volumeModificationsOutput, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumesModifications(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesModificationsInput{})).Return(volumeModificationsOutput, expErr).Times(1)
 			},
 			expErr: nil,
 		},
@@ -735,7 +731,7 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 			name:      "fail: EC2 API generic error",
 			volumeIDs: []string{"vol-001", "vol-002", "vol-003"},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
-				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(1)
+				mockEC2.EXPECT().DescribeVolumesModifications(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesModificationsInput{})).Return(nil, expErr).Times(1)
 			},
 			expErr: errors.New("generic EC2 API error"),
 		},
@@ -743,7 +739,6 @@ func TestBatchDescribeVolumesModifications(t *testing.T) {
 			name:      "fail: invalid request",
 			volumeIDs: []string{""},
 			mockFunc: func(mockEC2 *MockEC2API, expErr error, volumeModifications []types.VolumeModification) {
-				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any()).Return(nil, expErr).Times(0)
 			},
 			expErr: ErrInvalidRequest,
 		},
@@ -1903,7 +1898,7 @@ func TestCreateDisk(t *testing.T) {
 			defer ctxCancel()
 
 			if tc.expCreateVolumeInput != nil {
-				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 					func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 						if input.DryRun != nil && *input.DryRun {
 							return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
@@ -1913,8 +1908,8 @@ func TestCreateDisk(t *testing.T) {
 							Size:       aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
 							OutpostArn: aws.String(tc.diskOptions.OutpostArn),
 						}, tc.expCreateVolumeErr
-					}).AnyTimes()
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+					}).MinTimes(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
 					Volumes: []types.Volume{
 						{
 							VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
@@ -1925,18 +1920,18 @@ func TestCreateDisk(t *testing.T) {
 						},
 					},
 				}, tc.expDescVolumeErr).AnyTimes()
-				if len(tc.diskOptions.SnapshotID) > 0 {
-					mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
+				if (tc.expCreateVolumeErr == nil || tc.expCopyVolumesErr == nil) && len(tc.diskOptions.SnapshotID) > 0 {
+					mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{snapshot}}, nil).AnyTimes()
 				}
 				if len(tc.diskOptions.AvailabilityZone) == 0 && len(tc.diskOptions.AvailabilityZoneID) == 0 {
-					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
+					mockEC2.EXPECT().DescribeAvailabilityZones(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeAvailabilityZonesInput{})).Return(&ec2.DescribeAvailabilityZonesOutput{
 						AvailabilityZones: []types.AvailabilityZone{
 							{ZoneName: aws.String(defaultZone)},
 						},
 					}, nil)
 				}
 			} else if tc.expCopyVolumesInput != nil {
-				mockEC2.EXPECT().CopyVolumes(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.CopyVolumesOutput{
+				mockEC2.EXPECT().CopyVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.CopyVolumesInput{}), testutil.EC2Options()).Return(&ec2.CopyVolumesOutput{
 					Volumes: []types.Volume{
 						{
 							VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
@@ -1947,7 +1942,7 @@ func TestCreateDisk(t *testing.T) {
 						},
 					},
 				}, tc.expCopyVolumesErr)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
 					Volumes: []types.Volume{
 						{
 							VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
@@ -1961,7 +1956,7 @@ func TestCreateDisk(t *testing.T) {
 			}
 
 			if tc.expCreateVolumeInput == nil {
-				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 					func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 						if input.DryRun != nil && *input.DryRun {
 							return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
@@ -1970,7 +1965,7 @@ func TestCreateDisk(t *testing.T) {
 					}).AnyTimes()
 
 				if len(tc.diskOptions.AvailabilityZone) == 0 && len(tc.diskOptions.AvailabilityZoneID) == 0 {
-					mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(&ec2.DescribeAvailabilityZonesOutput{
+					mockEC2.EXPECT().DescribeAvailabilityZones(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeAvailabilityZonesInput{})).Return(&ec2.DescribeAvailabilityZonesOutput{
 						AvailabilityZones: []types.AvailabilityZone{
 							{ZoneName: aws.String(defaultZone)},
 						},
@@ -2033,24 +2028,24 @@ func TestCreateDiskClientToken(t *testing.T) {
 	c := newCloud(mockEC2)
 
 	gomock.InOrder(
-		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				if input.DryRun != nil && *input.DryRun {
 					return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
 				}
 				return nil, errors.New("unexpected non-dry-run call")
 			}),
-		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				assert.Equal(t, expectedClientToken1, *input.ClientToken)
 				return nil, &smithy.GenericAPIError{Code: "IdempotentParameterMismatch"}
 			}),
-		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				assert.Equal(t, expectedClientToken2, *input.ClientToken)
 				return nil, &smithy.GenericAPIError{Code: "IdempotentParameterMismatch"}
 			}),
-		mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 			func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 				assert.Equal(t, expectedClientToken3, *input.ClientToken)
 				return &ec2.CreateVolumeOutput{
@@ -2058,7 +2053,7 @@ func TestCreateDiskClientToken(t *testing.T) {
 					Size:     aws.Int32(util.BytesToGiB(diskOptions.CapacityBytes)),
 				}, nil
 			}),
-		mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{
+		mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{
 				{
 					VolumeId:         aws.String(volumeID),
@@ -2067,7 +2062,7 @@ func TestCreateDiskClientToken(t *testing.T) {
 					AvailabilityZone: aws.String(diskOptions.AvailabilityZone),
 				},
 			},
-		}, nil).AnyTimes(),
+		}, nil).MinTimes(1),
 	)
 
 	ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(defaultCreateDiskDeadline))
@@ -2116,7 +2111,7 @@ func TestDeleteDisk(t *testing.T) {
 			c := newCloud(mockEC2)
 
 			ctx := t.Context()
-			mockEC2.EXPECT().DeleteVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
+			mockEC2.EXPECT().DeleteVolume(testutil.AnyContext(), gomock.Eq(&ec2.DeleteVolumeInput{VolumeId: &tc.volumeID}), testutil.EC2Options()).Return(&ec2.DeleteVolumeOutput{}, tc.expErr)
 
 			ok, err := c.DeleteDisk(ctx, tc.volumeID)
 			if err != nil && tc.expErr == nil {
@@ -2163,14 +2158,14 @@ func TestAttachDisk(t *testing.T) {
 				attachRequest := createAttachRequest(volumeID, nodeID, path)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Eq(attachRequest), gomock.Any()).Return(&ec2.AttachVolumeOutput{
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), gomock.Eq(attachRequest), testutil.EC2Options()).Return(&ec2.AttachVolumeOutput{
 						Device:     aws.String(path),
 						InstanceId: aws.String(nodeID),
 						VolumeId:   aws.String(volumeID),
 						State:      types.VolumeAttachmentStateAttaching,
 					}, nil),
-					mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
 				)
 			},
 		},
@@ -2189,18 +2184,18 @@ func TestAttachDisk(t *testing.T) {
 
 				gomock.InOrder(
 					// First call - fail with "already in use" error
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Eq(attachRequest1), gomock.Any()).Return(nil, blockDeviceInUseErr),
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), gomock.Eq(attachRequest1), testutil.EC2Options()).Return(nil, blockDeviceInUseErr),
 
 					// Second call - succeed, expect bad device name to be skipped
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Eq(attachRequest2), gomock.Any()).Return(&ec2.AttachVolumeOutput{
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), gomock.Eq(attachRequest2), testutil.EC2Options()).Return(&ec2.AttachVolumeOutput{
 						Device:     aws.String(path),
 						InstanceId: aws.String(nodeID),
 						VolumeId:   aws.String(volumeID),
 						State:      types.VolumeAttachmentStateAttaching,
 					}, nil),
-					mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
 				)
 			},
 		},
@@ -2219,8 +2214,8 @@ func TestAttachDisk(t *testing.T) {
 				require.NoError(t, err)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID, volumeID), nil),
-					mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil))
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), instanceRequest).Return(newDescribeInstancesOutput(nodeID, volumeID), nil),
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil))
 			},
 		},
 		{
@@ -2234,8 +2229,8 @@ func TestAttachDisk(t *testing.T) {
 				attachRequest := createAttachRequest(volumeID, nodeID, path)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(gomock.Any(), attachRequest, gomock.Any()).Return(nil, errors.New("AttachVolume error")),
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), attachRequest, testutil.EC2Options()).Return(nil, errors.New("AttachVolume error")),
 				)
 			},
 		},
@@ -2251,7 +2246,7 @@ func TestAttachDisk(t *testing.T) {
 
 				gomock.InOrder(
 					mockEC2.EXPECT().DescribeInstances(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(ctx, attachRequest, gomock.Any()).Return(nil, blockDeviceInUseErr),
+					mockEC2.EXPECT().AttachVolume(ctx, attachRequest, testutil.EC2Options()).Return(nil, blockDeviceInUseErr),
 				)
 			},
 		},
@@ -2274,7 +2269,7 @@ func TestAttachDisk(t *testing.T) {
 
 				gomock.InOrder(
 					mockEC2.EXPECT().DescribeInstances(ctx, instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(ctx, attachRequest, gomock.Any()).Return(nil, attachLimitErr),
+					mockEC2.EXPECT().AttachVolume(ctx, attachRequest, testutil.EC2Options()).Return(nil, attachLimitErr),
 				)
 			},
 		},
@@ -2316,7 +2311,7 @@ func TestAttachDisk(t *testing.T) {
 
 				gomock.InOrder(
 					mockEC2.EXPECT().DescribeInstances(ctx, gomock.Eq(instanceRequest)).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().AttachVolume(ctx, gomock.Eq(attachRequest), gomock.Any()).Return(&ec2.AttachVolumeOutput{
+					mockEC2.EXPECT().AttachVolume(ctx, gomock.Eq(attachRequest), testutil.EC2Options()).Return(&ec2.AttachVolumeOutput{
 						Device:     aws.String(path),
 						InstanceId: aws.String(nodeID),
 						VolumeId:   aws.String(volumeID),
@@ -2325,7 +2320,7 @@ func TestAttachDisk(t *testing.T) {
 					mockEC2.EXPECT().DescribeVolumes(ctx, gomock.Eq(volumeRequest)).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, path, "attached"), nil),
 
 					mockEC2.EXPECT().DescribeInstances(ctx, gomock.Eq(createInstanceRequest2)).Return(newDescribeInstancesOutput(nodeID2), nil),
-					mockEC2.EXPECT().AttachVolume(ctx, gomock.Eq(attachRequest2), gomock.Any()).Return(&ec2.AttachVolumeOutput{
+					mockEC2.EXPECT().AttachVolume(ctx, gomock.Eq(attachRequest2), testutil.EC2Options()).Return(&ec2.AttachVolumeOutput{
 						Device:     aws.String(path),
 						InstanceId: aws.String(nodeID2),
 						VolumeId:   aws.String(volumeID),
@@ -2389,8 +2384,12 @@ func TestAttachDisk(t *testing.T) {
 
 				// Setup SageMaker mock
 				mockSM.EXPECT().AttachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.AttachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/123456789012"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(&sagemaker.AttachClusterNodeVolumeOutput{
 					DeviceName: aws.String("/dev/xvdba"),
 					Status:     smtypes.VolumeAttachmentStatusAttached,
@@ -2398,10 +2397,10 @@ func TestAttachDisk(t *testing.T) {
 
 				// Setup EC2 mock for volume state checking
 				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(
 					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, instanceID, "/dev/xvdba", "attached"),
 					nil,
-				).AnyTimes()
+				).MinTimes(1)
 			},
 			expDevice: "/dev/xvdba",
 			expErr:    nil,
@@ -2412,20 +2411,18 @@ func TestAttachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			setupMocks: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().AttachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.AttachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, &smithy.GenericAPIError{
 					Code:    "ValidationException",
 					Message: "HyperPod - Ec2ErrCode: AttachmentLimitExceeded : Ec2ErrMsg: Volume attachment limit exceeded",
 				})
-
-				// Setup EC2 mock for volume state checking
-				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
-					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
-					nil,
-				).AnyTimes()
 			},
 			expErr: errors.New("limit exceeded: api error ValidationException: HyperPod - Ec2ErrCode: AttachmentLimitExceeded : Ec2ErrMsg: Volume attachment limit exceeded"),
 		},
@@ -2435,17 +2432,15 @@ func TestAttachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			setupMocks: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().AttachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.AttachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, errors.New("AttachVolume error"))
-
-				// Setup EC2 mock for volume state checking
-				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
-					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
-					nil,
-				).AnyTimes()
 			},
 			expErr: errors.New("could not attach volume \"vol-test\" to node \"hyperpod-cluster1-i-1234567890\": AttachVolume error"),
 		},
@@ -2509,9 +2504,9 @@ func TestDetachDisk(t *testing.T) {
 				detachRequest := createDetachRequest(volumeID, nodeID)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolume(gomock.Any(), detachRequest, gomock.Any()).Return(nil, nil),
-					mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, "", "detached"), nil),
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().DetachVolume(testutil.AnyContext(), detachRequest, testutil.EC2Options()).Return(nil, nil),
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(createDescribeVolumesOutput([]*string{&volumeID}, nodeID, "", "detached"), nil),
 				)
 			},
 		},
@@ -2525,8 +2520,8 @@ func TestDetachDisk(t *testing.T) {
 				detachRequest := createDetachRequest(volumeID, nodeID)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolume(gomock.Any(), detachRequest, gomock.Any()).Return(nil, errors.New("DetachVolume error")),
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().DetachVolume(testutil.AnyContext(), detachRequest, testutil.EC2Options()).Return(nil, errors.New("DetachVolume error")),
 				)
 			},
 		},
@@ -2540,8 +2535,8 @@ func TestDetachDisk(t *testing.T) {
 				detachRequest := createDetachRequest(volumeID, nodeID)
 
 				gomock.InOrder(
-					mockEC2.EXPECT().DescribeInstances(gomock.Any(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
-					mockEC2.EXPECT().DetachVolume(gomock.Any(), detachRequest, gomock.Any()).Return(nil, ErrNotFound),
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), instanceRequest).Return(newDescribeInstancesOutput(nodeID), nil),
+					mockEC2.EXPECT().DetachVolume(testutil.AnyContext(), detachRequest, testutil.EC2Options()).Return(nil, ErrNotFound),
 				)
 			},
 		},
@@ -2585,18 +2580,22 @@ func TestDetachDisk(t *testing.T) {
 
 				// Setup SageMaker mock
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(&sagemaker.DetachClusterNodeVolumeOutput{
 					Status: smtypes.VolumeAttachmentStatusDetached,
 				}, nil)
 
 				// Setup EC2 mock for volume state checking
 				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(
 					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, instanceID, "", "detached"),
 					nil,
-				).AnyTimes()
+				).MinTimes(1)
 			},
 			expErr: nil,
 		},
@@ -2606,17 +2605,15 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, errors.New("DetachVolume error"))
-
-				// Setup EC2 mock for volume state checking
-				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
-					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "detached"),
-					nil,
-				).AnyTimes()
 			},
 			expErr: errors.New("could not detach volume \"vol-test\" from node \"hyperpod-cluster1-i-1234567890\": DetachVolume error"),
 		},
@@ -2626,9 +2623,14 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, &smithy.GenericAPIError{
 					Code:    "ValidationException",
 					Message: "HyperPod - Ec2ErrCode: IncorrectState : Ec2ErrMsg: State is not correct",
@@ -2642,9 +2644,14 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, &smithy.GenericAPIError{
 					Code:    "ValidationException",
 					Message: "HyperPod - Ec2ErrCode: InvalidAttachment.NotFound : Ec2ErrMsg: Attachment not found",
@@ -2658,9 +2665,14 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock to return error
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(nil, &smithy.GenericAPIError{
 					Code:    "ValidationException",
 					Message: "HyperPod - Ec2ErrCode: InvalidVolume.NotFound : Ec2ErrMsg: Volume not found",
@@ -2674,19 +2686,24 @@ func TestDetachDisk(t *testing.T) {
 			nodeID:   "hyperpod-cluster1-i-1234567890",
 			mockFunc: func(mockEC2 *MockEC2API, mockSM *MockSageMakerAPI, volumeID, nodeID string) {
 				// Setup SageMaker mock
+				instanceID := getInstanceIDFromHyperPodNode(nodeID)
 				mockSM.EXPECT().DetachClusterNodeVolume(
-					gomock.Any(),
-					gomock.Any(),
+					testutil.AnyContext(),
+					gomock.Eq(&sagemaker.DetachClusterNodeVolumeInput{
+						ClusterArn: aws.String("arn:aws:sagemaker:us-west-2:123456789012:cluster/cluster1"),
+						NodeId:     aws.String(instanceID),
+						VolumeId:   aws.String(volumeID),
+					}),
 				).Return(&sagemaker.DetachClusterNodeVolumeOutput{
 					Status: smtypes.VolumeAttachmentStatusDetaching,
 				}, nil)
 
 				// Setup EC2 mock to simulate timeout by always returning "attached"
 				volumeRequest := createVolumeRequest(volumeID)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), volumeRequest).Return(
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), volumeRequest).Return(
 					createDescribeVolumesOutput([]*string{aws.String(volumeID)}, "", "", "attached"),
 					nil,
-				).AnyTimes()
+				).MinTimes(1)
 			},
 			expErr: errors.New("error waiting for volume detachment: timed out waiting for the condition"),
 		},
@@ -2783,7 +2800,7 @@ func TestGetDiskByName(t *testing.T) {
 			}
 
 			ctx := t.Context()
-			mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{vol}}, tc.expErr)
+			mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{vol}}, tc.expErr)
 
 			disk, err := c.GetDiskByName(ctx, tc.volumeName, tc.volumeCapacity)
 			if err != nil {
@@ -2878,7 +2895,7 @@ func TestGetDiskByID(t *testing.T) {
 
 			ctx := t.Context()
 
-			mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(
+			mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(
 				&ec2.DescribeVolumesOutput{
 					Volumes: []types.Volume{
 						{
@@ -3070,7 +3087,7 @@ func TestCreateSnapshot(t *testing.T) {
 
 			ctx := t.Context()
 
-			mockEC2.EXPECT().CreateSnapshot(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			mockEC2.EXPECT().CreateSnapshot(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateSnapshotInput{}), testutil.EC2Options()).DoAndReturn(
 				func(ctx context.Context, input *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
 					if input.VolumeId == nil || *input.VolumeId != tc.expSnapshot.SourceVolumeID {
 						t.Errorf("Unexpected VolumeId. Expected: %s, Actual: %s", tc.expSnapshot.SourceVolumeID, aws.ToString(input.VolumeId))
@@ -3186,7 +3203,10 @@ func TestEnableFastSnapshotRestores(t *testing.T) {
 			c := newCloud(mockEC2)
 
 			ctx := t.Context()
-			mockEC2.EXPECT().EnableFastSnapshotRestores(gomock.Any(), gomock.Any(), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
+			mockEC2.EXPECT().EnableFastSnapshotRestores(testutil.AnyContext(), gomock.Eq(&ec2.EnableFastSnapshotRestoresInput{
+				AvailabilityZones: tc.availabilityZones,
+				SourceSnapshotIds: []string{tc.snapshotID},
+			}), testutil.EC2Options()).Return(tc.expOutput, tc.expErr).MinTimes(1)
 
 			response, err := c.EnableFastSnapshotRestores(ctx, tc.availabilityZones, tc.snapshotID)
 
@@ -3249,7 +3269,7 @@ func TestAvailabilityZones(t *testing.T) {
 			c := newCloud(mockEC2)
 
 			ctx := t.Context()
-			mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any()).Return(tc.expOutput, tc.expErr).AnyTimes()
+			mockEC2.EXPECT().DescribeAvailabilityZones(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeAvailabilityZonesInput{})).Return(tc.expOutput, tc.expErr).MinTimes(1)
 
 			az, err := c.AvailabilityZones(ctx)
 			if err != nil {
@@ -3303,7 +3323,10 @@ func TestDeleteSnapshot(t *testing.T) {
 			c := newCloud(mockEC2)
 
 			ctx := t.Context()
-			mockEC2.EXPECT().DeleteSnapshot(gomock.Any(), gomock.Any(), gomock.Any()).Return(&ec2.DeleteSnapshotOutput{}, tc.expErr)
+			mockEC2.EXPECT().DeleteSnapshot(testutil.AnyContext(), gomock.Eq(&ec2.DeleteSnapshotInput{
+				SnapshotId: aws.String(tc.snapshotName),
+				DryRun:     aws.Bool(false),
+			}), testutil.EC2Options()).Return(&ec2.DeleteSnapshotOutput{}, tc.expErr)
 
 			_, err := c.DeleteSnapshot(ctx, tc.snapshotName)
 			if err != nil {
@@ -3599,7 +3622,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 
 			ctx := t.Context()
 			if tc.existingVolume != nil || tc.existingVolumeError != nil {
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(
 					&ec2.DescribeVolumesOutput{
 						Volumes: []types.Volume{
 							*tc.existingVolume,
@@ -3622,7 +3645,7 @@ func TestResizeOrModifyDisk(t *testing.T) {
 							newVolume.VolumeType = types.VolumeType(tc.modifyDiskOptions.VolumeType)
 						}
 					}
-					mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(
 						&ec2.DescribeVolumesOutput{
 							Volumes: []types.Volume{
 								*newVolume,
@@ -3631,19 +3654,19 @@ func TestResizeOrModifyDisk(t *testing.T) {
 				}
 			}
 
-			mockEC2.EXPECT().DescribeTags(gomock.Any(), gomock.Any()).Return(&ec2.DescribeTagsOutput{}, nil).AnyTimes()
+			mockEC2.EXPECT().DescribeTags(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeTagsInput{})).Return(&ec2.DescribeTagsOutput{}, nil).AnyTimes()
 
 			// Mock CreateVolume for getVolumeLimits dry-run calls
-			mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "DryRunOperation"}).AnyTimes()
+			mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).Return(nil, &smithy.GenericAPIError{Code: "DryRunOperation"}).AnyTimes()
 
 			if tc.modifiedVolume != nil || tc.modifiedVolumeError != nil {
-				mockEC2.EXPECT().ModifyVolume(gomock.Any(), gomock.Any(), gomock.Any()).Return(tc.modifiedVolume, tc.modifiedVolumeError).AnyTimes()
+				mockEC2.EXPECT().ModifyVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.ModifyVolumeInput{}), testutil.EC2Options()).Return(tc.modifiedVolume, tc.modifiedVolumeError).MinTimes(1)
 			}
 			if tc.descModVolume != nil {
-				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any(), gomock.Any()).Return(tc.descModVolume, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumesModifications(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesModificationsInput{}), testutil.EC2Options()).Return(tc.descModVolume, nil).MinTimes(1)
 			} else {
 				emptyOutput := &ec2.DescribeVolumesModificationsOutput{}
-				mockEC2.EXPECT().DescribeVolumesModifications(gomock.Any(), gomock.Any(), gomock.Any()).Return(emptyOutput, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumesModifications(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesModificationsInput{}), testutil.EC2Options()).Return(emptyOutput, nil).AnyTimes()
 			}
 
 			newSize, err := c.ResizeOrModifyDisk(ctx, tc.volumeID, util.GiBToBytes(tc.reqSizeGiB), tc.modifyDiskOptions)
@@ -3741,16 +3764,16 @@ func TestModifyTags(t *testing.T) {
 
 			if len(tc.modifyTagsOptions.TagsToAdd) > 0 {
 				if tc.negativeCase {
-					mockEC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).Return(nil, tc.expErr).Times(1)
+					mockEC2.EXPECT().CreateTags(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateTagsInput{})).Return(nil, tc.expErr).Times(1)
 				} else {
-					mockEC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).Return(&ec2.CreateTagsOutput{}, tc.expErr).Times(1)
+					mockEC2.EXPECT().CreateTags(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateTagsInput{})).Return(&ec2.CreateTagsOutput{}, tc.expErr).Times(1)
 				}
 			}
 			if len(tc.modifyTagsOptions.TagsToDelete) > 0 {
 				if tc.negativeCase {
-					mockEC2.EXPECT().DeleteTags(gomock.Any(), gomock.Any()).Return(nil, tc.expErr).Times(1)
+					mockEC2.EXPECT().DeleteTags(testutil.AnyContext(), testutil.EC2Input(&ec2.DeleteTagsInput{})).Return(nil, tc.expErr).Times(1)
 				} else {
-					mockEC2.EXPECT().DeleteTags(gomock.Any(), gomock.Any()).Return(&ec2.DeleteTagsOutput{}, tc.expErr).Times(1)
+					mockEC2.EXPECT().DeleteTags(testutil.AnyContext(), testutil.EC2Input(&ec2.DeleteTagsInput{})).Return(&ec2.DeleteTagsOutput{}, tc.expErr).Times(1)
 				}
 			}
 
@@ -3829,7 +3852,7 @@ func TestGetSnapshotByName(t *testing.T) {
 
 			ctx := t.Context()
 
-			mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
+			mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
 
 			snapshot, err := c.GetSnapshotByName(ctx, tc.snapshotName)
 			if err != nil {
@@ -3902,7 +3925,7 @@ func TestGetSnapshotByID(t *testing.T) {
 
 			ctx := t.Context()
 
-			mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
+			mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{Snapshots: []types.Snapshot{ec2snapshot}}, nil)
 
 			snapshot, err := c.GetSnapshotByID(ctx, tc.snapshotID)
 			if err != nil {
@@ -3986,7 +4009,7 @@ func TestListSnapshots(t *testing.T) {
 
 				ctx := t.Context()
 
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
 
 				resp, err := c.ListSnapshots(ctx, "", 0, "")
 				if err != nil {
@@ -4061,7 +4084,7 @@ func TestListSnapshots(t *testing.T) {
 
 				ctx := t.Context()
 
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{Snapshots: ec2Snapshots}, nil)
 
 				resp, err := c.ListSnapshots(ctx, sourceVolumeID, 0, "")
 				if err != nil {
@@ -4125,11 +4148,11 @@ func TestListSnapshots(t *testing.T) {
 
 				ctx := t.Context()
 
-				firstCall := mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+				firstCall := mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{
 					Snapshots: ec2Snapshots[:maxResults],
 					NextToken: aws.String(nextTokenValue),
 				}, nil)
-				secondCall := mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{
+				secondCall := mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{
 					Snapshots: ec2Snapshots[maxResults:],
 				}, nil)
 				gomock.InOrder(
@@ -4175,7 +4198,7 @@ func TestListSnapshots(t *testing.T) {
 
 				ctx := t.Context()
 
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(nil, errors.New("test error"))
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(nil, errors.New("test error"))
 
 				if _, err := c.ListSnapshots(ctx, "", 0, ""); err == nil {
 					t.Fatalf("ListSnapshots() failed: expected an error, got none")
@@ -4193,7 +4216,7 @@ func TestListSnapshots(t *testing.T) {
 
 				ctx := t.Context()
 
-				mockEC2.EXPECT().DescribeSnapshots(gomock.Any(), gomock.Any()).Return(&ec2.DescribeSnapshotsOutput{}, nil)
+				mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeSnapshotsInput{})).Return(&ec2.DescribeSnapshotsOutput{}, nil)
 
 				_, err := c.ListSnapshots(ctx, "", 0, "")
 				if err != nil {
@@ -4393,38 +4416,42 @@ func TestWaitForAttachmentState(t *testing.T) {
 
 			switch tc.name {
 			case "success: detached":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil).MinTimes(1)
 			case "failure: already assigned but detached state":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil)
-				mockEC2.EXPECT().AttachVolume(gomock.Any(), gomock.Any()).Return(nil, nil)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{detachedVol}}, nil)
+				mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), gomock.Eq(&ec2.AttachVolumeInput{
+					Device:     aws.String(defaultPath),
+					InstanceId: aws.String("1234"),
+					VolumeId:   aws.String("vol-test-1234"),
+				})).Return(nil, nil)
 			case "failure: already assigned but attaching state":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil)
 			case "success: disk not found, assumed detached", "failure: disk not found, expected attached":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(nil, &smithy.GenericAPIError{
 					Code:    "InvalidVolume.NotFound",
 					Message: "foo",
-				}).AnyTimes()
+				}).MinTimes(1)
 			case "success: multiple attachments with Multi-Attach enabled":
 				multipleAttachmentsVol.MultiAttachEnabled = aws.Bool(true)
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).MinTimes(1)
 			case "success: HyperPod attached":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
 			case "success: HyperPod detached":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodDetachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodDetachedVol}}, nil).MinTimes(1)
 			case "failure: HyperPod with mismatch AssociatedResource":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
 			case "failure: HyperPod with invalid instanceId in AssociatedResource":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
 			case "failure: multiple attachments with Multi-Attach disabled":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).MinTimes(1)
 			case "failure: disk still attaching":
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil).MinTimes(1)
 			case "failure: context cancelled":
-				mockEC2.EXPECT().DescribeVolumes(ctx, gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(ctx, testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil).MinTimes(1)
 				cancel()
 			default:
-				mockEC2.EXPECT().DescribeVolumes(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil).MinTimes(1)
 			}
 
 			attachment, err := c.WaitForAttachmentState(ctx, tc.expectedState, tc.volumeID, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
@@ -4577,7 +4604,7 @@ func TestIsVolumeInitialized(t *testing.T) {
 
 			// If tc.dvsOutput nil, we should NOT expect a DVS call.
 			if tc.dvsOutput != nil {
-				mockEC2.EXPECT().DescribeVolumeStatus(gomock.Any(), gomock.Any()).Return(&ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{*tc.dvsOutput}}, nil).AnyTimes()
+				mockEC2.EXPECT().DescribeVolumeStatus(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumeStatusInput{})).Return(&ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{*tc.dvsOutput}}, nil).MinTimes(1)
 			}
 
 			startTime := time.Now()
@@ -4658,7 +4685,7 @@ func TestDryRun(t *testing.T) {
 			c.attemptDryRun.Store(tc.attemptDryRunBefore)
 
 			if tc.attemptDryRunBefore {
-				mockEC2.EXPECT().DescribeAvailabilityZones(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{
+				mockEC2.EXPECT().DescribeAvailabilityZones(testutil.AnyContext(), gomock.Eq(&ec2.DescribeAvailabilityZonesInput{DryRun: aws.Bool(true)}), testutil.EC2Options()).Return(nil, &smithy.GenericAPIError{
 					Code: tc.errCode,
 				}).Times(tc.dryRunAttempts)
 			}
@@ -4899,7 +4926,7 @@ func TestGetVolumeLimits(t *testing.T) {
 			}
 
 			if tc.cachedLimits == nil {
-				mockEC2.EXPECT().CreateVolume(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
 					func(ctx context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 						if input.DryRun == nil || !*input.DryRun {
 							t.Error("Expected DryRun to be true")
@@ -5365,9 +5392,7 @@ func TestExecBatchCaching(t *testing.T) {
 		mockEC2 := NewMockEC2API(mockCtrl)
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+		mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), gomock.Eq(&ec2.DescribeVolumesInput{
 			VolumeIds: []string{"vol-0c7e1a5f8b2d4c6939", "vol-0f8a2c4e6b9d1e5787"},
 		})).Return(nil, errors.New("InvalidVolume.NotFound: vol-0c7e1a5f8b2d4c6939")).Times(1)
 
@@ -5384,14 +5409,12 @@ func TestExecBatchCaching(t *testing.T) {
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 		cache.Set("vol-0c7e1a5f8b2d4c6939", &struct{}{})
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+		mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), gomock.Eq(&ec2.DescribeVolumesInput{
 			VolumeIds: []string{"vol-0f8a2c4e6b9d1e5787"},
 		})).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{{VolumeId: aws.String("vol-0f8a2c4e6b9d1e5787")}},
 		}, nil).Times(1)
-		mockEC2.EXPECT().DescribeVolumes(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+		mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), gomock.Eq(&ec2.DescribeVolumesInput{
 			VolumeIds: []string{"vol-0c7e1a5f8b2d4c6939"},
 		})).Return(&ec2.DescribeVolumesOutput{
 			Volumes: []types.Volume{{VolumeId: aws.String("vol-0c7e1a5f8b2d4c6939")}},
@@ -5410,9 +5433,7 @@ func TestExecBatchCaching(t *testing.T) {
 		mockEC2 := NewMockEC2API(mockCtrl)
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+		mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(&ec2.DescribeInstancesInput{
 			InstanceIds: []string{"i-0c7e1a5f8b2d4c939", "i-0f8a2c4e6b9d1e787"},
 		})).Return(nil, errors.New("InvalidInstanceID.NotFound: i-0c7e1a5f8b2d4c939")).Times(1)
 
@@ -5429,14 +5450,12 @@ func TestExecBatchCaching(t *testing.T) {
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 		cache.Set("i-0c7e1a5f8b2d4c939", &struct{}{})
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+		mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(&ec2.DescribeInstancesInput{
 			InstanceIds: []string{"i-0f8a2c4e6b9d1e787"},
 		})).Return(&ec2.DescribeInstancesOutput{
 			Reservations: []types.Reservation{{Instances: []types.Instance{{InstanceId: aws.String("i-0f8a2c4e6b9d1e787")}}}},
 		}, nil).Times(1)
-		mockEC2.EXPECT().DescribeInstances(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeInstancesInput{
+		mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(&ec2.DescribeInstancesInput{
 			InstanceIds: []string{"i-0c7e1a5f8b2d4c939"},
 		})).Return(&ec2.DescribeInstancesOutput{
 			Reservations: []types.Reservation{{Instances: []types.Instance{{InstanceId: aws.String("i-0c7e1a5f8b2d4c939")}}}},
@@ -5455,9 +5474,7 @@ func TestExecBatchCaching(t *testing.T) {
 		mockEC2 := NewMockEC2API(mockCtrl)
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+		mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), gomock.Eq(&ec2.DescribeSnapshotsInput{
 			SnapshotIds: []string{"snap-0c7e1a5f8b2d4c939", "snap-0f8a2c4e6b9d1e787"},
 		})).Return(nil, errors.New("InvalidSnapshot.NotFound: snap-0c7e1a5f8b2d4c939")).Times(1)
 
@@ -5474,14 +5491,12 @@ func TestExecBatchCaching(t *testing.T) {
 		cache := expiringcache.New[string, struct{}](cacheForgetDelay)
 		cache.Set("snap-0c7e1a5f8b2d4c939", &struct{}{})
 
-		ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
-		defer cancel()
-		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+		mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), gomock.Eq(&ec2.DescribeSnapshotsInput{
 			SnapshotIds: []string{"snap-0f8a2c4e6b9d1e787"},
 		})).Return(&ec2.DescribeSnapshotsOutput{
 			Snapshots: []types.Snapshot{{SnapshotId: aws.String("snap-0f8a2c4e6b9d1e787")}},
 		}, nil).Times(1)
-		mockEC2.EXPECT().DescribeSnapshots(gomock.AssignableToTypeOf(ctx), gomock.Eq(&ec2.DescribeSnapshotsInput{
+		mockEC2.EXPECT().DescribeSnapshots(testutil.AnyContext(), gomock.Eq(&ec2.DescribeSnapshotsInput{
 			SnapshotIds: []string{"snap-0c7e1a5f8b2d4c939"},
 		})).Return(&ec2.DescribeSnapshotsOutput{
 			Snapshots: []types.Snapshot{{SnapshotId: aws.String("snap-0c7e1a5f8b2d4c939")}},
