@@ -111,6 +111,9 @@ const (
 	// Ext4ClusterSizeKey configures the cluster size when formatting an ext4 volume with the bigalloc option enabled.
 	Ext4ClusterSizeKey = "ext4clustersize"
 
+	// Ext4EncryptionSupportKey enables the encrypt option when formatting an ext4 volume.
+	Ext4EncryptionSupportKey = "ext4encryptionsupport"
+
 	// TagKeyPrefix contains the prefix of a volume parameter that designates it as
 	// a tag to be attached to the resource.
 	TagKeyPrefix = "tagSpecification"
@@ -205,8 +208,9 @@ var (
 	FileSystemConfigs = map[string]fileSystemConfig{
 		FSTypeExt3: {
 			NotSupportedParams: map[string]struct{}{
-				Ext4BigAllocKey:    {},
-				Ext4ClusterSizeKey: {},
+				Ext4BigAllocKey:          {},
+				Ext4ClusterSizeKey:       {},
+				Ext4EncryptionSupportKey: {},
 			},
 		},
 		FSTypeExt4: {
@@ -214,20 +218,22 @@ var (
 		},
 		FSTypeXfs: {
 			NotSupportedParams: map[string]struct{}{
-				BytesPerInodeKey:   {},
-				NumberOfInodesKey:  {},
-				Ext4BigAllocKey:    {},
-				Ext4ClusterSizeKey: {},
+				BytesPerInodeKey:         {},
+				NumberOfInodesKey:        {},
+				Ext4BigAllocKey:          {},
+				Ext4ClusterSizeKey:       {},
+				Ext4EncryptionSupportKey: {},
 			},
 		},
 		FSTypeNtfs: {
 			NotSupportedParams: map[string]struct{}{
-				BlockSizeKey:       {},
-				InodeSizeKey:       {},
-				BytesPerInodeKey:   {},
-				NumberOfInodesKey:  {},
-				Ext4BigAllocKey:    {},
-				Ext4ClusterSizeKey: {},
+				BlockSizeKey:             {},
+				InodeSizeKey:             {},
+				BytesPerInodeKey:         {},
+				NumberOfInodesKey:        {},
+				Ext4BigAllocKey:          {},
+				Ext4ClusterSizeKey:       {},
+				Ext4EncryptionSupportKey: {},
 			},
 		},
 	}

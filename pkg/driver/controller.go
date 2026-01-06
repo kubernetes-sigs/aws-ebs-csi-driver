@@ -128,6 +128,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		numberOfInodes              string
 		ext4BigAlloc                bool
 		ext4ClusterSize             string
+		ext4EncryptionSupport       bool
 		blockAttachUntilInitialized bool
 	)
 
@@ -211,6 +212,8 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse ext4ClusterSize (%s): %v", value, err)
 			}
 			ext4ClusterSize = value
+		case Ext4EncryptionSupportKey:
+			ext4EncryptionSupport = isTrue(value)
 		case BlockAttachUntilInitializedKey:
 			blockAttachUntilInitialized = isTrue(value)
 		default:
@@ -317,6 +320,12 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if len(ext4ClusterSize) > 0 {
 		responseCtx[Ext4ClusterSizeKey] = ext4ClusterSize
 		if err = validateFormattingOption(volCap, Ext4ClusterSizeKey, FileSystemConfigs); err != nil {
+			return nil, err
+		}
+	}
+	if ext4EncryptionSupport {
+		responseCtx[Ext4EncryptionSupportKey] = trueStr
+		if err = validateFormattingOption(volCap, Ext4EncryptionSupportKey, FileSystemConfigs); err != nil {
 			return nil, err
 		}
 	}

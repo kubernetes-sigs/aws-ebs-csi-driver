@@ -181,6 +181,10 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if err != nil {
 		return nil, err
 	}
+	ext4EncryptionSupport, err := recheckFormattingOptionParameter(context, Ext4EncryptionSupportKey, FileSystemConfigs, fsType)
+	if err != nil {
+		return nil, err
+	}
 
 	mountOptions := collectMountOptions(fsType, mountVolume.GetMountFlags())
 
@@ -279,6 +283,9 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 	if len(ext4ClusterSize) > 0 {
 		formatOptions = append(formatOptions, "-C", ext4ClusterSize)
+	}
+	if ext4EncryptionSupport == "true" {
+		formatOptions = append(formatOptions, "-O", "encrypt")
 	}
 	if fsType == FSTypeXfs && d.options.LegacyXFSProgs {
 		formatOptions = append(formatOptions, "-m", "bigtime=0,inobtcount=0,reflink=0", "-i", "nrext64=0")

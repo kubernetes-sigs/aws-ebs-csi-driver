@@ -2579,6 +2579,13 @@ func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 			errExpected: false,
 		},
 		{
+			name: "success with ext4 encryption support",
+			formattingOptionParameters: map[string]string{
+				Ext4EncryptionSupportKey: "true",
+			},
+			errExpected: false,
+		},
+		{
 			name: "failure with IOPSPerGBKey",
 			formattingOptionParameters: map[string]string{
 				IopsPerGBKey: "wrong_value",
