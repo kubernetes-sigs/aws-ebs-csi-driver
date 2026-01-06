@@ -187,6 +187,7 @@ spec:
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+            - --http-endpoint=0.0.0.0:9809
           {{- if .Values.node.windowsHostProcess }}
             - --plugin-registration-path=$(PLUGIN_REG_DIR)
           {{- end }}
@@ -218,15 +219,13 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+          ports:
+            - name: healthz
+              containerPort: 9809
+          {{- with .Values.sidecars.nodeDriverRegistrar.livenessProbe }}
           livenessProbe:
-            exec:
-              command:
-                - /csi-node-driver-registrar.exe
-                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-                - --mode=kubelet-registration-probe
-            initialDelaySeconds: 30
-            timeoutSeconds: 15
-            periodSeconds: 90
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
