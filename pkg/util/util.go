@@ -219,3 +219,7 @@ func WaitUntilTimeOrContext(ctx context.Context, wakeup time.Time) {
 	case <-time.After(time.Until(wakeup)):
 	}
 }
+
+func IsHyperPodNode(nodeID string) bool {
+	return strings.HasPrefix(nodeID, "hyperpod-")
+}
