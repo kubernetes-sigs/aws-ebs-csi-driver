@@ -925,6 +925,44 @@ func TestNodeStageVolume(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name: "format_options_ext4_encryption_support",
+			req: &csi.NodeStageVolumeRequest{
+				VolumeId:          "vol-test",
+				StagingTargetPath: "/staging/path",
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "ext4",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeContext: map[string]string{
+					Ext4EncryptionSupportKey: "true",
+				},
+				PublishContext: map[string]string{
+					DevicePathKey: "/dev/xvdba",
+				},
+			},
+			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
+				m := mounter.NewMockMounter(ctrl)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Eq([]string(nil)), gomock.Eq([]string(nil)), gomock.Eq([]string{"-O", "encrypt"})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
+				return m
+			},
+			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
+				m := metadata.NewMockMetadataService(ctrl)
+				m.EXPECT().GetRegion().Return("us-west-2")
+				return m
+			},
+			expectedErr: nil,
+		},
+		{
 			name: "format_options_xfs",
 			req: &csi.NodeStageVolumeRequest{
 				VolumeId:          "vol-test",

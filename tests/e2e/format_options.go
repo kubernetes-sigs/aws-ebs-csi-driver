@@ -87,6 +87,16 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume
 					ebscsidriver.FSTypeKey:          fsType,
 				},
 			},
+			ebscsidriver.Ext4EncryptionSupportKey: {
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.Ext4EncryptionSupportKey: "true",
+					ebscsidriver.FSTypeKey:                fsType,
+					// Intentionally also enabling big alloc to test
+					// merging of two format params both using -O
+					ebscsidriver.Ext4BigAllocKey:    "true",
+					ebscsidriver.Ext4ClusterSizeKey: "16384",
+				},
+			},
 		}
 
 		Context(fmt.Sprintf("using an %s filesystem", fsType), func() {
