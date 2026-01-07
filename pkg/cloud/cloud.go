@@ -1152,7 +1152,7 @@ func (c *cloud) batchDescribeInstances(request *ec2.DescribeInstancesInput) (*ty
 }
 
 func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string, error) {
-	if isHyperPodNode(nodeID) {
+	if util.IsHyperPodNode(nodeID) {
 		return c.attachDiskHyperPod(ctx, volumeID, nodeID)
 	}
 
@@ -1272,7 +1272,7 @@ func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 }
 
 func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
-	if isHyperPodNode(nodeID) {
+	if util.IsHyperPodNode(nodeID) {
 		return c.detachDiskHyperPod(ctx, volumeID, nodeID)
 	}
 	instance, err := c.getInstance(ctx, nodeID)
@@ -1515,7 +1515,7 @@ func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.Vol
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
-	isHyperPod := isHyperPodNode(expectedInstance)
+	isHyperPod := util.IsHyperPodNode(expectedInstance)
 
 	verifyVolumeFunc := func(ctx context.Context) (bool, error) {
 		request := &ec2.DescribeVolumesInput{
@@ -1689,10 +1689,6 @@ func (c *cloud) GetVolumeIDByNodeAndDevice(ctx context.Context, nodeID string, d
 	}
 
 	return "", fmt.Errorf("volume not found at device %s on node %s: %w", deviceName, nodeID, ErrNotFound)
-}
-
-func isHyperPodNode(nodeID string) bool {
-	return strings.HasPrefix(nodeID, "hyperpod-")
 }
 
 // Only for hyperpod node, getInstanceIDFromHyperPodNode extracts the EC2 instance ID from a HyperPod node ID.

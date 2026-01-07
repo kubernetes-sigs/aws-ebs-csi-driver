@@ -2923,38 +2923,6 @@ func TestGetDiskByID(t *testing.T) {
 	}
 }
 
-func TestIsHyperPodNode(t *testing.T) {
-	tests := []struct {
-		name     string
-		nodeID   string
-		expected bool
-	}{
-		{
-			name:     "success: valid hyperpod node ID",
-			nodeID:   "hyperpod-abc123-i-0123456789abcdef0",
-			expected: true,
-		},
-		{
-			name:     "success: regular EC2 instance ID",
-			nodeID:   "i-0123456789abcdef0",
-			expected: false,
-		},
-		{
-			name:     "success: empty string",
-			nodeID:   "",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isHyperPodNode(tt.nodeID); got != tt.expected {
-				t.Errorf("isHyperPodNode() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestGetInstanceIDFromHyperPodNode(t *testing.T) {
 	tests := []struct {
 		name   string

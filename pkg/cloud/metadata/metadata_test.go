@@ -61,6 +61,7 @@ func TestNewMetadataService(t *testing.T) {
 		node             *corev1.Node
 		expectedMetadata *Metadata
 		expectedError    error
+		isHyperPodNode   bool
 	}{
 		{
 			name:            "TestNewMetadataService: Default MetadataSources, IMDS available",
@@ -202,6 +203,32 @@ func TestNewMetadataService(t *testing.T) {
 			},
 			expectedError: sourcesUnavailableErr([]string{SourceMetadataLabeler}),
 		},
+		{
+			name:            "TestNewMetadataService: Default MetadataSources on HyperPod node, K8s API available",
+			metadataSources: DefaultMetadataSources,
+			isHyperPodNode:  true,
+			node: &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "hyperpod-i-1234567890abcdef0",
+					Labels: map[string]string{
+						corev1.LabelInstanceTypeStable: "c5.xlarge",
+						corev1.LabelTopologyRegion:     "us-west-2",
+						corev1.LabelTopologyZone:       "us-west-2a",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
+				},
+			},
+			expectedMetadata: &Metadata{
+				InstanceID:             "hyperpod-abcde3ghij4l-i-1234567890abcdef0",
+				InstanceType:           "c5.xlarge",
+				Region:                 "us-west-2",
+				AvailabilityZone:       "us-west-2a",
+				NumAttachedENIs:        1,
+				NumBlockDeviceMappings: 0,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -214,14 +241,19 @@ func TestNewMetadataService(t *testing.T) {
 				return fake.NewSimpleClientset(tc.node), nil
 			}
 
-			t.Setenv("CSI_NODE_NAME", "test-node")
+			if tc.isHyperPodNode {
+				t.Setenv("CSI_NODE_NAME", "hyperpod-i-1234567890abcdef0")
+			} else {
+				t.Setenv("CSI_NODE_NAME", "test-node")
+			}
+
 			if tc.imdsDisabled {
 				t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 			} else {
 				t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
 			}
 
-			if tc.IMDSError == nil && !tc.imdsDisabled && (slices.Contains(tc.metadataSources, SourceIMDS)) {
+			if tc.IMDSError == nil && !tc.imdsDisabled && (slices.Contains(tc.metadataSources, SourceIMDS)) && !tc.isHyperPodNode {
 				mockIMDS.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",

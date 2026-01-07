@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
@@ -63,8 +64,13 @@ func NewMetadataService(cfg MetadataServiceConfig, region string) (MetadataServi
 	for _, source := range cfg.MetadataSources {
 		switch source {
 		case SourceIMDS:
-			if os.Getenv("AWS_EC2_METADATA_DISABLED") == "true" {
-				klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
+			isHyperPodNode := util.IsHyperPodNode(os.Getenv("CSI_NODE_NAME"))
+			if os.Getenv("AWS_EC2_METADATA_DISABLED") == "true" || isHyperPodNode {
+				if isHyperPodNode {
+					klog.V(2).InfoS("HyperPod node detected. Will not rely on IMDS for instance metadata")
+				} else {
+					klog.V(2).InfoS("Environment variable AWS_EC2_METADATA_DISABLED set to 'true'. Will not rely on IMDS for instance metadata")
+				}
 			} else {
 				klog.V(2).InfoS("Attempting to retrieve instance metadata from IMDS")
 				metadata, err := retrieveIMDSMetadata(cfg.IMDSClient)
