@@ -33,14 +33,6 @@ spec:
                 - fargate
                 - auto
                 - hybrid
-              - key: node.kubernetes.io/instance-type
-                operator: NotIn
-                values:
-                - a1.medium
-                - a1.large
-                - a1.xlarge
-                - a1.2xlarge
-                - a1.4xlarge
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: ebs-csi-node-sa

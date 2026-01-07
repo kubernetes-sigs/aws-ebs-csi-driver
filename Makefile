@@ -159,11 +159,6 @@ e2e/external: bin/helm bin/kubetest2
 	COLLECT_METRICS="true" \
 	./hack/e2e/run.sh
 
-.PHONY: e2e/external-a1
-e2e/external-a1: bin/helm bin/kubetest2
-	HELM_EXTRA_FLAGS="--set=a1CompatibilityDaemonSet=true" \
-	./hack/e2e/run.sh
-
 .PHONY: e2e/external-eks-bottlerocket
 e2e/external-eks-bottlerocket: bin/helm bin/kubetest2
 	GINKGO_SKIP=$(GINKGO_BOTTLEROCKET_SKIP) \
@@ -242,12 +237,8 @@ sub-push: all-image-registry push-manifest
 sub-push-fips:
 	$(MAKE) FIPS=true TAG=$(TAG)-fips sub-push
 
-.PHONY: sub-push-a1compat
-sub-push-a1compat:
-	$(MAKE) DOCKER_EXTRA_ARGS="-t=$(IMAGE):$(TAG)-a1compat" sub-image-linux-arm64-al2
-
 .PHONY: all-push
-all-push: sub-push sub-push-fips sub-push-a1compat
+all-push: sub-push sub-push-fips
 
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*

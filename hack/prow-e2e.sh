@@ -49,14 +49,6 @@ test-e2e-external-eks)
   TEST="external"
   export CLUSTER_TYPE="eksctl"
   ;;
-test-e2e-external-a1)
-  TEST="external-a1"
-  export AWS_AVAILABILITY_ZONES="us-west-2b,us-west-2c"
-  export INSTANCE_TYPE="a1.xlarge"
-  export IMAGE_ARCH="arm64"
-  export AMI_PARAMETER="/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-arm64-gp2"
-  export CLUSTER_TYPE="kops"
-  ;;
 test-e2e-external-eks-bottlerocket)
   TEST="external-eks-bottlerocket"
   export CLUSTER_TYPE="eksctl"
