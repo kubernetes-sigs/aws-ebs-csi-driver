@@ -62,4 +62,10 @@ func TestExpiringCache(t *testing.T) {
 	value, ok = cache.Get(testKey)
 	assert.False(t, ok, "Should not be able to Get() value after it expires")
 	assert.Nil(t, value, "Value should be nil when Get() returns not ok (after expiration)")
+
+	cache.Set(testKey, &testValue1)
+	cache.Remove(testKey)
+	value, ok = cache.Get(testKey)
+	assert.False(t, ok, "Should not be able to Get() value after it is removed")
+	assert.Nil(t, value, "Value should be nil when Get() returns not ok (after removal)")
 }

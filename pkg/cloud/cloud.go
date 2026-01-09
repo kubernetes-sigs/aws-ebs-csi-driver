@@ -217,6 +217,10 @@ var (
 	// For getting IOPS limit from io2 error.
 	// Error example it is used for: "An error occurred (InvalidParameterCombination) when calling the CreateVolume operation: io2 volumes configured with greater than 64 TiB or 256K IOPS or 1000:1 IOPS:GB ratio are not supported".
 	io2ErrRegex = regexp.MustCompile(`(?i)(\d+)K IOPS`)
+
+	volumeIDRegex   = regexp.MustCompile(util.VolumeIDRegex)
+	snapshotIDRegex = regexp.MustCompile(util.SnapshotIDRegex)
+	instanceIDRegex = regexp.MustCompile(util.InstanceIDRegex)
 )
 
 var invalidParameterErrorCodes = map[string]struct{}{
@@ -460,7 +464,6 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		ec2Client = plugin.GetEC2Client(cfg, ec2Options)
 		smClient = plugin.GetSageMakerClient(cfg, smOptions)
 	}
-
 	// Default clients if plugin is not in use or does not implement client override.
 	if ec2Client == nil {
 		ec2Client = ec2.NewFromConfig(cfg, ec2Options)
@@ -474,7 +477,6 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 		klog.V(4).InfoS("NewCloud: batching enabled")
 		bm = newBatcherManager(ec2Client)
 	}
-
 	c := &cloud{
 		awsConfig:             cfg,
 		region:                region,
@@ -506,21 +508,25 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 // Each batcher's `entries` set to maximum results returned by relevant EC2 API call without pagination.
 // Each batcher's `delay` minimizes RPC latency and EC2 API calls. Tuned via scalability tests.
 func newBatcherManager(svc util.EC2API) *batcherManager {
+	likelyNotFoundInstanceIDs := expiringcache.New[string, struct{}](cacheForgetDelay)
+	likelyNotFoundVolumeIDs := expiringcache.New[string, struct{}](cacheForgetDelay)
+	likelyNotFoundSnapshotIDs := expiringcache.New[string, struct{}](cacheForgetDelay)
+
 	return &batcherManager{
 		volumeIDBatcher: batcher.New(500, batchMaxDelay, func(ids []string) (map[string]*types.Volume, error) {
-			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher)
+			return execBatchDescribeVolumes(svc, ids, volumeIDBatcher, likelyNotFoundVolumeIDs)
 		}),
 		volumeTagBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.Volume, error) {
-			return execBatchDescribeVolumes(svc, names, volumeTagBatcher)
+			return execBatchDescribeVolumes(svc, names, volumeTagBatcher, likelyNotFoundVolumeIDs)
 		}),
 		instanceIDBatcher: batcher.New(50, batchMaxDelay, func(ids []string) (map[string]*types.Instance, error) {
-			return execBatchDescribeInstances(svc, ids)
+			return execBatchDescribeInstances(svc, ids, likelyNotFoundInstanceIDs)
 		}),
 		snapshotIDBatcher: batcher.New(1000, batchMaxDelay, func(ids []string) (map[string]*types.Snapshot, error) {
-			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher)
+			return execBatchDescribeSnapshots(svc, ids, snapshotIDBatcher, likelyNotFoundSnapshotIDs)
 		}),
 		snapshotTagBatcher: batcher.New(1000, batchMaxDelay, func(names []string) (map[string]*types.Snapshot, error) {
-			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher)
+			return execBatchDescribeSnapshots(svc, names, snapshotTagBatcher, likelyNotFoundSnapshotIDs)
 		}),
 		volumeModificationIDBatcher: batcher.New(500, batchMaxDelay, func(names []string) (map[string]*types.VolumeModification, error) {
 			return execBatchDescribeVolumesModifications(svc, names)
@@ -534,23 +540,40 @@ func newBatcherManager(svc util.EC2API) *batcherManager {
 	}
 }
 
+func removeLikelyBadIds(cache expiringcache.ExpiringCache[string, struct{}], input []string) (goodIds []string, likelyBadIds []string) {
+	// Iterate backwards to safely remove values without affecting indices of remaining items
+	for i := len(input) - 1; i >= 0; i-- {
+		id := input[i]
+		_, exists := cache.Get(id)
+		if exists {
+			likelyBadIds = append(likelyBadIds, id)
+		} else {
+			goodIds = append(goodIds, id)
+		}
+	}
+
+	return goodIds, likelyBadIds
+}
+
 // execBatchDescribeVolumes executes a batched DescribeVolumes API call depending on the type of batcher.
-func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBatcherType) (map[string]*types.Volume, error) {
+func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBatcherType, cache expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Volume, error) {
+	goodVolumes, badVolumes := removeLikelyBadIds(cache, input)
+
 	var request *ec2.DescribeVolumesInput
 
 	switch batcher {
 	case volumeIDBatcher:
-		klog.V(7).InfoS("execBatchDescribeVolumes", "volumeIds", input)
+		klog.V(7).InfoS("execBatchDescribeVolumes", "volumeIds", goodVolumes)
 		request = &ec2.DescribeVolumesInput{
-			VolumeIds: input,
+			VolumeIds: goodVolumes,
 		}
 
 	case volumeTagBatcher:
-		klog.V(7).InfoS("execBatchDescribeVolumes", "names", input)
+		klog.V(7).InfoS("execBatchDescribeVolumes", "names", goodVolumes)
 		filters := []types.Filter{
 			{
 				Name:   aws.String("tag:" + VolumeNameTagKey),
-				Values: input,
+				Values: goodVolumes,
 			},
 		}
 		request = &ec2.DescribeVolumesInput{
@@ -564,9 +587,31 @@ func execBatchDescribeVolumes(svc util.EC2API, input []string, batcher volumeBat
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
 	defer cancel()
 
-	resp, err := describeVolumes(ctx, svc, request)
-	if err != nil {
-		return nil, err
+	var resp []types.Volume
+	var err error
+
+	if len(goodVolumes) >= 1 {
+		resp, err = describeVolumes(ctx, svc, request)
+		if err != nil {
+			knownErrorVols := volumeIDRegex.FindAllString(err.Error(), -1)
+			for _, volID := range knownErrorVols {
+				cache.Set(volID, &struct{}{})
+			}
+			return nil, err
+		}
+	}
+
+	for _, vol := range badVolumes {
+		request := &ec2.DescribeVolumesInput{
+			VolumeIds: []string{vol},
+		}
+		retryResp, err := describeVolumes(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			cache.Remove(*retryResp[0].VolumeId)
+			resp = append(resp, retryResp...)
+		} else {
+			klog.V(7).InfoS("execBatchDescribeVolumes: failure", "err", err)
+		}
 	}
 
 	result := make(map[string]*types.Volume)
@@ -1096,18 +1141,42 @@ func (c *cloud) DeleteDisk(ctx context.Context, volumeID string) (bool, error) {
 }
 
 // execBatchDescribeInstances executes a batched DescribeInstances API call.
-func execBatchDescribeInstances(svc util.EC2API, input []string) (map[string]*types.Instance, error) {
-	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", input)
+func execBatchDescribeInstances(svc util.EC2API, input []string, cache expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Instance, error) {
+	goodInstances, badInstances := removeLikelyBadIds(cache, input)
+
+	klog.V(7).InfoS("execBatchDescribeInstances", "instanceIds", goodInstances)
 	request := &ec2.DescribeInstancesInput{
-		InstanceIds: input,
+		InstanceIds: goodInstances,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
 	defer cancel()
 
-	resp, err := describeInstances(ctx, svc, request)
-	if err != nil {
-		return nil, err
+	var resp []types.Instance
+	var err error
+
+	if len(goodInstances) >= 1 {
+		resp, err = describeInstances(ctx, svc, request)
+		if err != nil {
+			knownErrorInstances := instanceIDRegex.FindAllString(err.Error(), -1)
+			for _, instanceID := range knownErrorInstances {
+				cache.Set(instanceID, &struct{}{})
+			}
+			return nil, err
+		}
+	}
+
+	for _, instance := range badInstances {
+		request := &ec2.DescribeInstancesInput{
+			InstanceIds: []string{instance},
+		}
+		retryResp, err := describeInstances(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			cache.Remove(*retryResp[0].InstanceId)
+			resp = append(resp, retryResp...)
+		} else {
+			klog.V(7).InfoS("execBatchDescribeInstances: failure", "err", err)
+		}
 	}
 
 	result := make(map[string]*types.Instance)
@@ -1718,22 +1787,24 @@ func getInstanceIDFromAssociatedResource(arn string) (string, error) {
 }
 
 // execBatchDescribeSnapshots executes a batched DescribeSnapshots API call depending on the type of batcher.
-func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapshotBatcherType) (map[string]*types.Snapshot, error) {
+func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapshotBatcherType, cache expiringcache.ExpiringCache[string, struct{}]) (map[string]*types.Snapshot, error) {
+	goodSnapshots, badSnapshots := removeLikelyBadIds(cache, input)
+
 	var request *ec2.DescribeSnapshotsInput
 
 	switch batcher {
 	case snapshotIDBatcher:
-		klog.V(7).InfoS("execBatchDescribeSnapshots", "snapshotIds", input)
+		klog.V(7).InfoS("execBatchDescribeSnapshots", "snapshotIds", goodSnapshots)
 		request = &ec2.DescribeSnapshotsInput{
-			SnapshotIds: input,
+			SnapshotIds: goodSnapshots,
 		}
 
 	case snapshotTagBatcher:
-		klog.V(7).InfoS("execBatchDescribeSnapshots", "names", input)
+		klog.V(7).InfoS("execBatchDescribeSnapshots", "names", goodSnapshots)
 		filters := []types.Filter{
 			{
 				Name:   aws.String("tag:" + SnapshotNameTagKey),
-				Values: input,
+				Values: goodSnapshots,
 			},
 		}
 		request = &ec2.DescribeSnapshotsInput{
@@ -1747,9 +1818,31 @@ func execBatchDescribeSnapshots(svc util.EC2API, input []string, batcher snapsho
 	ctx, cancel := context.WithTimeout(context.Background(), batchDescribeTimeout)
 	defer cancel()
 
-	resp, err := describeSnapshots(ctx, svc, request)
-	if err != nil {
-		return nil, err
+	var resp []types.Snapshot
+	var err error
+
+	if len(goodSnapshots) >= 1 {
+		resp, err = describeSnapshots(ctx, svc, request)
+		if err != nil {
+			knownErrorSnapshots := snapshotIDRegex.FindAllString(err.Error(), -1)
+			for _, snapID := range knownErrorSnapshots {
+				cache.Set(snapID, &struct{}{})
+			}
+			return nil, err
+		}
+	}
+
+	for _, snap := range badSnapshots {
+		request := &ec2.DescribeSnapshotsInput{
+			SnapshotIds: []string{snap},
+		}
+		retryResp, err := describeSnapshots(ctx, svc, request)
+		if err == nil && len(retryResp) > 0 {
+			cache.Remove(*retryResp[0].SnapshotId)
+			resp = append(resp, retryResp...)
+		} else {
+			klog.V(7).InfoS("execBatchDescribeSnapshots: failure", "err", err)
+		}
 	}
 
 	result := make(map[string]*types.Snapshot)
@@ -2064,9 +2157,6 @@ func describeInstances(ctx context.Context, svc util.EC2API, request *ec2.Descri
 	for {
 		response, err := svc.DescribeInstances(ctx, request)
 		if err != nil {
-			if isAWSErrorInstanceNotFound(err) {
-				return nil, ErrNotFound
-			}
 			return nil, fmt.Errorf("error listing AWS instances: %w", err)
 		}
 
@@ -2091,6 +2181,9 @@ func (c *cloud) getInstance(ctx context.Context, nodeID string) (*types.Instance
 	if c.bm == nil {
 		instances, err := describeInstances(ctx, c.ec2, request)
 		if err != nil {
+			if isAWSErrorInstanceNotFound(err) {
+				return nil, ErrNotFound
+			}
 			return nil, err
 		}
 

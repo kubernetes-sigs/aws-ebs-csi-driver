@@ -42,6 +42,10 @@ const (
 	// AttachmentShared volume attachment type constant.
 	AttachmentShared    = "shared"
 	AttachmentDedicated = "dedicated"
+
+	VolumeIDRegex   = "vol-[a-z0-9]+"
+	InstanceIDRegex = "i-[a-z0-9]+"
+	SnapshotIDRegex = "snap-[a-z0-9]+"
 )
 
 var (
