@@ -50,6 +50,16 @@ linters:
     - noinlineerr # We use inline errors
     - embeddedstructfieldcheck # We have a few instances of this
   settings:
+    forbidigo:
+      forbid:
+        # Forbid testing anti-patterns Any/AssignableToTypeOf
+        - pattern: ^gomock\.Any$
+          msg: gomock.Any() is forbidden. Use gomock.Eq() or testutil matchers instead.
+        - pattern: ^gomock\.AssignableToTypeOf$
+          msg: gomock.AssignableToTypeOf() is forbidden. Use gomock.Eq() or testutil matchers instead.
+        # Default pattern, keep it enabled
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+          msg: Printing using fmt is forbidden. Use klog instead.
     revive:
       rules:
         # Using += 1 instead of ++ is fine

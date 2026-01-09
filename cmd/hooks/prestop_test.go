@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//nolint:forbidigo // Using AssignableToTypeOf for informer-generated calls to avoid testing k8s code
 package hooks
+
+// TODO: Refactor these tests to use the Kubernetes mock client so AssignableToTypeOf can be removed.
 
 import (
 	"errors"
@@ -20,10 +23,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
@@ -49,7 +54,7 @@ func TestPreStopHook(t *testing.T) {
 			mockFunc: func(nodeName string, mockClient *driver.MockKubernetesClient, mockCoreV1 *driver.MockCoreV1Interface, mockNode *driver.MockNodeInterface, mockStorageV1 *driver.MockVolumeAttachmentInterface, mockStorageV1Interface *driver.MockStorageV1Interface) error {
 				mockClient.EXPECT().CoreV1().Return(mockCoreV1).Times(1)
 				mockCoreV1.EXPECT().Nodes().Return(mockNode).Times(1)
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(nil, errors.New("non-existent node")).Times(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(nil, errors.New("non-existent node")).Times(1)
 
 				return nil
 			},
@@ -67,7 +72,7 @@ func TestPreStopHook(t *testing.T) {
 
 				mockClient.EXPECT().CoreV1().Return(mockCoreV1).Times(1)
 				mockCoreV1.EXPECT().Nodes().Return(mockNode).Times(1)
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(mockNodeObj, nil).Times(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(mockNodeObj, nil).Times(1)
 
 				return nil
 			},
@@ -90,15 +95,14 @@ func TestPreStopHook(t *testing.T) {
 
 				emptyVolumeAttachments := &storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
-				mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(emptyVolumeAttachments, nil).AnyTimes()
-				mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).Return(watch.NewFake(), nil).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
+				mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(emptyVolumeAttachments, nil).MinTimes(1)
 
 				return nil
 			},
@@ -129,15 +133,14 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
-				mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes()
-				mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).Return(watch.NewFake(), nil).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
+				mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(fakeVolumeAttachments, nil).MinTimes(1)
 
 				return nil
 			},
@@ -171,20 +174,20 @@ func TestPreStopHook(t *testing.T) {
 				fakeWatcher := watch.NewFake()
 				deleteSignal := make(chan bool, 1)
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
 				gomock.InOrder(
-					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes(),
-					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
+					mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(fakeVolumeAttachments, nil).MinTimes(1),
+					mockVolumeAttachments.EXPECT().Watch(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
 						deleteSignal <- true
 						return fakeWatcher, nil
-					}).AnyTimes(),
-					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(&storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}, nil).AnyTimes(),
+					}).MinTimes(1),
+					mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(&storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}, nil).MinTimes(1),
 				)
 
 				go func() {
@@ -216,15 +219,14 @@ func TestPreStopHook(t *testing.T) {
 
 				emptyVolumeAttachments := &storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
-				mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(emptyVolumeAttachments, nil).AnyTimes()
-				mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).Return(watch.NewFake(), nil).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
+				mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(emptyVolumeAttachments, nil).MinTimes(1)
 
 				return nil
 			},
@@ -255,15 +257,14 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
-				mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes()
-				mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).Return(watch.NewFake(), nil).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
+				mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(fakeVolumeAttachments, nil).MinTimes(1)
 
 				return nil
 			},
@@ -297,20 +298,20 @@ func TestPreStopHook(t *testing.T) {
 				fakeWatcher := watch.NewFake()
 				deleteSignal := make(chan bool, 1)
 
-				mockClient.EXPECT().CoreV1().Return(mockCoreV1).AnyTimes()
-				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(mockCoreV1).MinTimes(1)
+				mockClient.EXPECT().StorageV1().Return(mockStorageV1Interface).MinTimes(1)
 
-				mockCoreV1.EXPECT().Nodes().Return(mockNode).AnyTimes()
-				mockNode.EXPECT().Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).Return(fakeNode, nil).AnyTimes()
+				mockCoreV1.EXPECT().Nodes().Return(mockNode).MinTimes(1)
+				mockNode.EXPECT().Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).Return(fakeNode, nil).MinTimes(1)
 
-				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).AnyTimes()
+				mockStorageV1Interface.EXPECT().VolumeAttachments().Return(mockVolumeAttachments).MinTimes(1)
 				gomock.InOrder(
-					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(fakeVolumeAttachments, nil).AnyTimes(),
-					mockVolumeAttachments.EXPECT().Watch(gomock.Any(), gomock.Any()).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
+					mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(fakeVolumeAttachments, nil).MinTimes(1),
+					mockVolumeAttachments.EXPECT().Watch(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).DoAndReturn(func(signal, watchSignal any) (watch.Interface, error) {
 						deleteSignal <- true
 						return fakeWatcher, nil
-					}).AnyTimes(),
-					mockVolumeAttachments.EXPECT().List(gomock.Any(), gomock.Any()).Return(&storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}, nil).AnyTimes(),
+					}).MinTimes(1),
+					mockVolumeAttachments.EXPECT().List(testutil.AnyContext(), gomock.AssignableToTypeOf(metav1.ListOptions{})).Return(&storagev1.VolumeAttachmentList{Items: []storagev1.VolumeAttachment{}}, nil).MinTimes(1),
 				)
 
 				go func() {

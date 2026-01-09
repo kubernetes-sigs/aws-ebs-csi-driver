@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/golang/mock/gomock"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -254,7 +255,7 @@ func TestNewMetadataService(t *testing.T) {
 			}
 
 			if tc.IMDSError == nil && !tc.imdsDisabled && (slices.Contains(tc.metadataSources, SourceIMDS)) && !tc.isHyperPodNode {
-				mockIMDS.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				mockIMDS.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -262,13 +263,13 @@ func TestNewMetadataService(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				mockIMDS.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				mockIMDS.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab")),
 				}, nil)
-				mockIMDS.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+				mockIMDS.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
 				}, nil)
-				mockIMDS.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
+				mockIMDS.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
 			}
 
 			cfg := MetadataServiceConfig{
@@ -313,14 +314,14 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Error getting instance identity document",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(nil, errors.New("failed to get instance identity document"))
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(nil, errors.New("failed to get instance identity document"))
 			},
 			expectedError: errors.New("could not get IMDS metadata: failed to get instance identity document"),
 		},
 		{
 			name: "TestIMDSInstanceInfo: Empty instance ID",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID: "",
 					},
@@ -331,7 +332,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Empty instance type",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:   "i-1234567890abcdef0",
 						InstanceType: "",
@@ -343,7 +344,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Empty region and invalid region from session",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:   "i-1234567890abcdef0",
 						InstanceType: "c5.xlarge",
@@ -356,7 +357,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Empty availability zone and invalid region from session",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -370,7 +371,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Error getting ENIs metadata",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -378,14 +379,14 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(nil, errors.New("failed to get ENIs metadata"))
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(nil, errors.New("failed to get ENIs metadata"))
 			},
 			expectedError: errors.New("could not get metadata for ENIs: failed to get ENIs metadata"),
 		},
 		{
 			name: "TestIMDSInstanceInfo: Error reading ENIs metadata content",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -393,7 +394,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(errReader{}),
 				}, nil)
 			},
@@ -402,7 +403,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Error getting block device mappings metadata",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -410,17 +411,17 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("eni-1\neni-2")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(nil, errors.New("failed to get block device mappings metadata"))
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(nil, errors.New("failed to get block device mappings metadata"))
 			},
 			expectedError: errors.New("could not get metadata for block device mappings: failed to get block device mappings metadata"),
 		},
 		{
 			name: "TestIMDSInstanceInfo: Error reading block device mappings metadata content",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -428,10 +429,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(errReader{}),
 				}, nil)
 			},
@@ -440,7 +441,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Valid metadata with outpost ARN",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -448,13 +449,13 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("arn:aws:outposts:us-west-2:123456789012:outpost/op-1234567890abcdef0")),
 				}, nil)
 			},
@@ -477,7 +478,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 		{
 			name: "TestIMDSInstanceInfo: Valid metadata without outpost ARN",
 			mockIMDS: func(m *MockIMDS) {
-				m.EXPECT().GetInstanceIdentityDocument(gomock.Any(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
+				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
 					InstanceIdentityDocument: imds.InstanceIdentityDocument{
 						InstanceID:       "i-1234567890abcdef0",
 						InstanceType:     "c5.xlarge",
@@ -485,13 +486,13 @@ func TestIMDSInstanceInfo(t *testing.T) {
 						AvailabilityZone: "us-west-2a",
 					},
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: BlockDevicesEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("ebs\nebs\n")),
 				}, nil)
-				m.EXPECT().GetMetadata(gomock.Any(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
+				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: OutpostArnEndpoint}).Return(nil, errors.New("404 - Not Found"))
 			},
 			expectedMetadata: &Metadata{
 				InstanceID:             "i-1234567890abcdef0",

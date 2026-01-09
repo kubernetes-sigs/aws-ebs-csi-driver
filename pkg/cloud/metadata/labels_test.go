@@ -447,7 +447,7 @@ func TestPatchNewNodes(t *testing.T) {
 			pvInformer := setupPVInformer(t, nil)
 
 			instances := []*types.Instance{makeInstance("i-001", tt.metadata["i-001"].ENIs, []string{"vol-001", "vol-002"})}
-			mockCloud.EXPECT().GetInstancesPatching(ctx, []string{"i-001"}).Return(instances, nil).AnyTimes()
+			mockCloud.EXPECT().GetInstancesPatching(ctx, []string{"i-001"}).Return(instances, nil).MinTimes(1)
 
 			patched := make(chan struct{})
 			clientset.PrependReactor("patch", "nodes", func(action clienttesting.Action) (bool, runtime.Object, error) {

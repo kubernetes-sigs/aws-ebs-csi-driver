@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
 Copyright 2024 The Kubernetes Authors.
 
@@ -31,6 +33,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,11 +106,11 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -259,12 +262,12 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(false, nil)
-				m.EXPECT().MakeDir(gomock.Any()).Return(nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 0, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), defaultFsType, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(false, nil)
+				m.EXPECT().MakeDir(gomock.Eq("/staging/path")).Return(nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 0, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq(defaultFsType), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -562,11 +565,11 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), "1", gomock.Any()).Return("/dev/xvdba1", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq("1"), gomock.Eq("us-west-2")).Return("/dev/xvdba1", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba1"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba1"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -600,11 +603,11 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), "", gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -666,7 +669,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(false, errors.New("path exists error"))
 				return m
 			},
@@ -698,7 +701,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(false, nil)
 				m.EXPECT().MakeDir(gomock.Eq("/staging/path")).Return(errors.New("make dir error"))
 				return m
@@ -731,7 +734,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 0, errors.New("get device name error"))
 				return m
@@ -764,7 +767,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("/dev/xvdba", 1, nil)
 				return m
@@ -797,10 +800,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("format and mount error"))
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(errors.New("format and mount error"))
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -831,10 +834,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, errors.New("need resize error"))
 				return m
 			},
@@ -866,10 +869,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, errors.New("resize error"))
 				return m
@@ -910,10 +913,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Any(), gomock.Any(), gomock.Eq([]string{"-b", "4096", "-I", "512", "-i", "16384", "-N", "1000000", "-O", "bigalloc", "-C", "65536"})).Return(nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{"-b", "4096", "-I", "512", "-i", "16384", "-N", "1000000", "-O", "bigalloc", "-C", "65536"})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
@@ -987,10 +990,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("xfs"), gomock.Any(), gomock.Any(), gomock.Eq([]string{"-b", "size=4096", "-i", "size=512"})).Return(nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("xfs"), gomock.Eq([]string{"nouuid"}), gomock.Nil(), gomock.Eq([]string{"-b", "size=4096", "-i", "size=512"})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
@@ -1025,10 +1028,10 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
 				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("xfs"), gomock.Any(), gomock.Any(), gomock.Eq([]string{"-i", "size=512", "-m", "bigtime=0,inobtcount=0,reflink=0", "-i", "nrext64=0"})).Return(nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("xfs"), gomock.Eq([]string{"nouuid"}), gomock.Nil(), gomock.Eq([]string{"-i", "size=512", "-m", "bigtime=0,inobtcount=0,reflink=0", "-i", "nrext64=0"})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
@@ -1063,10 +1066,10 @@ func TestNodeStageVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-real"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				m.EXPECT().NeedResize(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().PathExists(gomock.Eq("/staging/path")).Return(true, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
+				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1466,11 +1469,11 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/target")).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/dev/xvdba"), gomock.Eq("/target/path"), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1499,9 +1502,9 @@ func TestNodePublishVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().PreparePublishTarget(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().PreparePublishTarget(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/staging/path"), gomock.Eq("/target/path"), gomock.Eq("ext4"), gomock.Eq([]string{"bind"})).Return(nil)
 				return m
 			},
 		},
@@ -1637,11 +1640,11 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/target")).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/dev/xvdba"), gomock.Eq("/target/path"), gomock.Eq(""), gomock.Eq([]string{"bind", "ro"})).Return(nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1714,11 +1717,11 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
+				m.EXPECT().PathExists(gomock.Eq("/target")).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/dev/xvdba"), gomock.Eq("/target/path"), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1751,11 +1754,11 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq("1"), gomock.Eq("us-west-2")).Return("/dev/xvdba1", nil)
+				m.EXPECT().PathExists(gomock.Eq("/target")).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/dev/xvdba1"), gomock.Eq("/target/path"), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1785,7 +1788,7 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 
-				m.EXPECT().FindDevicePath(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("device path error"))
+				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("", errors.New("device path error"))
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1817,10 +1820,10 @@ func TestNodePublishVolume(t *testing.T) {
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
 				m.EXPECT().FindDevicePath(gomock.Eq("/dev/xvdba"), gomock.Eq("vol-real"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
-				m.EXPECT().PathExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().MakeFile(gomock.Any()).Return(nil)
-				m.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-				m.EXPECT().Mount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().PathExists(gomock.Eq("/target")).Return(true, nil)
+				m.EXPECT().MakeFile(gomock.Eq("/target/path")).Return(nil)
+				m.EXPECT().IsLikelyNotMountPoint(gomock.Eq("/target/path")).Return(true, nil)
+				m.EXPECT().Mount(gomock.Eq("/dev/xvdba"), gomock.Eq("/target/path"), gomock.Eq(""), gomock.Eq([]string{"bind"})).Return(nil)
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -1899,8 +1902,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("dev-test", 1, nil)
-				m.EXPECT().Unstage(gomock.Any()).Return(nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("dev-test", 1, nil)
+				m.EXPECT().Unstage(gomock.Eq("/staging/path")).Return(nil)
 				return m
 			},
 		},
@@ -1926,8 +1929,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 1, nil)
-				m.EXPECT().Unstage(gomock.Any()).Return(errors.New("unstage failed"))
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
+				m.EXPECT().Unstage(gomock.Eq("/staging/path")).Return(errors.New("unstage failed"))
 				return m
 			},
 			expectedErr: status.Errorf(codes.Internal, "Could not unmount target %q: %v", "/staging/path", errors.New("unstage failed")),
@@ -1940,7 +1943,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 0, nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 0, nil)
 				return m
 			},
 		},
@@ -1952,7 +1955,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("", 0, errors.New("failed to get device name"))
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 0, errors.New("failed to get device name"))
 				return m
 			},
 			expectedErr: status.Error(codes.Internal, "failed to check if target \"/staging/path\" is a mount point: failed to get device name"),
@@ -1965,8 +1968,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 			},
 			mounterMock: func(ctrl *gomock.Controller) *mounter.MockMounter {
 				m := mounter.NewMockMounter(ctrl)
-				m.EXPECT().GetDeviceNameFromMount(gomock.Any()).Return("dev-test", 2, nil)
-				m.EXPECT().Unstage(gomock.Any()).Return(nil)
+				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("dev-test", 2, nil)
+				m.EXPECT().Unstage(gomock.Eq("/staging/path")).Return(nil)
 				return m
 			},
 		},
@@ -2664,13 +2667,13 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				mockClient := NewMockKubernetesClient(mockCtl)
 				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
 
 				csiNodesMock := NewMockCSINodeInterface(mockCtl)
 				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
 
 				csiNodesMock.EXPECT().
-					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
 					Return(nil, errors.New("failed to get CSINode")).
 					Times(1)
 
@@ -2703,7 +2706,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				mockClient := NewMockKubernetesClient(mockCtl)
 				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
 
 				csiNodesMock := NewMockCSINodeInterface(mockCtl)
 				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
@@ -2726,7 +2729,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				}
 
 				csiNodesMock.EXPECT().
-					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
 					Return(mockCSINode, nil).
 					Times(1)
 
@@ -2759,7 +2762,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				mockClient := NewMockKubernetesClient(mockCtl)
 
 				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).AnyTimes()
+				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
 
 				csiNodesMock := NewMockCSINodeInterface(mockCtl)
 				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
@@ -2782,23 +2785,24 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				}
 
 				csiNodesMock.EXPECT().
-					Get(gomock.Any(), gomock.Eq(nodeName), gomock.Any()).
+					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
 					Return(mockCSINode, nil).
 					Times(1)
 
 				coreV1Mock := NewMockCoreV1Interface(mockCtl)
-				mockClient.EXPECT().CoreV1().Return(coreV1Mock).AnyTimes()
+				mockClient.EXPECT().CoreV1().Return(coreV1Mock).MinTimes(1)
 
 				nodesMock := NewMockNodeInterface(mockCtl)
 				coreV1Mock.EXPECT().Nodes().Return(nodesMock).Times(1)
 
+				const expectedPatch = `[{"op":"test","path":"/spec/taints","value":[{"key":"test.ebs.csi.aws.com/agent-not-ready","effect":"NoSchedule"},{"key":"some-other-taint","effect":"NoExecute"}]},{"op":"replace","path":"/spec/taints","value":[{"key":"some-other-taint","effect":"NoExecute"}]}]`
 				nodesMock.EXPECT().
 					Patch(
-						gomock.Any(),
+						testutil.AnyContext(),
 						gomock.Eq(nodeName),
 						gomock.Eq(k8stypes.JSONPatchType),
-						gomock.Any(),
-						gomock.Any(),
+						gomock.Eq([]byte(expectedPatch)),
+						gomock.Eq(metav1.PatchOptions{}),
 					).
 					Return(node, nil).
 					Times(1)
