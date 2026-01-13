@@ -28,7 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -205,8 +205,8 @@ func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*instanceMetadata 
 // checkVolENI compares `expectedMetadata` and `labeledMetadata` to have the same number of volumes and ENIs attached to each node in `nodes`
 func checkVolENI(expectedMetadata, labeledMetadata map[string]*instanceMetadata, nodes *corev1.NodeList) {
 	for _, node := range nodes.Items {
-		vol, _ := strconv.Atoi(node.GetLabels()[metadata.VolumesLabel])
-		enis, _ := strconv.Atoi(node.GetLabels()[metadata.ENIsLabel])
+		vol, _ := strconv.Atoi(node.GetLabels()[util.GetDriverName()+"/non-csi-ebs-volumes-count"])
+		enis, _ := strconv.Atoi(node.GetLabels()[util.GetDriverName()+"/enis-count"])
 		id := parseProviderID(node.Spec.ProviderID)
 		labeledMetadata[id] = &instanceMetadata{}
 		labeledMetadata[id].ENIs = enis
@@ -278,8 +278,8 @@ func checkLabelsUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetada
 
 		for _, node := range updatedNodes.Items {
 			id := parseProviderID(node.Spec.ProviderID)
-			vol, _ := strconv.Atoi(node.Labels[metadata.VolumesLabel])
-			eni, _ := strconv.Atoi(node.Labels[metadata.ENIsLabel])
+			vol, _ := strconv.Atoi(node.Labels[util.GetDriverName()+"/non-csi-ebs-volumes-count"])
+			eni, _ := strconv.Atoi(node.Labels[util.GetDriverName()+"/enis-count"])
 			labeledMetadata[id].Volumes = vol
 			labeledMetadata[id].ENIs = eni
 
