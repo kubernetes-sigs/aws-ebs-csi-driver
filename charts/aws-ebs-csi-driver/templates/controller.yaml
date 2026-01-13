@@ -324,6 +324,9 @@ spec:
             {{- if not (regexMatch "(-retry-interval-max)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
             - --retry-interval-max=5m
             {{- end }}
+            {{- if semverCompare ">=1.33.0-0" .Capabilities.KubeVersion.Version }}
+            - --feature-gates=MutableCSINodeAllocatableCount=true
+            {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.attacher.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3303
             {{- end}}

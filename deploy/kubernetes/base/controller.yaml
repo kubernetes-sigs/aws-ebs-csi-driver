@@ -186,6 +186,7 @@ spec:
             - --kube-api-burst=100
             - --worker-threads=100
             - --retry-interval-max=5m
+            - --feature-gates=MutableCSINodeAllocatableCount=true
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
