@@ -40,8 +40,8 @@ The EBS CSI Driver also supports modifying tags of existing volumes (only availa
 
 ## Considerations
 
-- Keep in mind the [6-hour cooldown period](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_ModifyVolume.html) for EBS ModifyVolume. Multiple ModifyVolume calls for the same volume within a 6-hour period will fail.
-  - Note: If your volume modification only creates/modifies AWS resource tags, EBS ModifyVolume will not be called and this 6-hour cooldown period does not apply.  
+- Keep in mind the [EBS volume modification considerations and limitations](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modify-volume.html#elastic-volumes-considerations) from the AWS documentation. Modifications initiated during a cooldown period will not progress until the cooldown is over.
+  - Tag-only modifications to PVCs do not call the AWS `ModifyVolume` API and thus are not subject to these limitations.
 - Ensure that the desired volume properties are permissible. The driver does minimum client side validation. 
 
 ## Example

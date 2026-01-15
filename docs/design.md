@@ -368,9 +368,9 @@ Blindly return:
 
 ### EC2 ModifyVolume and Request Coalescing
 
-AWS exposes one unified ModifyVolume API to change the size, volume-type, IOPS, or throughput of your volume. AWS imposes a 6-hour cooldown after a successful volume modification.
+AWS exposes one unified ModifyVolume API to change the size, volume-type, IOPS, or throughput of your volume. AWS imposes a cooldown after a set number of volume modifications.
 
-However, the CSI Specification exposes two separate RPCs that rely on ebs-plugin calling this EC2 ModifyVolume API: ControllerExpandVolume, for increasing volume size, and ControllerModifyVolume, for all other volume modifications. To avoid the 6-hour cooldown, we coalesce these separate expansion and modification requests by waiting for up to two seconds, and then perform one merged EC2 ModifyVolume API Call.
+However, the CSI Specification exposes two separate RPCs that rely on ebs-plugin calling this EC2 ModifyVolume API: ControllerExpandVolume, for increasing volume size, and ControllerModifyVolume, for all other volume modifications. To avoid unnecessary `ModifyVolume` calls (potentially hitting the cooldown), we coalesce these separate expansion and modification requests by waiting for up to two seconds, and then perform one merged EC2 ModifyVolume API Call.
 
 Here is an overview of what may happen when you patch a PVC's size and VolumeAttributesClassName at the same time:
 
