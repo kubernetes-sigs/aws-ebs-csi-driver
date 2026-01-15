@@ -42,4 +42,5 @@ type Cloud interface {
 	AvailabilityZones(ctx context.Context) (map[string]struct{}, error)
 	DryRun(ctx context.Context) error
 	GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error)
+	LockSnapshot(ctx context.Context, lockOptions *SnapshotLockOptions) (err error)
 }

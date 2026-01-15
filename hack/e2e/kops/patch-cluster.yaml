@@ -72,7 +72,8 @@ spec:
           "Effect": "Allow",
           "Action": [
             "ec2:CreateVolume",
-            "ec2:EnableFastSnapshotRestores"
+            "ec2:EnableFastSnapshotRestores",
+            "ec2:LockSnapshot"
           ],
           "Resource": "arn:aws:ec2:*:*:snapshot/*"
         },

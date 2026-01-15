@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -351,6 +352,331 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 		}
 		test.Run(cs, snapshotrcs, ns)
 	})
+
+	It("should create a snapshot with governance mode lock for 1 day", func() {
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		restoredPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdGrepVolumeData("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         pod,
+			RestoredPod: restoredPod,
+			Parameters: map[string]string{
+				ebscsidriver.LockMode:     "governance",
+				ebscsidriver.LockDuration: "1",
+			},
+			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
+				describeResult := validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
+							Values: []string{"snapshot-" + string(snapshot.UID)},
+						},
+					},
+				})
+
+				snapshotId := *describeResult.Snapshots[0].SnapshotId
+
+				result, err := ec2Client.DescribeLockedSnapshots(context.Background(), &ec2.DescribeLockedSnapshotsInput{
+					SnapshotIds: []string{snapshotId},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe locked snapshots: %v", err))
+				}
+
+				if len(result.Snapshots) != 1 {
+					Fail(fmt.Sprintf("expected 1 locked snapshot, got %d", len(result.Snapshots)))
+				}
+
+				lockedSnapshot := result.Snapshots[0]
+				if types.LockMode(lockedSnapshot.LockState) != types.LockModeGovernance {
+					Fail(fmt.Sprintf("expected lock mode governance, got %s", lockedSnapshot.LockState))
+				}
+
+				if lockedSnapshot.LockDuration == nil || *lockedSnapshot.LockDuration != 1 {
+					Fail(fmt.Sprintf("expected lock duration 1 day, got %v", lockedSnapshot.LockDuration))
+				}
+
+			},
+		}
+		test.Run(cs, snapshotrcs, ns)
+	})
+
+	It("should create a snapshot with governance mode lock using expiration date", func() {
+		// Set expiration date to 1 day from now
+		expirationDate := time.Now().Add(24 * time.Hour).Format(time.RFC3339)
+
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		restoredPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdGrepVolumeData("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         pod,
+			RestoredPod: restoredPod,
+			Parameters: map[string]string{
+				ebscsidriver.LockMode:           "governance",
+				ebscsidriver.LockExpirationDate: expirationDate,
+			},
+			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
+				describeResult := validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
+							Values: []string{"snapshot-" + string(snapshot.UID)},
+						},
+					},
+				})
+
+				snapshotId := *describeResult.Snapshots[0].SnapshotId
+
+				result, err := ec2Client.DescribeLockedSnapshots(context.Background(), &ec2.DescribeLockedSnapshotsInput{
+					SnapshotIds: []string{snapshotId},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe locked snapshots: %v", err))
+				}
+
+				if len(result.Snapshots) != 1 {
+					Fail(fmt.Sprintf("expected 1 locked snapshot, got %d", len(result.Snapshots)))
+				}
+
+				lockedSnapshot := result.Snapshots[0]
+				if types.LockMode(lockedSnapshot.LockState) != types.LockModeGovernance {
+					Fail(fmt.Sprintf("expected lock mode governance, got %s", lockedSnapshot.LockState))
+				}
+
+				if lockedSnapshot.LockCreatedOn == nil {
+					Fail("expected lock creation date to be set")
+				}
+
+			},
+		}
+		test.Run(cs, snapshotrcs, ns)
+	})
+
+	It("should create a snapshot with compliance mode lock for 2 days with 12 hour cooloff", func() {
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		restoredPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdGrepVolumeData("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         pod,
+			RestoredPod: restoredPod,
+			Parameters: map[string]string{
+				ebscsidriver.LockMode:     "compliance",
+				ebscsidriver.LockDuration: "2",
+				// Must have cooloff otherwise will not be able to cleanup.
+				ebscsidriver.LockCoolOffPeriod: "12",
+			},
+			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
+				describeResult := validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
+							Values: []string{"snapshot-" + string(snapshot.UID)},
+						},
+					},
+				})
+
+				snapshotId := *describeResult.Snapshots[0].SnapshotId
+
+				result, err := ec2Client.DescribeLockedSnapshots(context.Background(), &ec2.DescribeLockedSnapshotsInput{
+					SnapshotIds: []string{snapshotId},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe locked snapshots: %v", err))
+				}
+
+				if len(result.Snapshots) != 1 {
+					Fail(fmt.Sprintf("expected 1 locked snapshot, got %d", len(result.Snapshots)))
+				}
+
+				lockedSnapshot := result.Snapshots[0]
+				if types.LockMode(lockedSnapshot.LockState) != types.LockMode(types.LockStateComplianceCooloff) {
+					Fail(fmt.Sprintf("expected lock mode compliance, got %s", lockedSnapshot.LockState))
+				}
+
+				if lockedSnapshot.LockDuration == nil || *lockedSnapshot.LockDuration != 2 {
+					Fail(fmt.Sprintf("expected lock duration 2 days, got %v", lockedSnapshot.LockDuration))
+				}
+
+				if lockedSnapshot.CoolOffPeriod == nil || *lockedSnapshot.CoolOffPeriod != 12 {
+					Fail(fmt.Sprintf("expected cooloff period 12 hours, got %v", lockedSnapshot.CoolOffPeriod))
+				}
+
+			},
+		}
+		test.Run(cs, snapshotrcs, ns)
+	})
+
+	It("should create a snapshot with FSR enabled and governance mode lock for 1 day", func() {
+		azList, err := ec2Client.DescribeAvailabilityZones(context.Background(), &ec2.DescribeAvailabilityZonesInput{})
+		if err != nil {
+			Fail(fmt.Sprintf("failed to list AZs: %v", err))
+		}
+		fsrAvailabilityZone := *azList.AvailabilityZones[0].ZoneName
+
+		pod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		restoredPod := testsuites.PodDetails{
+			Cmd: testsuites.PodCmdGrepVolumeData("/mnt/test-1"),
+			Volumes: []testsuites.VolumeDetails{
+				{
+					CreateVolumeParameters: map[string]string{
+						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+					},
+					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP3),
+					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedVolumeSnapshotTest{
+			CSIDriver:   ebsDriver,
+			Pod:         pod,
+			RestoredPod: restoredPod,
+			Parameters: map[string]string{
+				ebscsidriver.FastSnapshotRestoreAvailabilityZones: fsrAvailabilityZone,
+				ebscsidriver.LockMode:                             "governance",
+				ebscsidriver.LockDuration:                         "1",
+			},
+			ValidateFunc: func(snapshot *volumesnapshotv1.VolumeSnapshot) {
+				describeResult := validateEc2Snapshot(context.Background(), ec2Client, &ec2.DescribeSnapshotsInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + awscloud.SnapshotNameTagKey),
+							Values: []string{"snapshot-" + string(snapshot.UID)},
+						},
+					},
+				})
+
+				snapshotId := *describeResult.Snapshots[0].SnapshotId
+
+				fsrResult, err := ec2Client.DescribeFastSnapshotRestores(context.Background(), &ec2.DescribeFastSnapshotRestoresInput{
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("snapshot-id"),
+							Values: []string{snapshotId},
+						},
+					},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe FSR: %v", err))
+				}
+
+				if len(fsrResult.FastSnapshotRestores) != 1 {
+					Fail(fmt.Sprintf("expected 1 FSR, got %d", len(fsrResult.FastSnapshotRestores)))
+				}
+
+				if *fsrResult.FastSnapshotRestores[0].AvailabilityZone != fsrAvailabilityZone {
+					Fail(fmt.Sprintf("expected FSR for %s, got %s", fsrAvailabilityZone, *fsrResult.FastSnapshotRestores[0].AvailabilityZone))
+				}
+
+				lockResult, err := ec2Client.DescribeLockedSnapshots(context.Background(), &ec2.DescribeLockedSnapshotsInput{
+					SnapshotIds: []string{snapshotId},
+				})
+				if err != nil {
+					Fail(fmt.Sprintf("failed to describe locked snapshots: %v", err))
+				}
+
+				if len(lockResult.Snapshots) != 1 {
+					Fail(fmt.Sprintf("expected 1 locked snapshot, got %d", len(lockResult.Snapshots)))
+				}
+
+				lockedSnapshot := lockResult.Snapshots[0]
+				if types.LockMode(lockedSnapshot.LockState) != types.LockModeGovernance {
+					Fail(fmt.Sprintf("expected lock mode governance, got %s", lockedSnapshot.LockState))
+				}
+
+				if lockedSnapshot.LockDuration == nil || *lockedSnapshot.LockDuration != 1 {
+					Fail(fmt.Sprintf("expected lock duration 1 day, got %v", lockedSnapshot.LockDuration))
+				}
+
+			},
+		}
+		test.Run(cs, snapshotrcs, ns)
+	})
+
 	It("should copy a volume with different volume parameters", func() {
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
