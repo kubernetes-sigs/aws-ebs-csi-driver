@@ -65,7 +65,7 @@ build_and_push "${AWS_REGION}" \
   "${IMAGE_TAG}" \
   "${IMAGE_ARCH}"
 
-imageSuffixes=("fips-windows-amd64-ltsc2022 fips-windows-amd64-ltsc2019 windows-amd64-ltsc2019 windows-amd64-ltsc2022 fips-linux-amd64-al2023 fips-linux-arm64-al2023 linux-amd64-al2023 linux-arm64-al2023")
+imageSuffixes=("fips-windows-amd64-ltsc2022 fips-windows-amd64-ltsc2019 fips-windows-amd64-ltsc2025 windows-amd64-ltsc2019 windows-amd64-ltsc2022 windows-amd64-ltsc2025 fips-linux-amd64-al2023 fips-linux-arm64-al2023 linux-amd64-al2023 linux-arm64-al2023")
 
 loudecho "Ensuring all images are present"
 

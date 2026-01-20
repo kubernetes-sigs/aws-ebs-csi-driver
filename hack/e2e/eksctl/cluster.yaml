@@ -72,7 +72,7 @@ managedNodeGroups:
       allow: false
 {{- if and (eq .Env.WINDOWS "true") (not (env.Getenv "WINDOWS_AMI")) }}
   - name: ng-windows
-    amiFamily: WindowsServer2022CoreContainer
+    amiFamily: WindowsServer2025CoreContainer
     desiredCapacity: 3
     disablePodIMDS: true
     instanceTypes: [m5.2xlarge]
