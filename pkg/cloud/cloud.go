@@ -1257,9 +1257,10 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 
 	if !device.IsAlreadyAssigned {
 		request := &ec2.AttachVolumeInput{
-			Device:     aws.String(device.Path),
-			InstanceId: aws.String(nodeID),
-			VolumeId:   aws.String(volumeID),
+			Device:       aws.String(device.Path),
+			InstanceId:   aws.String(nodeID),
+			VolumeId:     aws.String(volumeID),
+			EbsCardIndex: device.CardIndex,
 		}
 
 		resp, attachErr := c.ec2.AttachVolume(ctx, request, func(o *ec2.Options) {
@@ -1283,7 +1284,7 @@ func (c *cloud) AttachDisk(ctx context.Context, volumeID, nodeID string) (string
 		klog.V(5).InfoS("[Debug] AttachVolume", "volumeID", volumeID, "nodeID", nodeID, "resp", resp)
 	}
 
-	_, err = c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateAttached, volumeID, *instance.InstanceId, device.Path, device.IsAlreadyAssigned)
+	_, err = c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateAttached, volumeID, *instance.InstanceId, device.Path, device.IsAlreadyAssigned, device.CardIndex)
 
 	// This is the only situation where we taint the device
 	if err != nil {
@@ -1340,6 +1341,7 @@ func (c *cloud) attachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 		nodeID,
 		deviceName,
 		false,
+		nil, // HyperPod doesn't use card indexes
 	)
 	if err != nil {
 		return "", fmt.Errorf("error waiting for volume attachment: %w", err)
@@ -1390,7 +1392,7 @@ func (c *cloud) DetachDisk(ctx context.Context, volumeID, nodeID string) error {
 		return fmt.Errorf("could not detach volume %q from node %q: %w", volumeID, nodeID, err)
 	}
 
-	attachment, err := c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateDetached, volumeID, *instance.InstanceId, "", false)
+	attachment, err := c.WaitForAttachmentState(ctx, types.VolumeAttachmentStateDetached, volumeID, *instance.InstanceId, "", false, nil)
 	if err != nil {
 		return err
 	}
@@ -1446,6 +1448,7 @@ func (c *cloud) detachDiskHyperPod(ctx context.Context, volumeID, nodeID string)
 		nodeID,
 		"",
 		false,
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("error waiting for volume detachment: %w", err)
@@ -1595,7 +1598,7 @@ func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.Vol
 }
 
 // WaitForAttachmentState polls until the attachment status is the expected value.
-func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
+func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool, expectedCardIndex *int32) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
 	isHyperPod := util.IsHyperPodNode(expectedInstance)
 
@@ -1678,14 +1681,23 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 			}
 		}
 
+		// Check card index if expected
+		if attachment != nil && expectedCardIndex != nil && expectedState == types.VolumeAttachmentStateAttached && !isHyperPod {
+			if attachment.EbsCardIndex == nil || *attachment.EbsCardIndex != *expectedCardIndex {
+				klog.InfoS("WaitForAttachmentState: card index mismatch", "cardIndex", attachment.EbsCardIndex, "expectedCardIndex", *expectedCardIndex, "attachment", attachment)
+				return false, nil
+			}
+		}
+
 		// if we expected volume to be attached and it was reported as already attached via DescribeInstance call
 		// but DescribeVolume told us volume is detached, we will short-circuit this long wait loop and return error
 		// so as AttachDisk can be retried without waiting for 20 minutes.
 		if (expectedState == types.VolumeAttachmentStateAttached) && alreadyAssigned && (attachmentState == types.VolumeAttachmentStateDetached) {
 			request := &ec2.AttachVolumeInput{
-				Device:     aws.String(expectedDevice),
-				InstanceId: aws.String(expectedInstance),
-				VolumeId:   aws.String(volumeID),
+				Device:       aws.String(expectedDevice),
+				InstanceId:   aws.String(expectedInstance),
+				VolumeId:     aws.String(volumeID),
+				EbsCardIndex: expectedCardIndex,
 			}
 			_, err := c.ec2.AttachVolume(ctx, request)
 			if err != nil {

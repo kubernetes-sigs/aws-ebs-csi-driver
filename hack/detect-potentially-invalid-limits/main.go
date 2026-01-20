@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/limits"
 )
 
 const (
@@ -30,10 +30,10 @@ const (
 func main() {
 	familyTypes := make(map[string]map[string]bool)
 
-	for _, instanceType := range cloud.KnownInstanceTypes() {
+	for _, instanceType := range limits.KnownInstanceTypes() {
 		family := strings.Split(instanceType, ".")[0]
 
-		_, attachmentType := cloud.GetVolumeLimits(instanceType)
+		_, attachmentType := limits.GetVolumeLimits(instanceType)
 		if familyTypes[family] == nil {
 			familyTypes[family] = make(map[string]bool)
 		}

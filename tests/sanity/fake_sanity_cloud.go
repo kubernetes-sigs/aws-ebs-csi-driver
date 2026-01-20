@@ -222,7 +222,7 @@ func (d *fakeCloud) ModifyTags(ctx context.Context, volumeID string, tagOptions 
 	return nil
 }
 
-func (d *fakeCloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool) (*types.VolumeAttachment, error) {
+func (d *fakeCloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool, expectedCardIndex *int32) (*types.VolumeAttachment, error) {
 	return &types.VolumeAttachment{}, nil
 }
 

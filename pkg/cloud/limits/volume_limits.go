@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloud
+package limits
 
 import "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 
@@ -32,6 +32,8 @@ var dedicatedInstances = map[string]struct{}{
 	"r8a.metal-48xl":  {},
 	"c8a.metal-48xl":  {},
 	"c8gb.metal-24xl": {},
+	"x8i.metal-48xl":  {},
+	"x8i.metal-96xl":  {},
 }
 
 // GetVolumeLimits returns the volume limit and attachment type for a given instance type.
@@ -66,4 +68,13 @@ func KnownInstanceTypes() []string {
 	}
 
 	return knownTypes
+}
+
+// GetCardCount returns the number of EBS cards for a given instance type.
+// Returns 1 (the default) if the instance type is not in the table.
+func GetCardCount(instanceType string) int {
+	if count, exists := ebsCardCounts[instanceType]; exists {
+		return count
+	}
+	return 1
 }

@@ -29,7 +29,7 @@ import (
 	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/limits"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
@@ -812,7 +812,7 @@ func (d *NodeService) getVolumesLimit() int64 {
 	}
 
 	instanceType := d.metadata.GetInstanceType()
-	availableAttachments, limitType := cloud.GetVolumeLimits(instanceType)
+	availableAttachments, limitType := limits.GetVolumeLimits(instanceType)
 	klog.V(4).InfoS("getVolumesLimit: Retrieved inputs", "instanceType", instanceType, "attachmentLimit", availableAttachments, "limitType", limitType)
 
 	// Calculate reserved volume attachments (additional EBS volumes)
