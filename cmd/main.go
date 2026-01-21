@@ -154,6 +154,16 @@ func main() {
 		region := os.Getenv("AWS_REGION")
 		var metadataErr error
 
+		// We need to do this as early as possible because some metadata sources (metadata-labeler)
+		// use the driver name, and thus we need the name to be initialized before running metadata.
+		driverName := "ebs.csi.aws.com"
+		if plugin != nil {
+			if pluginDriverName := plugin.GetDriverName(); pluginDriverName != "" {
+				driverName = pluginDriverName
+			}
+		}
+		util.SetDriverName(driverName)
+
 		if region != "" {
 			klog.InfoS("Region provided via AWS_REGION environment variable", "region", region)
 			if options.Mode != driver.ControllerMode {
@@ -175,21 +185,13 @@ func main() {
 			region = md.GetRegion()
 		}
 
-		driverName := "ebs.csi.aws.com"
 		if plugin != nil {
 			err = plugin.Init(region, registry)
 			if err != nil {
 				klog.ErrorS(err, "Failed to initialize plugin")
 				klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 			}
-
-			if pluginDriverName := plugin.GetDriverName(); pluginDriverName != "" {
-				driverName = pluginDriverName
-			}
 		}
-		// Set driver name here as it needs to be available in NewCloud
-		util.SetDriverName(driverName)
-
 		cloud = cloudPkg.NewCloud(region, options.AwsSdkDebugLog, options.UserAgentExtra, options.Batching, options.DeprecatedMetrics)
 	}
 

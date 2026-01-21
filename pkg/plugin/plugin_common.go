@@ -69,6 +69,7 @@ type EbsCsiPlugin interface {
 	// GetSageMakerClient replaces the AWS EC2 client the driver uses
 	GetSageMakerClient(cfg aws.Config, optFns ...func(*sagemaker.Options)) util.SageMakerAPI
 	// GetDriverName replaces the driver name in use (normally "ebs.csi.aws.com")
+	// This function can be called before Init and should not depend on it
 	GetDriverName() string
 }
 

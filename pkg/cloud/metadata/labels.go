@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -49,6 +50,9 @@ const (
 
 // Initialized in ContinuousUpdateLabelsLeaderElection (depends on driver name).
 var (
+	// Prevent races in initialization.
+	once sync.Once
+
 	// VolumesLabel is the label name for the number of volumes on a node.
 	VolumesLabel string
 
@@ -64,8 +68,10 @@ type enisVolumes struct {
 // initVariables initializes variables that depend on driver name.
 // Separated into a spearate function from ContinuousUpdateLabelsLeaderElection so it can be called in tests.
 func initVariables() {
-	VolumesLabel = util.GetDriverName() + "/non-csi-ebs-volumes-count"
-	ENIsLabel = util.GetDriverName() + "/enis-count"
+	once.Do(func() {
+		VolumesLabel = util.GetDriverName() + "/non-csi-ebs-volumes-count"
+		ENIsLabel = util.GetDriverName() + "/enis-count"
+	})
 }
 
 // ContinuousUpdateLabelsLeaderElection uses leader election so that only one controller pod calls continuousUpdateLabels().

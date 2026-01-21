@@ -145,6 +145,9 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 	}
 
 	if metadataLabeler && !sageMakerLabels {
+		// Initialize ENIsLabel and VolumesLabel globals.
+		initVariables()
+
 		backoff := wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   1.5,
