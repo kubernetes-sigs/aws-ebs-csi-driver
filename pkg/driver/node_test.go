@@ -21,9 +21,9 @@ package driver
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,14 +33,12 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -52,13 +50,13 @@ func TestNewNodeService(t *testing.T) {
 
 	mockMetadataService := metadata.NewMockMetadataService(ctrl)
 	mockMounter := mounter.NewMockMounter(ctrl)
-	mockKubernetesClient := NewMockKubernetesClient(ctrl)
+	fakeClient := fake.NewClientset()
 
 	t.Setenv("AWS_REGION", "us-west-2")
 
 	options := &Options{}
 
-	nodeService := NewNodeService(options, mockMetadataService, mockMounter, mockKubernetesClient)
+	nodeService := NewNodeService(options, mockMetadataService, mockMounter, fakeClient)
 
 	if nodeService.metadata != mockMetadataService {
 		t.Error("Expected NodeService.metadata to be set to the mock MetadataService")
@@ -2650,13 +2648,15 @@ func TestNodeGetVolumeStats(t *testing.T) {
 func TestRemoveNotReadyTaint(t *testing.T) {
 	nodeName := "test-node-123"
 	testCases := []struct {
-		name      string
-		setup     func(t *testing.T, mockCtl *gomock.Controller) (kubernetes.Interface, *corev1.Node)
-		expResult error
+		name           string
+		setup          func(t *testing.T) (kubernetes.Interface, *corev1.Node)
+		expResult      error
+		expErrContains string
+		checkTaints    func(t *testing.T, client kubernetes.Interface, nodeName string)
 	}{
 		{
 			name: "checkAllocatable returns error",
-			setup: func(t *testing.T, mockCtl *gomock.Controller) (kubernetes.Interface, *corev1.Node) {
+			setup: func(t *testing.T) (kubernetes.Interface, *corev1.Node) {
 				t.Helper()
 
 				node := &corev1.Node{
@@ -2665,25 +2665,16 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					},
 				}
 
-				mockClient := NewMockKubernetesClient(mockCtl)
-				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
+				// Create fake client without CSINode - this will cause Get to fail
+				client := fake.NewClientset(node)
 
-				csiNodesMock := NewMockCSINodeInterface(mockCtl)
-				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
-
-				csiNodesMock.EXPECT().
-					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
-					Return(nil, errors.New("failed to get CSINode")).
-					Times(1)
-
-				return mockClient, node
+				return client, node
 			},
-			expResult: fmt.Errorf("isAllocatableSet: failed to get CSINode for %s: failed to get CSINode", nodeName),
+			expErrContains: "isAllocatableSet: failed to get CSINode for " + nodeName,
 		},
 		{
 			name: "no taints to remove",
-			setup: func(t *testing.T, mockCtl *gomock.Controller) (kubernetes.Interface, *corev1.Node) {
+			setup: func(t *testing.T) (kubernetes.Interface, *corev1.Node) {
 				t.Helper()
 
 				node := &corev1.Node{
@@ -2704,15 +2695,8 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					},
 				}
 
-				mockClient := NewMockKubernetesClient(mockCtl)
-				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
-
-				csiNodesMock := NewMockCSINodeInterface(mockCtl)
-				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
-
 				count := int32(1)
-				mockCSINode := &v1.CSINode{
+				csiNode := &v1.CSINode{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: nodeName,
 					},
@@ -2728,18 +2712,26 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					},
 				}
 
-				csiNodesMock.EXPECT().
-					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
-					Return(mockCSINode, nil).
-					Times(1)
+				client := fake.NewClientset(node, csiNode)
 
-				return mockClient, node
+				return client, node
 			},
 			expResult: nil,
+			checkTaints: func(t *testing.T, client kubernetes.Interface, nodeName string) {
+				t.Helper()
+				// Verify taints are unchanged
+				updatedNode, err := client.CoreV1().Nodes().Get(t.Context(), nodeName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("failed to get node: %v", err)
+				}
+				if len(updatedNode.Spec.Taints) != 2 {
+					t.Fatalf("expected 2 taints, got %d", len(updatedNode.Spec.Taints))
+				}
+			},
 		},
 		{
 			name: "successfully removes taint",
-			setup: func(t *testing.T, mockCtl *gomock.Controller) (kubernetes.Interface, *corev1.Node) {
+			setup: func(t *testing.T) (kubernetes.Interface, *corev1.Node) {
 				t.Helper()
 
 				node := &corev1.Node{
@@ -2759,16 +2751,9 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 						},
 					},
 				}
-				mockClient := NewMockKubernetesClient(mockCtl)
-
-				storageV1Mock := NewMockStorageV1Interface(mockCtl)
-				mockClient.EXPECT().StorageV1().Return(storageV1Mock).MinTimes(1)
-
-				csiNodesMock := NewMockCSINodeInterface(mockCtl)
-				storageV1Mock.EXPECT().CSINodes().Return(csiNodesMock).Times(1)
 
 				count := int32(1)
-				mockCSINode := &v1.CSINode{
+				csiNode := &v1.CSINode{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: nodeName,
 					},
@@ -2784,54 +2769,66 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 					},
 				}
 
-				csiNodesMock.EXPECT().
-					Get(testutil.AnyContext(), gomock.Eq(nodeName), gomock.Eq(metav1.GetOptions{})).
-					Return(mockCSINode, nil).
-					Times(1)
+				client := fake.NewClientset(node, csiNode)
 
-				coreV1Mock := NewMockCoreV1Interface(mockCtl)
-				mockClient.EXPECT().CoreV1().Return(coreV1Mock).MinTimes(1)
-
-				nodesMock := NewMockNodeInterface(mockCtl)
-				coreV1Mock.EXPECT().Nodes().Return(nodesMock).Times(1)
-
-				const expectedPatch = `[{"op":"test","path":"/spec/taints","value":[{"key":"test.ebs.csi.aws.com/agent-not-ready","effect":"NoSchedule"},{"key":"some-other-taint","effect":"NoExecute"}]},{"op":"replace","path":"/spec/taints","value":[{"key":"some-other-taint","effect":"NoExecute"}]}]`
-				nodesMock.EXPECT().
-					Patch(
-						testutil.AnyContext(),
-						gomock.Eq(nodeName),
-						gomock.Eq(k8stypes.JSONPatchType),
-						gomock.Eq([]byte(expectedPatch)),
-						gomock.Eq(metav1.PatchOptions{}),
-					).
-					Return(node, nil).
-					Times(1)
-
-				return mockClient, node
+				return client, node
 			},
 			expResult: nil,
+			checkTaints: func(t *testing.T, client kubernetes.Interface, nodeName string) {
+				t.Helper()
+				// Verify the AgentNotReadyNodeTaintKey taint was removed
+				updatedNode, err := client.CoreV1().Nodes().Get(t.Context(), nodeName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("failed to get node: %v", err)
+				}
+				for _, taint := range updatedNode.Spec.Taints {
+					if taint.Key == AgentNotReadyNodeTaintKey {
+						t.Fatalf("expected taint %s to be removed, but it still exists", AgentNotReadyNodeTaintKey)
+					}
+				}
+				// Verify other taint is still present
+				found := false
+				for _, taint := range updatedNode.Spec.Taints {
+					if taint.Key == "some-other-taint" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("expected taint 'some-other-taint' to still exist")
+				}
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockCtl := gomock.NewController(t)
-			defer mockCtl.Finish()
-
-			client, node := tc.setup(t, mockCtl)
+			client, node := tc.setup(t)
 			result := removeNotReadyTaint(t.Context(), client, node)
 
-			if tc.expResult == nil {
+			switch {
+			case tc.expErrContains != "":
+				if result == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.expErrContains)
+				}
+				if !strings.Contains(result.Error(), tc.expErrContains) {
+					t.Fatalf("expected error containing %q, got %v", tc.expErrContains, result)
+				}
+			case tc.expResult == nil:
 				if result != nil {
 					t.Fatalf("expected no error, got %v", result)
 				}
-			} else {
+			default:
 				if result == nil {
 					t.Fatalf("expected error %v, got nil", tc.expResult)
 				}
 				if result.Error() != tc.expResult.Error() {
 					t.Fatalf("expected error %v, got %v", tc.expResult, result)
 				}
+			}
+
+			if tc.checkTaints != nil {
+				tc.checkTaints(t, client, nodeName)
 			}
 		})
 	}
@@ -2887,7 +2884,7 @@ func TestStartNotReadyTaintWatcher(t *testing.T) {
 				},
 			}
 
-			client := fake.NewSimpleClientset(node, csiNode)
+			client := fake.NewClientset(node, csiNode)
 
 			startNotReadyTaintWatcher(client, 1*time.Second)
 

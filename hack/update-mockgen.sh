@@ -25,11 +25,5 @@ BIN="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../bin"
 "${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_ec2.go -source pkg/util/ec2_interface.go EC2API &
 "${BIN}/mockgen" -package cloud -destination=./pkg/cloud/mock_sm.go -source pkg/util/sagemaker_interface.go SageMakerAPI &
 
-# Reflection-based mocking for external dependencies
-"${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_client.go -mock_names='Interface=MockKubernetesClient' k8s.io/client-go/kubernetes Interface &
-"${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_corev1.go k8s.io/client-go/kubernetes/typed/core/v1 CoreV1Interface,NodeInterface &
-"${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_storagev1.go k8s.io/client-go/kubernetes/typed/storage/v1 VolumeAttachmentInterface,StorageV1Interface &
-"${BIN}/mockgen" -package driver -destination=./pkg/driver/mock_k8s_storagev1_csinode.go k8s.io/client-go/kubernetes/typed/storage/v1 CSINodeInterface &
-
 # Wait for all mockgen processes to finish
 wait
