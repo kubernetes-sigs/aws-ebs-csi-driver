@@ -100,6 +100,10 @@ const (
 	dryRunInterval = 3 * time.Hour
 
 	getCallerIdentityRetryDelay = 30 * time.Second
+
+	// stuckAttachingTimeout is the duration after which an attachment stuck in "attaching" state
+	// will be detached to allow a retry.
+	stuckAttachingTimeout = 90 * time.Second
 )
 
 // VolumeStatusInitializingState is const reported by EC2 DescribeVolumeStatus which AWS SDK does not have type for.
@@ -1650,6 +1654,23 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 		}
 
 		if attachment != nil && attachment.Device != nil && expectedState == types.VolumeAttachmentStateAttached && !isHyperPod {
+			// Sometimes, a volume can get stuck attaching, for example when an instance is over the attachment limit
+			// or due to an EBS-side issue. When a volume has reached an extremely abnormal amount of time attaching,
+			// abort the attachment by calling DetachVolume and failing the ControllerPublishVolume RPC entirely to
+			// force a retry to occur with a fresh slate.
+			if attachmentState == types.VolumeAttachmentStateAttaching && attachment.AttachTime != nil && time.Since(*attachment.AttachTime) > stuckAttachingTimeout {
+				klog.InfoS("WaitForAttachmentState: attachment stuck in attaching state, detaching", "volumeID", volumeID, "instanceID", expectedInstance, "attachTime", attachment.AttachTime)
+				_, err := c.ec2.DetachVolume(ctx, &ec2.DetachVolumeInput{
+					VolumeId:   aws.String(volumeID),
+					InstanceId: aws.String(expectedInstance),
+				})
+				if err != nil {
+					klog.ErrorS(err, "WaitForAttachmentState: failed to detach stuck volume", "volumeID", volumeID, "instanceID", expectedInstance)
+					return false, err
+				}
+				return false, fmt.Errorf("%q stuck in attaching state for longer than %v", volumeID, stuckAttachingTimeout)
+			}
+
 			device := aws.ToString(attachment.Device)
 			if device != expectedDevice {
 				klog.InfoS("WaitForAttachmentState: device mismatch", "device", device, "expectedDevice", expectedDevice, "attachment", attachment)
