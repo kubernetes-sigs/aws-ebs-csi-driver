@@ -185,7 +185,7 @@ func TestPatchSingleNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			clientset := fake.NewSimpleClientset(&tt.node)
+			clientset := fake.NewClientset(&tt.node)
 
 			err := patchSingleNode(ctx, tt.node, tt.metadata, clientset)
 
@@ -246,7 +246,7 @@ func TestPatchNodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			nodeList := &corev1.NodeList{Items: tt.nodes}
-			clientset := fake.NewSimpleClientset(nodeList)
+			clientset := fake.NewClientset(nodeList)
 
 			err := patchNodes(ctx, nodeList, tt.metadata, clientset, tt.patchFails)
 
@@ -387,7 +387,7 @@ func TestUpdateMetadataEC2(t *testing.T) {
 
 			mockCloud := cloud.NewMockCloud(ctrl)
 			nodeList := &corev1.NodeList{Items: tt.nodes}
-			clientset := fake.NewSimpleClientset(nodeList)
+			clientset := fake.NewClientset(nodeList)
 			pvInformer := setupPVInformer(t, nil)
 
 			if tt.cloudErr != nil {
@@ -441,7 +441,7 @@ func TestPatchNewNodes(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockCloud := cloud.NewMockCloud(ctrl)
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 			factory := informers.NewSharedInformerFactory(clientset, 0)
 			nodesInformer := factory.Core().V1().Nodes().Informer()
 			pvInformer := setupPVInformer(t, nil)
@@ -566,7 +566,7 @@ func makeBlockDevice(volumeID string) types.InstanceBlockDeviceMapping {
 
 func setupPVInformer(t *testing.T, pvs []corev1.PersistentVolume) cache.SharedIndexInformer {
 	t.Helper()
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 	for i := range pvs {
 		_, err := clientset.CoreV1().PersistentVolumes().Create(context.Background(), &pvs[i], metav1.CreateOptions{})
 		if err != nil {

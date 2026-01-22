@@ -22,6 +22,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/metadata"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestNewDriver(t *testing.T) {
@@ -31,7 +32,7 @@ func TestNewDriver(t *testing.T) {
 	mockMetadataService := metadata.NewMockMetadataService(ctrl)
 	mockMounter := mounter.NewMockMounter(ctrl)
 
-	mockKubernetesClient := NewMockKubernetesClient(ctrl)
+	fakeClient := fake.NewClientset()
 	testCases := []struct {
 		name          string
 		o             *Options
@@ -80,7 +81,7 @@ func TestNewDriver(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			driver, err := NewDriver(mockCloud, tc.o, mockMounter, mockMetadataService, mockKubernetesClient)
+			driver, err := NewDriver(mockCloud, tc.o, mockMounter, mockMetadataService, fakeClient)
 			if tc.hasNode && driver.node == nil {
 				t.Fatalf("Expected driver to have node but driver does not have node")
 			}

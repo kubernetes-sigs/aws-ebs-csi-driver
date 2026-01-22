@@ -239,7 +239,7 @@ func TestNewMetadataService(t *testing.T) {
 				if tc.k8sAPIError != nil {
 					return nil, tc.k8sAPIError
 				}
-				return fake.NewSimpleClientset(tc.node), nil
+				return fake.NewClientset(tc.node), nil
 			}
 
 			if tc.isHyperPodNode {
@@ -728,9 +728,9 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("CSI_NODE_NAME", tc.nodeName)
 
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 			if tc.node != nil {
-				clientset = fake.NewSimpleClientset(tc.node)
+				clientset = fake.NewClientset(tc.node)
 			}
 
 			metadata, err := KubernetesAPIInstanceInfo(clientset, false)
@@ -810,9 +810,9 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("CSI_NODE_NAME", tc.nodeName)
 
-			clientset := fake.NewSimpleClientset()
+			clientset := fake.NewClientset()
 			if tc.node != nil {
-				clientset = fake.NewSimpleClientset(tc.node)
+				clientset = fake.NewClientset(tc.node)
 			}
 
 			metadata, err := KubernetesAPIInstanceInfo(clientset, true)
