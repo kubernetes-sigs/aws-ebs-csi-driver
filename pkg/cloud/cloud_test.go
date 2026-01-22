@@ -4372,6 +4372,15 @@ func TestWaitForAttachmentState(t *testing.T) {
 			alreadyAssigned:    false,
 			expectError:        true,
 		},
+		{
+			name:             "failure: stuck attaching triggers detach",
+			volumeID:         "vol-test-1234",
+			expectedState:    types.VolumeAttachmentStateAttached,
+			expectedInstance: "1234",
+			expectedDevice:   defaultPath,
+			alreadyAssigned:  false,
+			expectError:      true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4445,6 +4454,17 @@ func TestWaitForAttachmentState(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
 			case "failure: multiple attachments with Multi-Attach disabled":
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).MinTimes(1)
+			case "failure: stuck attaching triggers detach":
+				stuckAttachTime := time.Now().Add(-100 * time.Second)
+				stuckAttachingVol := types.Volume{
+					VolumeId:    aws.String(tc.volumeID),
+					Attachments: []types.VolumeAttachment{{Device: aws.String(defaultPath), InstanceId: aws.String("1234"), State: types.VolumeAttachmentStateAttaching, AttachTime: &stuckAttachTime}},
+				}
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{stuckAttachingVol}}, nil)
+				mockEC2.EXPECT().DetachVolume(testutil.AnyContext(), gomock.Eq(&ec2.DetachVolumeInput{
+					VolumeId:   aws.String("vol-test-1234"),
+					InstanceId: aws.String("1234"),
+				}), testutil.EC2Options()).Return(nil, nil)
 			case "failure: disk still attaching":
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachingVol}}, nil).MinTimes(1)
 			case "failure: context cancelled":
