@@ -594,6 +594,7 @@ var volumeLimits = map[string]volumeLimit{
 	"m8i.metal-96xl":      {79, "dedicated"},
 	"m8i.xlarge":          {32, "dedicated"},
 	"mac-m4.metal":        {31, "shared"},
+	"mac-m4max.metal":     {10, "shared"},
 	"mac-m4pro.metal":     {31, "shared"},
 	"mac1.metal":          {16, "shared"},
 	"mac2-m1ultra.metal":  {10, "shared"},

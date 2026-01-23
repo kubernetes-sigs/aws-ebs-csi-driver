@@ -39,6 +39,7 @@ linters:
     - varnamelen # Long var names happen
     - wsl # Too strict of a whitespace linter
     - wsl_v5 # Too strict
+    - prealloc # Many false positives
     # Consider adding in future
     - err113 # Do not create errors dynamically from scratch. Instead, wrap static (package-level) error.
     - wrapcheck # Same as err113
