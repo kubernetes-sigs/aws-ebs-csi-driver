@@ -14,7 +14,7 @@
 
 timeout: 5400s
 steps:
-  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20251211-4c812d4cd8
+  - name: gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20260108-7f313c340e
     entrypoint: ./hack/cloudbuild.sh
     env:
       - GIT_TAG=${_GIT_TAG}

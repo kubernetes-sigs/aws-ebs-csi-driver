@@ -496,7 +496,6 @@ additionalDaemonSets:
 #   nodeSelector:
 #     node.kubernetes.io/instance-type: c5.large
 #   volumeAttachLimit: 15
-
 storageClasses: []
 # Add StorageClass resources like:
 # - name: ebs-sc
@@ -543,4 +542,4 @@ debugLogs: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20251209-855adc2699-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20260120-e2c483ffe9-master"
