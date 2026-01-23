@@ -1,3 +1,70 @@
+# v1.55.0
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+**`v1.55.0` and later of the EBS CSI Driver does not support `a1.*` instances.** The EBS CSI Driver team recommends upgrading to a more recent [AWS Graviton](https://aws.amazon.com/ec2/graviton/) instance type.
+
+### Feature
+
+- Add new StorageClass parameter `ext4EncryptionSupport` to enable encryption support in ext4 for non-EBS encryption at rest ([#2820](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2820), [@ConnorJC3](https://github.com/ConnorJC3))
+- Added VolumeSnapshotClass parameters to lock EBS snapshots after creation ([#2797](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2797), [@mdzraf](https://github.com/mdzraf))
+- Automatically assign EBS card index for instances with multiple EBS cards ([#2835](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2835), [@ConnorJC3](https://github.com/ConnorJC3))
+- Cache known bad AWS IDs and remove from batched calls ([#2817](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2817), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+### Bug or Regression
+
+- Automatically detect and prevent use of IMDS on Hyper-pod nodes ([#2822](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2822), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- Detect, abort, and force a retry of attachments stuck for longer than 90 seconds ([#2833](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2833), [@ConnorJC3](https://github.com/ConnorJC3))
+- Prevent startup crash when alpha `metadata-labeler` feature is enabled by initializing name-dependent variables in node path ([#2827](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2827), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.5 → v1.32.7](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.5...config/v1.32.7)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.5 → v1.19.7](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.5...credentials/v1.19.7)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.16 → v1.18.17](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.16...feature/ec2/imds/v1.18.17)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.16 → v1.4.17](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.16...internal/configsources/v1.4.17)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.16 → v2.7.17](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.16...internal/endpoints/v2/v2.7.17)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.276.1 → v1.280.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.276.1...service/ec2/v1.280.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.16 → v1.13.17](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.16...service/internal/presigned-url/v1.13.17)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.228.2 → v1.230.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.228.2...service/sagemaker/v1.230.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.4 → v1.0.5](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.0.4...service/signin/v1.0.5)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.7 → v1.30.9](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.7...service/sso/v1.30.9)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.12 → v1.35.13](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.12...service/ssooidc/v1.35.13)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.41.5 → v1.41.6](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.41.5...service/sts/v1.41.6)
+- github.com/aws/aws-sdk-go-v2: [v1.41.0 → v1.41.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.0...v1.41.1)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.27.3 → v2.27.5](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.27.3...v2.27.5)
+- github.com/kubernetes-csi/csi-lib-utils: [v0.23.0 → v0.23.1](https://github.com/kubernetes-csi/csi-lib-utils/compare/v0.23.0...v0.23.1)
+- github.com/prometheus/common: [v0.67.4 → v0.67.5](https://github.com/prometheus/common/compare/v0.67.4...v0.67.5)
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.58.0 → v0.61.0
+- golang.org/x/crypto: v0.46.0 → v0.47.0
+- golang.org/x/mod: v0.30.0 → v0.31.0
+- golang.org/x/net: v0.48.0 → v0.49.0
+- golang.org/x/sys: v0.39.0 → v0.40.0
+- golang.org/x/telemetry: bc8e575 → 8fff8a5
+- golang.org/x/term: v0.38.0 → v0.39.0
+- golang.org/x/text: v0.32.0 → v0.33.0
+- golang.org/x/tools: v0.39.0 → v0.40.0
+- google.golang.org/genproto/googleapis/api: 97cd9d5 → b8f7ae3
+- google.golang.org/genproto/googleapis/rpc: 97cd9d5 → b8f7ae3
+- google.golang.org/grpc: v1.77.0 → v1.78.0
+- k8s.io/api: v0.34.3 → v0.35.0
+- k8s.io/apimachinery: v0.34.3 → v0.35.0
+- k8s.io/client-go: v0.34.3 → v0.35.0
+- k8s.io/component-base: v0.34.3 → v0.35.0
+- k8s.io/mount-utils: v0.34.3 → v0.35.0
+- k8s.io/utils: bc988d5 → 914a6e7
+
+### Removed
+- github.com/kisielk/errcheck: [v1.5.0](https://github.com/kisielk/errcheck/tree/v1.5.0)
+- github.com/kisielk/gotool: [v1.0.0](https://github.com/kisielk/gotool/tree/v1.0.0)
+
 # v1.54.0
 
 ## Changes by Kind
