@@ -2,5 +2,6 @@ To verify that aws-ebs-csi-driver has started, run:
 
     kubectl get pod -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "aws-ebs-csi-driver.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
 
-The "a1CompatibilityDaemonSet" parameter is no longer supported. For more information see the EBS CSI Helm Chart changelog:
-https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/CHANGELOG.md#2540
+The "a1CompatibilityDaemonSet" parameter has been removed. For more information see the EBS CSI Helm Chart changelog:
+https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/CHANGELOG.md#2550
+

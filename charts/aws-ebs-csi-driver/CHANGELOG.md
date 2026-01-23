@@ -1,5 +1,26 @@
 # Helm chart
 
+## 2.55.0
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+`v1.54.0` was last minor version of the EBS CSI Driver to publish an `-a1compat` image for compatibility with `a1.*` family Amazon EC2 instances. The EBS CSI Driver team recommends upgrading to a more recent [AWS Graviton](https://aws.amazon.com/ec2/graviton/) instance type.
+
+**The `a1CompatibilityDaemonSet` parameter has been removed.** The parameter will have no effect, and installation may fail when attempting to install via a method that validates the Helm schema, such as the Helm CLI.
+
+### Feature
+
+- Enable `MutableCSINodeAllocatableCount` feature gate in external-attacher ([#2826](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2826), [@torredil](https://github.com/torredil))
+
+### Bug or Regression
+
+- Replaced deprecated node-driver-registrar liveness probe command with /healthz endpoint ([#2819](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2819), [@mdzraf](https://github.com/mdzraf))
+
+### Other (Cleanup or Flake)
+
+- Removed all `a1compat` references in Helm chart ([#2823](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2823), [@ConnorJC3](https://github.com/ConnorJC3))
+
 ## 2.54.1
 
 ### Bugfix
