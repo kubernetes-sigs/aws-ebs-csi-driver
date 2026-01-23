@@ -335,8 +335,8 @@ update/generate-license-header:
 
 .PHONY: generate-volume-limits-table
 generate-volume-limits-table:
-	go run ./hack/generate-volume-limits-table > pkg/cloud/volume_limits_table.go
-	gofmt -s -w pkg/cloud/volume_limits_table.go
+	go run ./hack/generate-volume-limits-table > pkg/cloud/limits/volume_limits_table.go
+	gofmt -s -w pkg/cloud/limits/volume_limits_table.go
 	go run ./hack/detect-potentially-invalid-limits
 
 ## Verifiers

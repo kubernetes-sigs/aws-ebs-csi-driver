@@ -2330,6 +2330,66 @@ func TestAttachDisk(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:     "success: AttachVolume with card index",
+			volumeID: defaultVolumeID,
+			nodeID:   defaultNodeID,
+			path:     defaultPath,
+			expErr:   nil,
+			mockFunc: func(mockEC2 *MockEC2API, ctx context.Context, volumeID, nodeID, nodeID2, path string, dm dm.DeviceManager) {
+				instanceRequest := createInstanceRequest(nodeID)
+
+				// Create a fake instance with card index to trigger card index logic
+				// Must use r8gb.48xlarge instance type which has 2 cards
+				fakeInstance := &types.Instance{
+					InstanceId:   aws.String(nodeID),
+					InstanceType: "r8gb.48xlarge",
+					BlockDeviceMappings: []types.InstanceBlockDeviceMapping{
+						{
+							DeviceName: aws.String("/dev/xvda"),
+							Ebs: &types.EbsInstanceBlockDevice{
+								VolumeId:     aws.String("vol-existing"),
+								EbsCardIndex: aws.Int32(0),
+							},
+						},
+					},
+				}
+
+				attachRequestWithCardIndex := createAttachRequestWithCardIndex(volumeID, nodeID, path, aws.Int32(1))
+
+				gomock.InOrder(
+					mockEC2.EXPECT().DescribeInstances(testutil.AnyContext(), gomock.Eq(instanceRequest)).Return(&ec2.DescribeInstancesOutput{
+						Reservations: []types.Reservation{
+							{
+								Instances: []types.Instance{*fakeInstance},
+							},
+						},
+					}, nil),
+					mockEC2.EXPECT().AttachVolume(testutil.AnyContext(), gomock.Eq(attachRequestWithCardIndex), testutil.EC2Options()).Return(&ec2.AttachVolumeOutput{
+						Device:       aws.String(path),
+						InstanceId:   aws.String(nodeID),
+						VolumeId:     aws.String(volumeID),
+						State:        types.VolumeAttachmentStateAttaching,
+						EbsCardIndex: aws.Int32(1),
+					}, nil),
+					mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
+						Volumes: []types.Volume{
+							{
+								VolumeId: aws.String(volumeID),
+								Attachments: []types.VolumeAttachment{
+									{
+										Device:       aws.String(path),
+										InstanceId:   aws.String(nodeID),
+										State:        types.VolumeAttachmentStateAttached,
+										EbsCardIndex: aws.Int32(1),
+									},
+								},
+							},
+						},
+					}, nil),
+				)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4245,6 +4305,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 		alreadyAssigned    bool
 		expectError        bool
 		associatedResource *string
+		expectedCardIndex  *int32
 	}{
 		{
 			name:             "success: attached",
@@ -4381,6 +4442,26 @@ func TestWaitForAttachmentState(t *testing.T) {
 			alreadyAssigned:  false,
 			expectError:      true,
 		},
+		{
+			name:              "success: attached with card index",
+			volumeID:          "vol-test-1234",
+			expectedState:     types.VolumeAttachmentStateAttached,
+			expectedInstance:  "1234",
+			expectedDevice:    defaultPath,
+			expectedCardIndex: aws.Int32(1),
+			alreadyAssigned:   false,
+			expectError:       false,
+		},
+		{
+			name:              "failure: card index mismatch",
+			volumeID:          "vol-test-1234",
+			expectedState:     types.VolumeAttachmentStateAttached,
+			expectedInstance:  "1234",
+			expectedDevice:    defaultPath,
+			expectedCardIndex: aws.Int32(2),
+			alreadyAssigned:   false,
+			expectError:       true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4452,6 +4533,29 @@ func TestWaitForAttachmentState(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
 			case "failure: HyperPod with invalid instanceId in AssociatedResource":
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).MinTimes(1)
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{hyperpodAttachedVol}}, nil).AnyTimes()
+			case "success: attached with card index":
+				attachedVolWithCardIndex := types.Volume{
+					VolumeId: aws.String(tc.volumeID),
+					Attachments: []types.VolumeAttachment{{
+						Device:       aws.String(defaultPath),
+						InstanceId:   aws.String("1234"),
+						State:        types.VolumeAttachmentStateAttached,
+						EbsCardIndex: aws.Int32(1),
+					}},
+				}
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVolWithCardIndex}}, nil).AnyTimes()
+			case "failure: card index mismatch":
+				attachedVolWithWrongCardIndex := types.Volume{
+					VolumeId: aws.String(tc.volumeID),
+					Attachments: []types.VolumeAttachment{{
+						Device:       aws.String(defaultPath),
+						InstanceId:   aws.String("1234"),
+						State:        types.VolumeAttachmentStateAttached,
+						EbsCardIndex: aws.Int32(1), // Different from expected (2)
+					}},
+				}
+				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVolWithWrongCardIndex}}, nil).AnyTimes()
 			case "failure: multiple attachments with Multi-Attach disabled":
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{multipleAttachmentsVol}}, nil).MinTimes(1)
 			case "failure: stuck attaching triggers detach":
@@ -4474,7 +4578,7 @@ func TestWaitForAttachmentState(t *testing.T) {
 				mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{attachedVol}}, nil).MinTimes(1)
 			}
 
-			attachment, err := c.WaitForAttachmentState(ctx, tc.expectedState, tc.volumeID, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned)
+			attachment, err := c.WaitForAttachmentState(ctx, tc.expectedState, tc.volumeID, tc.expectedInstance, tc.expectedDevice, tc.alreadyAssigned, tc.expectedCardIndex)
 
 			if tc.expectError {
 				if err == nil {
@@ -5110,6 +5214,15 @@ func createAttachRequest(volumeID, nodeID, path string) *ec2.AttachVolumeInput {
 		Device:     aws.String(path),
 		InstanceId: aws.String(nodeID),
 		VolumeId:   aws.String(volumeID),
+	}
+}
+
+func createAttachRequestWithCardIndex(volumeID, nodeID, path string, cardIndex *int32) *ec2.AttachVolumeInput {
+	return &ec2.AttachVolumeInput{
+		Device:       aws.String(path),
+		InstanceId:   aws.String(nodeID),
+		VolumeId:     aws.String(volumeID),
+		EbsCardIndex: cardIndex,
 	}
 }
 
