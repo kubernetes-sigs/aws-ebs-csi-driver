@@ -42,7 +42,7 @@ FIPS_TEST=${FIPS_TEST:-"false"}
 
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
-K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.35.0}
+K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.34.1}
 K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-1.34}
 
 # Override AMI - eksctl clusters only
