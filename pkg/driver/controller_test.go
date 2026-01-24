@@ -36,6 +36,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -177,13 +178,13 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{
+							Segments: lo.Assign(map[string]string{
 								WellKnownZoneTopologyKey: expZone,
 								AwsAccountIDKey:          outpostArn.AccountID,
 								AwsOutpostIDKey:          outpostArn.Resource,
 								AwsRegionKey:             outpostArn.Region,
 								AwsPartitionKey:          outpostArn.Partition,
-							},
+							}, util.GetNodeSegments()),
 						},
 					},
 				}
@@ -663,7 +664,9 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
+							Segments: lo.Assign(map[string]string{
+								WellKnownZoneTopologyKey: expZone,
+							}, util.GetNodeSegments()),
 						},
 					},
 				}
@@ -2172,7 +2175,9 @@ func TestCreateVolume(t *testing.T) {
 					VolumeContext: map[string]string{},
 					AccessibleTopology: []*csi.Topology{
 						{
-							Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
+							Segments: lo.Assign(map[string]string{
+								WellKnownZoneTopologyKey: expZone,
+							}, util.GetNodeSegments()),
 						},
 					},
 				}

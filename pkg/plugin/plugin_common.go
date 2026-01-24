@@ -71,6 +71,8 @@ type EbsCsiPlugin interface {
 	// GetDriverName replaces the driver name in use (normally "ebs.csi.aws.com")
 	// This function can be called before Init and should not depend on it
 	GetDriverName() string
+	// GetSegments provides addational segments to be added as part of the driver and controllers
+	GetNodeSegments() map[string]string
 }
 
 // ebsCsiPluginBase implements stub functionality of all plugin methods except Init().
@@ -92,4 +94,8 @@ func (p *ebsCsiPluginBase) GetSageMakerClient(_ aws.Config, _ ...func(o *sagemak
 
 func (p *ebsCsiPluginBase) GetDriverName() string {
 	return ""
+}
+
+func (p *ebsCsiPluginBase) GetNodeSegments() map[string]string {
+	return map[string]string{}
 }

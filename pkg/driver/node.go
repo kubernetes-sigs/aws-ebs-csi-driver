@@ -34,6 +34,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/samber/lo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -615,6 +616,7 @@ func (d *NodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 		WellKnownZoneTopologyKey: zone,
 		OSTopologyKey:            osType,
 	}
+	lo.Assign(segments, util.GetNodeSegments())
 
 	outpostArn := d.metadata.GetOutpostArn()
 

@@ -19,6 +19,7 @@ package util
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
 	"os"
@@ -55,7 +56,8 @@ var (
 
 	// DriverName is the domain for all EBS CSI Driver related components.
 	// Variable instead of constant to allow initialization from plugin.
-	driverName = ""
+	driverName     = ""
+	pluginSegments = map[string]string{}
 )
 
 func SetDriverName(name string) {
@@ -81,6 +83,21 @@ func GetDriverName() string {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
 	}
 	return driverName
+}
+
+func SetNodeSegments(segments map[string]string) {
+	setSegments := sync.OnceValue(func() map[string]string {
+		pluginSegments = segments
+		return pluginSegments
+	})()
+	if !maps.Equal(setSegments, segments) {
+		klog.ErrorS(nil, "Attempted to change plugin segments after they were already set")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 0)
+	}
+}
+
+func GetNodeSegments() map[string]string {
+	return pluginSegments
 }
 
 // RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB.
