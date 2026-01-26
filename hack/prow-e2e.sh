@@ -76,7 +76,7 @@ test-e2e-external-kustomize)
   ;;
 test-helm-chart)
   TEST="helm-ct"
-  export INSTANCE_TYPE="c5.xlarge"
+  export INSTANCE_TYPE="c5.2xlarge"
   ;;
 *)
   echo "Unknown e2e test ${1}" >&2
