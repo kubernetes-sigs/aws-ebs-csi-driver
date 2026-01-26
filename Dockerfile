@@ -38,3 +38,8 @@ FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2022@sh
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
+
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2025@sha256:e93d0945e886786631cf0c02e53a89431a5075ee15ee51b887a05aeb0ffb8398 AS windows-ltsc2025
+COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
+ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
+ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
