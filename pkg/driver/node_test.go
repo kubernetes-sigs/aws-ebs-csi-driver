@@ -34,6 +34,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/mounter"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/samber/lo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
@@ -2072,11 +2073,11 @@ func TestNodeGetInfo(t *testing.T) {
 			expectedResp: &csi.NodeGetInfoResponse{
 				NodeId: "i-1234567890abcdef0",
 				AccessibleTopology: &csi.Topology{
-					Segments: map[string]string{
+					Segments: lo.Assign(map[string]string{
 						ZoneTopologyKey:          "us-west-2a",
 						WellKnownZoneTopologyKey: "us-west-2a",
 						OSTopologyKey:            runtime.GOOS,
-					},
+					}, util.GetNodeSegments()),
 				},
 			},
 		},
@@ -2094,11 +2095,11 @@ func TestNodeGetInfo(t *testing.T) {
 			expectedResp: &csi.NodeGetInfoResponse{
 				NodeId: "i-1234567890abcdef0",
 				AccessibleTopology: &csi.Topology{
-					Segments: map[string]string{
+					Segments: lo.Assign(map[string]string{
 						ZoneTopologyKey:          "us-west-2a",
 						WellKnownZoneTopologyKey: "us-west-2a",
 						OSTopologyKey:            runtime.GOOS,
-					},
+					}, util.GetNodeSegments()),
 				},
 			},
 		},
@@ -2121,7 +2122,7 @@ func TestNodeGetInfo(t *testing.T) {
 			expectedResp: &csi.NodeGetInfoResponse{
 				NodeId: "i-1234567890abcdef0",
 				AccessibleTopology: &csi.Topology{
-					Segments: map[string]string{
+					Segments: lo.Assign(map[string]string{
 						ZoneTopologyKey:          "us-west-2a",
 						WellKnownZoneTopologyKey: "us-west-2a",
 						OSTopologyKey:            runtime.GOOS,
@@ -2129,7 +2130,7 @@ func TestNodeGetInfo(t *testing.T) {
 						AwsPartitionKey:          "aws",
 						AwsAccountIDKey:          "123456789012",
 						AwsOutpostIDKey:          "op-1234567890abcdef0",
-					},
+					}, util.GetNodeSegments()),
 				},
 			},
 		},

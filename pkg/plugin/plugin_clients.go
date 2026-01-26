@@ -30,16 +30,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
 )
 
-// ec2ClientBase implements stub functionality for EC2API. It can be used
+// Ec2ClientBase implements stub functionality for EC2API. It can be used
 // by plugins that only want to customize a subset of the EC2 API calls.
 // Use of this struct is NOT required, plugins may return any compliant
 // EC2API implementation from GetEC2Client.
-type ec2ClientBase struct {
+type Ec2ClientBase struct {
 	client *ec2.Client
 }
 
-// init sets up the EC2 client in ec2ClientBase. Must be called first.
-func (b *ec2ClientBase) init(cfg aws.Config, optFns ...func(*ec2.Options)) {
+// init sets up the EC2 client in Ec2ClientBase. Must be called first.
+func (b *Ec2ClientBase) init(cfg aws.Config, optFns ...func(*ec2.Options)) {
 	b.client = ec2.NewFromConfig(cfg, optFns...)
 }
 
@@ -58,58 +58,58 @@ func (b *sageMakerClientBase) init(cfg aws.Config, optFns ...func(*sagemaker.Opt
 
 // EC2API stub functions.
 
-func (b *ec2ClientBase) DescribeVolumes(ctx context.Context, params *ec2.DescribeVolumesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error) {
+func (b *Ec2ClientBase) DescribeVolumes(ctx context.Context, params *ec2.DescribeVolumesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error) {
 	return b.client.DescribeVolumes(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeVolumeStatus(ctx context.Context, params *ec2.DescribeVolumeStatusInput, optFns ...func(options *ec2.Options)) (*ec2.DescribeVolumeStatusOutput, error) {
+func (b *Ec2ClientBase) DescribeVolumeStatus(ctx context.Context, params *ec2.DescribeVolumeStatusInput, optFns ...func(options *ec2.Options)) (*ec2.DescribeVolumeStatusOutput, error) {
 	return b.client.DescribeVolumeStatus(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) CreateVolume(ctx context.Context, params *ec2.CreateVolumeInput, optFns ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+func (b *Ec2ClientBase) CreateVolume(ctx context.Context, params *ec2.CreateVolumeInput, optFns ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
 	return b.client.CreateVolume(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) CopyVolumes(ctx context.Context, params *ec2.CopyVolumesInput, optFns ...func(*ec2.Options)) (*ec2.CopyVolumesOutput, error) {
+func (b *Ec2ClientBase) CopyVolumes(ctx context.Context, params *ec2.CopyVolumesInput, optFns ...func(*ec2.Options)) (*ec2.CopyVolumesOutput, error) {
 	return b.client.CopyVolumes(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DeleteVolume(ctx context.Context, params *ec2.DeleteVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DeleteVolumeOutput, error) {
+func (b *Ec2ClientBase) DeleteVolume(ctx context.Context, params *ec2.DeleteVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DeleteVolumeOutput, error) {
 	return b.client.DeleteVolume(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) AttachVolume(ctx context.Context, params *ec2.AttachVolumeInput, optFns ...func(*ec2.Options)) (*ec2.AttachVolumeOutput, error) {
+func (b *Ec2ClientBase) AttachVolume(ctx context.Context, params *ec2.AttachVolumeInput, optFns ...func(*ec2.Options)) (*ec2.AttachVolumeOutput, error) {
 	return b.client.AttachVolume(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DetachVolume(ctx context.Context, params *ec2.DetachVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DetachVolumeOutput, error) {
+func (b *Ec2ClientBase) DetachVolume(ctx context.Context, params *ec2.DetachVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DetachVolumeOutput, error) {
 	return b.client.DetachVolume(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+func (b *Ec2ClientBase) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	return b.client.DescribeInstances(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeAvailabilityZones(ctx context.Context, params *ec2.DescribeAvailabilityZonesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeAvailabilityZonesOutput, error) {
+func (b *Ec2ClientBase) DescribeAvailabilityZones(ctx context.Context, params *ec2.DescribeAvailabilityZonesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeAvailabilityZonesOutput, error) {
 	return b.client.DescribeAvailabilityZones(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) CreateSnapshot(ctx context.Context, params *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
+func (b *Ec2ClientBase) CreateSnapshot(ctx context.Context, params *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
 	return b.client.CreateSnapshot(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DeleteSnapshot(ctx context.Context, params *ec2.DeleteSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.DeleteSnapshotOutput, error) {
+func (b *Ec2ClientBase) DeleteSnapshot(ctx context.Context, params *ec2.DeleteSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.DeleteSnapshotOutput, error) {
 	return b.client.DeleteSnapshot(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeSnapshots(ctx context.Context, params *ec2.DescribeSnapshotsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSnapshotsOutput, error) {
+func (b *Ec2ClientBase) DescribeSnapshots(ctx context.Context, params *ec2.DescribeSnapshotsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSnapshotsOutput, error) {
 	return b.client.DescribeSnapshots(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) ModifyVolume(ctx context.Context, params *ec2.ModifyVolumeInput, optFns ...func(*ec2.Options)) (*ec2.ModifyVolumeOutput, error) {
+func (b *Ec2ClientBase) ModifyVolume(ctx context.Context, params *ec2.ModifyVolumeInput, optFns ...func(*ec2.Options)) (*ec2.ModifyVolumeOutput, error) {
 	return b.client.ModifyVolume(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeVolumesModifications(ctx context.Context, params *ec2.DescribeVolumesModificationsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesModificationsOutput, error) {
+func (b *Ec2ClientBase) DescribeVolumesModifications(ctx context.Context, params *ec2.DescribeVolumesModificationsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesModificationsOutput, error) {
 	return b.client.DescribeVolumesModifications(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DescribeTags(ctx context.Context, params *ec2.DescribeTagsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
+func (b *Ec2ClientBase) DescribeTags(ctx context.Context, params *ec2.DescribeTagsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
 	return b.client.DescribeTags(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) CreateTags(ctx context.Context, params *ec2.CreateTagsInput, optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
+func (b *Ec2ClientBase) CreateTags(ctx context.Context, params *ec2.CreateTagsInput, optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
 	return b.client.CreateTags(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) DeleteTags(ctx context.Context, params *ec2.DeleteTagsInput, optFns ...func(*ec2.Options)) (*ec2.DeleteTagsOutput, error) {
+func (b *Ec2ClientBase) DeleteTags(ctx context.Context, params *ec2.DeleteTagsInput, optFns ...func(*ec2.Options)) (*ec2.DeleteTagsOutput, error) {
 	return b.client.DeleteTags(ctx, params, optFns...)
 }
-func (b *ec2ClientBase) EnableFastSnapshotRestores(ctx context.Context, params *ec2.EnableFastSnapshotRestoresInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastSnapshotRestoresOutput, error) {
+func (b *Ec2ClientBase) EnableFastSnapshotRestores(ctx context.Context, params *ec2.EnableFastSnapshotRestoresInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastSnapshotRestoresOutput, error) {
 	return b.client.EnableFastSnapshotRestores(ctx, params, optFns...)
 }
 

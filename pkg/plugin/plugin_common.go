@@ -42,7 +42,7 @@ func GetPlugin() EbsCsiPlugin {
 }
 
 // loadPlugin loads a plugin into memory.
-func loadPlugin(pluginToLoad EbsCsiPlugin) {
+func LoadPlugin(pluginToLoad EbsCsiPlugin) {
 	if plugin != nil {
 		// Multiple plugins are not currently supported
 		// Thus, exit as quickly as possible
@@ -71,25 +71,31 @@ type EbsCsiPlugin interface {
 	// GetDriverName replaces the driver name in use (normally "ebs.csi.aws.com")
 	// This function can be called before Init and should not depend on it
 	GetDriverName() string
+	// GetSegments provides addational segments to be added as part of the driver and controllers
+	GetNodeSegments() map[string]string
 }
 
-// ebsCsiPluginBase implements stub functionality of all plugin methods except Init().
+// EbsCsiPluginBase implements stub functionality of all plugin methods except Init().
 // It is strongly recommended to embed into plugin implementations to prevent bulid failures
 // if/when new functions are added to the EbsCsiPlugin interface.
-type ebsCsiPluginBase struct{}
+type EbsCsiPluginBase struct{}
 
-func (p *ebsCsiPluginBase) InitFlags(_ *pflag.FlagSet) {
+func (p *EbsCsiPluginBase) InitFlags(_ *pflag.FlagSet) {
 	// Do nothing intentionally.
 }
 
-func (p *ebsCsiPluginBase) GetEC2Client(_ aws.Config, _ ...func(o *ec2.Options)) util.EC2API {
+func (p *EbsCsiPluginBase) GetEC2Client(_ aws.Config, _ ...func(o *ec2.Options)) util.EC2API {
 	return nil
 }
 
-func (p *ebsCsiPluginBase) GetSageMakerClient(_ aws.Config, _ ...func(o *sagemaker.Options)) util.SageMakerAPI {
+func (p *EbsCsiPluginBase) GetSageMakerClient(_ aws.Config, _ ...func(o *sagemaker.Options)) util.SageMakerAPI {
 	return nil
 }
 
-func (p *ebsCsiPluginBase) GetDriverName() string {
+func (p *EbsCsiPluginBase) GetDriverName() string {
 	return ""
+}
+
+func (p *EbsCsiPluginBase) GetNodeSegments() map[string]string {
+	return map[string]string{}
 }
