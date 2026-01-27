@@ -913,15 +913,20 @@ func startNotReadyTaintWatcher(clientset kubernetes.Interface, maxWatchDuration 
 		}
 		err := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
 			if err := removeNotReadyTaint(ctx, clientset, n); err != nil {
-				klog.ErrorS(err, "Failed to remove agent-not-ready taint, retrying", "node", n.Name)
 				if apierrors.IsBadRequest(err) || apierrors.IsInvalid(err) || apierrors.IsNotFound(err) {
 					// Our node is probably stale, get a new copy
-					var err error
-					n, err = clientset.CoreV1().Nodes().Get(ctx, n.Name, metav1.GetOptions{})
-					if err != nil {
-						klog.ErrorS(err, "Failed to update potentially stale node", "node", n.Name)
+					freshNode, nodeErr := clientset.CoreV1().Nodes().Get(ctx, n.Name, metav1.GetOptions{})
+					if nodeErr != nil {
+						klog.ErrorS(nodeErr, "Failed to update potentially stale node", "node", n.Name)
+						return false, nil // Continue retrying with old node
 					}
+					// Check if taint was already removed by another attempt
+					if !hasNotReadyTaint(freshNode) {
+						return true, nil // Taint is gone, we're done
+					}
+					n = freshNode // Update to fresh node for next retry
 				}
+				klog.ErrorS(err, "Failed to remove agent-not-ready taint, retrying", "node", n.Name)
 				return false, nil // Continue retrying
 			}
 			// We either removed the taint, or there was no taint to remove
