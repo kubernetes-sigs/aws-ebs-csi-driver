@@ -1,6 +1,7 @@
 {{- if not .Values.nodeComponentOnly -}}
 # Controller Service
-kind: Deployment
+{{- $kind := .Values.controller.kind | default "Deployment" }}
+kind: {{ $kind }}
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
@@ -12,6 +13,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
+  {{- if eq $kind "Deployment" }}
   replicas: {{ .Values.controller.replicaCount }}
   {{- if or (kindIs "float64" .Values.controller.revisionHistoryLimit) (kindIs "int64" .Values.controller.revisionHistoryLimit) }}
   revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
@@ -19,6 +21,15 @@ spec:
   {{- with .Values.controller.updateStrategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- else if eq $kind "DaemonSet" }}
+  {{- if or (kindIs "float64" .Values.controller.revisionHistoryLimit) (kindIs "int64" .Values.controller.revisionHistoryLimit) }}
+  revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
+  {{- end }}
+  {{- with .Values.controller.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- end }}
   selector:
     matchLabels:
@@ -52,7 +63,7 @@ spec:
         {{- with .Values.controller.tolerations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- if .Values.controller.topologySpreadConstraints }}
+      {{- if and (eq $kind "Deployment") .Values.controller.topologySpreadConstraints }}
       {{- $tscLabelSelector := dict "labelSelector" ( dict "matchLabels" ( dict "app" "ebs-csi-controller" ) ) }}
       {{- $constraints := list }}
       {{- range .Values.controller.topologySpreadConstraints }}

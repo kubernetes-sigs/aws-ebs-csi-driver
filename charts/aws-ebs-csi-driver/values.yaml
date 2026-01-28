@@ -194,6 +194,7 @@ awsAccessSecret:
   keyId: key_id
   accessKey: access_key
 controller:
+  kind: Deployment
   batching: true
   volumeModificationFeature:
     enabled: false

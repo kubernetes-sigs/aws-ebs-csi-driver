@@ -138,6 +138,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Kubernetes resource kind for the controller (Deployment or DaemonSet)",
+          "default": "Deployment",
+          "enum": ["Deployment", "DaemonSet"]
+        },
         "additionalArgs": {
           "type": "array",
           "description": "Additional arguments passed to the controller pod",
