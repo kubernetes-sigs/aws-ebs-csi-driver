@@ -165,7 +165,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.9.1"
+      tag: "v0.9.2"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
