@@ -1,5 +1,11 @@
 # Helm chart
 
+## 2.55.1
+
+### Security
+
+This release upgrades to the latest CSI sidecar builds to address CVE-2025-61726.
+
 ## 2.55.0
 
 ### Urgent Upgrade Notes
