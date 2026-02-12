@@ -100,6 +100,7 @@ load_param_set() {
   export GINKGO_PARALLEL="${GINKGO_PARALLEL:-5}"
   export AWS_AVAILABILITY_ZONES="${AWS_AVAILABILITY_ZONES:-us-west-2a}"
   export TEST_PATH="${TEST_PATH:-./tests/e2e/...}"
+  export JUNIT_REPORT="${REPORT_DIR:-hack/e2e/csi-test-artifacts/artifacts}/junit-params-${name}.xml"
   # Export optional vars if set by the param set function
   if [[ -n "${EBS_INSTALL_SNAPSHOT+x}" ]]; then export EBS_INSTALL_SNAPSHOT; fi
   if [[ -n "${FIPS_TEST+x}" ]]; then export FIPS_TEST; fi
