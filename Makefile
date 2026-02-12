@@ -129,128 +129,23 @@ cluster/uninstall: bin/helm bin/aws
 # Targets to run e2e tests
 
 ## Parameter-specific e2e tests
-# Run tests for specific Helm parameter sets
-# Usage: make e2e/parameters PARAM_SET=standard
+# Usage: make e2e/parameters PARAM_SET=<name>
+# See hack/e2e/param-sets.sh for available sets and their definitions.
 
 .PHONY: e2e/parameters
 e2e/parameters: bin/helm bin/ginkgo
 ifndef PARAM_SET
-	$(error PARAM_SET is required. Options: standard, volume-modification, node-config, storage-classes, debug, metadata-labeler, legacy-compat, selinux, fips)
+	$(error PARAM_SET is required. Run ./hack/e2e/param-sets.sh for available sets)
 endif
-ifeq ($(PARAM_SET),standard)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(extraCreateMetadata|k8sTagClusterId|extraVolumeTags|controllerMetrics|nodeMetrics|batching|defaultFsType|controllerLoggingFormat|nodeLoggingFormat|controllerLogLevel|nodeLogLevel|provisionerLogLevel|attacherLogLevel|snapshotterLogLevel|resizerLogLevel|nodeDriverRegistrarLogLevel|storageClasses|volumeSnapshotClasses|defaultStorageClass|snapshotterForceEnable|controllerUserAgentExtra|controllerEnablePrometheusAnnotations|nodeEnablePrometheusAnnotations|nodeKubeletPath|nodeTolerateAllTaints|controllerPodDisruptionBudget|provisionerLeaderElection|attacherLeaderElection|resizerLeaderElection)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.extraCreateMetadata=true,controller.k8sTagClusterId=e2e-param-test,controller.extraVolumeTags.TestKey=TestValue,controller.enableMetrics=true,node.enableMetrics=true,controller.batching=true,controller.defaultFsType=xfs,controller.loggingFormat=json,node.loggingFormat=json,controller.logLevel=4,node.logLevel=4,sidecars.provisioner.logLevel=4,sidecars.attacher.logLevel=4,sidecars.snapshotter.logLevel=4,sidecars.resizer.logLevel=4,sidecars.nodeDriverRegistrar.logLevel=4,defaultStorageClass.enabled=true,storageClasses[0].name=test-sc,storageClasses[0].parameters.type=gp3,volumeSnapshotClasses[0].name=test-vsc,volumeSnapshotClasses[0].deletionPolicy=Delete,sidecars.snapshotter.forceEnable=true,controller.userAgentExtra=e2e-test,controller.enablePrometheusAnnotations=true,node.enablePrometheusAnnotations=true,node.kubeletPath=/var/lib/kubelet,node.tolerateAllTaints=true,controller.podDisruptionBudget.enabled=true,sidecars.provisioner.leaderElection.enabled=true,sidecars.attacher.leaderElection.enabled=true,sidecars.resizer.leaderElection.enabled=true" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),volume-modification)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(volumeModification|volumemodifierLogLevel|volumemodifierLeaderElection)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true,sidecars.provisioner.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.resizer.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.volumemodifier.logLevel=4,sidecars.volumemodifier.leaderElection.enabled=false" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),node-config)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(reservedVolumeAttachments|hostNetwork|nodeDisableMutation|nodeTerminationGracePeriod)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=node.reservedVolumeAttachments=2,node.hostNetwork=true,node.serviceAccount.disableMutation=true,node.terminationGracePeriodSeconds=60" \
-	./hack/e2e/run.sh
-# volume-attach-limit must be separate from node-config because volumeAttachLimit and reservedVolumeAttachments are mutually exclusive
-else ifeq ($(PARAM_SET),volume-attach-limit)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:volumeAttachLimit\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=node.volumeAttachLimit=25" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),storage-classes)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(storageClasses|volumeSnapshotClasses|defaultStorageClass)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=defaultStorageClass.enabled=true,storageClasses[0].name=test-sc,storageClasses[0].parameters.type=gp3,volumeSnapshotClasses[0].name=test-vsc,volumeSnapshotClasses[0].deletionPolicy=Delete" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),debug) #debugLogs=true overrides the individual logLevel settings. We need to keep debug separate or not set debugLogs when testing individual log levels. 
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(debugLogs|sdkDebugLog)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=debugLogs=true,controller.sdkDebugLog=true" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),metadata-labeler)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(metadataLabeler|metadataLabelerLogLevel)\]" \
-	GINKGO_PARALLEL=1 \
-	EBS_INSTALL_SNAPSHOT=false \
-	HELM_EXTRA_FLAGS="--set=sidecars.metadataLabeler.enabled=true,node.metadataSources='metadata-labeler',sidecars.metadataLabeler.logLevel=4" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),legacy-compat)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(useOldCSIDriver|legacyXFS)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=useOldCSIDriver=true,node.legacyXFS=true" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),selinux)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:selinux\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=node.selinux=true" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),fips)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:fips\]" \
-	GINKGO_PARALLEL=5 \
-	FIPS_TEST=true \
-	HELM_EXTRA_FLAGS="--set=fips=true" \
-	./hack/e2e/run.sh
-else ifeq ($(PARAM_SET),infra)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(controllerReplicaCount|controllerPriorityClassName|controllerResources|controllerPodAnnotations|controllerPodLabels|controllerDeploymentAnnotations|controllerRevisionHistoryLimit|nodePriorityClassName|nodeResources|nodePodAnnotations|nodeDaemonSetAnnotations|nodeRevisionHistoryLimit|provisionerResources|attacherResources|snapshotterResources|resizerResources|nodeDriverRegistrarResources|livenessProbeResources|customLabels|controllerEnv|nodeEnv|controllerTopologySpreadConstraints|controllerSecurityContext|nodeSecurityContext|controllerContainerSecurityContext|controllerVolumes|controllerVolumeMounts|nodeVolumes|nodeVolumeMounts|controllerDnsConfig|nodeDnsConfig|controllerInitContainers|nodeInitContainers|imagePullPolicy)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.replicaCount=3,controller.priorityClassName=system-cluster-critical,controller.resources.requests.cpu=100m,controller.resources.limits.memory=256Mi,controller.podAnnotations.test-annotation=test-value,controller.podLabels.test-label=test-value,controller.deploymentAnnotations.deploy-annotation=deploy-value,controller.revisionHistoryLimit=5,node.priorityClassName=system-node-critical,node.resources.requests.cpu=50m,node.resources.limits.memory=128Mi,node.podAnnotations.node-annotation=node-value,node.daemonSetAnnotations.ds-annotation=ds-value,node.revisionHistoryLimit=3,sidecars.provisioner.resources.requests.cpu=20m,sidecars.attacher.resources.requests.cpu=15m,sidecars.snapshotter.resources.requests.cpu=15m,sidecars.resizer.resources.requests.cpu=15m,sidecars.nodeDriverRegistrar.resources.requests.cpu=10m,sidecars.livenessProbe.resources.requests.cpu=5m,customLabels.custom-label=custom-value,controller.env[0].name=TEST_ENV,controller.env[0].value=test-value,node.env[0].name=NODE_ENV,node.env[0].value=node-value,controller.topologySpreadConstraints[0].maxSkew=1,controller.topologySpreadConstraints[0].topologyKey=topology.kubernetes.io/zone,controller.topologySpreadConstraints[0].whenUnsatisfiable=ScheduleAnyway,controller.securityContext.runAsNonRoot=true,controller.containerSecurityContext.readOnlyRootFilesystem=true,controller.volumes[0].name=extra-volume,controller.volumes[0].configMap.name=kube-root-ca.crt,controller.volumeMounts[0].name=extra-volume,controller.volumeMounts[0].mountPath=/extra,node.volumes[0].name=node-extra-volume,node.volumes[0].configMap.name=kube-root-ca.crt,node.volumeMounts[0].name=node-extra-volume,node.volumeMounts[0].mountPath=/node-extra,controller.dnsConfig.nameservers[0]=8.8.8.8,node.dnsConfig.nameservers[0]=8.8.4.4,controller.initContainers[0].name=init-container,controller.initContainers[0].image=busybox,controller.initContainers[0].command[0]=echo,controller.initContainers[0].command[1]=init,node.initContainers[0].name=node-init-container,node.initContainers[0].image=busybox,node.initContainers[0].command[0]=echo,node.initContainers[0].command[1]=node-init,image.pullPolicy=Always" \
-	./hack/e2e/run.sh
-# update-strategy must be separate because Recreate conflicts with default rollingUpdate settings
-else ifeq ($(PARAM_SET),update-strategy)
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\] \[param:(controllerUpdateStrategy|nodeUpdateStrategy)\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.updateStrategy.type=Recreate,controller.updateStrategy.rollingUpdate=null,node.updateStrategy.type=OnDelete" \
-	./hack/e2e/run.sh
-else
-	$(error Unknown PARAM_SET: $(PARAM_SET). Options: standard, volume-modification, node-config, volume-attach-limit, storage-classes, debug, infra, update-strategy, metadata-labeler, legacy-compat, selinux, fips)
-endif
+	./hack/e2e/param-sets.sh run $(PARAM_SET)
 
 .PHONY: e2e/parameters-all
 e2e/parameters-all: bin/helm bin/ginkgo
-	@echo "Running all parameter sets sequentially..."
-	$(MAKE) e2e/parameters PARAM_SET=standard
-	$(MAKE) e2e/parameters PARAM_SET=volume-modification
-	$(MAKE) e2e/parameters PARAM_SET=node-config
-	$(MAKE) e2e/parameters PARAM_SET=volume-attach-limit
-	$(MAKE) e2e/parameters PARAM_SET=storage-classes
-	$(MAKE) e2e/parameters PARAM_SET=debug
-	$(MAKE) e2e/parameters PARAM_SET=infra
-	$(MAKE) e2e/parameters PARAM_SET=update-strategy
-	@echo "All parameter sets completed successfully!"
+	./hack/e2e/param-sets.sh run-all
 
 .PHONY: e2e/single-az
 e2e/single-az: bin/helm bin/ginkgo
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
-	GINKGO_SKIP="\[param:" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true,sidecars.provisioner.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.resizer.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',node.enableMetrics=true" \
-	./hack/e2e/run.sh
+	./hack/e2e/param-sets.sh run-all
 
 .PHONY: e2e/multi-az
 e2e/multi-az: bin/helm bin/ginkgo

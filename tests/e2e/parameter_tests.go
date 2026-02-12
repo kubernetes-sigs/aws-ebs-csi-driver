@@ -820,17 +820,6 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [param:volumeSnapshotClasses]", func
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	It("should create VolumeSnapshotClass from Helm values", func() {
-		// Check if VolumeSnapshotClass CRD exists
-		_, err := f.DynamicClient.Resource(schema.GroupVersionResource{
-			Group:    "snapshot.storage.k8s.io",
-			Version:  "v1",
-			Resource: "volumesnapshotclasses",
-		}).List(context.Background(), metav1.ListOptions{})
-
-		if err != nil {
-			Skip("VolumeSnapshotClass CRD not installed")
-		}
-
 		// Verify the test-vsc VolumeSnapshotClass was created
 		vsc, err := f.DynamicClient.Resource(schema.GroupVersionResource{
 			Group:    "snapshot.storage.k8s.io",
@@ -1222,10 +1211,8 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [param:controllerEnablePrometheusAnn
 	})
 
 	It("should have prometheus annotations on controller metrics service", func() {
-		svc, err := cs.CoreV1().Services("kube-system").Get(context.Background(), "ebs-csi-controller-metrics", metav1.GetOptions{})
-		if err != nil {
-			Skip("Metrics service not found - metrics may not be enabled")
-		}
+		svc, err := cs.CoreV1().Services("kube-system").Get(context.Background(), "ebs-csi-controller", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Controller metrics service should exist when enableMetrics=true")
 		Expect(svc.Annotations["prometheus.io/scrape"]).To(Equal("true"))
 		Expect(svc.Annotations["prometheus.io/port"]).NotTo(BeEmpty())
 	})
@@ -1242,10 +1229,8 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [param:nodeEnablePrometheusAnnotatio
 	})
 
 	It("should have prometheus annotations on node metrics service", func() {
-		svc, err := cs.CoreV1().Services("kube-system").Get(context.Background(), "ebs-csi-node-metrics", metav1.GetOptions{})
-		if err != nil {
-			Skip("Metrics service not found - metrics may not be enabled")
-		}
+		svc, err := cs.CoreV1().Services("kube-system").Get(context.Background(), "ebs-csi-node", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred(), "Node metrics service should exist when enableMetrics=true")
 		Expect(svc.Annotations["prometheus.io/scrape"]).To(Equal("true"))
 		Expect(svc.Annotations["prometheus.io/port"]).NotTo(BeEmpty())
 	})
