@@ -128,14 +128,23 @@ cluster/uninstall: bin/helm bin/aws
 ## E2E targets
 # Targets to run e2e tests
 
+## e2e/parameters and e2e/parameters-all are Parameter-specific e2e tests
+# Usage: make e2e/parameters PARAM_SET=<name> or make e2e/paramaters-all
+# See hack/e2e/param-sets.sh for available sets and their definitions.
+ 
+.PHONY: e2e/parameters
+e2e/parameters: bin/helm bin/ginkgo
+	./hack/e2e/param-sets.sh run $(PARAM_SET)
+
+.PHONY: e2e/parameters-all
+e2e/parameters-all: bin/helm bin/ginkgo
+	./hack/e2e/param-sets.sh run-all
+
+# THIS WILL BE REVERSED BEFORE MERGING. Only here because these tests do not 
+# yet have their own testgrid but reviewers need to see how JUnit output is after tests run for this PR. 
 .PHONY: e2e/single-az
 e2e/single-az: bin/helm bin/ginkgo
-	AWS_AVAILABILITY_ZONES=us-west-2a \
-	TEST_PATH=./tests/e2e/... \
-	GINKGO_FOCUS="\[ebs-csi-e2e\] \[single-az\]" \
-	GINKGO_PARALLEL=5 \
-	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true,sidecars.provisioner.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.resizer.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',node.enableMetrics=true" \
-	./hack/e2e/run.sh
+	./hack/e2e/param-sets.sh run-all 
 
 .PHONY: e2e/multi-az
 e2e/multi-az: bin/helm bin/ginkgo
