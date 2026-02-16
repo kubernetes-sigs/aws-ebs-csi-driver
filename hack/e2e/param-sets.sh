@@ -113,12 +113,68 @@ run_param_set() {
   ./hack/e2e/run.sh
 }
 
+# Merge per-set JUnit XMLs into a single file with duplicate skipped tests removed.
+# Each Ginkgo run reports ALL specs (most as skipped), so the same skipped test appears
+# in every per-set file. This merges all results into one file, keeping non-skipped results
+# (passed/failed) over skipped duplicates, and emitting each skipped test only once.
+merge_junit_results() {
+  local report_dir="${REPORT_DIR:-/logs/artifacts}"
+  local output="${report_dir}/junit-params.xml"
+
+  python3 - "$report_dir" "$output" <<'PYEOF'
+import glob, sys, xml.etree.ElementTree as ET
+
+report_dir, output = sys.argv[1], sys.argv[2]
+merged = {}
+time_total = 0.0
+
+def priority(tc):
+    if tc.find("failure") is not None or tc.find("error") is not None:
+        return 2  # failed/errored
+    if tc.find("skipped") is not None:
+        return 0  # skipped
+    return 1      # passed
+
+for path in sorted(glob.glob(f"{report_dir}/junit-params-*.xml")):
+    tree = ET.parse(path)
+    time_total += float(tree.getroot().get("time", "0"))
+    for tc in tree.iter("testcase"):
+        name = tc.get("name", "")
+        if name not in merged or priority(tc) > priority(merged[name]):
+            merged[name] = tc
+
+tests = list(merged.values())
+skipped = sum(1 for tc in tests if tc.find("skipped") is not None)
+failed = sum(1 for tc in tests if tc.find("failure") is not None)
+errored = sum(1 for tc in tests if tc.find("error") is not None)
+
+root = ET.Element("testsuites", tests=str(len(tests)), disabled=str(skipped),
+                  errors=str(errored), failures=str(failed), time=str(time_total))
+suite = ET.SubElement(root, "testsuite", name="AWS EBS CSI Driver Parameter Tests",
+                      tests=str(len(tests)), skipped=str(skipped),
+                      errors=str(errored), failures=str(failed), time=str(time_total))
+for tc in tests:
+    suite.append(tc)
+
+ET.ElementTree(root).write(output, xml_declaration=True, encoding="UTF-8")
+PYEOF
+
+  # Remove per-set files only if merge succeeded, so CI only sees the merged result
+  if [[ $? -eq 0 && -f "$output" ]]; then
+    rm -f "${report_dir}"/junit-params-*.xml
+    echo "Merged JUnit results into ${output}"
+  else
+    echo "WARNING: JUnit merge failed, keeping per-set files" >&2
+  fi
+}
+
 # Run all standard parameter sets sequentially
 run_all_param_sets() {
   echo "Running all parameter sets sequentially..."
   for set in $PARAM_SETS_ALL; do
     run_param_set "$set"
   done
+  merge_junit_results
   echo "All parameter sets completed successfully!"
 }
 
@@ -128,6 +184,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     run)
       [[ -z "${2:-}" ]] && { echo "Usage: $0 run <param-set-name>" >&2; exit 1; }
       run_param_set "$2"
+      merge_junit_results
       ;;
     run-all)
       run_all_param_sets
