@@ -765,6 +765,15 @@ func (t *TestPod) SetNodeSelector(nodeSelector map[string]string) {
 	t.pod.Spec.NodeSelector = nodeSelector
 }
 
+// SetImage overrides the default busybox image used by NewTestPod. This is
+// needed by tests whose command requires tools not present in busybox (for
+// example GNU coreutils' `cp --reflink`, or xfsprogs).
+func (t *TestPod) SetImage(image string) {
+	for i := range t.pod.Spec.Containers {
+		t.pod.Spec.Containers[i].Image = image
+	}
+}
+
 func (t *TestPod) Cleanup() {
 	cleanupPodOrFail(t.client, t.pod.Name, t.namespace.Name)
 }

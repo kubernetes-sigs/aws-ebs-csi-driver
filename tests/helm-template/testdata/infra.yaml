@@ -1,0 +1,135 @@
+# Copyright 2026 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an 'AS IS' BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+nameOverride: custom-ebs-name
+image:
+  pullPolicy: Always
+customLabels:
+  custom-label: custom-value
+controller:
+  replicaCount: 3
+  priorityClassName: system-node-critical
+  resources:
+    requests:
+      cpu: 100m
+    limits:
+      memory: 256Mi
+  podAnnotations:
+    test-annotation: test-value
+  podLabels:
+    test-label: test-value
+  deploymentAnnotations:
+    deploy-annotation: deploy-value
+  revisionHistoryLimit: 5
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+  securityContext:
+    runAsNonRoot: true
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+  volumes:
+    - name: extra-volume
+      configMap:
+        name: kube-root-ca.crt
+  volumeMounts:
+    - name: extra-volume
+      mountPath: /extra
+  dnsConfig:
+    nameservers:
+      - "8.8.8.8"
+  initContainers:
+    - name: init-container
+      image: busybox
+      command: ["echo", "init"]
+  updateStrategy:
+    type: Recreate
+    rollingUpdate: null
+  tolerations:
+    - key: test-key
+      value: test-value
+      effect: NoSchedule
+      operator: Equal
+  env:
+    - name: TEST_ENV
+      value: test-value
+  additionalArgs:
+    - --warn-on-invalid-tag
+node:
+  priorityClassName: system-node-critical
+  resources:
+    requests:
+      cpu: 50m
+    limits:
+      memory: 128Mi
+  podAnnotations:
+    node-annotation: node-value
+  daemonSetAnnotations:
+    ds-annotation: ds-value
+  revisionHistoryLimit: 3
+  volumes:
+    - name: node-extra-volume
+      configMap:
+        name: kube-root-ca.crt
+  volumeMounts:
+    - name: node-extra-volume
+      mountPath: /node-extra
+  dnsConfig:
+    nameservers:
+      - "8.8.4.4"
+  initContainers:
+    - name: node-init-container
+      image: busybox
+      command: ["echo", "node-init"]
+  updateStrategy:
+    type: OnDelete
+  tolerateAllTaints: false
+  tolerations:
+    - key: node-key
+      value: node-value
+      operator: Equal
+  env:
+    - name: NODE_ENV
+      value: node-value
+  additionalArgs:
+    - --logtostderr
+sidecars:
+  snapshotter:
+    forceEnable: true
+    resources:
+      requests:
+        cpu: 15m
+  provisioner:
+    resources:
+      requests:
+        cpu: 20m
+    additionalArgs:
+      - --retry-interval-start=10s
+  attacher:
+    resources:
+      requests:
+        cpu: 15m
+  resizer:
+    resources:
+      requests:
+        cpu: 15m
+  nodeDriverRegistrar:
+    resources:
+      requests:
+        cpu: 10m
+  livenessProbe:
+    resources:
+      requests:
+        cpu: 5m

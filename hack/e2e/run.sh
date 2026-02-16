@@ -203,7 +203,7 @@ else
     "${BIN}/ginkgo" -p -nodes="${GINKGO_PARALLEL}" \
       --focus="${GINKGO_FOCUS}" \
       --skip="${GINKGO_SKIP}" \
-      --junit-report="${REPORT_DIR}/junit.xml" \
+      --junit-report="${JUNIT_REPORT:-${REPORT_DIR}/junit.xml}" \
       "${TEST_PATH}" \
       -- \
       -kubeconfig="${KUBECONFIG}" \
