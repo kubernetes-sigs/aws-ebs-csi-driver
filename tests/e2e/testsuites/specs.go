@@ -27,6 +27,7 @@ import (
 
 type PodDetails struct {
 	Cmd     string
+	Image   string // Optional; overrides the default busybox image from NewTestPod.
 	Volumes []VolumeDetails
 }
 
@@ -84,6 +85,9 @@ type DataSource struct {
 
 func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func()) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
+	if pod.Image != "" {
+		tpod.SetImage(pod.Image)
+	}
 	cleanupFuncs := make([]func(), 0)
 	for n, v := range pod.Volumes {
 		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver)

@@ -29,12 +29,17 @@ function install_driver() {
       --namespace kube-system
       --set node.enableWindows="${WINDOWS}"
       --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
-      --set controller.k8sTagClusterId="${CLUSTER_NAME}"
       --set image.pullPolicy="Always"
       --set controller.userAgentExtra="dev"
       --timeout 10m0s
       --wait
       --kubeconfig "${KUBECONFIG}")
+    # Only set k8sTagClusterId from CLUSTER_NAME if HELM_EXTRA_FLAGS or
+    # HELM_OVERRIDE_K8S_TAG_CLUSTER_ID doesn't override it, so test configurations
+    # (e.g., param-sets.sh) can set their own cluster ID via a values file.
+    if [[ "${HELM_EXTRA_FLAGS:-}" != *k8sTagClusterId* ]] && [[ -z "${HELM_OVERRIDE_K8S_TAG_CLUSTER_ID:-}" ]]; then
+      HELM_ARGS+=(--set controller.k8sTagClusterId="${CLUSTER_NAME}")
+    fi
     if [ -n "${HELM_VALUES_FILE:-}" ]; then
       HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
     fi
