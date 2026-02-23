@@ -1,5 +1,20 @@
 # Helm chart
 
+## 2.56.0
+
+- Bump driver version to `v1.56.0`.
+- Bump sidecars to latest to address the following.
+   - a bug where retries could cause volumes to be provisioned in the wrong availability zone. ([#1466](https://github.com/kubernetes-csi/external-provisioner/pull/1466), [@torredil](https://github.com/torredil))
+   - a bug where the csi-resizer would crash with "concurrent map writes" when multiple resize operations failed simultaneously. ([#557](https://github.com/kubernetes-csi/external-resizer/pull/557), [@torredil](https://github.com/torredil))
+
+### Feature
+
+- Allow overriding node-driver-registrar liveness probe /healthz endpoint. ([#2865](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2865), [@jukie](https://github.com/jukie))
+
+### Other (Cleanup or Flake)
+
+- Rename health and metrics ports ([#2867](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2867), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
 ## 2.55.1
 
 ### Security

@@ -1,3 +1,68 @@
+# v1.56.0
+
+## Changes by Kind
+
+### Feature
+
+- Add support for Windows Server 2025 ([#2831](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2831), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- Update CSI sidecar images to address CVE-2025-61726 ([#2849](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2849), [@torredil](https://github.com/torredil))
+
+### Bug or Regression
+
+- Fix error handling when re-fetching the node object during agent-not-ready taint removal attempts. ([#2847](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2847), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- cel.dev/expr: v0.24.0 → v0.25.1
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.7 → v1.32.9](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.7...config/v1.32.9)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.7 → v1.19.9](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.7...credentials/v1.19.9)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.281.0 → v1.290.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.281.0...service/ec2/v1.290.0)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.230.1 → v1.233.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.230.1...service/sagemaker/v1.233.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.9 → v1.30.10](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.9...service/sso/v1.30.10)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.13 → v1.35.14](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.13...service/ssooidc/v1.35.14)
+- github.com/cncf/xds/go: [0feb691 → ee656c7](https://github.com/cncf/xds/compare/0feb691...ee656c7)
+- github.com/envoyproxy/go-control-plane/envoy: [v1.35.0 → v1.36.0](https://github.com/envoyproxy/go-control-plane/compare/envoy/v1.35.0...envoy/v1.36.0)
+- github.com/envoyproxy/go-control-plane: [75eaa19 → v0.14.0](https://github.com/envoyproxy/go-control-plane/compare/75eaa19...v0.14.0)
+- github.com/envoyproxy/protoc-gen-validate: [v1.2.1 → v1.3.0](https://github.com/envoyproxy/protoc-gen-validate/compare/v1.2.1...v1.3.0)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.27.5 → v2.28.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.27.5...v2.28.0)
+- github.com/kubernetes-csi/csi-lib-utils: [v0.23.1 → v0.23.2](https://github.com/kubernetes-csi/csi-lib-utils/compare/v0.23.1...v0.23.2)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.38.0 → v1.39.0
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.64.0 → v0.65.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel/metric: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel/sdk/metric: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel/sdk: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel/trace: v1.39.0 → v1.40.0
+- go.opentelemetry.io/otel: v1.39.0 → v1.40.0
+- golang.org/x/crypto: v0.47.0 → v0.48.0
+- golang.org/x/mod: v0.31.0 → v0.32.0
+- golang.org/x/net: v0.49.0 → v0.50.0
+- golang.org/x/oauth2: v0.34.0 → v0.35.0
+- golang.org/x/sys: v0.40.0 → v0.41.0
+- golang.org/x/telemetry: 8fff8a5 → bd525da
+- golang.org/x/term: v0.39.0 → v0.40.0
+- golang.org/x/text: v0.33.0 → v0.34.0
+- golang.org/x/tools: v0.40.0 → v0.41.0
+- google.golang.org/genproto/googleapis/api: 8e98ce8 → 42d3e9b
+- google.golang.org/genproto/googleapis/rpc: 8e98ce8 → 42d3e9b
+- google.golang.org/grpc: v1.78.0 → v1.79.1
+- k8s.io/api: v0.35.0 → v0.35.1
+- k8s.io/apimachinery: v0.35.0 → v0.35.1
+- k8s.io/client-go: v0.35.0 → v0.35.1
+- k8s.io/component-base: v0.35.0 → v0.35.1
+- k8s.io/kube-openapi: 4e65d59 → a19766b
+- k8s.io/mount-utils: v0.35.0 → v0.35.1
+- k8s.io/utils: 914a6e7 → b8788ab
+- sigs.k8s.io/structured-merge-diff/v6: v6.3.1 → v6.3.2
+
+### Removed
+_Nothing has changed._
+
 # v1.55.0
 
 ## Changes by Kind
