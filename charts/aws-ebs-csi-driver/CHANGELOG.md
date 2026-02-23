@@ -1,5 +1,11 @@
 # Helm chart
 
+## 2.56.1
+
+### Security
+
+This release upgrades to the latest volume-modifer-for-k8s version to adress CVE-2025-68121 and CVE-2026-24051
+
 ## 2.56.0
 
 - Bump driver version to `v1.56.0`.
