@@ -874,7 +874,7 @@ func TestNodeStageVolume(t *testing.T) {
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/staging/path")).Return("", 1, nil)
 				m.EXPECT().FormatAndMountSensitiveWithFormatOptions(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq("ext4"), gomock.Nil(), gomock.Nil(), gomock.Eq([]string{})).Return(nil)
 				m.EXPECT().NeedResize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(true, nil)
-				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path")).Return(false, errors.New("resize error"))
+				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/staging/path"), gomock.Eq(int64(0))).Return(false, errors.New("resize error"))
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -2273,7 +2273,7 @@ func TestNodeExpandVolume(t *testing.T) {
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
-				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path")).Return(true, nil)
+				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path"), gomock.Eq(int64(0))).Return(true, nil)
 				m.EXPECT().GetBlockSizeBytes(gomock.Eq("/dev/xvdba")).Return(int64(1000), nil)
 				return m
 			},
@@ -2419,7 +2419,7 @@ func TestNodeExpandVolume(t *testing.T) {
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
-				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path")).Return(false, errors.New("failed to resize volume"))
+				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path"), gomock.Eq(int64(0))).Return(false, errors.New("failed to resize volume"))
 				return m
 			},
 			metadataMock: func(ctrl *gomock.Controller) *metadata.MockMetadataService {
@@ -2441,7 +2441,7 @@ func TestNodeExpandVolume(t *testing.T) {
 				m.EXPECT().IsBlockDevice(gomock.Eq("/volume/path")).Return(false, nil)
 				m.EXPECT().GetDeviceNameFromMount(gomock.Eq("/volume/path")).Return("device-name", 1, nil)
 				m.EXPECT().FindDevicePath(gomock.Eq("device-name"), gomock.Eq("vol-test"), gomock.Eq(""), gomock.Eq("us-west-2")).Return("/dev/xvdba", nil)
-				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path")).Return(true, nil)
+				m.EXPECT().Resize(gomock.Eq("/dev/xvdba"), gomock.Eq("/volume/path"), gomock.Eq(int64(0))).Return(true, nil)
 				m.EXPECT().GetBlockSizeBytes(gomock.Eq("/dev/xvdba")).Return(int64(0), errors.New("failed to get block size"))
 				return m
 			},

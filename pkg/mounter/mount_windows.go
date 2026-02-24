@@ -21,9 +21,10 @@ package mounter
 import (
 	"errors"
 	"fmt"
+	"regexp"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"golang.org/x/sys/windows"
-	"regexp"
 
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -197,12 +198,12 @@ func (m *NodeMounter) PathExists(path string) (bool, error) {
 	}
 }
 
-func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
+func (m *NodeMounter) Resize(devicePath, deviceMountPath string, newSize int64) (bool, error) {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
-		return proxyMounter.ResizeVolume(deviceMountPath)
+		return proxyMounter.ResizeVolume(deviceMountPath, newSize)
 	case *CSIProxyMounter:
-		return proxyMounter.ResizeVolume(deviceMountPath)
+		return proxyMounter.ResizeVolume(deviceMountPath, newSize)
 	default:
 		return false, ErrUnsupportedMounter
 	}

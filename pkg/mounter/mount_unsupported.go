@@ -77,7 +77,7 @@ func (m *NodeMounter) PathExists(path string) (bool, error) {
 	return false, errors.New(stubMessage)
 }
 
-func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
+func (m *NodeMounter) Resize(devicePath, deviceMountPath string, newSize int64) (bool, error) {
 	return false, errors.New(stubMessage)
 }
 

@@ -305,7 +305,7 @@ func (d *NodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	if needResize {
 		klog.V(2).InfoS("Volume needs resizing", "source", source)
-		if _, err := d.mounter.Resize(source, target); err != nil {
+		if _, err := d.mounter.Resize(source, target, 0); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q):  %v", volumeID, source, err)
 		}
 	}
@@ -422,7 +422,7 @@ func (d *NodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		return nil, status.Errorf(codes.NotFound, "failed to find device path for device name %s for mount %s: %v", deviceName, req.GetVolumePath(), err)
 	}
 
-	if _, err = d.mounter.Resize(devicePath, volumePath); err != nil {
+	if _, err = d.mounter.Resize(devicePath, volumePath, req.GetCapacityRange().GetRequiredBytes()); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not resize volume %q (%q): %v", volumeID, devicePath, err)
 	}
 

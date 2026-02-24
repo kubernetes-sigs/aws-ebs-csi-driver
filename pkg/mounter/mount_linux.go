@@ -283,7 +283,7 @@ func (m *NodeMounter) PathExists(path string) (bool, error) {
 }
 
 // Resize resizes the filesystem of the given devicePath.
-func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
+func (m *NodeMounter) Resize(devicePath, deviceMountPath string, newSize int64) (bool, error) {
 	return mountutils.NewResizeFs(m.Exec).Resize(devicePath, deviceMountPath)
 }
 

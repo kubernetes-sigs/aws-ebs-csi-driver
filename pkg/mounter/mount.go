@@ -42,7 +42,7 @@ type Mounter interface {
 	NeedResize(devicePath string, deviceMountPath string) (bool, error)
 	Unpublish(path string) error
 	Unstage(path string) error
-	Resize(devicePath, deviceMountPath string) (bool, error)
+	Resize(devicePath, deviceMountPath string, newSize int64) (bool, error)
 	FindDevicePath(devicePath, volumeID, partition, region string) (string, error)
 	PreparePublishTarget(target string) error
 	IsBlockDevice(fullPath string) (bool, error)

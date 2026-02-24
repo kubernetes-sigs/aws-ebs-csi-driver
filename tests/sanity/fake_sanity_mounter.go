@@ -85,7 +85,7 @@ func (m *fakeMounter) PathExists(path string) (bool, error) {
 	return true, nil
 }
 
-func (m *fakeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
+func (m *fakeMounter) Resize(devicePath, deviceMountPath string, newSize int64) (bool, error) {
 	return false, nil
 }
 

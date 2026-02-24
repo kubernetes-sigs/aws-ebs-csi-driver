@@ -341,18 +341,18 @@ func (mr *MockMounterMockRecorder) PreparePublishTarget(target interface{}) *gom
 }
 
 // Resize mocks base method.
-func (m *MockMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
+func (m *MockMounter) Resize(devicePath, deviceMountPath string, newSize int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Resize", devicePath, deviceMountPath)
+	ret := m.ctrl.Call(m, "Resize", devicePath, deviceMountPath, newSize)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Resize indicates an expected call of Resize.
-func (mr *MockMounterMockRecorder) Resize(devicePath, deviceMountPath interface{}) *gomock.Call {
+func (mr *MockMounterMockRecorder) Resize(devicePath, deviceMountPath, newSize interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockMounter)(nil).Resize), devicePath, deviceMountPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockMounter)(nil).Resize), devicePath, deviceMountPath, newSize)
 }
 
 // Unmount mocks base method.

@@ -405,7 +405,7 @@ func (mounter *CSIProxyMounter) FormatAndMountSensitiveWithFormatOptions(source 
 }
 
 // ResizeVolume resizes the volume at given mount path
-func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string) (bool, error) {
+func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string, sizeBytes int64) (bool, error) {
 	// Find the volume id
 	getVolumeIdRequest := &volume.GetVolumeIDFromTargetPathRequest{
 		TargetPath: util.NormalizeWindowsPath(deviceMountPath),
@@ -418,7 +418,8 @@ func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string) (bool, erro
 
 	// Resize volume
 	resizeVolumeRequest := &volume.ResizeVolumeRequest{
-		VolumeId: volumeId,
+		VolumeId:  volumeId,
+		SizeBytes: sizeBytes,
 	}
 	_, err = mounter.VolumeClient.ResizeVolume(context.Background(), resizeVolumeRequest)
 	if err != nil {
