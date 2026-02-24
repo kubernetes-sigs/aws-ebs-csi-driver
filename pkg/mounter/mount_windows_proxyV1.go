@@ -416,6 +416,16 @@ func (mounter *CSIProxyMounter) ResizeVolume(deviceMountPath string, sizeBytes i
 	}
 	volumeId := volumeIdResponse.GetVolumeId()
 
+	// Diagnostic: call Get-PartitionSupportedSize to log what csi-proxy would
+	// compute as SizeMax, and compare with the sizeBytes we are passing in.
+	cmd := fmt.Sprintf(`Get-Volume -UniqueId "%s" | Get-Partition | Get-PartitionSupportedSize | Select-Object -ExpandProperty SizeMax`, volumeId)
+	out, psErr := utilexec.New().Command("powershell", "-Mta", "-NoProfile", "-NonInteractive", "-Command", cmd).CombinedOutput()
+	if psErr != nil {
+		klog.V(2).InfoS("ResizeVolume: Get-PartitionSupportedSize failed (diagnostic only)", "volumeId", volumeId, "sizeBytes", sizeBytes, "output", string(out), "err", psErr)
+	} else {
+		klog.V(2).InfoS("ResizeVolume: size comparison", "volumeId", volumeId, "sizeBytes", sizeBytes, "sizeMax", strings.TrimSpace(string(out)))
+	}
+
 	// Resize volume
 	resizeVolumeRequest := &volume.ResizeVolumeRequest{
 		VolumeId:  volumeId,
