@@ -67,6 +67,10 @@ IMAGE_ARCH=${IMAGE_ARCH:-amd64}
 DEPLOY_METHOD=${DEPLOY_METHOD:-"helm"}
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
 HELM_EXTRA_FLAGS=${HELM_EXTRA_FLAGS:-}
+# When using IRSA, eksctl creates the service account
+if [[ -n "${USE_IRSA:-}" ]]; then
+  HELM_EXTRA_FLAGS="${HELM_EXTRA_FLAGS} --set controller.serviceAccount.create=false"
+fi
 COLLECT_METRICS=${COLLECT_METRICS:-"false"}
 
 TEST_PATH=${TEST_PATH:-"./tests/e2e-kubernetes/..."}
