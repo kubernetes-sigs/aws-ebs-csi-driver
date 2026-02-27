@@ -56,6 +56,9 @@ SCALABILITY_TEST_RUN_NAME # Name of test run. Used as name of directory for addi
 # Snapshot
 SNAPSHOTS_PER_VOLUME # How many snapshots per volume
 
+# Volume lifecycle churn
+WAVES             # Number of sequential waves of Jobs (default: 3)
+
 # Find default values at top of `scale-test` script. 
 ```
 
@@ -71,6 +74,7 @@ Set the `CLUSTER_TYPE` and `TEST_TYPE` environment variables to set up and run d
   - 'scale-sts': Scales a StatefulSet to `$REPLICAS`. Waits for all pods to be ready. Delete Sts. Waits for all PVs to be deleted. Exercises the complete dynamic provisioning lifecycle for block volumes.
   - 'expand-and-modify': Creates `$REPLICAS` block volumes. Patches PVC capacity and VACName at rate of 5 PVCs per second. Ensures PVCs are expanded and modified before deleting them. Exercises ControllerExpandVolume & ControllerModifyVolume. Set `MODIFY_ONLY` or `EXPAND_ONLY` to 'true' to test solely volume modification/expansion.
   - 'snapshot-volume-scale': Creates `$REPLICAS` number of volumes. Takes `$SNAPSHOTS_PER_VOLUME` snapshots of each volume.
+  - 'volume-lifecycle-churn': Runs `$WAVES` sequential waves of `$REPLICAS` short-lived Jobs, each with its own PVC. When a wave completes, its volumes are torn down while the next wave's volumes are created, producing concurrent create+attach / detach+delete pressure on the driver. Models workloads like Spark pipelines where volume lifecycle phases overlap.
 
 You can mix and match `CLUSTER_TYPE` and `TEST_TYPE`.
 
