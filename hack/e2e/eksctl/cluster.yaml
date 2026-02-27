@@ -19,8 +19,11 @@ metadata:
   region: {{ .Env.REGION }}
   version: "{{ .Env.K8S_VERSION }}"
 availabilityZones: [{{ .Env.ZONES }}]
+autoModeConfig:
+  enabled: false
 iam:
   vpcResourceControllerPolicy: true
+{{- if env.Getenv "USE_IRSA" }}
   withOIDC: true
   serviceAccounts:
     - metadata:
@@ -28,35 +31,15 @@ iam:
         namespace: kube-system
       wellKnownPolicies:
         ebsCSIController: true
-      attachPolicy:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - ec2:CopyVolumes
-            Resource: "arn:aws:ec2:*:*:volume/vol-*"
-          - Effect: Allow
-            Action:
-              - ec2:CopyVolumes
-            Resource: "arn:aws:ec2:*:*:volume/*"
-            Condition:
-              StringLike:
-                "aws:RequestTag/ebs.csi.aws.com/cluster": "true"
-          - Effect: Allow
-            Action:
-              - ec2:CopyVolumes
-            Resource: "arn:aws:ec2:*:*:volume/*"
-            Condition:
-              StringLike:
-                "aws:RequestTag/CSIVolumeName": "*"
-          - Effect: Allow
-            Action:
-              - ec2:CreateTags
-            Resource:
-              - "arn:aws:ec2:*:*:volume/*"
-            Condition:
-              StringEquals:
-                "ec2:CreateAction": "CopyVolumes"
+{{- else }}
+  podIdentityAssociations:
+    - namespace: kube-system
+      serviceAccountName: ebs-csi-controller-sa
+      wellKnownPolicies:
+        ebsCSIController: true
+addons:
+  - name: eks-pod-identity-agent
+{{- end }}
 managedNodeGroups:
   - name: ng-linux
     amiFamily: {{ .Env.AMI_FAMILY }}
@@ -78,6 +61,7 @@ managedNodeGroups:
     instanceTypes: [m5.2xlarge]
     ssh:
       allow: false
+      enableSsm: true
 {{- end }}
 nodeGroups:
 {{- if env.Getenv "OUTPOST_ARN" }}
@@ -93,6 +77,7 @@ nodeGroups:
     instanceType: {{ .Env.OUTPOST_INSTANCE_TYPE }}
     ssh:
       allow: false
+      enableSsm: true
     outpostARN: {{ .Env.OUTPOST_ARN }}
 {{- end }}
 {{- if and (eq .Env.WINDOWS "true") (env.Getenv "WINDOWS_AMI") }}
@@ -105,4 +90,5 @@ nodeGroups:
     instanceType: m5.2xlarge
     ssh:
       allow: false
+      enableSsm: true
 {{- end }}
