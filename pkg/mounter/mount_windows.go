@@ -21,9 +21,10 @@ package mounter
 import (
 	"errors"
 	"fmt"
+	"regexp"
+
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"golang.org/x/sys/windows"
-	"regexp"
 
 	"k8s.io/klog/v2"
 	mountutils "k8s.io/mount-utils"
@@ -200,8 +201,15 @@ func (m *NodeMounter) PathExists(path string) (bool, error) {
 func (m *NodeMounter) Resize(devicePath, deviceMountPath string) (bool, error) {
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
+		// Refresh the host storage cache before resizing to ensure Windows has an updated view of disk geometry.
+		if err := proxyMounter.Rescan(); err != nil {
+			klog.ErrorS(err, "Rescan failed during Resize")
+		}
 		return proxyMounter.ResizeVolume(deviceMountPath)
 	case *CSIProxyMounter:
+		if err := proxyMounter.Rescan(); err != nil {
+			klog.ErrorS(err, "Rescan failed during Resize")
+		}
 		return proxyMounter.ResizeVolume(deviceMountPath)
 	default:
 		return false, ErrUnsupportedMounter
@@ -215,6 +223,9 @@ func (m *NodeMounter) NeedResize(devicePath, deviceMountPath string) (bool, erro
 
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	case *CSIProxyMounterV2:
+		if err := proxyMounter.Rescan(); err != nil {
+			klog.ErrorS(err, "Rescan failed during NeedResize")
+		}
 		deviceSize, err = proxyMounter.GetDeviceSize(devicePath)
 		if err != nil {
 			return false, fmt.Errorf("failed to get device size: %w", err)
@@ -224,6 +235,9 @@ func (m *NodeMounter) NeedResize(devicePath, deviceMountPath string) (bool, erro
 			return false, fmt.Errorf("failed to get filesystem size: %w", err)
 		}
 	case *CSIProxyMounter:
+		if err := proxyMounter.Rescan(); err != nil {
+			klog.ErrorS(err, "Rescan failed during NeedResize")
+		}
 		deviceSize, err = proxyMounter.GetDeviceSize(devicePath)
 		if err != nil {
 			return false, fmt.Errorf("failed to get device size: %w", err)
