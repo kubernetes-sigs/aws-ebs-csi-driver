@@ -394,6 +394,12 @@ func deleteNodePod(nodeID string, cs clientset.Interface) {
 
 	err = cs.CoreV1().Pods(driverNamespace).Delete(context.Background(), targetPod, deleteOptions)
 	Expect(err).NotTo(HaveOccurred(), "Failed to delete ebs-csi-node pod "+targetPod)
+
+	By("Waiting for pod " + targetPod + " to be fully deleted")
+	Eventually(func() bool {
+		_, err := cs.CoreV1().Pods(driverNamespace).Get(context.Background(), targetPod, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, "2m", "2s").Should(BeTrue(), "Pod "+targetPod+" was not fully deleted in time")
 }
 
 func deleteControllerPod(cs clientset.Interface) {
