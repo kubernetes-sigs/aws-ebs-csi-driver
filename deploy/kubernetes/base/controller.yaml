@@ -279,11 +279,11 @@ spec:
             - name: socket-dir
               mountPath: /csi
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 10m
-              memory: 40Mi
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

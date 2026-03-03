@@ -635,9 +635,16 @@ spec:
               containerPort: 3305
               protocol: TCP
           {{- end }}
-          {{- with default .Values.controller.resources .Values.sidecars.livenessProbe.resources }}
+          {{- with .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           {{- end }}
           {{- with .Values.sidecars.livenessProbe.securityContext }}
           securityContext:

@@ -132,11 +132,11 @@ spec:
             - name: probe-dir
               mountPath: C:\var\lib\kubelet\plugins\ebs.csi.aws.com
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 10m
-              memory: 40Mi
+              memory: 150Mi
+            limits:
+              memory: 150Mi
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: public.ecr.aws/csi-components/livenessprobe:v2.18.0-eksbuild.1
@@ -147,11 +147,11 @@ spec:
             - name: plugin-dir
               mountPath: C:\csi
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 10m
-              memory: 40Mi
+              memory: 150Mi
+            limits:
+              memory: 150Mi
           terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: kubelet-dir

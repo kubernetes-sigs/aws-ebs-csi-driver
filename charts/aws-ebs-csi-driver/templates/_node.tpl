@@ -233,9 +233,16 @@ spec:
               mountPath: /registration
             - name: probe-dir
               mountPath: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) }}
-          {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
+          {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           {{- end }}
           {{- with .Values.sidecars.nodeDriverRegistrar.securityContext }}
           securityContext:
@@ -257,9 +264,16 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
-          {{- with default .Values.node.resources .Values.sidecars.livenessProbe.resources }}
+          {{- with .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           {{- end }}
           {{- with .Values.sidecars.livenessProbe.securityContext }}
           securityContext:
