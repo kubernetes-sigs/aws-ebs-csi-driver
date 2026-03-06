@@ -60,6 +60,7 @@ source "${BASE_DIR}/helpers/scale-test/pre_test_validation.sh"
 source "${BASE_DIR}/helpers/scale-test/scale-sts-test/scale-sts.sh"
 source "${BASE_DIR}/helpers/scale-test/expand-and-modify-test/expand-and-modify.sh"
 source "${BASE_DIR}/helpers/scale-test/snapshot-volume-scale-test/snapshot-volume-scale.sh"
+source "${BASE_DIR}/helpers/scale-test/volume-lifecycle-churn-test/volume-lifecycle-churn.sh"
 
 usage() {
   echo "Usage: $0 [base-cmd]"
@@ -100,6 +101,7 @@ run_scale() {
   *scale-sts*) sts_scale_test ;;
   *expand-and-modify*) expand_and_modify_test ;;
   *snapshot-volume-scale*) snapshot_scale_test ;;
+  *spark-workload* | *volume-lifecycle-churn*) volume_lifecycle_churn_test ;;
   *)
     echo "Invalid TEST_TYPE '$TEST_TYPE'."
     exit 1
