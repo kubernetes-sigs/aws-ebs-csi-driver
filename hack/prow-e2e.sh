@@ -78,6 +78,9 @@ test-helm-chart)
   TEST="helm-ct"
   export INSTANCE_TYPE="c5.2xlarge"
   ;;
+test-e2e-parameters)
+  TEST="parameters-all"
+  ;;
 *)
   echo "Unknown e2e test ${1}" >&2
   exit 1
