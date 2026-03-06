@@ -135,11 +135,11 @@ spec:
             - name: probe-dir
               mountPath: /var/lib/kubelet/plugins/ebs.csi.aws.com/
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 10m
-              memory: 40Mi
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -153,11 +153,11 @@ spec:
             - name: plugin-dir
               mountPath: /csi
           resources:
-            limits:
-              memory: 256Mi
             requests:
               cpu: 10m
-              memory: 40Mi
+              memory: 32Mi
+            limits:
+              memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

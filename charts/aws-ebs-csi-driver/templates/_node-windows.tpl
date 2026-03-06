@@ -233,9 +233,16 @@ spec:
               mountPath: C:\registration
             - name: probe-dir
               mountPath: C:\var\lib\kubelet\plugins\ebs.csi.aws.com
-          {{- with default .Values.node.resources .Values.sidecars.nodeDriverRegistrar.resources }}
+          {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 150Mi
+            limits:
+              memory: 150Mi
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
@@ -254,9 +261,16 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
-          {{- with default .Values.node.resources .Values.sidecars.livenessProbe.resources }}
+          {{- with .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 150Mi
+            limits:
+              memory: 150Mi
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
       {{- if .Values.imagePullSecrets }}
