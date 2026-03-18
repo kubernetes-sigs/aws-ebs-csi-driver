@@ -19,6 +19,7 @@ steps:
     env:
       - GIT_TAG=${_GIT_TAG}
       - PULL_BASE_REF=${_PULL_BASE_REF}
+      - RELEASE_BUILD=true
       - HOME=/root
 options:
   machineType: E2_HIGHCPU_32

@@ -19,11 +19,12 @@
 ## Variables/Functions
 
 VERSION?=v1.56.0
+RELEASE_BUILD?=false
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u -Iseconds)
-LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
+LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.driverVersion=${VERSION} -X ${PKG}/pkg/cloud.releaseBuild=${RELEASE_BUILD} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
 OS?=$(shell go env GOHOSTOS)
 ARCH?=$(shell go env GOHOSTARCH)

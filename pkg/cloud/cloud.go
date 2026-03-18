@@ -206,6 +206,7 @@ var (
 
 // Set during build time via -ldflags.
 var driverVersion string
+var releaseBuild string
 
 // AWS error codes.
 const (
@@ -437,14 +438,15 @@ func NewCloud(region string, awsSdkDebugLog bool, userAgentExtra string, batchin
 	}
 
 	// Set the env var so that the session appends custom user agent string
+	userAgent := "aws-ebs-csi-driver-" + driverVersion
 	if userAgentExtra != "" {
-		if err := os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion+"-"+userAgentExtra); err != nil {
-			klog.ErrorS(err, "Failed to set AWS_EXECUTION_ENV")
-		}
-	} else {
-		if err := os.Setenv("AWS_EXECUTION_ENV", "aws-ebs-csi-driver-"+driverVersion); err != nil {
-			klog.ErrorS(err, "Failed to set AWS_EXECUTION_ENV")
-		}
+		userAgent += "-" + userAgentExtra
+	}
+	if releaseBuild != "true" {
+		userAgent += "-dev"
+	}
+	if err := os.Setenv("AWS_EXECUTION_ENV", userAgent); err != nil {
+		klog.ErrorS(err, "Failed to set AWS_EXECUTION_ENV")
 	}
 
 	ec2Options := func(o *ec2.Options) {
