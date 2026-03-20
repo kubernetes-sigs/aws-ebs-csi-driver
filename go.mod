@@ -126,4 +126,4 @@ require (
 // Workaround https://github.com/kubernetes-csi/csi-proxy/issues/411
 replace github.com/kubernetes-csi/csi-proxy/v2 => github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
 
-go 1.26.0
+go 1.26.1
