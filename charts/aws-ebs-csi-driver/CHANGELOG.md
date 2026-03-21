@@ -1,5 +1,15 @@
 # Helm chart
 
+## 2.57.0
+
+### Security
+
+This release includes a fix for critical [CVE-2026-33186](https://github.com/advisories/GHSA-p77j-4mvh-x3m3) in all containers.
+
+### Other (Cleanup or Flake)
+
+- Reduced default memory for node-driver-registrar and liveness-probe sidecars from 256Mi/40Mi to 32Mi/32Mi on Linux and 150Mi/150Mi on Windows. Sidecar resource defaults are now independent of node.resources and controller.resources. ([#2884](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2884), [@torredil](https://github.com/torredil))
+
 ## 2.56.1
 
 ### Security

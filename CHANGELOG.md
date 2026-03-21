@@ -1,3 +1,106 @@
+
+# v1.57.1
+
+### Security
+
+Bump go version to adress stdlib CVEs
+
+# v1.57.0
+
+## Changes by Kind
+### Note
+
+The following instance types incorrectly report 128 attachments from the `DescribeInstanceTypes` API but currently only support 64 attachments and have been manually pinned to 64 volumes when calculating the attachment limit:
+- `8gn.48xlarge`
+- `m8gn.48xlarge`
+- `c8gn.48xlarge`
+
+### Security
+
+This release includes a fix for critical [CVE-2026-33186](https://github.com/advisories/GHSA-p77j-4mvh-x3m3) in all containers.
+
+### Other (Cleanup or Flake)
+
+- Rescan disks before resize operations on Windows. ([#2881](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2881), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.9 → v1.32.12](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.9...config/v1.32.12)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.9 → v1.19.12](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.9...credentials/v1.19.12)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.17 → v1.18.20](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.17...feature/ec2/imds/v1.18.20)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.17 → v1.4.20](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.17...internal/configsources/v1.4.20)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.17 → v2.7.20](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.17...internal/endpoints/v2/v2.7.20)
+- github.com/aws/aws-sdk-go-v2/internal/ini: [v1.8.4 → v1.8.6](https://github.com/aws/aws-sdk-go-v2/compare/internal/ini/v1.8.4...internal/ini/v1.8.6)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.290.0 → v1.295.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.290.0...service/ec2/v1.295.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.4 → v1.13.7](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.4...service/internal/accept-encoding/v1.13.7)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.17 → v1.13.20](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.17...service/internal/presigned-url/v1.13.20)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.233.0 → v1.236.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.233.0...service/sagemaker/v1.236.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.5 → v1.0.8](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.0.5...service/signin/v1.0.8)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.10 → v1.30.13](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.10...service/sso/v1.30.13)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.14 → v1.35.17](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.14...service/ssooidc/v1.35.17)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.41.6 → v1.41.9](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.41.6...service/sts/v1.41.9)
+- github.com/aws/aws-sdk-go-v2: [v1.41.1 → v1.41.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.1...v1.41.4)
+- github.com/aws/smithy-go: [v1.24.0 → v1.24.2](https://github.com/aws/smithy-go/compare/v1.24.0...v1.24.2)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.9.1 → v0.9.4](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.9.1...v0.9.4)
+- github.com/go-openapi/jsonpointer: [v0.22.4 → v0.22.5](https://github.com/go-openapi/jsonpointer/compare/v0.22.4...v0.22.5)
+- github.com/go-openapi/jsonreference: [v0.21.4 → v0.21.5](https://github.com/go-openapi/jsonreference/compare/v0.21.4...v0.21.5)
+- github.com/go-openapi/swag/cmdutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/cmdutils/v0.25.4...cmdutils/v0.25.5)
+- github.com/go-openapi/swag/conv: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/conv/v0.25.4...conv/v0.25.5)
+- github.com/go-openapi/swag/fileutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/fileutils/v0.25.4...fileutils/v0.25.5)
+- github.com/go-openapi/swag/jsonname: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/jsonname/v0.25.4...jsonname/v0.25.5)
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/jsonutils/fixtures_test/v0.25.4...jsonutils/fixtures_test/v0.25.5)
+- github.com/go-openapi/swag/jsonutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/jsonutils/v0.25.4...jsonutils/v0.25.5)
+- github.com/go-openapi/swag/loading: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/loading/v0.25.4...loading/v0.25.5)
+- github.com/go-openapi/swag/mangling: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/mangling/v0.25.4...mangling/v0.25.5)
+- github.com/go-openapi/swag/netutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/netutils/v0.25.4...netutils/v0.25.5)
+- github.com/go-openapi/swag/stringutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/stringutils/v0.25.4...stringutils/v0.25.5)
+- github.com/go-openapi/swag/typeutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/typeutils/v0.25.4...typeutils/v0.25.5)
+- github.com/go-openapi/swag/yamlutils: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/yamlutils/v0.25.4...yamlutils/v0.25.5)
+- github.com/go-openapi/swag: [v0.25.4 → v0.25.5](https://github.com/go-openapi/swag/compare/v0.25.4...v0.25.5)
+- github.com/go-openapi/testify/enable/yaml/v2: [v2.0.2 → v2.4.0](https://github.com/go-openapi/testify/compare/enable/yaml/v2/v2.0.2...enable/yaml/v2/v2.4.0)
+- github.com/go-openapi/testify/v2: [v2.0.2 → v2.4.0](https://github.com/go-openapi/testify/compare/v2.0.2...v2.4.0)
+- github.com/prometheus/procfs: [v0.19.2 → v0.20.1](https://github.com/prometheus/procfs/compare/v0.19.2...v0.20.1)
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.65.0 → v0.67.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel/metric: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel/sdk/metric: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel/sdk: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel/trace: v1.40.0 → v1.42.0
+- go.opentelemetry.io/otel: v1.40.0 → v1.42.0
+- go.opentelemetry.io/proto/otlp: v1.9.0 → v1.10.0
+- go.yaml.in/yaml/v2: v2.4.3 → v2.4.4
+- golang.org/x/crypto: v0.48.0 → v0.49.0
+- golang.org/x/mod: v0.32.0 → v0.33.0
+- golang.org/x/net: v0.50.0 → v0.52.0
+- golang.org/x/oauth2: v0.35.0 → v0.36.0
+- golang.org/x/sync: v0.19.0 → v0.20.0
+- golang.org/x/sys: v0.41.0 → v0.42.0
+- golang.org/x/telemetry: bd525da → e7419c6
+- golang.org/x/term: v0.40.0 → v0.41.0
+- golang.org/x/text: v0.34.0 → v0.35.0
+- golang.org/x/time: v0.14.0 → v0.15.0
+- golang.org/x/tools: v0.41.0 → v0.42.0
+- google.golang.org/genproto/googleapis/api: 42d3e9b → 0b37fe3
+- google.golang.org/genproto/googleapis/rpc: 42d3e9b → 0b37fe3
+- google.golang.org/grpc: v1.79.1 → v1.79.3
+- k8s.io/api: v0.35.1 → v0.35.3
+- k8s.io/apimachinery: v0.35.1 → v0.35.3
+- k8s.io/client-go: v0.35.1 → v0.35.3
+- k8s.io/component-base: v0.35.1 → v0.35.3
+- k8s.io/csi-translation-lib: v0.34.3 → v0.35.2
+- k8s.io/klog/v2: v2.130.1 → v2.140.0
+- k8s.io/kube-openapi: a19766b → 5883c5e
+- k8s.io/kubectl: v0.34.3 → v0.35.3
+- k8s.io/mount-utils: v0.35.1 → v0.35.3
+
+### Removed
+_Nothing has changed._
+
 # v1.56.0
 
 ## Changes by Kind
