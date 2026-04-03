@@ -1,3 +1,48 @@
+# v1.58.0
+
+## Changes by Kind
+
+### Feature
+
+- When --k8s-tag-cluster-id is set, tag volumes and snapshots with `ebs.csi.aws.com/cluster-name` to support cluster-scoped IAM policies. ([#2899](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2899), [@torredil](https://github.com/torredil))
+
+### Bug or Regression
+
+- Handle duplicate CreateVolume RPCs for in-use volumes ([#2908](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2908), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Other (Cleanup or Flake)
+
+- Append driver mode to user agent string for metadata labeler container. ([#2907](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2907), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.30.0 → v1.31.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/detectors/gcp/v1.30.0...detectors/gcp/v1.31.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.12 → v1.32.13](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.12...config/v1.32.13)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.12 → v1.19.13](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.12...credentials/v1.19.13)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.20 → v1.18.21](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.20...feature/ec2/imds/v1.18.21)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.20 → v1.4.21](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.20...internal/configsources/v1.4.21)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.20 → v2.7.21](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.20...internal/endpoints/v2/v2.7.21)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.296.0 → v1.296.2](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.296.0...service/ec2/v1.296.2)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.20 → v1.13.21](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.20...service/internal/presigned-url/v1.13.21)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.236.1 → v1.238.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.236.1...service/sagemaker/v1.238.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.8 → v1.0.9](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.0.8...service/signin/v1.0.9)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.13 → v1.30.14](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.13...service/sso/v1.30.14)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.17 → v1.35.18](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.17...service/ssooidc/v1.35.18)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.41.9 → v1.41.10](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.41.9...service/sts/v1.41.10)
+- github.com/aws/aws-sdk-go-v2: [v1.41.4 → v1.41.5](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.4...v1.41.5)
+- github.com/fxamacker/cbor/v2: [v2.9.0 → v2.9.1](https://github.com/fxamacker/cbor/compare/v2.9.0...v2.9.1)
+- gonum.org/v1/gonum: v0.16.0 → v0.17.0
+- google.golang.org/genproto/googleapis/api: d00831a → 9d38bb4
+- google.golang.org/genproto/googleapis/rpc: d00831a → 9d38bb4
+- google.golang.org/grpc: v1.79.3 → v1.80.0
+- k8s.io/kube-openapi: 5883c5e → 16be699
+
+### Removed
+_Nothing has changed._
 
 # v1.57.1
 
