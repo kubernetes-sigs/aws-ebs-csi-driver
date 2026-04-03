@@ -1,5 +1,9 @@
 # Helm chart
 
+## 2.58.0
+
+Bumped driver to `v1.58.0`
+
 ## 2.57.0
 
 ### Security
