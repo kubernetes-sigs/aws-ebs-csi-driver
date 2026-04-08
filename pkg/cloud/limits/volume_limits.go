@@ -45,6 +45,13 @@ var dedicatedInstances = map[string]struct{}{
 	"m8gn.metal-24xl": {},
 }
 
+// IsDedicatedOverride returns true if the instance type is known to have an incorrect
+// attachment type from the API and should be treated as dedicated.
+func IsDedicatedOverride(instanceType string) bool {
+	_, ok := dedicatedInstances[instanceType]
+	return ok
+}
+
 // GetVolumeLimits returns the volume limit and attachment type for a given instance type.
 // Returns (limit, attachmentType) where limit is the maximum number of volumes
 // and attachmentType is either "shared" or "dedicated".

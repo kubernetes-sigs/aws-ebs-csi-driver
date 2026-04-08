@@ -119,6 +119,8 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 	numAttachedENIs := 1        // Default: All nodes have at least 1 attached ENI
 	numBlockDeviceMappings := 0 // Default: 0
 	sageMakerLabels := false
+	metadataLabelerVolumeAttachmentLimit := 0
+	metadataLabelerVolumeAttachmentType := ""
 
 	if val, ok := node.GetLabels()[LabelSageMakerENICount]; ok {
 		if num, err := strconv.Atoi(val); err == nil {
@@ -157,23 +159,27 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
+		var labels metadataLabels
+
 		backoffErr := wait.ExponentialBackoffWithContext(ctx, backoff, func(ctx context.Context) (bool, error) {
-			if numAttachedENIs, numBlockDeviceMappings, err = getEC2ENIsVolumes(node); err != nil {
-				klog.ErrorS(err, "get ENI and volume labels failed, retrying...")
-				node, err = clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-				//nolint: nilerr // Want to catch retry all errs until context times out
-				if err != nil {
-					return false, nil
-				}
+			var labelErr error
+			if labels, labelErr = getMetadataLabels(node); labelErr != nil {
+				klog.ErrorS(labelErr, "get metadata labels failed, retrying...")
+				node, _ = clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 				return false, nil
 			}
 			return true, nil
 		})
 
 		if backoffErr != nil {
-			klog.ErrorS(backoffErr, "get ENI and volume labels failed after multiple retries")
+			klog.ErrorS(backoffErr, "get metadata labels failed after multiple retries")
 			return nil, backoffErr
 		}
+
+		numAttachedENIs = labels.ENIs
+		numBlockDeviceMappings = labels.Volumes
+		metadataLabelerVolumeAttachmentLimit = labels.VolumeAttachmentLimit
+		metadataLabelerVolumeAttachmentType = labels.VolumeAttachmentType
 	}
 
 	instanceID, err := parseProviderID(node)
@@ -214,6 +220,8 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 		AvailabilityZone:       availabilityZone,
 		NumAttachedENIs:        numAttachedENIs,
 		NumBlockDeviceMappings: numBlockDeviceMappings,
+		VolumeAttachmentLimit:  metadataLabelerVolumeAttachmentLimit,
+		VolumeAttachmentType:   metadataLabelerVolumeAttachmentType,
 	}
 
 	// Only let metadata.UpdateMetadata work for metadataLabeler data source
@@ -224,16 +232,36 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface, metadataLabeler b
 	return &instanceInfo, nil
 }
 
-func getEC2ENIsVolumes(node *corev1.Node) (int, int, error) {
+type metadataLabels struct {
+	ENIs                  int
+	Volumes               int
+	VolumeAttachmentLimit int
+	VolumeAttachmentType  string
+}
+
+func getMetadataLabels(node *corev1.Node) (metadataLabels, error) {
 	eni, err := getLabelAsInt(node, ENIsLabel, 1)
 	if err != nil {
-		return 0, 0, err
+		return metadataLabels{}, err
 	}
 	vol, err := getLabelAsInt(node, VolumesLabel, 0)
 	if err != nil {
-		return 0, 0, err
+		return metadataLabels{}, err
 	}
-	return eni, vol, nil
+	limit, err := getLabelAsInt(node, VolumeAttachmentLimitLabel, 0)
+	if err != nil {
+		return metadataLabels{}, err
+	}
+	attachType, ok := node.GetLabels()[VolumeAttachmentTypeLabel]
+	if !ok {
+		return metadataLabels{}, fmt.Errorf("%s label not found on node", VolumeAttachmentTypeLabel)
+	}
+	return metadataLabels{
+		ENIs:                  eni,
+		Volumes:               vol,
+		VolumeAttachmentLimit: limit,
+		VolumeAttachmentType:  attachType,
+	}, nil
 }
 
 func getLabelAsInt(node *corev1.Node, label string, defaultValue int) (int, error) {

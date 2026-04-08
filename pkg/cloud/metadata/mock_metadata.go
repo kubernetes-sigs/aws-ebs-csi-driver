@@ -134,6 +134,34 @@ func (mr *MockMetadataServiceMockRecorder) GetRegion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockMetadataService)(nil).GetRegion))
 }
 
+// GetVolumeAttachmentLimit mocks base method.
+func (m *MockMetadataService) GetVolumeAttachmentLimit() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVolumeAttachmentLimit")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetVolumeAttachmentLimit indicates an expected call of GetVolumeAttachmentLimit.
+func (mr *MockMetadataServiceMockRecorder) GetVolumeAttachmentLimit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeAttachmentLimit", reflect.TypeOf((*MockMetadataService)(nil).GetVolumeAttachmentLimit))
+}
+
+// GetVolumeAttachmentType mocks base method.
+func (m *MockMetadataService) GetVolumeAttachmentType() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVolumeAttachmentType")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetVolumeAttachmentType indicates an expected call of GetVolumeAttachmentType.
+func (mr *MockMetadataServiceMockRecorder) GetVolumeAttachmentType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeAttachmentType", reflect.TypeOf((*MockMetadataService)(nil).GetVolumeAttachmentType))
+}
+
 // UpdateMetadata mocks base method.
 func (m *MockMetadataService) UpdateMetadata() error {
 	m.ctrl.T.Helper()

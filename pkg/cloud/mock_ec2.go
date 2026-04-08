@@ -215,6 +215,26 @@ func (mr *MockEC2APIMockRecorder) DescribeAvailabilityZones(ctx, params interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAvailabilityZones", reflect.TypeOf((*MockEC2API)(nil).DescribeAvailabilityZones), varargs...)
 }
 
+// DescribeInstanceTypes mocks base method.
+func (m *MockEC2API) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeInstanceTypes", varargs...)
+	ret0, _ := ret[0].(*ec2.DescribeInstanceTypesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeInstanceTypes indicates an expected call of DescribeInstanceTypes.
+func (mr *MockEC2APIMockRecorder) DescribeInstanceTypes(ctx, params interface{}, optFns ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeInstanceTypes", reflect.TypeOf((*MockEC2API)(nil).DescribeInstanceTypes), varargs...)
+}
+
 // DescribeInstances mocks base method.
 func (m *MockEC2API) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	m.ctrl.T.Helper()

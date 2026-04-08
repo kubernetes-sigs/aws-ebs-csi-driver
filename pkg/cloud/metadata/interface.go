@@ -30,6 +30,8 @@ type MetadataService interface {
 	GetNumAttachedENIs() int
 	GetNumBlockDeviceMappings() int
 	GetOutpostArn() arn.ARN
+	GetVolumeAttachmentLimit() int
+	GetVolumeAttachmentType() string
 	UpdateMetadata() error
 }
 

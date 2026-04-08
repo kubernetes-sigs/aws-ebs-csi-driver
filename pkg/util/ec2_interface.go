@@ -43,4 +43,5 @@ type EC2API interface {
 	DeleteTags(ctx context.Context, params *ec2.DeleteTagsInput, optFns ...func(*ec2.Options)) (*ec2.DeleteTagsOutput, error)
 	EnableFastSnapshotRestores(ctx context.Context, params *ec2.EnableFastSnapshotRestoresInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastSnapshotRestoresOutput, error)
 	LockSnapshot(ctx context.Context, params *ec2.LockSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.LockSnapshotOutput, error)
+	DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error)
 }

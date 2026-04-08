@@ -35,6 +35,8 @@ type Metadata struct {
 	NumAttachedENIs        int
 	NumBlockDeviceMappings int
 	OutpostArn             arn.ARN
+	VolumeAttachmentLimit  int
+	VolumeAttachmentType   string
 	IMDSClient             IMDS
 	K8sAPIClient           kubernetes.Interface
 }
@@ -122,6 +124,8 @@ func (m *Metadata) UpdateMetadata() error {
 		}
 		m.NumAttachedENIs = updatedMetadata.NumAttachedENIs
 		m.NumBlockDeviceMappings = updatedMetadata.NumBlockDeviceMappings
+		m.VolumeAttachmentLimit = updatedMetadata.VolumeAttachmentLimit
+		m.VolumeAttachmentType = updatedMetadata.VolumeAttachmentType
 	}
 
 	return nil
@@ -191,6 +195,16 @@ func (m *Metadata) GetNumBlockDeviceMappings() int {
 // GetOutpostArn returns outpost arn if instance is running on an outpost. empty otherwise.
 func (m *Metadata) GetOutpostArn() arn.ARN {
 	return m.OutpostArn
+}
+
+// GetVolumeAttachmentLimit returns the maximum number of EBS volume attachments for this instance type.
+func (m *Metadata) GetVolumeAttachmentLimit() int {
+	return m.VolumeAttachmentLimit
+}
+
+// GetVolumeAttachmentType returns the volume attachment type ("shared" or "dedicated") for this instance type.
+func (m *Metadata) GetVolumeAttachmentType() string {
+	return m.VolumeAttachmentType
 }
 
 // InvalidSourceErr returns an error message when a metadata source is invalid.
