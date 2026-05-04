@@ -49,6 +49,24 @@ test-e2e-external-eks)
   TEST="external"
   export CLUSTER_TYPE="eksctl"
   ;;
+test-e2e-external-eks-oldest)
+  TEST="external"
+  export CLUSTER_TYPE="eksctl"
+  OLDEST_EKS_VERSION=$(aws eks describe-cluster-versions \
+    --region "${AWS_REGION:-us-west-2}" \
+    --cluster-type eks \
+    --output json |
+    jq -r '[.clusterVersions[]
+            | select(.versionStatus == "STANDARD_SUPPORT" or .versionStatus == "EXTENDED_SUPPORT")
+            | .clusterVersion]
+           | sort_by(split(".") | map(tonumber))
+           | .[0] // empty')
+  if [[ -z "${OLDEST_EKS_VERSION}" ]]; then
+    echo "Failed to resolve the oldest supported EKS Kubernetes version from the EKS API" >&2
+    exit 1
+  fi
+  export K8S_VERSION_EKSCTL="${OLDEST_EKS_VERSION}"
+  ;;
 test-e2e-external-eks-bottlerocket)
   TEST="external-eks-bottlerocket"
   export CLUSTER_TYPE="eksctl"
