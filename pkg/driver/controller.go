@@ -375,12 +375,12 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if volumeID != "" {
 		sourceVolume, err := d.cloud.GetDiskByID(ctx, volumeID)
 
-		if kmsKeyID != "" && sourceVolume.KmsKeyID != kmsKeyID {
-			return nil, status.Errorf(codes.InvalidArgument, "Cannot provision clone with different KMS key than source volume")
-		}
-
 		if err != nil {
 			return nil, status.Errorf(codes.NotFound, "Error source volume with volumeID %v not found: %v", volumeID, err)
+		}
+
+		if kmsKeyID != "" && sourceVolume.KmsKeyID != kmsKeyID {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot provision clone with different KMS key than source volume")
 		}
 
 		err = checkSourceTopology(req.GetAccessibilityRequirements(), sourceVolume.AvailabilityZone, sourceVolume.OutpostArn, sourceVolume.AvailabilityZoneID)
