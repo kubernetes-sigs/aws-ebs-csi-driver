@@ -56,6 +56,7 @@ var (
 
 type MetricRecorder struct {
 	registry        *prometheus.Registry
+	mu              sync.RWMutex
 	metrics         map[string]any
 	asyncEC2Metrics *AsyncEC2Collector
 }
@@ -128,7 +129,9 @@ func (m *MetricRecorder) IncreaseCount(name string, helpText string, labels map[
 		return // recorder is not initialized
 	}
 
+	m.mu.RLock()
 	metric, ok := m.metrics[name]
+	m.mu.RUnlock()
 
 	if !ok {
 		klog.V(4).InfoS("Metric not found, registering", "name", name, "labels", labels)
@@ -150,7 +153,10 @@ func (m *MetricRecorder) ObserveHistogram(name string, helpText string, value fl
 	if m == nil {
 		return // recorder is not initialized
 	}
+
+	m.mu.RLock()
 	metric, ok := m.metrics[name]
+	m.mu.RUnlock()
 
 	if !ok {
 		klog.V(4).InfoS("Metric not found, registering", "name", name, "labels", labels, "buckets", buckets)
@@ -214,6 +220,8 @@ func (m *MetricRecorder) InitializeMetricsHandler(address, path, certFile, keyFi
 }
 
 func (m *MetricRecorder) registerHistogramVec(name, help string, labels []string, buckets []float64) *prometheus.HistogramVec {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if metric, exists := m.metrics[name]; exists {
 		if histogramVec, ok := metric.(*prometheus.HistogramVec); ok {
 			return histogramVec
@@ -235,6 +243,8 @@ func (m *MetricRecorder) registerHistogramVec(name, help string, labels []string
 }
 
 func (m *MetricRecorder) registerCounterVec(name, help string, labels []string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, exists := m.metrics[name]; exists {
 		return
 	}
@@ -258,11 +268,18 @@ func getLabelNames(labels map[string]string) []string {
 }
 
 func (m *MetricRecorder) initializeMetricWithOperations(name, help string, labelNames []string) {
-	if _, exists := m.metrics[name]; !exists {
-		metric := m.registerHistogramVec(name, help, labelNames, nil)
-		for _, op := range operations {
-			metric.WithLabelValues(op)
-		}
+	m.mu.RLock()
+	_, exists := m.metrics[name]
+	m.mu.RUnlock()
+	if exists {
+		return
+	}
+	metric := m.registerHistogramVec(name, help, labelNames, nil)
+	if metric == nil {
+		return
+	}
+	for _, op := range operations {
+		metric.WithLabelValues(op)
 	}
 }
 

@@ -15,9 +15,12 @@
 package metrics
 
 import (
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/component-base/metrics/testutil"
 )
 
@@ -89,6 +92,27 @@ test_re_register_total{key="value2"} 1
 			}
 		})
 	}
+}
+
+func TestMetricRecorderConcurrentAccess(t *testing.T) {
+	m := &MetricRecorder{
+		registry: prometheus.NewRegistry(),
+		metrics:  make(map[string]any),
+	}
+
+	const goroutines = 2
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := range goroutines {
+		go func(id int) {
+			defer wg.Done()
+			labels := map[string]string{"k": fmt.Sprintf("v%d", id)}
+			m.IncreaseCount("concurrent_counter", "help", labels)
+			m.ObserveHistogram("concurrent_hist", "help", float64(id), labels, []float64{1, 5, 10})
+			m.initializeMetricWithOperations("concurrent_op", "help", []string{"request"})
+		}(i)
+	}
+	wg.Wait()
 }
 
 func getMetricNameFromExpected(expected string) string {
