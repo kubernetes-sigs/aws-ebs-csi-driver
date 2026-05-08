@@ -25,6 +25,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -558,8 +559,7 @@ func newBatcherManager(svc util.EC2API) *batcherManager {
 
 func removeLikelyBadIds(cache expiringcache.ExpiringCache[string, struct{}], input []string) (goodIds []string, likelyBadIds []string) {
 	// Iterate backwards to safely remove values without affecting indices of remaining items
-	for i := len(input) - 1; i >= 0; i-- {
-		id := input[i]
+	for _, id := range slices.Backward(input) {
 		_, exists := cache.Get(id)
 		if exists {
 			likelyBadIds = append(likelyBadIds, id)
