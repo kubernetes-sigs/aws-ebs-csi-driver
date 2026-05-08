@@ -38,3 +38,6 @@ hack/release-scripts/image-digests.yaml
 # E2E artifacts
 _rundir/
 _artifacts/
+
+# Claude
+.claude/
