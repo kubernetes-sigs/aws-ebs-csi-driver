@@ -22,18 +22,8 @@ import (
 	"strings"
 
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"k8s.io/klog/v2"
-)
-
-var (
-	reservedTagKeys = map[string]string{
-		cloud.VolumeNameTagKey:           "",
-		cloud.AwsEbsDriverTagKey:         "",
-		cloud.SnapshotNameTagKey:         "",
-		ClusterNameTagKey:                "",
-		IopsPerGBKey:                     "",
-		AllowAutoIOPSIncreaseOnModifyKey: "",
-	}
 )
 
 func ValidateDriverOptions(options *Options) error {
@@ -54,11 +44,14 @@ func ValidateDriverOptions(options *Options) error {
 
 func validateExtraTags(tags map[string]string, warnOnly bool) error {
 	validate := func(k, _ string) error {
-		if _, ok := reservedTagKeys[k]; ok {
+		if k == cloud.VolumeNameTagKey || k == cloud.SnapshotNameTagKey || k == ClusterNameTagKey {
 			return fmt.Errorf("tag key '%s' is reserved", k)
 		}
 		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
 			return fmt.Errorf("tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
+		}
+		if strings.HasPrefix(k, util.GetDriverName()+"/") {
+			return fmt.Errorf("tag key prefix '%s/' is reserved", util.GetDriverName())
 		}
 		return nil
 	}

@@ -47,6 +47,7 @@ func init() {
 	initVariables()
 	// Need to set these here because we rely on them in ParseModifyVolumeParameters
 	// TODO: Figure out a cleaner method
+	cloud.AwsEbsDriverTagKey = util.GetDriverName() + "/cluster"
 	cloud.AllowAutoIOPSIncreaseOnModifyKey = util.GetDriverName() + "/AllowAutoIOPSIncreaseOnModify"
 	cloud.IOPSPerGBKey = util.GetDriverName() + "/IOPSPerGb"
 }
