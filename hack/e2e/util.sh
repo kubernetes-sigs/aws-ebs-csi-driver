@@ -23,9 +23,24 @@ function loudecho() {
 }
 
 function install_driver() {
+  if [ -n "${REGISTRY_SERVER:-}" ] && [ -n "${REGISTRY_USERNAME:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
+    loudecho "Logging into OCI registry ${REGISTRY_SERVER}"
+    echo "${REGISTRY_PASSWORD}" | "${BIN}/helm" registry login "${REGISTRY_SERVER}" \
+      --username "${REGISTRY_USERNAME}" --password-stdin
+
+    loudecho "Creating image pull secret ${IMAGE_PULL_SECRET_NAME} in kube-system"
+    kubectl create secret docker-registry "${IMAGE_PULL_SECRET_NAME}" \
+      --docker-server="${REGISTRY_SERVER}" \
+      --docker-username="${REGISTRY_USERNAME}" \
+      --docker-password="${REGISTRY_PASSWORD}" \
+      --namespace kube-system \
+      --kubeconfig "${KUBECONFIG}" \
+      --dry-run=client -o yaml | kubectl apply --kubeconfig "${KUBECONFIG}" -f -
+  fi
+
   if [[ ${DEPLOY_METHOD} == "helm" ]]; then
     HELM_ARGS=(upgrade --install aws-ebs-csi-driver
-      "${BASE_DIR}/../../charts/aws-ebs-csi-driver"
+      "${HELM_CHART_REPOSITORY}"
       --namespace kube-system
       --set node.enableWindows="${WINDOWS}"
       --set node.windowsHostProcess="${WINDOWS_HOSTPROCESS}"
@@ -35,6 +50,9 @@ function install_driver() {
       --timeout 10m0s
       --wait
       --kubeconfig "${KUBECONFIG}")
+    if [ -n "${HELM_CHART_TAG:-}" ]; then
+      HELM_ARGS+=(--version "${HELM_CHART_TAG}")
+    fi
     if [ -n "${HELM_VALUES_FILE:-}" ]; then
       HELM_ARGS+=(-f "${HELM_VALUES_FILE}")
     fi
@@ -42,9 +60,9 @@ function install_driver() {
       HELM_ARGS+=(--set image.repository="${IMAGE_NAME}")
       HELM_ARGS+=(--set image.tag="${IMAGE_TAG}")
     fi
-    eval "EXPANDED_HELM_EXTRA_FLAGS=$HELM_EXTRA_FLAGS"
-    if [[ -n "$EXPANDED_HELM_EXTRA_FLAGS" ]]; then
-      HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS}")
+    eval "EXPANDED_HELM_EXTRA_FLAGS=(${HELM_EXTRA_FLAGS})"
+    if [[ -n "${EXPANDED_HELM_EXTRA_FLAGS[*]}" ]]; then
+      HELM_ARGS+=("${EXPANDED_HELM_EXTRA_FLAGS[@]}")
     fi
     set -x
     "${BIN}/helm" "${HELM_ARGS[@]}"
@@ -62,5 +80,13 @@ function uninstall_driver() {
     ${BIN}/helm uninstall "aws-ebs-csi-driver" --namespace kube-system --kubeconfig "${KUBECONFIG}"
   elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
     kubectl --kubeconfig "${KUBECONFIG}" delete -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
+  fi
+
+  if [ -n "${REGISTRY_SERVER:-}" ]; then
+    loudecho "Removing imagePullSecret ${IMAGE_PULL_SECRET_NAME}"
+    kubectl delete secret "${IMAGE_PULL_SECRET_NAME}" \
+      --namespace kube-system \
+      --kubeconfig "${KUBECONFIG}" \
+      --ignore-not-found
   fi
 }
