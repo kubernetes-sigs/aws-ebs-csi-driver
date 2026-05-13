@@ -19,19 +19,19 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.34.31"
+AWSCLI_VERSION="2.34.45"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.14.0"
 # https://github.com/eksctl-io/eksctl
-EKSCTL_VERSION="v0.225.0"
+EKSCTL_VERSION="v0.226.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.28.1"
+GINKGO_VERSION="v2.28.3"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v2.11.4"
+GOLANGCI_LINT_VERSION="v2.12.2"
 # https://github.com/hairyhenderson/gomplate
-GOMPLATE_VERSION="v5.0.0"
+GOMPLATE_VERSION="v5.1.0"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
-GOVULNCHECK_VERSION="v1.2.0"
+GOVULNCHECK_VERSION="v1.3.0"
 # https://github.com/helm/helm
 HELM_VERSION="v4.1.4"
 # https://github.com/kubernetes/kops
@@ -40,7 +40,7 @@ HELM_VERSION="v4.1.4"
 KOPS_VERSION="v1.35.0"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
-KUBETEST2_VERSION="v0.0.0-20260317143741-b280bb097b17"
+KUBETEST2_VERSION="v0.0.0-20260510045745-558f16b589d1"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/mvdan/sh

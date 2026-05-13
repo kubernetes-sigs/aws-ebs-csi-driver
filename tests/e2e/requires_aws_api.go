@@ -730,7 +730,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provision
 		test.Run(cs, ns)
 	})
 	// This is a test to ensure driver logic is handled correctly when all params are omitted.
-	It("should copy a volume with all omitted params and not get same IOPS as source ", func() {
+	It("should copy a volume with all omitted params and not get same IOPS as source", func() {
 		sourceIops := "3012"
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),

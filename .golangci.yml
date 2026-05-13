@@ -51,6 +51,8 @@ linters:
     - noinlineerr # We use inline errors
     - embeddedstructfieldcheck # We have a few instances of this
   settings:
+    goconst:
+      ignore-tests: true
     forbidigo:
       forbid:
         # Forbid testing anti-patterns Any/AssignableToTypeOf
@@ -94,6 +96,9 @@ linters:
       - linters:
           - gosec
         path: tests/sanity
+      - linters:
+          - goconst
+        path: pkg/cloud/limits
 formatters:
   enable:
     - gci
