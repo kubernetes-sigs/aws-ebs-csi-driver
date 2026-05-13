@@ -1,3 +1,69 @@
+# v1.60.0
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix init order bug that allowed modifying tags reserved for use by the EBS CSI Driver ([#2932](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2932), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- Fix possible nil pointer deref on clones path ([#2931](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2931), [@ElijahQuinones](https://github.com/ElijahQuinones))
+- Add mutex to MetricRecorder to prevent crashes caused by concurrent access ([#2933](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2933), [@ElijahQuinones](https://github.com/ElijahQuinones))
+
+## Dependencies
+
+### Added
+- k8s.io/streaming: v0.36.1
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.16 → v1.32.17](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.16...config/v1.32.17)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.15 → v1.19.16](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.15...credentials/v1.19.16)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.22 → v1.18.23](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.22...feature/ec2/imds/v1.18.23)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.22 → v1.4.23](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.22...internal/configsources/v1.4.23)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.22 → v2.7.23](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.22...internal/endpoints/v2/v2.7.23)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.23 → v1.4.24](https://github.com/aws/aws-sdk-go-v2/compare/internal/v4a/v1.4.23...internal/v4a/v1.4.24)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.297.1 → v1.301.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.297.1...service/ec2/v1.301.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.8 → v1.13.9](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.8...service/internal/accept-encoding/v1.13.9)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.22 → v1.13.23](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.22...service/internal/presigned-url/v1.13.23)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.241.0 → v1.246.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.241.0...service/sagemaker/v1.246.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.10 → v1.0.11](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.0.10...service/signin/v1.0.11)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.16 → v1.30.17](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.16...service/sso/v1.30.17)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.20 → v1.35.21](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.20...service/ssooidc/v1.35.21)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.42.0 → v1.42.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.42.0...service/sts/v1.42.1)
+- github.com/aws/aws-sdk-go-v2: [v1.41.6 → v1.41.7](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.6...v1.41.7)
+- github.com/aws/smithy-go: [v1.25.0 → v1.25.1](https://github.com/aws/smithy-go/compare/v1.25.0...v1.25.1)
+- github.com/cncf/xds/go: [ee656c7 → dba9d58](https://github.com/cncf/xds/compare/ee656c7...dba9d58)
+- github.com/envoyproxy/go-control-plane/envoy: [v1.36.0 → v1.37.0](https://github.com/envoyproxy/go-control-plane/compare/envoy/v1.36.0...envoy/v1.37.0)
+- github.com/envoyproxy/protoc-gen-validate: [v1.3.0 → v1.3.3](https://github.com/envoyproxy/protoc-gen-validate/compare/v1.3.0...v1.3.3)
+- github.com/fxamacker/cbor/v2: [v2.9.1 → v2.9.2](https://github.com/fxamacker/cbor/compare/v2.9.1...v2.9.2)
+- github.com/go-jose/go-jose/v4: [v4.1.3 → v4.1.4](https://github.com/go-jose/go-jose/compare/v4.1.3...v4.1.4)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.39.0 → v1.42.0
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.61.0 → v0.65.0
+- go.uber.org/zap: v1.27.1 → v1.28.0
+- golang.org/x/crypto: v0.50.0 → v0.51.0
+- golang.org/x/mod: v0.34.0 → v0.35.0
+- golang.org/x/net: v0.53.0 → v0.54.0
+- golang.org/x/sys: v0.43.0 → v0.44.0
+- golang.org/x/telemetry: 579e4da → be6f6cb
+- golang.org/x/term: v0.42.0 → v0.43.0
+- golang.org/x/text: v0.36.0 → v0.37.0
+- golang.org/x/tools: v0.43.0 → v0.44.0
+- google.golang.org/genproto/googleapis/api: afd174a → 3700d41
+- google.golang.org/genproto/googleapis/rpc: afd174a → 3700d41
+- google.golang.org/grpc: v1.80.0 → v1.81.0
+- google.golang.org/protobuf: v1.36.11 → f2248ac
+- k8s.io/api: v0.35.4 → v0.36.1
+- k8s.io/apimachinery: v0.35.4 → v0.36.1
+- k8s.io/client-go: v0.35.4 → v0.36.1
+- k8s.io/component-base: v0.35.4 → v0.36.1
+- k8s.io/gengo/v2: 85fd79d → ec3ebc5
+- k8s.io/kube-openapi: ec9c827 → ef417d0
+- k8s.io/mount-utils: v0.35.4 → v0.36.1
+- k8s.io/utils: 28399d8 → ff6756f
+
+### Removed
+- github.com/armon/go-socks5: [e753329](https://github.com/armon/go-socks5/tree/e753329)
+- github.com/cenkalti/backoff/v4: [v4.3.0](https://github.com/cenkalti/backoff/tree/v4.3.0)
+- github.com/gregjones/httpcache: [901d907](https://github.com/gregjones/httpcache/tree/901d907)
+
 # v1.59.0
 
 ## Changes by Kind
