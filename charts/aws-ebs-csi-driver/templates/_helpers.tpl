@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 Determine image
 */}}
 {{- define "aws-ebs-csi-driver.fullImagePath" -}}
-{{ printf "%s%s:%s%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) (.Values.fips | ternary "-fips" "") }}
+{{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.image.repository (default (printf "v%s" .Chart.AppVersion) (.Values.image.tag | toString)) }}
 {{- end -}}
 
 {{/*

@@ -122,6 +122,8 @@ spec:
             {{- if .Values.fips }}
             - name: AWS_USE_FIPS_ENDPOINT
               value: "true"
+            - name: GODEBUG
+              value: "fips140=on"
             {{- end }}
             {{- if .Values.node.serviceAccount.disableMutation }}
             - name: DISABLE_TAINT_WATCHER

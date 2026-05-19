@@ -551,17 +551,13 @@ func TestGetNextCardIndex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := getNextCardIndex(tc.numCards, tc.cardCounts)
 
-			if tc.expectedCardIndex == nil {
-				if result != nil {
-					t.Fatalf("Expected nil card index, got %v", *result)
-				}
-			} else {
-				if result == nil {
-					t.Fatalf("Expected card index %v, got nil", *tc.expectedCardIndex)
-				}
-				if *result != *tc.expectedCardIndex {
-					t.Fatalf("Expected card index %v, got %v", *tc.expectedCardIndex, *result)
-				}
+			switch {
+			case tc.expectedCardIndex == nil && result != nil:
+				t.Fatalf("Expected nil card index, got %v", *result)
+			case tc.expectedCardIndex != nil && result == nil:
+				t.Fatalf("Expected card index %v, got nil", *tc.expectedCardIndex)
+			case tc.expectedCardIndex != nil && result != nil && *result != *tc.expectedCardIndex:
+				t.Fatalf("Expected card index %v, got %v", *tc.expectedCardIndex, *result)
 			}
 		})
 	}
