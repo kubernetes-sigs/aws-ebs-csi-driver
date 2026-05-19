@@ -38,8 +38,6 @@ AMI_FAMILY=${AMI_FAMILY:-"AmazonLinux2023"}
 WINDOWS_HOSTPROCESS=${WINDOWS_HOSTPROCESS:-"false"}
 OUTPOST_ARN=${OUTPOST_ARN:-}
 OUTPOST_INSTANCE_TYPE=${OUTPOST_INSTANCE_TYPE:-${INSTANCE_TYPE}}
-FIPS_TEST=${FIPS_TEST:-"false"}
-
 # kops: must include patch version (e.g. 1.19.1)
 # eksctl: mustn't include patch version (e.g. 1.19)
 K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.35.5}
