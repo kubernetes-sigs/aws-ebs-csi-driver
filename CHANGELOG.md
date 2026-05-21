@@ -1,3 +1,24 @@
+# v1.60.1
+
+Bump all CSI sidecars (csi-attacher, csi-node-driver-registrar, csi-provisioner, csi-resizer, csi-snapshotter, livenessprobe, snapshot-controller, volume-modifier-for-k8s) to address `CVE-2026-33814` in `golang.org/x/net` ([#2941](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2941), [@ElijahQuinones](https://github.com/ElijahQuinones)).
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.301.0 → v1.303.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.301.0...service/ec2/v1.303.0)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.246.0 → v1.248.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.246.0...service/sagemaker/v1.248.0)
+- github.com/kubernetes-csi/csi-lib-utils: [v0.23.2 → v0.24.0](https://github.com/kubernetes-csi/csi-lib-utils/compare/v0.23.2...v0.24.0)
+- google.golang.org/genproto/googleapis/api: 3700d41 → aa98bba
+- google.golang.org/genproto/googleapis/rpc: 3700d41 → aa98bba
+- google.golang.org/grpc: v1.81.0 → v1.81.1
+- k8s.io/kube-openapi: ef417d0 → aa012df
+
+### Removed
+_Nothing has changed._
+
 # v1.60.0
 
 ## Changes by Kind
