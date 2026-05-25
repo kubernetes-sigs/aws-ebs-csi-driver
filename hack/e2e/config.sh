@@ -65,11 +65,21 @@ IMAGE_TAG=${IMAGE_TAG:-$(md5sum <<<"${CLUSTER_NAME}.${CLUSTER_TYPE}" | awk '{ pr
 IMAGE_ARCH=${IMAGE_ARCH:-amd64}
 
 DEPLOY_METHOD=${DEPLOY_METHOD:-"helm"}
+HELM_CHART_REPOSITORY=${HELM_CHART_REPOSITORY:-"${BASE_DIR}/../../charts/aws-ebs-csi-driver"}
+HELM_CHART_TAG=${HELM_CHART_TAG:-}
+REGISTRY_SERVER=${REGISTRY_SERVER:-}
+REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
+IMAGE_PULL_SECRET_NAME=${IMAGE_PULL_SECRET_NAME:-"registry-pull-secret"}
 HELM_CT_TEST=${HELM_CT_TEST:-"false"}
 HELM_EXTRA_FLAGS=${HELM_EXTRA_FLAGS:-}
 # When using IRSA, eksctl creates the service account
 if [[ -n "${USE_IRSA:-}" ]]; then
-  HELM_EXTRA_FLAGS="${HELM_EXTRA_FLAGS} --set controller.serviceAccount.create=false"
+  HELM_EXTRA_FLAGS="${HELM_EXTRA_FLAGS:+${HELM_EXTRA_FLAGS} }--set=controller.serviceAccount.create=false"
+fi
+# When registry credentials are provided, configure the image pull secret for Helm
+if [ -n "${REGISTRY_SERVER:-}" ] && [ -n "${REGISTRY_USERNAME:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
+  HELM_EXTRA_FLAGS="${HELM_EXTRA_FLAGS:+${HELM_EXTRA_FLAGS} }--set=imagePullSecrets[0]=${IMAGE_PULL_SECRET_NAME}"
 fi
 COLLECT_METRICS=${COLLECT_METRICS:-"false"}
 
