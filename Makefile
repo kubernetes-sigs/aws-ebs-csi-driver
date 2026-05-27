@@ -128,6 +128,22 @@ cluster/uninstall: bin/helm bin/aws
 ## E2E targets
 # Targets to run e2e tests
 
+.PHONY: test/helm-template
+test/helm-template: bin/helm
+	cd tests/helm-template && go test -v -count=1 ./...
+
+## e2e/parameters and e2e/parameters-all are Parameter-specific e2e tests
+# Usage: make e2e/parameters PARAM_SET=<name> or make e2e/parameters-all
+# See hack/e2e/param-sets.sh for available sets and their definitions.
+ 
+.PHONY: e2e/parameters
+e2e/parameters: bin/helm bin/ginkgo
+	./hack/e2e/param-sets.sh run $(PARAM_SET)
+
+.PHONY: e2e/parameters-all
+e2e/parameters-all: bin/helm bin/ginkgo test/helm-template
+	./hack/e2e/param-sets.sh run-all
+
 .PHONY: e2e/single-az
 e2e/single-az: bin/helm bin/ginkgo
 	AWS_AVAILABILITY_ZONES=us-west-2a \
