@@ -543,6 +543,7 @@ func TestDebug(t *testing.T) {
 
 func TestMiscellaneous(t *testing.T) {
 	resources := renderChart(t, "miscellaneous")
+	want := loadValuesMap(t, "miscellaneous")
 	controller := mustFind(t, resources, "Deployment", "ebs-csi-controller")
 	cPS := podSpec(t, controller)
 
@@ -567,6 +568,25 @@ func TestMiscellaneous(t *testing.T) {
 		c := findContainer(t, cPS, "volumemodifier")
 		if !hasArg(c, "--leader-election=false") {
 			t.Error("volumemodifier should have --leader-election=false")
+		}
+	})
+
+	t.Run("volumemodifierVolumeMounts", func(t *testing.T) {
+		wantMounts, _ := want["sidecars"].(obj)["volumemodifier"].(obj)["volumeMounts"].([]interface{})
+		c := findContainer(t, cPS, "volumemodifier")
+		mounts := nestedSlice(t, c, "volumeMounts")
+		for _, wm := range wantMounts {
+			wmObj := wm.(obj)
+			var found bool
+			for _, m := range mounts {
+				mm := m.(obj)
+				if mm["name"] == wmObj["name"] && mm["mountPath"] == wmObj["mountPath"] {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("volumemodifier should have mount %v at %v", wmObj["name"], wmObj["mountPath"])
+			}
 		}
 	})
 
