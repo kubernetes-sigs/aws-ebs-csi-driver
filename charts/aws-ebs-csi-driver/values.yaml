@@ -544,4 +544,4 @@ debugLogs: false
 helmTester:
   enabled: true
   # Supply a custom image to the ebs-csi-driver-test pod in helm-tester.yaml
-  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20260512-1f34ef0df3-master"
+  image: "us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e:v20260601-2cbf4bdb47-master"
