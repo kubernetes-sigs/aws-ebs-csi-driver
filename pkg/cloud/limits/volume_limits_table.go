@@ -710,6 +710,7 @@ var volumeLimits = map[string]volumeLimit{
 	"m8ine.8xlarge":       {32, "dedicated"},
 	"m8ine.large":         {32, "dedicated"},
 	"m8ine.xlarge":        {32, "dedicated"},
+	"mac-m3ultra.metal":   {10, "shared"},
 	"mac-m4.metal":        {31, "shared"},
 	"mac-m4max.metal":     {10, "shared"},
 	"mac-m4pro.metal":     {31, "shared"},
