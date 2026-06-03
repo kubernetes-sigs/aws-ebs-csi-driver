@@ -1,3 +1,50 @@
+# v1.61.0
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.17 → v1.32.22](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.17...config/v1.32.22)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.16 → v1.19.21](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.16...credentials/v1.19.21)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.23 → v1.18.27](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.23...feature/ec2/imds/v1.18.27)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.23 → v1.4.27](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.23...internal/configsources/v1.4.27)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.23 → v2.7.27](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.23...internal/endpoints/v2/v2.7.27)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.24 → v1.4.28](https://github.com/aws/aws-sdk-go-v2/compare/internal/v4a/v1.4.24...internal/v4a/v1.4.28)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.303.0 → v1.305.1](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.303.0...service/ec2/v1.305.1)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.9 → v1.13.11](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.9...service/internal/accept-encoding/v1.13.11)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.23 → v1.13.27](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.23...service/internal/presigned-url/v1.13.27)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.248.0 → v1.251.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.248.0...service/sagemaker/v1.251.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.0.11 → v1.1.3](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.0.11...service/signin/v1.1.3)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.30.17 → v1.31.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.30.17...service/sso/v1.31.1)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.35.21 → v1.36.4](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.35.21...service/ssooidc/v1.36.4)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.42.1 → v1.43.1](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.42.1...service/sts/v1.43.1)
+- github.com/aws/aws-sdk-go-v2: [v1.41.7 → v1.41.11](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.7...v1.41.11)
+- github.com/aws/smithy-go: [v1.25.1 → v1.27.0](https://github.com/aws/smithy-go/compare/v1.25.1...v1.27.0)
+- github.com/awslabs/volume-modifier-for-k8s: [v0.9.4 → v0.9.5](https://github.com/awslabs/volume-modifier-for-k8s/compare/v0.9.4...v0.9.5)
+- github.com/go-openapi/jsonreference: [v0.21.5 → v0.21.6](https://github.com/go-openapi/jsonreference/compare/v0.21.5...v0.21.6)
+- github.com/go-openapi/testify/v2: [v2.4.2 → v2.5.1](https://github.com/go-openapi/testify/compare/v2.4.2...v2.5.1)
+- github.com/golang-jwt/jwt/v5: [v5.3.0 → v5.3.1](https://github.com/golang-jwt/jwt/compare/v5.3.0...v5.3.1)
+- github.com/prometheus/common: [v0.67.5 → v0.68.1](https://github.com/prometheus/common/compare/v0.67.5...v0.68.1)
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.68.0 → v0.69.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel/metric: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel/sdk/metric: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel/sdk: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel/trace: v1.43.0 → v1.44.0
+- go.opentelemetry.io/otel: v1.43.0 → v1.44.0
+- golang.org/x/net: v0.54.0 → v0.55.0
+- golang.org/x/sys: v0.44.0 → v0.45.0
+- google.golang.org/genproto/googleapis/api: aa98bba → 3dc84a4
+- google.golang.org/genproto/googleapis/rpc: aa98bba → 3dc84a4
+- k8s.io/csi-translation-lib: v0.35.2 → v0.36.1
+- k8s.io/kubectl: v0.35.3 → v0.36.1
+
+### Removed
+- github.com/gogo/protobuf: [v1.3.2](https://github.com/gogo/protobuf/tree/v1.3.2)
+
 # v1.60.1
 
 Bump all CSI sidecars (csi-attacher, csi-node-driver-registrar, csi-provisioner, csi-resizer, csi-snapshotter, livenessprobe, snapshot-controller, volume-modifier-for-k8s) to address `CVE-2026-33814` in `golang.org/x/net` ([#2941](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2941), [@ElijahQuinones](https://github.com/ElijahQuinones)).
