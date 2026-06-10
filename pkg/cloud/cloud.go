@@ -2186,8 +2186,23 @@ func (c *cloud) EnableFastSnapshotRestores(ctx context.Context, availabilityZone
 }
 
 // DryRun will make a dry-run EC2 API call. Nil return value means we successfully received EC2 DryRunOperation error code.
+//
+// If a plugin is loaded, its HealthCheck result is incorporated: an unhealthy
+// plugin fails the check, and a plugin may opt to skip the driver's own
+// dry-run entirely (e.g. when its EC2 client uses credentials the dry-run
+// should not be issued against). See the EbsCsiPlugin interface for details.
 func (c *cloud) DryRun(ctx context.Context) error {
 	if c.attemptDryRun.Load() {
+		if p := plugin.GetPlugin(); p != nil {
+			skipDriverHealthCheck, pluginErr := p.HealthCheck()
+			if pluginErr != nil {
+				return fmt.Errorf("plugin unhealthy: %w", pluginErr)
+			} else if skipDriverHealthCheck {
+				c.attemptDryRun.Store(false)
+				return nil
+			}
+		}
+
 		// Rely on EC2 DAZ because it is required in ebs controller IAM role, but not in instance default role.
 		_, apiErr := c.ec2.DescribeAvailabilityZones(ctx,
 			&ec2.DescribeAvailabilityZonesInput{DryRun: aws.Bool(true)},

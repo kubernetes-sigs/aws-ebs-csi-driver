@@ -69,6 +69,14 @@ type EbsCsiPlugin interface {
 	// GetSageMakerClient replaces the AWS SageMaker client the driver uses
 	GetSageMakerClient(cfg aws.Config, optFns ...func(*sagemaker.Options)) util.SageMakerAPI
 
+	// HealthCheck supplements or overrides the controller's periodic health check.
+	//
+	// When the driver is about to perform a health check, the plugin's HealthCheck is called first.
+	// If skipDriverHealthCheck is true, the driver's health check will be skipped (assumed healthy).
+	// If the plugin returns a non-nil value for err, the driver's health check will fail with the
+	// returned error. On node-mode drivers, this function currently has no effect.
+	HealthCheck() (skipDriverHealthCheck bool, err error)
+
 	// GetDriverName replaces the driver name in use (normally "ebs.csi.aws.com")
 	// This function can be called before Init and should not depend on it
 	GetDriverName() string
@@ -98,6 +106,10 @@ func (p *ebsCsiPluginBase) GetEC2Client(_ aws.Config, _ ...func(o *ec2.Options))
 
 func (p *ebsCsiPluginBase) GetSageMakerClient(_ aws.Config, _ ...func(o *sagemaker.Options)) util.SageMakerAPI {
 	return nil
+}
+
+func (p *ebsCsiPluginBase) HealthCheck() (bool, error) {
+	return false, nil
 }
 
 func (p *ebsCsiPluginBase) GetDriverName() string {
