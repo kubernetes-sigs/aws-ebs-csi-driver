@@ -1221,6 +1221,11 @@
                 }
               }
             },
+            "volumeMounts": {
+              "type": "array",
+              "description": "Add additional volume mounts on the volumemodifier container",
+              "default": []
+            },
             "securityContext": {
               "type": "object"
             }

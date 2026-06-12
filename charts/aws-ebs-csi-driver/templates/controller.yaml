@@ -481,6 +481,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- with .Values.sidecars.volumemodifier.volumeMounts }}
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-volmod
