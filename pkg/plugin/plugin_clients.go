@@ -28,6 +28,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/sagemaker"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+)
+
+// Compile-time assertions that the client bases fully implement the driver's
+// API interfaces. These ensure that if a new method is added to EC2API or
+// SageMakerAPI, the corresponding stub is added here too (so plugins embedding
+// these bases continue to compile).
+var (
+	_ util.EC2API       = &ec2ClientBase{}
+	_ util.SageMakerAPI = &sageMakerClientBase{}
 )
 
 // ec2ClientBase implements stub functionality for EC2API. It can be used
@@ -111,6 +121,12 @@ func (b *ec2ClientBase) DeleteTags(ctx context.Context, params *ec2.DeleteTagsIn
 }
 func (b *ec2ClientBase) EnableFastSnapshotRestores(ctx context.Context, params *ec2.EnableFastSnapshotRestoresInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastSnapshotRestoresOutput, error) {
 	return b.client.EnableFastSnapshotRestores(ctx, params, optFns...)
+}
+func (b *ec2ClientBase) LockSnapshot(ctx context.Context, params *ec2.LockSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.LockSnapshotOutput, error) {
+	return b.client.LockSnapshot(ctx, params, optFns...)
+}
+func (b *ec2ClientBase) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
+	return b.client.DescribeInstanceTypes(ctx, params, optFns...)
 }
 
 // SagmeMakerAPI stub functions.
