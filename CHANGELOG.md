@@ -1,3 +1,80 @@
+# v1.62.0
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+In the next minor version of the EBS CSI Driver (`v1.62.0`), the `-fips` container images will no longer be built or released. FIPS support is migrating to the Golang FIPS 140-3 module (https://go.dev/doc/security/fips140) which can be enabled dynamically at runtime. Thus, a single container image will be used for both FIPS and non-FIPS deployments.
+
+**This change only affects users directly relying on or customizing the `-fips` image.** If you enable FIPS mode via the `fips` Helm or EKS Addon parameter without using a custom container image, this change does not affect you.
+
+### Feature
+
+- Add plugin method to disable/override health check ([#2952](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2952), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug or Regression
+
+- Disallow overriding driver-reserved tags when `--warn-on-invalid-tag` is `true`. ([#2954](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2954), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/aws/aws-sdk-go-v2: [v1.41.11 → v1.42.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.41.11...v1.42.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.22 → v1.32.25](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.22...v1.32.25)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.21 → v1.19.24](https://github.com/aws/aws-sdk-go-v2/compare/v1.19.21...v1.19.24)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.27 → v1.18.29](https://github.com/aws/aws-sdk-go-v2/compare/v1.18.27...v1.18.29)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.27 → v1.4.29](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.27...v1.4.29)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.27 → v2.7.29](https://github.com/aws/aws-sdk-go-v2/compare/v2.7.27...v2.7.29)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.28 → v1.4.30](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.28...v1.4.30)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.305.1 → v1.307.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.305.1...v1.307.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.11 → v1.13.12](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.11...v1.13.12)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.27 → v1.13.29](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.27...v1.13.29)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.251.1 → v1.254.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.251.1...v1.254.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.1.3 → v1.2.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.1.3...v1.2.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.31.1 → v1.31.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.31.1...v1.31.3)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.36.4 → v1.36.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.36.4...v1.36.6)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.43.1 → v1.43.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.1...v1.43.3)
+- github.com/aws/smithy-go: [v1.27.0 → v1.27.2](https://github.com/aws/smithy-go/compare/v1.27.0...v1.27.2)
+- github.com/go-openapi/swag: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/cmdutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/conv: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/fileutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/jsonname: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/jsonutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/loading: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/mangling: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/netutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/stringutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/typeutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/swag/yamlutils: [v0.26.0 → v0.26.1](https://github.com/go-openapi/swag/compare/v0.26.0...v0.26.1)
+- github.com/go-openapi/testify/enable/yaml/v2: [v2.4.2 → v2.5.1](https://github.com/go-openapi/testify/compare/v2.4.2...v2.5.1)
+- golang.org/x/crypto: v0.51.0 → v0.53.0
+- golang.org/x/mod: v0.35.0 → v0.36.0
+- golang.org/x/net: v0.55.0 → v0.56.0
+- golang.org/x/sync: v0.20.0 → v0.21.0
+- golang.org/x/sys: v0.45.0 → v0.46.0
+- golang.org/x/telemetry: be6f6cb → 42602be
+- golang.org/x/term: v0.43.0 → v0.44.0
+- golang.org/x/text: v0.37.0 → v0.38.0
+- golang.org/x/tools: v0.44.0 → v0.45.0
+- google.golang.org/genproto/googleapis/api: 3dc84a4 → 7ab31c2
+- google.golang.org/genproto/googleapis/rpc: 3dc84a4 → 7ab31c2
+- k8s.io/api: v0.36.1 → v0.36.2
+- k8s.io/apimachinery: v0.36.1 → v0.36.2
+- k8s.io/client-go: v0.36.1 → v0.36.2
+- k8s.io/component-base: v0.36.1 → v0.36.2
+- k8s.io/kube-openapi: aa012df → 865597e
+- k8s.io/mount-utils: v0.36.1 → v0.36.2
+- k8s.io/streaming: v0.36.1 → v0.36.2
+
+### Removed
+_Nothing has changed._
+
 # 1.61.1
 
 ## Dependencies
