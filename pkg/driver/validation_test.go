@@ -108,6 +108,48 @@ func TestValidateExtraTags(t *testing.T) {
 	}
 }
 
+func TestValidateExtraTagsWarnOnly(t *testing.T) {
+	testCases := []struct {
+		name         string
+		tags         map[string]string
+		expectedTags map[string]string
+	}{
+		{
+			name: "valid tags are preserved",
+			tags: map[string]string{
+				"extra-tag-key": "extra-tag-value",
+			},
+			expectedTags: map[string]string{
+				"extra-tag-key": "extra-tag-value",
+			},
+		},
+		{
+			name: "reserved keys are removed",
+			tags: map[string]string{
+				cloud.VolumeNameTagKey:   "attacker-vol-name",
+				cloud.SnapshotNameTagKey: "attacker-snap-name",
+				ClusterNameTagKey:        "attacker-cluster",
+				"valid-key":              "valid-value",
+			},
+			expectedTags: map[string]string{
+				"valid-key": "valid-value",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateExtraTags(tc.tags, true)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(tc.tags, tc.expectedTags) {
+				t.Fatalf("tags not equal\ngot:\n%v\nexpected:\n%v", tc.tags, tc.expectedTags)
+			}
+		})
+	}
+}
+
 func TestValidateMode(t *testing.T) {
 	testCases := []struct {
 		name   string
