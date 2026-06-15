@@ -140,7 +140,7 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
-          image: public.ecr.aws/csi-components/csi-provisioner:v6.2.0-eksbuild.7
+          image: public.ecr.aws/csi-components/csi-provisioner:v6.3.0-eksbuild.1
           imagePullPolicy: IfNotPresent
           args:
             - --timeout=60s

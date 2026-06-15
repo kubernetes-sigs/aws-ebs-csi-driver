@@ -14,8 +14,6 @@
 
 package main
 
-import "github.com/aws/aws-sdk-go-v2/aws"
-
 // This file contains overrides used to generate the volume limits and multi-card tables.
 // Modifications in this file directly change the table values, and CANNOT be detected as invalid
 // by the detect-potentially-invalid-limits script. This file should only be used when an
@@ -31,10 +29,7 @@ type instanceOverride struct {
 
 // wrongLimitInstances contains instance types whose EBS limits reported by
 // DescribeInstanceTypes are incorrect and must be overridden.
-var wrongLimitInstances = map[string]instanceOverride{
-	// This instance returns an incorrect 128 volume limit in some but not all regions.
-	"c8gn.48xlarge": {maxAttachments: aws.Int32(64), maxEbsCards: aws.Int32(1)},
-}
+var wrongLimitInstances = map[string]instanceOverride{}
 
 // skipRegions contains regions to skip entirely when collecting instance data.
 var skipRegions = map[string]struct{}{
