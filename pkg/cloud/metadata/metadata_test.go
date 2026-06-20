@@ -150,6 +150,8 @@ func TestNewMetadataService(t *testing.T) {
 						corev1.LabelTopologyZone:       "us-west-2a",
 						ENIsLabel:                      "4",
 						VolumesLabel:                   "5",
+						VolumeAttachmentLimitLabel:     "27",
+						VolumeAttachmentTypeLabel:      "shared",
 					},
 				},
 				Spec: corev1.NodeSpec{
@@ -163,6 +165,8 @@ func TestNewMetadataService(t *testing.T) {
 				AvailabilityZone:       "us-west-2a",
 				NumAttachedENIs:        4,
 				NumBlockDeviceMappings: 5,
+				VolumeAttachmentLimit:  27,
+				VolumeAttachmentType:   "shared",
 			},
 		},
 		{
@@ -296,6 +300,8 @@ func TestNewMetadataService(t *testing.T) {
 				assert.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.GetNumAttachedENIs())
 				assert.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.GetNumBlockDeviceMappings())
 				assert.Equal(t, tc.expectedMetadata.OutpostArn, metadata.GetOutpostArn())
+				assert.Equal(t, tc.expectedMetadata.VolumeAttachmentLimit, metadata.GetVolumeAttachmentLimit())
+				assert.Equal(t, tc.expectedMetadata.VolumeAttachmentType, metadata.GetVolumeAttachmentType())
 			}
 		})
 	}
@@ -528,6 +534,8 @@ func TestIMDSInstanceInfo(t *testing.T) {
 				assert.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.GetNumAttachedENIs())
 				assert.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.GetNumBlockDeviceMappings())
 				assert.Equal(t, tc.expectedMetadata.OutpostArn, metadata.GetOutpostArn())
+				assert.Equal(t, tc.expectedMetadata.VolumeAttachmentLimit, metadata.GetVolumeAttachmentLimit())
+				assert.Equal(t, tc.expectedMetadata.VolumeAttachmentType, metadata.GetVolumeAttachmentType())
 			}
 		})
 	}
@@ -776,6 +784,8 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 						corev1.LabelTopologyZone:       "us-west-2a",
 						ENIsLabel:                      "5",
 						VolumesLabel:                   "4",
+						VolumeAttachmentLimitLabel:     "27",
+						VolumeAttachmentTypeLabel:      "shared",
 					},
 				},
 				Spec: corev1.NodeSpec{
@@ -789,6 +799,8 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 				AvailabilityZone:       "us-west-2a",
 				NumAttachedENIs:        5,
 				NumBlockDeviceMappings: 4,
+				VolumeAttachmentLimit:  27,
+				VolumeAttachmentType:   "shared",
 			},
 		},
 		{
@@ -828,6 +840,8 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 				require.Equal(t, tc.expectedMetadata.AvailabilityZone, metadata.AvailabilityZone)
 				require.Equal(t, tc.expectedMetadata.NumAttachedENIs, metadata.NumAttachedENIs)
 				require.Equal(t, tc.expectedMetadata.NumBlockDeviceMappings, metadata.NumBlockDeviceMappings)
+				require.Equal(t, tc.expectedMetadata.VolumeAttachmentLimit, metadata.VolumeAttachmentLimit)
+				require.Equal(t, tc.expectedMetadata.VolumeAttachmentType, metadata.VolumeAttachmentType)
 			}
 		})
 	}
