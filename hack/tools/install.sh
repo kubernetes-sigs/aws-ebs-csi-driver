@@ -49,6 +49,8 @@ SHFMT_VERSION="v3.13.1"
 YAMALE_VERSION="6.1.0"
 # https://pypi.org/project/yamllint/
 YAMLLINT_VERSION="1.38.0"
+# https://github.com/mikefarah/yq
+YQ_VERSION="v4.53.3"
 
 OS="$(go env GOHOSTOS)"
 ARCH="$(go env GOHOSTARCH)"
@@ -191,6 +193,12 @@ function install_shfmt() {
   INSTALL_PATH="${1}"
 
   install_go "${INSTALL_PATH}" "mvdan.cc/sh/v3/cmd/shfmt@${SHFMT_VERSION}"
+}
+
+function install_yq() {
+  INSTALL_PATH="${1}"
+
+  install_binary "${INSTALL_PATH}" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_${OS}_${ARCH}" "yq"
 }
 
 # Utility functions

@@ -35,6 +35,9 @@ vendor/
 # Files used by Makefile when upgrading sidecars
 hack/release-scripts/image-digests.yaml
 
+# Packaged Helm chart output (make helm-chart-push)
+artifacts/
+
 # E2E artifacts
 _rundir/
 _artifacts/

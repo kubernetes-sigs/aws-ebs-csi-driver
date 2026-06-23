@@ -44,3 +44,8 @@ export IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver
 export TAG=${GIT_TAG:10}
 export VERSION=$PULL_BASE_REF
 IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make -j $(nproc) all-push
+
+if [[ "${PULL_BASE_REF}" =~ ^release- ]]; then
+  loudecho "Push helm chart to staging GAR (release branch ${PULL_BASE_REF})"
+  make helm-chart-push
+fi

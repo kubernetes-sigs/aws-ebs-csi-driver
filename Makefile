@@ -305,6 +305,16 @@ create-manifest: all-image-registry
 push-manifest: create-manifest
 	docker manifest push --purge $(IMAGE):$(TAG)
 
+## Helm chart
+# Package the Helm chart and push it to the staging OCI registry.
+# Invoked by hack/cloudbuild.sh on release branches.
+
+HELM_CHART_REPO ?= gcr.io/k8s-staging-provider-aws/charts
+
+.PHONY: helm-chart-push
+helm-chart-push: bin/helm bin/yq
+	./hack/helm-chart-package.sh
+
 ## Tools
 # Tools necessary to perform other targets
 
