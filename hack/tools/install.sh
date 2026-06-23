@@ -98,7 +98,11 @@ function install_tar_binary() {
     TAR_EXTRA_FLAGS=""
   fi
 
-  curl --location "${DOWNLOAD_URL}" | tar "$TAR_EXTRA_FLAGS" --extract --touch --transform "s/.*/${BINARY_NAME}/" -C "${INSTALL_PATH}" "${BINARY_PATH}"
+  # Extract the single binary to stdout and redirect it to the destination,
+  # rather than using GNU tar's --transform to rename in place. The release
+  # build image (gcb-docker-gcloud) ships BusyBox tar, which supports neither
+  # --transform nor --touch; -O (extract to stdout) is portable across both.
+  curl --location "${DOWNLOAD_URL}" | tar "$TAR_EXTRA_FLAGS" --extract -O "${BINARY_PATH}" >"${INSTALL_PATH}/${BINARY_NAME}"
   chmod +x "${INSTALL_PATH}/${BINARY_NAME}"
 }
 
