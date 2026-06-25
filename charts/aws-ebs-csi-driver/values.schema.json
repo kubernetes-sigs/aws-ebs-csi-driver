@@ -118,7 +118,7 @@
     },
     "fips": {
       "type": "boolean",
-      "description": "Instruct the AWS SDK to use AWS FIPS endpoints, and deploy container built with BoringCrypto (a FIPS-validated cryptographic library) instead of the Go default. The EBS CSI Driver FIPS images have not undergone FIPS certification, and no official guarantee is made about the compliance of these images under the FIPS standard. Users relying on these images for FIPS compliance should perform their own independent evaluation",
+      "description": "Enable FIPS 140-3 mode: activates the Go Cryptographic Module (CMVP #5247) at runtime via GODEBUG=fips140=on, and instructs the AWS SDK to use FIPS endpoints via AWS_USE_FIPS_ENDPOINT. See docs/fips.md for details.",
       "default": "false"
     },
     "debugLogs": {

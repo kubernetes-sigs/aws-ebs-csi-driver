@@ -34,10 +34,6 @@ else
 	BINARY=aws-ebs-csi-driver
 	OSVERSION?=al2023
 endif
-FIPS?=false
-ifeq ($(FIPS),true)
-	FIPS_DOCKER_ARGS=--build-arg=GOEXPERIMENT=boringcrypto
-endif
 
 GO_SOURCES=go.mod go.sum $(shell find pkg cmd -type f -name "*.go")
 
@@ -249,12 +245,8 @@ security: bin/govulncheck
 .PHONY: sub-push
 sub-push: all-image-registry push-manifest
 
-.PHONY: sub-push-fips
-sub-push-fips:
-	$(MAKE) FIPS=true TAG=$(TAG)-fips sub-push
-
 .PHONY: all-push
-all-push: sub-push sub-push-fips
+all-push: sub-push
 
 test-e2e-%:
 	./hack/prow-e2e.sh test-e2e-$*
@@ -272,7 +264,7 @@ bin:
 	@mkdir -p $@
 
 bin/$(BINARY): $(GO_SOURCES) | bin
-	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -mod=readonly -ldflags ${LDFLAGS} -o $@ ./cmd/
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOFIPS140=$(GOFIPS140) go build -mod=readonly -ldflags ${LDFLAGS} -o $@ ./cmd/
 
 .PHONY: all-image-registry
 all-image-registry: $(addprefix sub-image-,$(ALL_OS_ARCH_OSVERSION))
@@ -290,7 +282,7 @@ image:
 		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
 		--build-arg=GOPROXY=$(GOPROXY) \
 		--build-arg=VERSION=$(VERSION) \
-		$(FIPS_DOCKER_ARGS) \
+		--build-arg=GOFIPS140=$(GOFIPS140) \
 		$(DOCKER_EXTRA_ARGS) \
 		.
 
