@@ -44,3 +44,10 @@ export IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver
 export TAG=${GIT_TAG:10}
 export VERSION=$PULL_BASE_REF
 IMAGE=gcr.io/k8s-staging-provider-aws/aws-ebs-csi-driver make -j $(nproc) all-push
+
+# Push the Helm chart to the staging OCI registry when triggered by the
+# helm-chart tag that chart-releaser creates (e.g. helm-chart-aws-ebs-csi-driver-2.62.0).
+if [[ "${PULL_BASE_REF}" =~ ^helm-chart- ]]; then
+  loudecho "Push helm chart to staging GCR (${PULL_BASE_REF})"
+  make helm-chart-push
+fi
