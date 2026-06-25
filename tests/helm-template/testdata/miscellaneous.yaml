@@ -15,6 +15,10 @@
 controller:
   volumeModificationFeature:
     enabled: true
+  volumes:
+    - name: extra-volume
+      configMap:
+        name: kube-root-ca.crt
 node:
   volumeAttachLimit: 25
   metadataSources: metadata-labeler
@@ -29,6 +33,9 @@ sidecars:
     logLevel: 5
     leaderElection:
       enabled: false
+    volumeMounts:
+      - name: extra-volume
+        mountPath: /extra
   metadataLabeler:
     enabled: true
     logLevel: 5

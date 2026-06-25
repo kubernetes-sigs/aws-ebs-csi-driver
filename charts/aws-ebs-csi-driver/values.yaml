@@ -180,6 +180,11 @@ sidecars:
     # Additional parameters provided by volume-modifier-for-k8s.
     additionalArgs: []
     resources: {}
+    # Add additional volume mounts on the volumemodifier container with sidecars.volumemodifier.volumeMounts
+    volumeMounts: []
+    # And add mount paths for those additional volumes:
+    # - name: custom-dir
+    #   mountPath: /mount/path
     securityContext:
       seccompProfile:
         type: RuntimeDefault
