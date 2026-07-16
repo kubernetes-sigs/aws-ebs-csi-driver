@@ -400,27 +400,32 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 				To(HaveLen(1))
 		}
 		if len(t.storageClass.AllowedTopologies) > 0 {
-			// Since we're chaging our topology key, assume we have the values below to compare:
-			// NodeSelectorTerms: [{[{topology.ebs.csi.aws.com/zone In [us-west-2a]} {topology.kubernetes.io/zone In [us-west-2a]}] []}]
-			// AllowedTopologies: [{[{topology.ebs.csi.aws.com/zone [us-west-2a us-west-2b us-west-2c]}]}]
-			// As you can see tests might fail depending on the ordering of the NodeSelectorTerms. That's why we're doing this "hack".
-			// This is a quick fix to unblock the PRs we have. We really need to improve this. TODO
+			// The provisioner records the volume's zone in the PV's node
+			// affinity. The key it uses (e.g. topology.kubernetes.io/zone) is
+			// the same key the StorageClass's allowedTopologies specifies, so
+			// validate against that key rather than assuming a fixed one.
+			// A PV may carry several node-selector terms; find the one that
+			// constrains the topology key and confirm its value(s) fall within
+			// the StorageClass's allowed set.
+			topologyKey := t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key
+			allowedValues := t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values
 
 			keyFound := false
-			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions {
-				if v.Key == "topology"+util.GetDriverName()+"/zone" {
+			for _, term := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms {
+				for _, expr := range term.MatchExpressions {
+					if expr.Key != topologyKey {
+						continue
+					}
 					keyFound = true
-					Expect(v.Key).To(Equal(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key))
+					for _, v := range expr.Values {
+						Expect(allowedValues).To(ContainElement(v))
+					}
 				}
 			}
 
 			// additional sanity check so we can catch an unintended test case that'd hide failures
 			if !keyFound {
 				Fail("Volume is expected to have a node selector term.")
-			}
-
-			for _, v := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values {
-				Expect(t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values).To(ContainElement(v))
 			}
 		}
 	}

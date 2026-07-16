@@ -59,7 +59,7 @@ func validateEc2Snapshot(ctx context.Context, ec2Client *ec2.Client, input *ec2.
 	return describeResult
 }
 
-var _ = Describe("[ebs-csi-e2e] [single-az] [requires-aws-api] Dynamic Provisioning", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
