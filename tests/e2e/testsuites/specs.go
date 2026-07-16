@@ -45,6 +45,7 @@ type VolumeDetails struct {
 	CreateVolumeParameters     map[string]string // Optional, used when dynamically-provisioned volumes
 	VolumeID                   string            // Optional, used with pre-provisioned volumes
 	PreProvisionedVolumeFsType string            // Optional, used with pre-provisioned volumes
+	AvailabilityZone           string            // Optional, used with pre-provisioned volumes to set PV node affinity
 	DataSource                 *DataSource       // Optional, used with PVCs created from snapshots
 }
 
@@ -179,7 +180,7 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 		volumeMode = v1.PersistentVolumeBlock
 	}
 	By("setting up the PV")
-	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.PreProvisionedVolumeFsType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, volume.AccessMode, volumeMode)
+	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.PreProvisionedVolumeFsType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, volume.AccessMode, volumeMode, volume.AvailabilityZone)
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
 	tpv.Create()
 	By("setting up the PVC")

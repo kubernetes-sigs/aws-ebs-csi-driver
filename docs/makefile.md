@@ -59,7 +59,8 @@ Creates a cluster for running E2E tests against. There are many parameters that 
 - `AMI_FAMILY`: Which ami family to create a linux node group with for the cluster (`eksctl` clusters only) - defaults to `AmazonLinux2023`
 - `WINDOWS`: Whether or not to create a Windows node group for the cluster (`eksctl` clusters only) - defaults to `false`
 - `AWS_REGION`: Which region to create the cluster in - defaults to `us-west-2`
-- `AWS_AVAILABILITY_ZONES`: Which AZs to create nodes for the cluster in - defaults to `us-west-2a,us-west-2b,us-west-2c`
+- `AWS_AVAILABILITY_ZONES`: Which AZs to create nodes for the cluster in - defaults to the first `NUM_AZS` non-opt-in AZs in the region
+- `NUM_AZS`: How many AZs to auto-detect when `AWS_AVAILABILITY_ZONES` is unset - defaults to `2`
 - `OUTPOST_ARN`: If set, create an additional nodegroup on an [outpost](https://aws.amazon.com/outposts/) (`eksctl clusters only)
 - `OUTPOST_INSTANCE_TYPE`: The instance type to use for the outpost nodegroup (only used when `OUTPOST_ARN` is non-empty) - defaults to `INSTANCE_TYPE`
 
@@ -201,13 +202,9 @@ Alternatively, you may run on an externally created cluster by passing `CLUSTER_
 
 Run the Kubernetes upstream [external storage E2E tests](https://github.com/kubernetes/kubernetes/blob/master/test/e2e/README.md). This is the most comprehensive E2E test, recommended for local development.
 
-### `make e2e/single-az`
+### `make e2e/functional`
 
-Run the single-AZ EBS CSI E2E tests. Requires a cluster with only one Availability Zone.
-
-### `make e2e/multi-az`
-
-Run the multi-AZ EBS CSI E2E tests. Requires a cluster with at least two Availability Zones.
+Run the EBS CSI functional E2E tests (the `[functional]` labeled specs) against a single multi-AZ cluster. `AWS_AVAILABILITY_ZONES` is derived automatically from the cluster's worker nodes. The multi-attach specs pin their volume to an AZ with at least two schedulable worker nodes and place two pods on different nodes sharing it, so the cluster must have at least two nodes in one AZ (the default `make cluster/create` satisfies this).
 
 ### `make e2e/external-windows`
 

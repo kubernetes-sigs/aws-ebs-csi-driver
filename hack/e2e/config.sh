@@ -28,8 +28,9 @@ KUBECONFIG=${KUBECONFIG:-"${TEST_DIR}/${CLUSTER_NAME}.${CLUSTER_TYPE}.kubeconfig
 # Use AWS_REGION as priority, fallback to region from awscli config, fallback to us-west-2
 REGION_FROM_CONFIG="$(${BIN}/aws configure get region || echo '')"
 export AWS_REGION=${AWS_REGION:-${REGION_FROM_CONFIG:-us-west-2}}
-# If zones are not provided, auto-detect the first 3 AZs that are not opt in
-ZONES=${AWS_AVAILABILITY_ZONES:-$(${BIN}/aws ec2 describe-availability-zones --region "${AWS_REGION}" | jq -r '[.AvailabilityZones[] | select(.OptInStatus == "opt-in-not-required") | .ZoneName][:3] | join(",")')}
+# If zones are not provided, auto-detect the first NUM_AZS AZs that are not opt in.
+NUM_AZS=${NUM_AZS:-2}
+ZONES=${AWS_AVAILABILITY_ZONES:-$(${BIN}/aws ec2 describe-availability-zones --region "${AWS_REGION}" | jq -r "[.AvailabilityZones[] | select(.OptInStatus == \"opt-in-not-required\") | .ZoneName][:${NUM_AZS}] | join(\",\")")}
 FIRST_ZONE=$(echo "${ZONES}" | cut -d, -f1)
 NODE_COUNT=${NODE_COUNT:-3}
 INSTANCE_TYPE=${INSTANCE_TYPE:-c5.large}

@@ -36,7 +36,7 @@ import (
 	admissionapi "k8s.io/pod-security-admission/api"
 )
 
-var _ = Describe("[ebs-csi-e2e] [single-az] NVMe Metrics", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] NVMe Metrics", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
