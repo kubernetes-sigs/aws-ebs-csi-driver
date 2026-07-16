@@ -32,7 +32,7 @@ import (
 // Validates that the driver has ec2:DescribeInstanceTypes permission and that
 // the API returns valid EBS card information for the cluster's instance types.
 // This permission is required at runtime to resolve multi-card instance types.
-var _ = Describe("[ebs-csi-e2e] [single-az] Multi-Card", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Multi-Card", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
