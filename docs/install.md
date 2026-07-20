@@ -22,6 +22,8 @@ If the driver is able to access IMDS, it will utilize that as a preferred source
 
 In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit).
 
+**Note: If you are using a CNI plugin that adds extra routing layers, such as eBPF overlays, a hop limit of 2 may lead to dropped packets. A hop limit of 3 or higher is often required for the IMDS return packets to reach the pods.
+
 #### Kubernetes Metadata
 
 By default, if the driver is unable to reach IMDS, it will fall back to using the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
