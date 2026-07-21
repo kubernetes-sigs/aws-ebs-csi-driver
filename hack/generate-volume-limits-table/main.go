@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -92,6 +93,12 @@ func getAvailableRegions(ctx context.Context) ([]string, error) {
 	regions := make([]string, 0, len(result.Regions))
 	for _, region := range result.Regions {
 		regions = append(regions, *region.RegionName)
+	}
+
+	// As of the time of writing this code, AWS has 34 publicly available regions.
+	// This number should only ever go down if a region is closed. Do not decrease it otherwise.
+	if len(regions) < 34 {
+		return nil, fmt.Errorf("expected at least 34 regions but got %d (account is probably missing opt-in regions)", len(regions))
 	}
 
 	return regions, nil

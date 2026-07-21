@@ -89,7 +89,7 @@ update: update/gofix update/gofmt update/golangci-fix update/kustomize update/mo
 	@echo "All updates succeeded!"
 
 .PHONY: verify
-verify: verify/govet verify/golangci-lint verify/update
+verify: verify/govet verify/golangci-lint verify/update verify/volume-limits
 	@echo "All verifications passed!"
 
 .PHONY: cluster/create
@@ -369,3 +369,7 @@ verify/govet:
 .PHONY: verify/update
 verify/update: bin/helm bin/mockgen
 	./hack/verify-update.sh
+
+.PHONY: verify/volume-limits
+verify/volume-limits:
+	go run ./hack/detect-potentially-invalid-limits
