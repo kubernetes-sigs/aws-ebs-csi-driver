@@ -1,5 +1,22 @@
 # Helm chart
 
+## 2.63.0
+
+### Features
+
+ - Adds support for `.Values.sidecars.volumemodifier.volumeMounts` to enable user-specified volume mounts for the volumemodifier container. ([#2945](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2945), [@Kellen275](https://github.com/Kellen275))
+
+### Dependencies
+
+ - Bumped EBS CSI Driver to `v1.63.0`
+ - Bumped `csi-provisioner` to `v6.3.0-eksbuild.2`
+ - Bumped `csi-attacher` to `v4.12.0-eksbuild.3`
+ - Bumped `csi-snapshotter` to `v8.6.0-eksbuild.3`
+ - Bumped `csi-resizer` to `v2.2.1-eksbuild.1`
+ - Bumped `csi-node-driver-registrar` to `v2.17.0-eksbuild.3`
+ - Bumped `livenessprobe` to `v2.19.0-eksbuild.3`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.5-eksbuild.3`
+
 ## 2.61.1
 
  - Bumped EBS CSI Driver to `v1.61.1`
