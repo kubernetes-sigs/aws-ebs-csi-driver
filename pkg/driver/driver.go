@@ -89,7 +89,7 @@ func initVariables() {
 }
 
 func NewDriver(c cloud.Cloud, o *Options, m mounter.Mounter, md metadata.MetadataService, k kubernetes.Interface) (*Driver, error) {
-	klog.InfoS("Driver Information", "Driver", util.GetDriverName(), "Version", driverVersion)
+	klog.InfoS("Driver Information TEST", "Driver", util.GetDriverName(), "Version", driverVersion)
 	initVariables()
 
 	if err := ValidateDriverOptions(o); err != nil {
