@@ -21,7 +21,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-provisioner
-      tag: "v6.3.0-eksbuild.2"
+      tag: "v6.3.0-eksbuild.3"
     logLevel: 2
     # Additional parameters provided by csi-provisioner.
     additionalArgs: []
@@ -48,7 +48,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-attacher
-      tag: "v4.12.0-eksbuild.3"
+      tag: "v4.12.0-eksbuild.4"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -77,7 +77,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-snapshotter
-      tag: "v8.6.0-eksbuild.3"
+      tag: "v8.6.0-eksbuild.4"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -105,7 +105,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/livenessprobe
-      tag: "v2.19.0-eksbuild.3"
+      tag: "v2.19.0-eksbuild.4"
     # Additional parameters provided by livenessprobe.
     additionalArgs: []
     resources: {}
@@ -117,7 +117,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-resizer
-      tag: "v2.2.1-eksbuild.1"
+      tag: "v2.2.1-eksbuild.2"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:
@@ -144,7 +144,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-node-driver-registrar
-      tag: "v2.17.0-eksbuild.3"
+      tag: "v2.17.0-eksbuild.4"
     logLevel: 2
     # The port the health probe is bound to.
     healthPort: 9809
@@ -166,7 +166,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
-      tag: "v0.9.5-eksbuild.3"
+      tag: "v0.9.5-eksbuild.4"
     leaderElection:
       enabled: true
       # Optional values to tune lease behavior.
