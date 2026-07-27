@@ -47,7 +47,7 @@ func main() {
 				// Log with red background and bold text to stand out in terminal
 				log.Printf("%s!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s", formatWarning, formatReset)
 				log.Printf("%s!!! WARNING - the following instance types have potentially invalid limits/types !!!%s", formatWarning, formatReset)
-				log.Printf("%s!!!          Check if they need to be hardcoded in pkg/volume_limits.go          !!!%s", formatWarning, formatReset)
+				log.Printf("%s!!!    Check if they need to be hardcoded in pkg/cloud/limits/volume_limits.go   !!!%s", formatWarning, formatReset)
 				log.Printf("%s!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%s", formatWarning, formatReset)
 				loggedWarning = true
 			}
