@@ -58,7 +58,7 @@ managedNodeGroups:
     amiFamily: WindowsServer2025CoreContainer
     desiredCapacity: 3
     disablePodIMDS: true
-    instanceTypes: [m5.2xlarge]
+    instanceTypes: [m7a.2xlarge]
     ssh:
       allow: false
       enableSsm: true
@@ -87,7 +87,7 @@ nodeGroups:
     ami: {{ .Env.WINDOWS_AMI }}
     desiredCapacity: 3
     disablePodIMDS: true
-    instanceType: m5.2xlarge
+    instanceType: m7a.2xlarge
     ssh:
       allow: false
       enableSsm: true
