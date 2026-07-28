@@ -1,3 +1,67 @@
+# v1.63.1
+
+This is a security patch release. It updates every CSI sidecar container to a
+version built with patched dependencies, resolving the following advisories:
+
+- [GHSA-hrxh-6v49-42gf](https://github.com/advisories/GHSA-hrxh-6v49-42gf) (High) in `google.golang.org/grpc`
+- [GHSA-gcjh-h69q-9w9g](https://github.com/advisories/GHSA-gcjh-h69q-9w9g) (Medium) in `github.com/google/cel-go`
+
+The driver image itself was not affected by either advisory. This release also
+refreshes the AL2023 base image and upgrades the driver's Go dependencies.
+([#2976](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2976), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+<details>
+<summary>Added</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details>
+<summary>Changed</summary>
+
+- github.com/aws/aws-sdk-go-v2: [v1.42.1 → v1.43.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.42.1...v1.43.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.30 → v1.32.31](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.30...v1.32.31)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.29 → v1.19.30](https://github.com/aws/aws-sdk-go-v2/compare/v1.19.29...v1.19.30)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.30 → v1.18.31](https://github.com/aws/aws-sdk-go-v2/compare/v1.18.30...v1.18.31)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.30 → v1.4.31](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.30...v1.4.31)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.30 → v2.7.31](https://github.com/aws/aws-sdk-go-v2/compare/v2.7.30...v2.7.31)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.31 → v1.4.32](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.31...v1.4.32)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.316.1 → v1.317.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.316.1...v1.317.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.30 → v1.13.31](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.30...v1.13.31)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.259.0 → v1.262.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.259.0...v1.262.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.4.1 → v1.5.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.1...v1.5.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.32.1 → v1.33.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.1...v1.33.0)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.37.1 → v1.38.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.37.1...v1.38.0)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.44.1 → v1.45.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.44.1...v1.45.0)
+- github.com/aws/smithy-go: [v1.27.4 → v1.27.5](https://github.com/aws/smithy-go/compare/v1.27.4...v1.27.5)
+- github.com/klauspost/compress: [v1.19.0 → v1.19.1](https://github.com/klauspost/compress/compare/v1.19.0...v1.19.1)
+- github.com/prometheus/client_golang: [v1.24.0 → v1.24.1](https://github.com/prometheus/client_golang/compare/v1.24.0...v1.24.1)
+- github.com/prometheus/common: [v0.70.0 → v0.70.1](https://github.com/prometheus/common/compare/v0.70.0...v0.70.1)
+- go.opentelemetry.io/proto/otlp: v1.10.0 → v1.11.0
+- go.yaml.in/yaml/v3: v3.0.4 → v3.0.5
+- google.golang.org/genproto/googleapis/api: 0afa2a6 → 6c54ddd
+- google.golang.org/genproto/googleapis/rpc: 0afa2a6 → 6c54ddd
+- k8s.io/api: v0.36.2 → v0.36.3
+- k8s.io/apimachinery: v0.36.2 → v0.36.3
+- k8s.io/client-go: v0.36.2 → v0.36.3
+- k8s.io/component-base: v0.36.2 → v0.36.3
+- k8s.io/mount-utils: v0.36.2 → v0.36.3
+- k8s.io/streaming: v0.36.2 → v0.36.3
+
+</details>
+
+<details>
+<summary>Removed</summary>
+
+_Nothing has changed._
+
+</details>
+
+# v1.63.0
+
 ## Changes by Kind
 
 ### Urgent Upgrade Notes
