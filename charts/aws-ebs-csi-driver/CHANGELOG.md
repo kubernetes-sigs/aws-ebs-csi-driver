@@ -1,5 +1,16 @@
 # Helm chart
 
+## 2.63.1
+### Dependencies
+ - Bumped EBS CSI Driver to `v1.63.1`
+ - Bumped `csi-attacher` to `v4.12.0-eksbuild.4`
+ - Bumped `csi-node-driver-registrar` to `v2.17.0-eksbuild.4`
+ - Bumped `csi-provisioner` to `v6.3.0-eksbuild.3`
+ - Bumped `csi-resizer` to `v2.2.1-eksbuild.2`
+ - Bumped `csi-snapshotter` to `v8.6.0-eksbuild.4`
+ - Bumped `livenessprobe` to `v2.19.0-eksbuild.4`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.5-eksbuild.4`
+
 ## 2.63.0
 
 ### Features
