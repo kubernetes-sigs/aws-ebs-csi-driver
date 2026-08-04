@@ -31,7 +31,7 @@ var (
 	testedFsTypes = []string{ebscsidriver.FSTypeExt4, ebscsidriver.FSTypeExt3, ebscsidriver.FSTypeXfs}
 )
 
-var _ = Describe("[ebs-csi-e2e] [single-az] [format-options] Formatting a volume", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] [format-options] Formatting a volume", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 

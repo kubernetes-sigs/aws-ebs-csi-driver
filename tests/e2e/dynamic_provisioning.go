@@ -15,6 +15,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -27,6 +28,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -36,7 +38,7 @@ import (
 	admissionapi "k8s.io/pod-security-admission/api"
 )
 
-var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -267,7 +269,12 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 
 	It("should succeed multi-attach with dynamically provisioned IO2 block device", func() {
+		zone := multiAttachZone(cs)
+		if zone == "" {
+			Fail("no availability zone has two or more schedulable worker nodes; multi-attach requires a cluster with at least two nodes in one AZ")
+		}
 		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		allowedTopologyValues := []string{zone}
 		pods := []testsuites.PodDetails{
 			{
 				Volumes: []testsuites.VolumeDetails{
@@ -282,8 +289,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
 						},
-						AccessMode:        v1.ReadWriteMany,
-						VolumeBindingMode: &volumeBindingMode,
+						AccessMode:            v1.ReadWriteMany,
+						VolumeBindingMode:     &volumeBindingMode,
+						AllowedTopologyValues: allowedTopologyValues,
 					},
 				},
 			},
@@ -318,7 +326,12 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 
 	It("should fail to multi-attach dynamically provisioned IO2 block device - not enabled", func() {
+		zone := multiAttachZone(cs)
+		if zone == "" {
+			Fail("no availability zone has two or more schedulable worker nodes; multi-attach requires a cluster with at least two nodes in one AZ")
+		}
 		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		allowedTopologyValues := []string{zone}
 		pods := []testsuites.PodDetails{
 			{
 				Volumes: []testsuites.VolumeDetails{
@@ -333,8 +346,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
 						},
-						AccessMode:        v1.ReadWriteOnce,
-						VolumeBindingMode: &volumeBindingMode,
+						AccessMode:            v1.ReadWriteOnce,
+						VolumeBindingMode:     &volumeBindingMode,
+						AllowedTopologyValues: allowedTopologyValues,
 					},
 				},
 			},
@@ -351,8 +365,9 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
 						},
-						AccessMode:        v1.ReadWriteOnce,
-						VolumeBindingMode: &volumeBindingMode,
+						AccessMode:            v1.ReadWriteOnce,
+						VolumeBindingMode:     &volumeBindingMode,
+						AllowedTopologyValues: allowedTopologyValues,
 					},
 				},
 			},
@@ -686,7 +701,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	})
 })
 
-var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Snapshot", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -751,7 +766,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Snapshot", func() {
 	})
 })
 
-var _ = Describe("[ebs-csi-e2e] [multi-az] Dynamic Provisioning", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Topology Aware Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -829,6 +844,36 @@ var _ = Describe("[ebs-csi-e2e] [multi-az] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 })
+
+// multiAttachZone returns an availability zone with at least two schedulable
+// worker nodes, or "" if none exists.
+func multiAttachZone(cs clientset.Interface) string {
+	nodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		Fail(fmt.Sprintf("could not list nodes to find a multi-node AZ: %v", err))
+	}
+	nodesPerZone := map[string]int{}
+	for i := range nodes.Items {
+		node := &nodes.Items[i]
+		if _, isControlPlane := node.Labels["node-role.kubernetes.io/control-plane"]; isControlPlane {
+			continue
+		}
+		if node.Spec.Unschedulable {
+			continue
+		}
+		zone := node.Labels[ebscsidriver.WellKnownZoneTopologyKey]
+		if zone == "" {
+			continue
+		}
+		nodesPerZone[zone]++
+	}
+	for zone, count := range nodesPerZone {
+		if count >= 2 {
+			return zone
+		}
+	}
+	return ""
+}
 
 func restClient(group string, version string) (restclientset.Interface, error) {
 	// setup rest client
