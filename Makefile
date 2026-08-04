@@ -148,15 +148,6 @@ e2e/functional: bin/helm bin/ginkgo
 	HELM_EXTRA_FLAGS="--set=controller.volumeModificationFeature.enabled=true,sidecars.provisioner.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',sidecars.resizer.additionalArgs[0]='--feature-gates=VolumeAttributesClass=true',node.enableMetrics=true" \
 	./hack/e2e/run.sh
 
-# Temporary aliases kept until test-infra migrates to e2e/functional, then
-# removed. single-az runs the merged suite; multi-az is a no-op (now included).
-.PHONY: e2e/single-az
-e2e/single-az: e2e/functional
-
-.PHONY: e2e/multi-az
-e2e/multi-az:
-	@echo "e2e/multi-az is a no-op: its tests are now part of e2e/functional."
-
 .PHONY: e2e/disruptive
 e2e/disruptive: bin/helm bin/ginkgo
 	TEST_PATH=./tests/e2e/... \

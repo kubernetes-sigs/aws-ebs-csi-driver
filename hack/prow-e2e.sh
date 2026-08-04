@@ -22,14 +22,8 @@
 make bin/aws
 
 case ${1} in
-test-e2e-functional | test-e2e-single-az)
-  # test-e2e-single-az is a temporary alias that runs the merged [functional]
-  # suite until the test-infra jobs migrate to test-e2e-functional.
+test-e2e-functional)
   TEST="functional"
-  ;;
-test-e2e-multi-az)
-  echo "test-e2e-multi-az is a no-op: its tests are now part of test-e2e-functional."
-  exit 0
   ;;
 test-e2e-disruptive)
   TEST="disruptive"
