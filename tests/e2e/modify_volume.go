@@ -124,7 +124,7 @@ var (
 	}
 )
 
-var _ = Describe("[ebs-csi-e2e] [single-az] [modify-volume] Modifying a PVC", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] [modify-volume] Modifying a PVC", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 

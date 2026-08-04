@@ -49,20 +49,21 @@ var (
 )
 
 // Requires env AWS_AVAILABILITY_ZONES a comma separated list of AZs to be set.
-var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
-		cs           clientset.Interface
-		ns           *v1.Namespace
-		ebsDriver    driver.PreProvisionedVolumeTestDriver
-		pvTestDriver driver.PVTestDriver
-		snapshotrcs  k8srestclient.Interface
-		cloud        awscloud.Cloud
-		volumeID     string
-		snapshotID   string
-		diskSize     string
+		cs               clientset.Interface
+		ns               *v1.Namespace
+		ebsDriver        driver.PreProvisionedVolumeTestDriver
+		pvTestDriver     driver.PVTestDriver
+		snapshotrcs      k8srestclient.Interface
+		cloud            awscloud.Cloud
+		volumeID         string
+		snapshotID       string
+		diskSize         string
+		availabilityZone string
 		// Set to true if the volume should be deleted automatically after test
 		skipManuallyDeletingVolume bool
 	)
@@ -77,7 +78,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Skip(fmt.Sprintf("env %q not set", awsAvailabilityZonesEnv))
 		}
 		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
-		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
+		availabilityZone = availabilityZones[rand.Intn(len(availabilityZones))]
 		region := availabilityZone[0 : len(availabilityZone)-1]
 
 		cloud = awscloud.NewCloud(region, false, "", true, false)
@@ -127,6 +128,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 						VolumeID:                   volumeID,
 						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
 						ClaimSize:                  diskSize,
+						AvailabilityZone:           availabilityZone,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -171,6 +173,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 						VolumeID:                   volumeID,
 						PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
 						ClaimSize:                  diskSize,
+						AvailabilityZone:           availabilityZone,
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -195,6 +198,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
 				ClaimSize:                  diskSize,
 				ReclaimPolicy:              &reclaimPolicy,
+				AvailabilityZone:           availabilityZone,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -213,6 +217,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 				PreProvisionedVolumeFsType: ebscsidriver.FSTypeExt4,
 				ClaimSize:                  diskSize,
 				ReclaimPolicy:              &reclaimPolicy,
+				AvailabilityZone:           availabilityZone,
 			},
 		}
 		test := testsuites.PreProvisionedReclaimPolicyTest{
@@ -223,7 +228,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned", func() {
 	})
 })
 
-var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", func() {
+var _ = Describe("[ebs-csi-e2e] [functional] Pre-Provisioned with Multi-Attach", func() {
 	f := framework.NewDefaultFramework("ebs")
 	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
@@ -233,6 +238,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 		ebsDriver                  driver.PreProvisionedVolumeTestDriver
 		cloud                      awscloud.Cloud
 		volumeID                   string
+		availabilityZone           string
 		skipManuallyDeletingVolume bool
 	)
 
@@ -241,11 +247,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 		ns = f.Namespace
 		ebsDriver = driver.InitEbsCSIDriver()
 
-		if os.Getenv(awsAvailabilityZonesEnv) == "" {
-			Skip(fmt.Sprintf("env %q not set", awsAvailabilityZonesEnv))
+		availabilityZone = multiAttachZone(cs)
+		if availabilityZone == "" {
+			Fail("no availability zone has two or more schedulable worker nodes; multi-attach requires a cluster with at least two nodes in one AZ")
 		}
-		availabilityZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
-		availabilityZone := availabilityZones[rand.Intn(len(availabilityZones))]
 		region := availabilityZone[0 : len(availabilityZone)-1]
 
 		cloud = awscloud.NewCloud(region, false, "", true, false)
@@ -268,7 +273,7 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 	})
 
 	AfterEach(func() {
-		if !skipManuallyDeletingVolume {
+		if cloud != nil && !skipManuallyDeletingVolume {
 			deleteDiskWithRetry(cloud, volumeID)
 		}
 	})
@@ -285,9 +290,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
 						},
-						AccessMode:    v1.ReadWriteMany,
-						VolumeID:      volumeID,
-						ReclaimPolicy: &reclaimPolicy,
+						AccessMode:       v1.ReadWriteMany,
+						VolumeID:         volumeID,
+						ReclaimPolicy:    &reclaimPolicy,
+						AvailabilityZone: availabilityZone,
 					},
 				},
 			},
@@ -300,9 +306,10 @@ var _ = Describe("[ebs-csi-e2e] [single-az] Pre-Provisioned with Multi-Attach", 
 							NameGenerate: "test-block-volume-",
 							DevicePath:   "/dev/xvda",
 						},
-						AccessMode:    v1.ReadWriteMany,
-						VolumeID:      volumeID,
-						ReclaimPolicy: &reclaimPolicy,
+						AccessMode:       v1.ReadWriteMany,
+						VolumeID:         volumeID,
+						ReclaimPolicy:    &reclaimPolicy,
+						AvailabilityZone: availabilityZone,
 					},
 				},
 			},

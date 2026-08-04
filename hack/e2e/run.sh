@@ -41,20 +41,20 @@ else
   exit 1
 fi
 
-# Fail single-az tests early if we know cluster is multi-az.
-IGNORE_SINGLE_AZ_ERR=${IGNORE_SINGLE_AZ_ERR:="false"}
-if [[ $IGNORE_SINGLE_AZ_ERR != "true" && "$GINKGO_FOCUS" =~ "single-az" ]]; then
-  # Get unique AZs of non-control-plane nodes
-  azs=$(kubectl get nodes \
+# [env]-gated tests (pre-provisioned, topology-aware) read AWS_AVAILABILITY_ZONES
+# to target real AZs. When unset, derive it from the live worker nodes.
+if [[ -z "${AWS_AVAILABILITY_ZONES:-}" ]]; then
+  AWS_AVAILABILITY_ZONES=$(kubectl get nodes \
     --kubeconfig "${KUBECONFIG}" \
     --selector '!node-role.kubernetes.io/control-plane' \
-    -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr " " "\n" | sort -u)
-
-  # Check if there's exactly one AZ and it matches $AWS_AVAILABILITY_ZONES
-  if [[ $(echo "$azs" | wc -w) -gt 1 ]] || [[ "$azs" != "$AWS_AVAILABILITY_ZONES" ]]; then
-    loudecho "ERROR. single-az tests require all worker nodes to be in a single availability zone (AZ) that matches env var \$AWS_AVAILABILITY_ZONES (Currently set as \"$AWS_AVAILABILITY_ZONES\"). Please delete nodes in other AZs. If you want to bypass this error, set env var IGNORE_SINGLE_AZ_ERR='true'"
+    --field-selector 'spec.unschedulable=false' \
+    -o jsonpath='{.items[*].metadata.labels.topology\.kubernetes\.io/zone}' | tr " " "\n" | sort -u | paste -sd, -)
+  if [[ -z "${AWS_AVAILABILITY_ZONES}" ]]; then
+    loudecho "ERROR. Could not derive AWS_AVAILABILITY_ZONES from cluster worker nodes. Set it explicitly or ensure worker nodes are labeled with topology.kubernetes.io/zone."
     exit 1
   fi
+  export AWS_AVAILABILITY_ZONES
+  loudecho "Derived AWS_AVAILABILITY_ZONES from cluster worker nodes: ${AWS_AVAILABILITY_ZONES}"
 fi
 
 if [[ "$WINDOWS" == true ]]; then
