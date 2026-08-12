@@ -1162,7 +1162,7 @@ func TestCreateDisk(t *testing.T) {
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
-				Encrypted:        true,
+				Encrypted:        aws.Bool(true),
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 			},
 			expDisk: &Disk{
@@ -1180,7 +1180,7 @@ func TestCreateDisk(t *testing.T) {
 				CapacityBytes:    util.GiBToBytes(1),
 				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				AvailabilityZone: expZone,
-				Encrypted:        true,
+				Encrypted:        aws.Bool(true),
 				KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 				SourceVolumeID:   "test-vol-id",
 			},
@@ -2016,6 +2016,235 @@ func TestCreateDisk(t *testing.T) {
 			}
 
 			mockCtrl.Finish()
+		})
+	}
+}
+
+// TestCreateDiskCloneEncrypted verifies Encrypted and KmsKeyId on the
+// CopyVolumesInput passed to the SDK are nil when the corresponding
+// DiskOptions fields are unset, and match them otherwise.
+func TestCreateDiskCloneEncrypted(t *testing.T) {
+	t.Parallel()
+
+	const sourceVolumeID = "vol-source-1234"
+	const kmsKeyID = "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef"
+
+	testCases := []struct {
+		name         string
+		diskOptions  *DiskOptions
+		expEncrypted *bool
+		expKmsKeyID  *string
+	}{
+		{
+			name: "encrypted unset: Encrypted and KmsKeyId omitted from CopyVolumes",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   sourceVolumeID,
+			},
+			expEncrypted: nil,
+			expKmsKeyID:  nil,
+		},
+		{
+			name: "encrypted=true: Encrypted=true on CopyVolumes",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   sourceVolumeID,
+				Encrypted:        aws.Bool(true),
+			},
+			expEncrypted: aws.Bool(true),
+			expKmsKeyID:  nil,
+		},
+		{
+			name: "encrypted=false: Encrypted=false on CopyVolumes",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   sourceVolumeID,
+				Encrypted:        aws.Bool(false),
+			},
+			expEncrypted: aws.Bool(false),
+			expKmsKeyID:  nil,
+		},
+		{
+			name: "encrypted=true with KmsKeyID: both set on CopyVolumes",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   sourceVolumeID,
+				Encrypted:        aws.Bool(true),
+				KmsKeyID:         kmsKeyID,
+			},
+			expEncrypted: aws.Bool(true),
+			expKmsKeyID:  aws.String(kmsKeyID),
+		},
+		{
+			name: "encrypted unset with KmsKeyID: KmsKeyId set, Encrypted omitted",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				SourceVolumeID:   sourceVolumeID,
+				KmsKeyID:         kmsKeyID,
+			},
+			expEncrypted: nil,
+			expKmsKeyID:  aws.String(kmsKeyID),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+			defer cancel()
+
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			var capturedInput *ec2.CopyVolumesInput
+			mockEC2.EXPECT().CopyVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.CopyVolumesInput{}), testutil.EC2Options()).DoAndReturn(
+				func(_ context.Context, input *ec2.CopyVolumesInput, _ ...func(*ec2.Options)) (*ec2.CopyVolumesOutput, error) {
+					capturedInput = input
+					return &ec2.CopyVolumesOutput{
+						Volumes: []types.Volume{
+							{
+								VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+								Size:             aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+								State:            types.VolumeState("available"),
+								AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+							},
+						},
+					}, nil
+				})
+			mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).Return(nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")).AnyTimes()
+			mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
+				Volumes: []types.Volume{
+					{
+						VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+						Size:             aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+						State:            types.VolumeState("available"),
+						AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+					},
+				},
+			}, nil).AnyTimes()
+
+			_, err := c.CreateDisk(ctx, "vol-test-name", tc.diskOptions)
+			require.NoError(t, err)
+			require.NotNil(t, capturedInput, "CopyVolumes was not called")
+
+			if tc.expEncrypted == nil {
+				assert.Nil(t, capturedInput.Encrypted, "Encrypted should be unset")
+			} else {
+				require.NotNil(t, capturedInput.Encrypted, "Encrypted should be set")
+				assert.Equal(t, *tc.expEncrypted, *capturedInput.Encrypted)
+			}
+			if tc.expKmsKeyID == nil {
+				assert.Nil(t, capturedInput.KmsKeyId, "KmsKeyId should be unset")
+			} else {
+				require.NotNil(t, capturedInput.KmsKeyId, "KmsKeyId should be set")
+				assert.Equal(t, *tc.expKmsKeyID, *capturedInput.KmsKeyId)
+			}
+		})
+	}
+}
+
+// TestCreateDiskCreateVolumeEncrypted verifies Encrypted on the
+// CreateVolumeInput passed to the SDK is nil when DiskOptions.Encrypted is
+// nil, and matches it otherwise.
+func TestCreateDiskCreateVolumeEncrypted(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		diskOptions  *DiskOptions
+		expEncrypted *bool
+	}{
+		{
+			name: "encrypted nil: Encrypted omitted from CreateVolume",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+			},
+			expEncrypted: nil,
+		},
+		{
+			name: "encrypted=true: Encrypted=true on CreateVolume",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				Encrypted:        aws.Bool(true),
+			},
+			expEncrypted: aws.Bool(true),
+		},
+		{
+			name: "encrypted=false: Encrypted=false on CreateVolume",
+			diskOptions: &DiskOptions{
+				CapacityBytes:    util.GiBToBytes(1),
+				Tags:             map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				AvailabilityZone: defaultZone,
+				Encrypted:        aws.Bool(false),
+			},
+			expEncrypted: aws.Bool(false),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(defaultCreateDiskDeadline))
+			defer cancel()
+
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			var capturedInput *ec2.CreateVolumeInput
+			mockEC2.EXPECT().CreateVolume(testutil.AnyContext(), testutil.EC2Input(&ec2.CreateVolumeInput{}), testutil.EC2Options()).DoAndReturn(
+				func(_ context.Context, input *ec2.CreateVolumeInput, _ ...func(*ec2.Options)) (*ec2.CreateVolumeOutput, error) {
+					if input.DryRun != nil && *input.DryRun {
+						return nil, errors.New("Volume iops of 2147483647 is too high; maximum is 16000.")
+					}
+					capturedInput = input
+					return &ec2.CreateVolumeOutput{
+						VolumeId: aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+						Size:     aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+					}, nil
+				}).MinTimes(1)
+			mockEC2.EXPECT().DescribeVolumes(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumesInput{})).Return(&ec2.DescribeVolumesOutput{
+				Volumes: []types.Volume{
+					{
+						VolumeId:         aws.String(tc.diskOptions.Tags[VolumeNameTagKey]),
+						Size:             aws.Int32(util.BytesToGiB(tc.diskOptions.CapacityBytes)),
+						State:            types.VolumeState("available"),
+						AvailabilityZone: aws.String(tc.diskOptions.AvailabilityZone),
+					},
+				},
+			}, nil).AnyTimes()
+
+			_, err := c.CreateDisk(ctx, "vol-test-name", tc.diskOptions)
+			require.NoError(t, err)
+			require.NotNil(t, capturedInput, "CreateVolume was not called")
+
+			if tc.expEncrypted == nil {
+				assert.Nil(t, capturedInput.Encrypted, "Encrypted should be unset")
+			} else {
+				require.NotNil(t, capturedInput.Encrypted, "Encrypted should be set")
+				assert.Equal(t, *tc.expEncrypted, *capturedInput.Encrypted)
+			}
 		})
 	}
 }

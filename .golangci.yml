@@ -24,10 +24,12 @@ linters:
     - depguard # We don't guard against dependencies
     - dupl # Tracks code duplication. Too much duplication in tests. False positives in non-tests
     - exhaustruct # Explicitly instantiating all structs is painful for K8s structs
+    - exhaustruct_v5 # Replacement for exhaustruct
     - funlen # Long func names happen
     - gocognit # Cognitive complexity
     - gocyclo # Cyclomatic complexity
     - gomoddirectives # We need `replace` in `go.mod`
+    - gomodguard # Deprecated in favor of gomodguard_v2
     - interfacebloat # No more than 10 interface methods
     - ireturn # Accept interfaces return concrete types
     - lll # Limit line length
@@ -99,6 +101,10 @@ linters:
       - linters:
           - goconst
         path: pkg/cloud/limits
+      # Test fixtures intentionally contain duplicate metadata values.
+      - linters:
+          - dupword
+        path: pkg/cloud/metadata/metadata_test.go
 formatters:
   enable:
     - gci

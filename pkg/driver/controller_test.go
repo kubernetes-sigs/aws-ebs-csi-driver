@@ -298,7 +298,7 @@ func TestCreateVolume(t *testing.T) {
 					CapacityBytes:    stdVolSize,
 					AvailabilityZone: expZone,
 					OutpostArn:       mockSourceDisk.OutpostArn,
-					Encrypted:        true,
+					Encrypted:        aws.Bool(true),
 					KmsKeyID:         req.GetParameters()[KmsKeyIDKey],
 					SourceVolumeID:   req.GetVolumeContentSource().GetVolume().GetVolumeId(),
 					Tags: map[string]string{
@@ -601,7 +601,7 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "clone fail: different KMS key than source",
+			name: "clone success: different KMS key than source",
 			testFunc: func(t *testing.T) {
 				t.Helper()
 				req := &csi.CreateVolumeRequest{
@@ -623,6 +623,14 @@ func TestCreateVolume(t *testing.T) {
 
 				ctx := t.Context()
 
+				mockDisk := &cloud.Disk{
+					VolumeID:         req.GetName(),
+					AvailabilityZone: expZone,
+					CapacityGiB:      util.BytesToGiB(stdVolSize),
+					SourceVolumeID:   testSourceVolID,
+					KmsKeyID:         "arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+				}
+
 				mockSourceDisk := &cloud.Disk{
 					VolumeID:         testSourceVolID,
 					AvailabilityZone: expZone,
@@ -634,15 +642,28 @@ func TestCreateVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := cloud.NewMockCloud(mockCtl)
+				expectedOpts := &cloud.DiskOptions{
+					CapacityBytes:    stdVolSize,
+					AvailabilityZone: expZone,
+					OutpostArn:       mockSourceDisk.OutpostArn,
+					Encrypted:        aws.Bool(true),
+					KmsKeyID:         req.GetParameters()[KmsKeyIDKey],
+					SourceVolumeID:   req.GetVolumeContentSource().GetVolume().GetVolumeId(),
+					Tags: map[string]string{
+						cloud.VolumeNameTagKey:   req.GetName(),
+						cloud.AwsEbsDriverTagKey: "true",
+					},
+				}
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(ctx), gomock.Eq("volume-id")).Return(mockSourceDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(ctx), gomock.Eq(req.GetName()), gomock.Eq(expectedOpts)).Return(mockDisk, nil)
 				awsDriver := ControllerService{
 					cloud:    mockCloud,
 					inFlight: internal.NewInFlight(),
 					options:  &Options{},
 				}
 				_, err := awsDriver.CreateVolume(ctx, req)
-				if status.Code(err) != codes.InvalidArgument {
-					t.Fatalf("failed expected InvalidArgument error but got %v", err)
+				if err != nil {
+					t.Fatalf("expected no error but got %v", err)
 				}
 			},
 		},
@@ -1800,7 +1821,8 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				expectedOpts := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
-					Encrypted:     true, Tags: map[string]string{
+					Encrypted:     aws.Bool(true),
+					Tags: map[string]string{
 						cloud.VolumeNameTagKey:   req.GetName(),
 						cloud.AwsEbsDriverTagKey: "true",
 					},
@@ -1850,7 +1872,7 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud := cloud.NewMockCloud(mockCtl)
 				expectedOpts := &cloud.DiskOptions{
 					CapacityBytes: stdVolSize,
-					Encrypted:     true,
+					Encrypted:     aws.Bool(true),
 					KmsKeyID:      req.GetParameters()[KmsKeyIDKey],
 					Tags: map[string]string{
 						cloud.VolumeNameTagKey:   req.GetName(),

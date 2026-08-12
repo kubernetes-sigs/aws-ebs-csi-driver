@@ -2665,9 +2665,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				t.Helper()
 
 				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 				}
 
 				// Create fake client without CSINode - this will cause Get to fail
@@ -2683,9 +2681,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				t.Helper()
 
 				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
@@ -2702,9 +2698,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				count := int32(1)
 				csiNode := &v1.CSINode{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
@@ -2740,9 +2734,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 				t.Helper()
 
 				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: corev1.NodeSpec{
 						Taints: []corev1.Taint{
 							{
@@ -2759,9 +2751,7 @@ func TestRemoveNotReadyTaint(t *testing.T) {
 
 				count := int32(1)
 				csiNode := &v1.CSINode{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.CSINodeSpec{
 						Drivers: []v1.CSINodeDriver{
 							{
@@ -2863,7 +2853,7 @@ func TestStartNotReadyTaintWatcher(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+			node := &corev1.Node{Name: nodeName}
 			if tc.seedWithTaint {
 				node.Spec.Taints = []corev1.Taint{{
 					Key:    AgentNotReadyNodeTaintKey,
@@ -2874,9 +2864,7 @@ func TestStartNotReadyTaintWatcher(t *testing.T) {
 
 			count := int32(1)
 			csiNode := &v1.CSINode{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
-				},
+				Name: nodeName,
 				Spec: v1.CSINodeSpec{
 					Drivers: []v1.CSINodeDriver{
 						{

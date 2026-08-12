@@ -27,7 +27,7 @@ EKSCTL_VERSION="v0.230.0"
 # https://github.com/onsi/ginkgo
 GINKGO_VERSION="v2.32.1"
 # https://github.com/golangci/golangci-lint
-GOLANGCI_LINT_VERSION="v2.12.2"
+GOLANGCI_LINT_VERSION="v2.13.2"
 # https://github.com/hairyhenderson/gomplate
 GOMPLATE_VERSION="v5.2.0"
 # https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck
