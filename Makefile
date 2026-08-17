@@ -227,6 +227,32 @@ update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/
 update-image-dependencies: update-sidecar-dependencies
 	./hack/release-scripts/update-e2e-images
 
+# Prepare a release: upgrade Go dependencies, refresh sidecar digests/tags,
+# regenerate all generated files, and run unit tests. Leaves a diff ready
+# to be committed.
+.PHONY: pre-release
+pre-release:
+	go get -u ./...
+	go -C ./tests/e2e get -u ./...
+	$(MAKE) update-sidecar-dependencies
+	$(MAKE) update
+	$(MAKE) test
+	@echo "Pre-release updates succeeded! Review the diff and commit it as the release PR."
+
+# Generate the post-release PR file changes and draft changelog
+# entries for the driver and the helm chart.
+# Usage: make post-release NEW_VERSION=v1.64.0
+.PHONY: post-release
+post-release: bin/release-notes hack/release-scripts/generate-release-pr hack/release-scripts/generate-changelog
+ifndef NEW_VERSION
+	$(error NEW_VERSION is required, e.g. make post-release NEW_VERSION=v1.64.0)
+endif
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN is required to generate the changelog (a GitHub token with repo read access))
+endif
+	./hack/release-scripts/generate-release-pr $(VERSION) $(NEW_VERSION)
+	./hack/release-scripts/generate-changelog $(VERSION) $(NEW_VERSION)
+
 .PHONY: security
 security: bin/govulncheck
 	./hack/tools/check-security.sh

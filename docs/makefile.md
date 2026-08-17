@@ -220,6 +220,22 @@ Test the EBS CSI Driver Helm chart via the [Helm `chart-testing` tool](https://g
 
 ## Release Scripts
 
+### `make pre-release`
+
+Performs the in-repo preparation for a driver release: upgrades Go dependencies (root and `tests/e2e` modules), refreshes the sidecar image digests and tags, regenerates all generated files (`make update`), and runs the unit tests. Leaves a diff ready to be committed as the pre-release PR.
+
+### `make post-release`
+
+Generates the post-release PR file changes after a release tag has been pushed: version references and draft changelog entries for both `CHANGELOG.md` (via the [Kubernetes `release-notes` tool](https://github.com/kubernetes/release/tree/master/cmd/release-notes)) and `charts/aws-ebs-csi-driver/CHANGELOG.md` (driver and sidecar versions). Requires `GITHUB_TOKEN` set to a GitHub token with repo read access.
+
+The changelog entries are drafts: review and edit them (release summary, urgent upgrade notes, chart features) before submitting the PR.
+
+#### Example: Generate the post-release PR changes for `v1.64.0`
+
+```bash
+GITHUB_TOKEN="ghp_..." make post-release NEW_VERSION=v1.64.0
+```
+
 ### 'make update-image-dependencies'
 
 Convenience target to perform all image updates (including sidecars, kubekins-e2e-v2, and gcb-docker-gcloud). This is the primary target to use unless more granular control is needed.

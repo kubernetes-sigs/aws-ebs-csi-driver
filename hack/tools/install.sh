@@ -43,6 +43,8 @@ KOPS_COMMIT=""
 KUBETEST2_VERSION="v0.0.0-20260615110723-bebdb6468331"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
+# https://github.com/kubernetes/release
+RELEASE_NOTES_VERSION="v0.21.1"
 # https://github.com/mvdan/sh
 SHFMT_VERSION="v3.13.1"
 # https://pypi.org/project/yamale/
@@ -189,6 +191,12 @@ function install_mockgen() {
   INSTALL_PATH="${1}"
 
   install_go "${INSTALL_PATH}" "github.com/golang/mock/mockgen@${MOCKGEN_VERSION}"
+}
+
+function install_release-notes() {
+  INSTALL_PATH="${1}"
+
+  install_go "${INSTALL_PATH}" "k8s.io/release/cmd/release-notes@${RELEASE_NOTES_VERSION}"
 }
 
 function install_shfmt() {
