@@ -18,7 +18,7 @@
 
 ## Variables/Functions
 
-VERSION?=v1.63.1
+VERSION?=v1.64.0
 
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
@@ -237,6 +237,7 @@ pre-release:
 	$(MAKE) update-sidecar-dependencies
 	$(MAKE) update
 	$(MAKE) test
+	$(MAKE) verify
 	@echo "Pre-release updates succeeded! Review the diff and commit it as the release PR."
 
 # Generate the post-release PR file changes and draft changelog
