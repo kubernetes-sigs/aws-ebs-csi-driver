@@ -110,6 +110,27 @@ func renderChartWithSet(t *testing.T, sets ...string) []obj {
 	return parseYAMLDocs(t, stdout.Bytes())
 }
 
+// renderChartWithSetExpectError runs helm template with inline --set flags and
+// asserts the render fails, returning the combined stderr for inspection. Use
+// this for testing fail()-guarded misconfigurations rather than renderChartWithSet,
+// which calls t.Fatal on any non-zero exit.
+func renderChartWithSetExpectError(t *testing.T, sets ...string) error {
+	t.Helper()
+	args := []string{"template", releaseName, chartPath()}
+	for _, s := range sets {
+		args = append(args, "--set", s)
+	}
+	cmd := exec.Command(helmBin(), args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		t.Fatalf("expected helm template to fail, but it succeeded\nstdout: %s", stdout.String())
+	}
+	return fmt.Errorf("%w: %s", err, stderr.String())
+}
+
 // parseYAMLDocs splits multi-doc YAML and converts each to a JSON-like map via sigs.k8s.io/yaml.
 func parseYAMLDocs(t *testing.T, data []byte) []obj {
 	t.Helper()
