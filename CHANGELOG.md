@@ -1,3 +1,97 @@
+# v1.64.0
+
+
+
+## Dependencies
+
+### Added
+- cloud.google.com/go/auth: v0.18.2
+- github.com/apapsch/go-jsonmerge/v2: [v2.0.0](https://github.com/apapsch/go-jsonmerge/tree/v2.0.0)
+- github.com/go-openapi/analysis: [v0.25.5](https://github.com/go-openapi/analysis/tree/v0.25.5)
+- github.com/go-openapi/errors: [v0.22.8](https://github.com/go-openapi/errors/tree/v0.22.8)
+- github.com/go-openapi/loads: [v0.25.0](https://github.com/go-openapi/loads/tree/v0.25.0)
+- github.com/go-openapi/runtime: [v0.33.0](https://github.com/go-openapi/runtime/tree/v0.33.0)
+- github.com/go-openapi/runtime/server-middleware: [v0.30.0](https://github.com/go-openapi/runtime/tree/v0.30.0)
+- github.com/go-openapi/spec: [v0.22.9](https://github.com/go-openapi/spec/tree/v0.22.9)
+- github.com/go-openapi/strfmt: [v0.27.0](https://github.com/go-openapi/strfmt/tree/v0.27.0)
+- github.com/go-openapi/validate: [v0.26.1](https://github.com/go-openapi/validate/tree/v0.26.1)
+- github.com/go-viper/mapstructure/v2: [v2.5.0](https://github.com/go-viper/mapstructure/tree/v2.5.0)
+- github.com/google/s2a-go: [v0.1.9](https://github.com/google/s2a-go/tree/v0.1.9)
+- github.com/googleapis/enterprise-certificate-proxy: [v0.3.11](https://github.com/googleapis/enterprise-certificate-proxy/tree/v0.3.11)
+- github.com/googleapis/gax-go/v2: [v2.17.0](https://github.com/googleapis/gax-go/tree/v2.17.0)
+- github.com/oapi-codegen/runtime: [v1.6.0](https://github.com/oapi-codegen/runtime/tree/v1.6.0)
+- github.com/oklog/ulid/v2: [v2.1.1](https://github.com/oklog/ulid/tree/v2.1.1)
+- go.opentelemetry.io/otel/exporters/stdout/stdouttrace: v1.45.0
+- go.uber.org/mock: v0.6.0
+
+### Changed
+- cel.dev/expr: v0.25.1 → v0.25.2
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.32.0 → v1.33.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/v1.32.0...v1.33.0)
+- github.com/Masterminds/semver/v3: [v3.4.0 → v3.5.0](https://github.com/Masterminds/semver/compare/v3.4.0...v3.5.0)
+- github.com/aws/aws-sdk-go-v2: [v1.43.0 → v1.43.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.0...v1.43.6)
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.31 → v1.32.37](https://github.com/aws/aws-sdk-go-v2/compare/v1.32.31...v1.32.37)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.30 → v1.19.36](https://github.com/aws/aws-sdk-go-v2/compare/v1.19.30...v1.19.36)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.31 → v1.18.37](https://github.com/aws/aws-sdk-go-v2/compare/v1.18.31...v1.18.37)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.31 → v1.4.37](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.31...v1.4.37)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.31 → v2.7.37](https://github.com/aws/aws-sdk-go-v2/compare/v2.7.31...v2.7.37)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.32 → v1.4.38](https://github.com/aws/aws-sdk-go-v2/compare/v1.4.32...v1.4.38)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.317.0 → v1.321.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.317.0...v1.321.2)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.13 → v1.13.17](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.13...v1.13.17)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.31 → v1.13.37](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.31...v1.13.37)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.262.0 → v1.267.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.262.0...v1.267.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.5.0 → v1.5.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.0...v1.5.6)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.33.0 → v1.33.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.0...v1.33.6)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.38.0 → v1.38.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.0...v1.38.6)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.45.0 → v1.45.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.45.0...v1.45.6)
+- github.com/aws/smithy-go: [v1.27.5 → v1.27.8](https://github.com/aws/smithy-go/compare/v1.27.5...v1.27.8)
+- github.com/container-storage-interface/spec: [v1.12.0 → v1.13.0](https://github.com/container-storage-interface/spec/compare/v1.12.0...v1.13.0)
+- github.com/felixge/httpsnoop: [v1.0.4 → v1.1.0](https://github.com/felixge/httpsnoop/compare/v1.0.4...v1.1.0)
+- github.com/go-openapi/swag: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/cmdutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/conv: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/fileutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/jsonutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/loading: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/mangling: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/netutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/pools: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/stringutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/typeutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/go-openapi/swag/yamlutils: [v0.27.3 → v0.28.0](https://github.com/go-openapi/swag/compare/v0.27.3...v0.28.0)
+- github.com/google/pprof: [27863c8 → ef3492d](https://github.com/google/pprof/compare/27863c8...ef3492d)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.29.0 → v2.30.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.29.0...v2.30.0)
+- github.com/ianlancetaylor/demangle: [bd984b5 → f615e6b](https://github.com/ianlancetaylor/demangle/compare/bd984b5...f615e6b)
+- github.com/kubernetes-csi/csi-test/v5: [v5.4.0 → d41e43d](https://github.com/kubernetes-csi/csi-test/compare/v5.4.0...d41e43d)
+- github.com/onsi/ginkgo/v2: [v2.27.2 → v2.32.1](https://github.com/onsi/ginkgo/compare/v2.27.2...v2.32.1)
+- github.com/onsi/gomega: [v1.38.2 → v1.42.1](https://github.com/onsi/gomega/compare/v1.38.2...v1.42.1)
+- github.com/spiffe/go-spiffe/v2: [v2.6.0 → v2.7.0](https://github.com/spiffe/go-spiffe/compare/v2.6.0...v2.7.0)
+- github.com/stretchr/objx: [v0.5.2 → v0.5.3](https://github.com/stretchr/objx/compare/v0.5.2...v0.5.3)
+- github.com/stretchr/testify: [v1.11.1 → v1.12.0](https://github.com/stretchr/testify/compare/v1.11.1...v1.12.0)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.43.0 → v1.44.0
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.69.0 → v0.70.0
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.65.0 → v0.70.0
+- go.opentelemetry.io/otel: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/metric: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/sdk: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/sdk/metric: v1.44.0 → v1.45.0
+- go.opentelemetry.io/otel/trace: v1.44.0 → v1.45.0
+- golang.org/x/crypto: v0.54.0 → v0.55.0
+- golang.org/x/mod: v0.37.0 → v0.40.0
+- golang.org/x/net: v0.57.0 → v0.58.0
+- golang.org/x/telemetry: 59b4966 → a038080
+- golang.org/x/text: v0.40.0 → v0.41.0
+- golang.org/x/tools: v0.47.0 → v0.49.0
+- google.golang.org/genproto/googleapis/api: 6c54ddd → ec0a776
+- google.golang.org/genproto/googleapis/rpc: 6c54ddd → ec0a776
+- google.golang.org/grpc: v1.82.1 → v1.83.0
+- google.golang.org/protobuf: f2248ac → v1.36.12
+
+### Removed
+- github.com/antihax/optional: [v1.0.0](https://github.com/antihax/optional/tree/v1.0.0)
+
 # v1.63.1
 
 This is a security patch release. It updates every CSI sidecar container to a

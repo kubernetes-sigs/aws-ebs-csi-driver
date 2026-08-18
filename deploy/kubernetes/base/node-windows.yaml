@@ -42,7 +42,7 @@ spec:
         - operator: Exists
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.63.1
+          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0
           imagePullPolicy: IfNotPresent
           args:
             - node
