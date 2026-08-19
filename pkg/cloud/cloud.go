@@ -2359,6 +2359,51 @@ func (c *cloud) getInstancesPatchingBatch(ctx context.Context, nodeIDs []string)
 	return instances, nil
 }
 
+// GetInstanceTypesInfo returns volume attachment info for the given instance types via DescribeInstanceTypes.
+func (c *cloud) GetInstanceTypesInfo(ctx context.Context, instanceTypes []string) (map[string]InstanceTypeInfo, error) {
+	result := make(map[string]InstanceTypeInfo, len(instanceTypes))
+
+	typeNames := make([]types.InstanceType, len(instanceTypes))
+	for i, t := range instanceTypes {
+		typeNames[i] = types.InstanceType(t)
+	}
+
+	// DescribeInstanceTypes supports up to 100 instance types per call
+	const batchSize = 100
+	for i := 0; i < len(typeNames); i += batchSize {
+		end := min(i+batchSize, len(typeNames))
+		batch := typeNames[i:end]
+
+		var nextToken *string
+		for {
+			resp, err := c.ec2.DescribeInstanceTypes(ctx, &ec2.DescribeInstanceTypesInput{
+				InstanceTypes: batch,
+				NextToken:     nextToken,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("error calling DescribeInstanceTypes: %w", err)
+			}
+
+			for _, it := range resp.InstanceTypes {
+				if it.EbsInfo == nil || it.EbsInfo.MaximumEbsAttachments == nil {
+					continue
+				}
+				result[string(it.InstanceType)] = InstanceTypeInfo{
+					MaxAttachments: int(*it.EbsInfo.MaximumEbsAttachments),
+					AttachmentType: string(it.EbsInfo.AttachmentLimitType),
+				}
+			}
+
+			if resp.NextToken == nil {
+				break
+			}
+			nextToken = resp.NextToken
+		}
+	}
+
+	return result, nil
+}
+
 func describeSnapshots(ctx context.Context, svc util.EC2API, request *ec2.DescribeSnapshotsInput) ([]types.Snapshot, error) {
 	var snapshots []types.Snapshot
 	var nextToken *string

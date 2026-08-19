@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/limits"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,12 +49,14 @@ const (
 )
 
 type instanceMetadata struct {
-	ENIs             int
-	Volumes          int
-	InstanceType     string
-	AllocatableCount int32
-	NodeID           string
-	AvailabilityZone string
+	ENIs                  int
+	Volumes               int
+	InstanceType          string
+	AllocatableCount      int32
+	NodeID                string
+	AvailabilityZone      string
+	VolumeAttachmentLimit int
+	VolumeAttachmentType  string
 }
 
 var _ = framework.Describe("[ebs-csi-e2e] [Disruptive] Metadata Labeler Sidecar", framework.WithDisruptive(), func() {
@@ -107,6 +110,7 @@ var _ = framework.Describe("[ebs-csi-e2e] [Disruptive] Metadata Labeler Sidecar"
 			})
 			Expect(err).NotTo(HaveOccurred(), "Failed to describe EC2 instances")
 			expectedMetadata = getVolENIs(resp)
+			populateVolumeAttachmentInfo(ec2Client, expectedMetadata)
 
 			By("Checking initial node labels")
 			checkVolENI(expectedMetadata, labeledMetadata, nodes)
@@ -202,16 +206,65 @@ func getVolENIs(resp *ec2.DescribeInstancesOutput) map[string]*instanceMetadata 
 	return expectedMetadata
 }
 
+// populateVolumeAttachmentInfo calls DescribeInstanceTypes to get volume attachment limits for each instance type.
+func populateVolumeAttachmentInfo(ec2Client *ec2.Client, metadata map[string]*instanceMetadata) {
+	uniqueTypes := make(map[string]struct{})
+	for _, m := range metadata {
+		uniqueTypes[m.InstanceType] = struct{}{}
+	}
+
+	typeNames := make([]types.InstanceType, 0, len(uniqueTypes))
+	for t := range uniqueTypes {
+		typeNames = append(typeNames, types.InstanceType(t))
+	}
+
+	resp, err := ec2Client.DescribeInstanceTypes(context.TODO(), &ec2.DescribeInstanceTypesInput{
+		InstanceTypes: typeNames,
+	})
+	Expect(err).NotTo(HaveOccurred(), "Failed to describe instance types")
+
+	typeInfo := make(map[string]struct {
+		limit      int
+		attachType string
+	})
+	for _, it := range resp.InstanceTypes {
+		if it.EbsInfo != nil && it.EbsInfo.MaximumEbsAttachments != nil {
+			typeInfo[string(it.InstanceType)] = struct {
+				limit      int
+				attachType string
+			}{
+				limit:      int(*it.EbsInfo.MaximumEbsAttachments),
+				attachType: string(it.EbsInfo.AttachmentLimitType),
+			}
+		}
+	}
+
+	for _, m := range metadata {
+		if info, ok := typeInfo[m.InstanceType]; ok {
+			m.VolumeAttachmentLimit = info.limit
+			m.VolumeAttachmentType = info.attachType
+			// Apply the same dedicated override the labeler uses
+			if limits.IsDedicatedOverride(m.InstanceType) {
+				m.VolumeAttachmentType = util.AttachmentDedicated
+			}
+		}
+	}
+}
+
 // checkVolENI compares `expectedMetadata` and `labeledMetadata` to have the same number of volumes and ENIs attached to each node in `nodes`
 func checkVolENI(expectedMetadata, labeledMetadata map[string]*instanceMetadata, nodes *corev1.NodeList) {
 	for _, node := range nodes.Items {
 		vol, _ := strconv.Atoi(node.GetLabels()[util.GetDriverName()+"/non-csi-ebs-volumes-count"])
 		enis, _ := strconv.Atoi(node.GetLabels()[util.GetDriverName()+"/enis-count"])
+		attachLimit, _ := strconv.Atoi(node.GetLabels()[util.GetDriverName()+"/volume-attachment-limit"])
+		attachType := node.GetLabels()[util.GetDriverName()+"/volume-attachment-type"]
 		id := parseProviderID(node.Spec.ProviderID)
 		labeledMetadata[id] = &instanceMetadata{}
 		labeledMetadata[id].ENIs = enis
 		labeledMetadata[id].Volumes = vol
 		labeledMetadata[id].NodeID = node.Name
+		labeledMetadata[id].VolumeAttachmentLimit = attachLimit
+		labeledMetadata[id].VolumeAttachmentType = attachType
 
 		if expectedMetadata[id] != nil {
 			if labeledMetadata[id].Volumes != expectedMetadata[id].Volumes {
@@ -221,6 +274,14 @@ func checkVolENI(expectedMetadata, labeledMetadata map[string]*instanceMetadata,
 			if labeledMetadata[id].ENIs != expectedMetadata[id].ENIs {
 				Fail(fmt.Sprintf("ENI count mismatch for node %s: expected %d, got %d\n",
 					node.Name, expectedMetadata[id].ENIs, labeledMetadata[id].ENIs))
+			}
+			if labeledMetadata[id].VolumeAttachmentLimit != expectedMetadata[id].VolumeAttachmentLimit {
+				Fail(fmt.Sprintf("VolumeAttachmentLimit mismatch for node %s: expected %d, got %d\n",
+					node.Name, expectedMetadata[id].VolumeAttachmentLimit, labeledMetadata[id].VolumeAttachmentLimit))
+			}
+			if labeledMetadata[id].VolumeAttachmentType != expectedMetadata[id].VolumeAttachmentType {
+				Fail(fmt.Sprintf("VolumeAttachmentType mismatch for node %s: expected %s, got %s\n",
+					node.Name, expectedMetadata[id].VolumeAttachmentType, labeledMetadata[id].VolumeAttachmentType))
 			}
 		}
 	}
@@ -280,10 +341,17 @@ func checkLabelsUpdated(cs kubernetes.Interface, labeledMetadata, expectedMetada
 			id := parseProviderID(node.Spec.ProviderID)
 			vol, _ := strconv.Atoi(node.Labels[util.GetDriverName()+"/non-csi-ebs-volumes-count"])
 			eni, _ := strconv.Atoi(node.Labels[util.GetDriverName()+"/enis-count"])
+			attachLimit, _ := strconv.Atoi(node.Labels[util.GetDriverName()+"/volume-attachment-limit"])
+			attachType := node.Labels[util.GetDriverName()+"/volume-attachment-type"]
 			labeledMetadata[id].Volumes = vol
 			labeledMetadata[id].ENIs = eni
+			labeledMetadata[id].VolumeAttachmentLimit = attachLimit
+			labeledMetadata[id].VolumeAttachmentType = attachType
 
 			if vol != expectedMetadata[id].Volumes || eni != expectedMetadata[id].ENIs {
+				return false
+			}
+			if attachLimit != expectedMetadata[id].VolumeAttachmentLimit || attachType != expectedMetadata[id].VolumeAttachmentType {
 				return false
 			}
 		}
