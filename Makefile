@@ -237,6 +237,7 @@ pre-release:
 	$(MAKE) update-sidecar-dependencies
 	$(MAKE) update
 	$(MAKE) test
+	$(MAKE) verify
 	@echo "Pre-release updates succeeded! Review the diff and commit it as the release PR."
 
 # Generate the post-release PR file changes and draft changelog
