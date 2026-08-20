@@ -22,6 +22,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,17 +76,28 @@ func (modifyVolumeTest *ModifyVolumeTest) Run(c clientset.Interface, ns *v1.Name
 	if testType == VolumeModifierForK8s {
 		AnnotatePvc(modifyingPvc, parametersWithPrefix)
 	} else if testType == ExternalResizer {
-		vac, err := c.StorageV1beta1().VolumeAttributesClasses().Create(context.Background(), &v1beta1.VolumeAttributesClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      formatOptionMountPod.pod.Name,
-				Namespace: ns.Name,
-			},
-			DriverName: util.GetDriverName(),
-			Parameters: modifyVolumeTest.ModifyVolumeParameters,
-		}, metav1.CreateOptions{})
-		framework.ExpectNoError(err)
-
-		vacName := vac.Name
+		meta := metav1.ObjectMeta{
+			Name:      formatOptionMountPod.pod.Name,
+			Namespace: ns.Name,
+		}
+		var vacName string
+		if serverSupportsVolumeAttributesClassV1(c) {
+			vac, err := c.StorageV1().VolumeAttributesClasses().Create(context.Background(), &storagev1.VolumeAttributesClass{
+				ObjectMeta: meta,
+				DriverName: util.GetDriverName(),
+				Parameters: modifyVolumeTest.ModifyVolumeParameters,
+			}, metav1.CreateOptions{})
+			framework.ExpectNoError(err)
+			vacName = vac.Name
+		} else {
+			vac, err := c.StorageV1beta1().VolumeAttributesClasses().Create(context.Background(), &v1beta1.VolumeAttributesClass{
+				ObjectMeta: meta,
+				DriverName: util.GetDriverName(),
+				Parameters: modifyVolumeTest.ModifyVolumeParameters,
+			}, metav1.CreateOptions{})
+			framework.ExpectNoError(err)
+			vacName = vac.Name
+		}
 		modifyingPvc.Spec.VolumeAttributesClassName = &vacName
 	}
 
@@ -133,4 +145,17 @@ func attemptInvalidModification(c clientset.Interface, ns *v1.Namespace, testVol
 		framework.ExpectNoError(err, fmt.Sprintf("fail to modify pvc(%s): %v", modifyingPvc.Name, err))
 	}
 	framework.Logf("pvc %q/%q has been modified with invalid annotations: %s", ns.Name, modifiedPvc.Name, modifiedPvc.Annotations)
+}
+
+func serverSupportsVolumeAttributesClassV1(c clientset.Interface) bool {
+	resources, err := c.Discovery().ServerResourcesForGroupVersion(storagev1.SchemeGroupVersion.String())
+	if err != nil {
+		return false
+	}
+	for _, r := range resources.APIResources {
+		if r.Name == "volumeattributesclasses" {
+			return true
+		}
+	}
+	return false
 }
