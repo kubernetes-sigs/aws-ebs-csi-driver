@@ -1067,7 +1067,11 @@
             },
             "additionalArgs": {
               "type": "array",
-              "default": []
+              "description": "Additional arguments passed to the liveness-probe container",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
             },
             "resources": {
               "type": ["object", "null"],

@@ -3,15 +3,15 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: ebs-csi-node-windows
+  name: "ebs-csi-node-windows"
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: ebs-csi-node
-      app.kubernetes.io/name: aws-ebs-csi-driver
+      app: "ebs-csi-node"
+      app.kubernetes.io/name: "aws-ebs-csi-driver"
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 10%
@@ -19,8 +19,8 @@ spec:
   template:
     metadata:
       labels:
-        app: ebs-csi-node
-        app.kubernetes.io/name: aws-ebs-csi-driver
+        app: "ebs-csi-node"
+        app.kubernetes.io/name: "aws-ebs-csi-driver"
     spec:
       affinity:
         nodeAffinity:
@@ -35,20 +35,20 @@ spec:
                 - hybrid
       nodeSelector:
         kubernetes.io/os: windows
-      serviceAccountName: ebs-csi-node-sa
+      serviceAccountName: "ebs-csi-node-sa"
       terminationGracePeriodSeconds: 30
-      priorityClassName: system-node-critical
+      priorityClassName: "system-node-critical"
       tolerations:
         - operator: Exists
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0"
+          imagePullPolicy: "IfNotPresent"
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
-            - --logging-format=text
-            - --v=2
+            - "--logging-format=text"
+            - "--v=2"
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -102,13 +102,13 @@ spec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
           terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
-          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.17.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-node-driver-registrar:v2.17.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --http-endpoint=0.0.0.0:9809
-            - --v=2
+            - "--v=2"
           env:
             - name: ADDRESS
               value: unix:/csi/csi.sock
@@ -139,8 +139,8 @@ spec:
               memory: 150Mi
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=unix:/csi/csi.sock
           volumeMounts:

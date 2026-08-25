@@ -6,7 +6,7 @@ apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 spec:
   replicas: 2
   revisionHistoryLimit: 10
@@ -17,17 +17,17 @@ spec:
   selector:
     matchLabels:
       app: ebs-csi-controller
-      app.kubernetes.io/name: aws-ebs-csi-driver
+      app.kubernetes.io/name: "aws-ebs-csi-driver"
   template:
     metadata:
       labels:
         app: ebs-csi-controller
-        app.kubernetes.io/name: aws-ebs-csi-driver
+        app.kubernetes.io/name: "aws-ebs-csi-driver"
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: ebs-csi-controller-sa
-      priorityClassName: system-cluster-critical
+      serviceAccountName: "ebs-csi-controller-sa"
+      priorityClassName: "system-cluster-critical"
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -64,15 +64,15 @@ spec:
         runAsUser: 1000
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0"
+          imagePullPolicy: "IfNotPresent"
           args:
             - controller
             - --endpoint=$(CSI_ENDPOINT)
             - --batching=true
-            - --logging-format=text
-            - --user-agent-extra=kustomize
-            - --v=2
+            - "--logging-format=text"
+            - "--user-agent-extra=kustomize"
+            - "--v=2"
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
@@ -83,14 +83,14 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
-                  key: key_id
+                  name: "aws-secret"
+                  key: "key_id"
                   optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: aws-secret
-                  key: access_key
+                  name: "aws-secret"
+                  key: "access_key"
                   optional: true
             - name: AWS_EC2_ENDPOINT
               valueFrom:
@@ -140,16 +140,16 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
-          image: public.ecr.aws/csi-components/csi-provisioner:v6.3.0-eksbuild.4
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-provisioner:v6.3.0-eksbuild.4"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --timeout=60s
             - --csi-address=$(ADDRESS)
-            - --v=2
+            - "--v=2"
             - --feature-gates=Topology=true
             - --extra-create-metadata
             - --leader-election=true
-            - --default-fstype=ext4
+            - "--default-fstype=ext4"
             - --kube-api-qps=20
             - --kube-api-burst=100
             - --worker-threads=100
@@ -175,12 +175,12 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-attacher
-          image: public.ecr.aws/csi-components/csi-attacher:v4.12.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-attacher:v4.12.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --timeout=6m
             - --csi-address=$(ADDRESS)
-            - --v=2
+            - "--v=2"
             - --leader-election=true
             - --kube-api-qps=20
             - --kube-api-burst=100
@@ -206,12 +206,12 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-snapshotter
-          image: public.ecr.aws/csi-components/csi-snapshotter:v8.6.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-snapshotter:v8.6.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
-            - --v=2
+            - "--v=2"
             - --extra-create-metadata
             - --kube-api-qps=20
             - --kube-api-burst=100
@@ -236,13 +236,13 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-resizer
-          image: public.ecr.aws/csi-components/csi-resizer:v2.2.1-eksbuild.3
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-resizer:v2.2.1-eksbuild.3"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --timeout=60s
             - --extra-modify-metadata
             - --csi-address=$(ADDRESS)
-            - --v=2
+            - "--v=2"
             - --handle-volume-inuse-error=false
             - --leader-election=true
             - --kube-api-qps=20
@@ -270,8 +270,8 @@ spec:
               type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=60s

@@ -4,7 +4,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: ebs-csi-controller
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
   {{- with .Values.controller.deploymentAnnotations }}
@@ -34,7 +34,12 @@ spec:
         {{- end }}
       {{- if .Values.controller.podAnnotations }}
       annotations:
-        {{- tpl ( .Values.controller.podAnnotations | toYaml ) . | nindent 8 }}
+        {{- $annotations := dict }}
+        {{- range $key, $value := .Values.controller.podAnnotations }}
+        {{- $valueString := ternary "" (toString $value) (kindIs "invalid" $value) }}
+        {{- $_ := set $annotations (tpl $key $) (tpl $valueString $) }}
+        {{- end }}
+        {{- toYaml $annotations | nindent 8 }}
       {{- end }}
     spec:
       nodeSelector:
@@ -42,8 +47,8 @@ spec:
         {{- with .Values.controller.nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ .Values.controller.serviceAccount.name }}
-      priorityClassName: {{ .Values.controller.priorityClassName }}
+      serviceAccountName: {{ .Values.controller.serviceAccount.name | quote }}
+      priorityClassName: {{ .Values.controller.priorityClassName | quote }}
       {{- with default .Values.controller.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -71,8 +76,8 @@ spec:
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           args:
             - controller
             - --endpoint=$(CSI_ENDPOINT)
@@ -80,13 +85,13 @@ spec:
               {{- include "aws-ebs-csi-driver.extra-volume-tags" . | nindent 12 }}
             {{- end }}
             {{- with (tpl (default "" .Values.controller.k8sTagClusterId) . )  }}
-            - --k8s-tag-cluster-id={{ . }}
+            - {{ printf "--k8s-tag-cluster-id=%v" (.) | quote }}
             {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not .Values.controller.httpEndpoint) }}
             - --http-endpoint=0.0.0.0:3301
             {{- end}}
             {{- with .Values.controller.httpEndpoint }}
-            - --http-endpoint={{ . }}
+            - {{ printf "--http-endpoint=%v" (.) | quote }}
             {{- end }}
             {{- if or .Values.controller.sdkDebugLog .Values.debugLogs }}
             - --aws-sdk-debug-log=true
@@ -98,10 +103,10 @@ spec:
             - --enable-node-local-volumes=true
             {{- end}}
             {{- with .Values.controller.loggingFormat }}
-            - --logging-format={{ . }}
+            - {{ printf "--logging-format=%v" (.) | quote }}
             {{- end }}
             {{- with .Values.controller.userAgentExtra }}
-            - --user-agent-extra={{ . }}
+            - {{ printf "--user-agent-extra=%v" (.) | quote }}
             {{- end }}
             {{- if .Values.controller.otelTracing }}
             - --enable-otel-tracing=true
@@ -109,10 +114,10 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.controller.logLevel }}
+            - {{ printf "--v=%v" (.Values.controller.logLevel) | quote }}
             {{- end }}
-            {{- range .Values.controller.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.controller.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: CSI_ENDPOINT
@@ -125,14 +130,14 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .keyId }}
+                  name: {{ .name | quote }}
+                  key: {{ .keyId | quote }}
                   optional: true
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .name }}
-                  key: {{ .accessKey }}
+                  name: {{ .name | quote }}
+                  key: {{ .accessKey | quote }}
                   optional: true
             {{- end }}
             - name: AWS_EC2_ENDPOINT
@@ -149,7 +154,7 @@ spec:
                   optional: true
             {{- with .Values.controller.region }}
             - name: AWS_REGION
-              value: {{ . }}
+              value: {{ . | quote }}
             {{- end }}
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
@@ -159,9 +164,9 @@ spec:
             {{- end }}
             {{- with .Values.controller.otelTracing }}
             - name: OTEL_SERVICE_NAME
-              value: {{ .otelServiceName }}
+              value: {{ .otelServiceName | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .otelExporterEndpoint }}
+              value: {{ .otelExporterEndpoint | quote }}
             {{- end }}
             {{- if .Values.fips }}
             - name: AWS_USE_FIPS_ENDPOINT
@@ -214,8 +219,8 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-provisioner
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.provisioner.image.repository .Values.sidecars.provisioner.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.provisioner.image.pullPolicy | quote }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
             - --timeout=60s
@@ -224,7 +229,7 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.provisioner.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.provisioner.logLevel) | quote }}
             {{- end }}
             - --feature-gates=Topology=true
             {{- if .Values.controller.extraCreateMetadata }}
@@ -233,16 +238,16 @@ spec:
             - --leader-election={{ .Values.sidecars.provisioner.leaderElection.enabled | required "leader election state for csi-provisioner is required, must be set to true || false." }}
             {{- if .Values.sidecars.provisioner.leaderElection.enabled }}
             {{- if .Values.sidecars.provisioner.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.provisioner.leaderElection.leaseDuration }}
+            - {{ printf "--leader-election-lease-duration=%v" (.Values.sidecars.provisioner.leaderElection.leaseDuration) | quote }}
             {{- end }}
             {{- if .Values.sidecars.provisioner.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.provisioner.leaderElection.renewDeadline }}
+            - {{ printf "--leader-election-renew-deadline=%v" (.Values.sidecars.provisioner.leaderElection.renewDeadline) | quote }}
             {{- end }}
             {{- if .Values.sidecars.provisioner.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.provisioner.leaderElection.retryPeriod }}
+            - {{ printf "--leader-election-retry-period=%v" (.Values.sidecars.provisioner.leaderElection.retryPeriod) | quote }}
             {{- end }}
             {{- end }}
-            - --default-fstype={{ .Values.controller.defaultFsType }}
+            - {{ printf "--default-fstype=%v" (.Values.controller.defaultFsType | default "") | quote }}
             {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-worker-threads)" (join " " .Values.sidecars.provisioner.additionalArgs)) }}
             - --kube-api-qps=20
             - --kube-api-burst=100
@@ -257,8 +262,8 @@ spec:
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.provisioner.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3302
             {{- end}}
-            {{- range .Values.sidecars.provisioner.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.provisioner.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -294,8 +299,8 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: csi-attacher
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.attacher.image.repository .Values.sidecars.attacher.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.attacher.image.pullPolicy | quote }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
             - --timeout=6m
@@ -304,18 +309,18 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.attacher.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.attacher.logLevel) | quote }}
             {{- end }}
             - --leader-election={{ .Values.sidecars.attacher.leaderElection.enabled | required "leader election state for csi-attacher is required, must be set to true || false." }}
             {{- if .Values.sidecars.attacher.leaderElection.enabled }}
             {{- if .Values.sidecars.attacher.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.attacher.leaderElection.leaseDuration }}
+            - {{ printf "--leader-election-lease-duration=%v" (.Values.sidecars.attacher.leaderElection.leaseDuration) | quote }}
             {{- end }}
             {{- if .Values.sidecars.attacher.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.attacher.leaderElection.renewDeadline }}
+            - {{ printf "--leader-election-renew-deadline=%v" (.Values.sidecars.attacher.leaderElection.renewDeadline) | quote }}
             {{- end }}
             {{- if .Values.sidecars.attacher.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.attacher.leaderElection.retryPeriod }}
+            - {{ printf "--leader-election-retry-period=%v" (.Values.sidecars.attacher.leaderElection.retryPeriod) | quote }}
             {{- end }}
             {{- end }}
             {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-worker-threads)" (join " " .Values.sidecars.attacher.additionalArgs)) }}
@@ -332,8 +337,8 @@ spec:
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.attacher.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3303
             {{- end}}
-            {{- range .Values.sidecars.attacher.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.attacher.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -368,15 +373,15 @@ spec:
           terminationMessagePolicy: FallbackToLogsOnError
         {{- if or .Values.sidecars.snapshotter.forceEnable (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1beta1") (.Capabilities.APIVersions.Has "snapshot.storage.k8s.io/v1") }}
         - name: csi-snapshotter
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.snapshotter.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.snapshotter.image.repository .Values.sidecars.snapshotter.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.snapshotter.image.pullPolicy | quote }}
           args:
             - --csi-address=$(ADDRESS)
             - --leader-election=true
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.snapshotter.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.snapshotter.logLevel) | quote }}
             {{- end }}
             {{- if .Values.controller.extraCreateMetadata }}
             - --extra-create-metadata
@@ -392,8 +397,8 @@ spec:
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.snapshotter.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3306
             {{- end}}
-            {{- range .Values.sidecars.snapshotter.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.snapshotter.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -429,8 +434,8 @@ spec:
         {{- end }}
         {{- if (.Values.controller.volumeModificationFeature).enabled }}
         - name: volumemodifier
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.volumemodifier.image.repository .Values.sidecars.volumemodifier.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.volumemodifier.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.volumemodifier.image.repository .Values.sidecars.volumemodifier.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.volumemodifier.image.pullPolicy | quote }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.volumemodifier.additionalArgs)) }}
             - --timeout=60s
@@ -439,25 +444,25 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.volumemodifier.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.volumemodifier.logLevel) | quote }}
             {{- end }}
             - --leader-election={{ .Values.sidecars.volumemodifier.leaderElection.enabled | required "leader election state for csi-volumemodifier is required, must be set to true || false." }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.enabled }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.leaseDuration }}
-            - --leader-election-lease-duration={{ .Values.sidecars.volumemodifier.leaderElection.leaseDuration }}
+            - {{ printf "--leader-election-lease-duration=%v" (.Values.sidecars.volumemodifier.leaderElection.leaseDuration) | quote }}
             {{- end }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.renewDeadline}}
-            - --leader-election-renew-deadline={{ .Values.sidecars.volumemodifier.leaderElection.renewDeadline }}
+            - {{ printf "--leader-election-renew-deadline=%v" (.Values.sidecars.volumemodifier.leaderElection.renewDeadline) | quote }}
             {{- end }}
             {{- if .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
-            - --leader-election-retry-period={{ .Values.sidecars.volumemodifier.leaderElection.retryPeriod }}
+            - {{ printf "--leader-election-retry-period=%v" (.Values.sidecars.volumemodifier.leaderElection.retryPeriod) | quote }}
             {{- end }}
             {{- end }}
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.volumemodifier.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3307
             {{- end}}
-            {{- range .Values.sidecars.volumemodifier.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.volumemodifier.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -504,16 +509,16 @@ spec:
         {{- end }}
         {{- if .Values.sidecars.metadataLabeler.enabled }}
         - name: metadata-labeler
-          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           args:
             - metadataLabeler
             {{- with .Values.controller.userAgentExtra }}
-            - --user-agent-extra={{ . }}
+            - {{ printf "--user-agent-extra=%v" (.) | quote }}
             {{- end }}
-            - --v={{ .Values.sidecars.metadataLabeler.logLevel }}
-            {{- range .Values.sidecars.metadataLabeler.additionalArgs }}
-            - {{ . }}
+            - {{ printf "--v=%v" (.Values.sidecars.metadataLabeler.logLevel) | quote }}
+            {{- with .Values.sidecars.metadataLabeler.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: CSI_NODE_NAME
@@ -540,8 +545,8 @@ spec:
           {{- end }}
         {{- end }}
         - name: csi-resizer
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.resizer.image.repository .Values.sidecars.resizer.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.resizer.image.pullPolicy | quote }}
           args:
             {{- if not (regexMatch "(-timeout)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
             - --timeout=60s
@@ -553,19 +558,19 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.resizer.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.resizer.logLevel) | quote }}
             {{- end }}
             - --handle-volume-inuse-error=false
             {{- with .Values.sidecars.resizer.leaderElection }}
             - --leader-election={{ .enabled | default true }}
             {{- if .leaseDuration }}
-            - --leader-election-lease-duration={{ .leaseDuration }}
+            - {{ printf "--leader-election-lease-duration=%v" (.leaseDuration) | quote }}
             {{- end }}
             {{- if .renewDeadline }}
-            - --leader-election-renew-deadline={{ .renewDeadline }}
+            - {{ printf "--leader-election-renew-deadline=%v" (.renewDeadline) | quote }}
             {{- end }}
             {{- if .retryPeriod }}
-            - --leader-election-retry-period={{ .retryPeriod }}
+            - {{ printf "--leader-election-retry-period=%v" (.retryPeriod) | quote }}
             {{- end }}
             {{- end }}
             {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-workers)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
@@ -582,8 +587,8 @@ spec:
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.resizer.additionalArgs))) }}
             - --http-endpoint=0.0.0.0:3304
             {{- end}}
-            {{- range .Values.sidecars.resizer.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.resizer.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
@@ -619,16 +624,16 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy | quote }}
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=60s
             {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-metrics-address)" (join " " .Values.sidecars.livenessProbe.additionalArgs))) }}
             - --metrics-address=0.0.0.0:3305
             {{- end}}
-            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.livenessProbe.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
@@ -662,7 +667,7 @@ spec:
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.imagePullSecrets }}
-        - name: {{ . }}
+        - name: {{ . | quote }}
       {{- end }}
       {{- end }}
       volumes:
