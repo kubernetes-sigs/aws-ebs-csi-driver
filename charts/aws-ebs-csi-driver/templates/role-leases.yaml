@@ -2,7 +2,7 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace | quote }}
   name: ebs-csi-leases-role
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}

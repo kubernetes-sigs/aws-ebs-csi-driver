@@ -3,15 +3,15 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: ebs-csi-node
+  name: "ebs-csi-node"
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: ebs-csi-node
-      app.kubernetes.io/name: aws-ebs-csi-driver
+      app: "ebs-csi-node"
+      app.kubernetes.io/name: "aws-ebs-csi-driver"
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 10%
@@ -19,8 +19,8 @@ spec:
   template:
     metadata:
       labels:
-        app: ebs-csi-node
-        app.kubernetes.io/name: aws-ebs-csi-driver
+        app: "ebs-csi-node"
+        app.kubernetes.io/name: "aws-ebs-csi-driver"
     spec:
       affinity:
         nodeAffinity:
@@ -35,9 +35,9 @@ spec:
                 - hybrid
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: ebs-csi-node-sa
+      serviceAccountName: "ebs-csi-node-sa"
       terminationGracePeriodSeconds: 30
-      priorityClassName: system-node-critical
+      priorityClassName: "system-node-critical"
       tolerations:
         - operator: Exists
       hostNetwork: false
@@ -48,14 +48,14 @@ spec:
         runAsUser: 0
       containers:
         - name: ebs-plugin
-          image: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.64.0"
+          imagePullPolicy: "IfNotPresent"
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
-            - --csi-mount-point-prefix=/var/lib/kubelet/plugins/kubernetes.io/csi/ebs.csi.aws.com/
-            - --logging-format=text
-            - --v=2
+            - "--csi-mount-point-prefix=/var/lib/kubelet/plugins/kubernetes.io/csi/ebs.csi.aws.com/"
+            - "--logging-format=text"
+            - "--v=2"
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
@@ -65,7 +65,7 @@ spec:
                   fieldPath: spec.nodeName
           volumeMounts:
             - name: kubelet-dir
-              mountPath: /var/lib/kubelet
+              mountPath: "/var/lib/kubelet"
               mountPropagation: "Bidirectional"
             - name: plugin-dir
               mountPath: /csi
@@ -105,18 +105,18 @@ spec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
           terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
-          image: public.ecr.aws/csi-components/csi-node-driver-registrar:v2.17.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/csi-node-driver-registrar:v2.17.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --http-endpoint=0.0.0.0:9809
-            - --v=2
+            - "--v=2"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
+              value: "/var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock"
           ports:
             - name: healthz-ndr
               containerPort: 9809
@@ -133,7 +133,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
             - name: probe-dir
-              mountPath: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+              mountPath: "/var/lib/kubelet/plugins/ebs.csi.aws.com/"
           resources:
             requests:
               cpu: 10m
@@ -145,8 +145,8 @@ spec:
             readOnlyRootFilesystem: true
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5
-          imagePullPolicy: IfNotPresent
+          image: "public.ecr.aws/csi-components/livenessprobe:v2.19.0-eksbuild.5"
+          imagePullPolicy: "IfNotPresent"
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
@@ -165,15 +165,15 @@ spec:
       volumes:
         - name: kubelet-dir
           hostPath:
-            path: /var/lib/kubelet
+            path: "/var/lib/kubelet"
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+            path: "/var/lib/kubelet/plugins/ebs.csi.aws.com/"
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/
+            path: "/var/lib/kubelet/plugins_registry/"
             type: Directory
         - name: device-dir
           hostPath:

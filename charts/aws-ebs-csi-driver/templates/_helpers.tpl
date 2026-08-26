@@ -44,12 +44,12 @@ Common labels
 {{- define "aws-ebs-csi-driver.labels" -}}
 {{ include "aws-ebs-csi-driver.selectorLabels" . }}
 {{- if ne .Release.Name "kustomize" }}
-helm.sh/chart: {{ include "aws-ebs-csi-driver.chart" . }}
+helm.sh/chart: {{ include "aws-ebs-csi-driver.chart" . | quote }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/component: csi-driver
-app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
 {{- end }}
 {{- if .Values.customLabels }}
 {{ toYaml .Values.customLabels }}
@@ -60,9 +60,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Common selector labels
 */}}
 {{- define "aws-ebs-csi-driver.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . }}
+app.kubernetes.io/name: {{ include "aws-ebs-csi-driver.name" . | quote }}
 {{- if ne .Release.Name "kustomize" }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end }}
 {{- end -}}
 
@@ -75,7 +75,7 @@ Convert the `--extra-tags` command line arg from a map.
 {{- $noop := printf "%s=%v" $key $value | append $result.pairs | set $result "pairs" -}}
 {{- end -}}
 {{- if gt (len $result.pairs) 0 -}}
-{{- printf "- \"--extra-tags=%s\"" (join "," $result.pairs) -}}
+- {{ printf "--extra-tags=%s" (join "," $result.pairs) | quote }}
 {{- end -}}
 {{- end -}}
 
@@ -107,4 +107,26 @@ Recommended daemonset tolerations
 # Prevents undesired eviction by v1beta1 Karpenter
 - key: "karpenter.sh/disruption"
   operator: Exists
+{{- end -}}
+
+{{/*
+Render an IntOrString value safely. A string that is a plain integer is emitted
+as a bare integer (so an int stays an int for the API server); anything else is
+emitted via toYaml, which quotes/escapes it and prevents YAML injection from a
+value that contains newlines or document separators.
+*/}}
+{{- define "aws-ebs-csi-driver.int-or-string" -}}
+{{- if not (kindIs "invalid" .) -}}
+{{- $parsed := 0 -}}
+{{- $isInteger := false -}}
+{{- if kindIs "string" . -}}
+{{- $parsed = atoi . -}}
+{{- $isInteger = eq (toString $parsed) . -}}
+{{- end -}}
+{{- if $isInteger -}}
+{{ $parsed }}
+{{- else -}}
+{{ . | toJson }}
+{{- end -}}
+{{- end -}}
 {{- end -}}

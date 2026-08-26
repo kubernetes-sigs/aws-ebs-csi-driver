@@ -4,8 +4,8 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: {{ .NodeName }}
-  namespace: {{ .Values.node.namespaceOverride | default .Release.Namespace }}
+  name: {{ .NodeName | quote }}
+  namespace: {{ .Values.node.namespaceOverride | default .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
   {{- with .Values.node.daemonSetAnnotations }}
@@ -18,14 +18,14 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: {{ .NodeName }}
+      app: {{ .NodeName | quote }}
       {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   updateStrategy:
     {{- toYaml .Values.node.updateStrategy | nindent 4 }}
   template:
     metadata:
       labels:
-        app: {{ .NodeName }}
+        app: {{ .NodeName | quote }}
         {{- include "aws-ebs-csi-driver.labels" . | nindent 8 }}
         {{- if .Values.node.podLabels }}
         {{- toYaml .Values.node.podLabels | nindent 8 }}
@@ -43,9 +43,9 @@ spec:
         {{- with .Values.node.nodeSelector }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      serviceAccountName: {{ .Values.node.serviceAccount.name }}
+      serviceAccountName: {{ .Values.node.serviceAccount.name | quote }}
       terminationGracePeriodSeconds: {{ .Values.node.terminationGracePeriodSeconds }}
-      priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" }}
+      priorityClassName: {{ .Values.node.priorityClassName | default "system-node-critical" | quote }}
       tolerations:
         {{- if .Values.node.tolerateAllTaints }}
         - operator: Exists
@@ -66,42 +66,42 @@ spec:
       {{- end }}
       containers:
         - name: ebs-plugin
-          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ include "aws-ebs-csi-driver.fullImagePath" $ | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
             {{- with .Values.node.reservedVolumeAttachments }}
-            - --reserved-volume-attachments={{ . }}
+            - {{ printf "--reserved-volume-attachments=%v" (.) | quote }}
             {{- end }}
             {{- if .Values.node.enableMetrics }}
             - --http-endpoint=0.0.0.0:3302
             {{- end}}
             {{- with .Values.node.kubeletPath }}
-            - --csi-mount-point-prefix={{ . }}/plugins/kubernetes.io/csi/ebs.csi.aws.com/
+            - {{ printf "--csi-mount-point-prefix=%s/plugins/kubernetes.io/csi/ebs.csi.aws.com/" . | quote }}
             {{- end}}
             {{- with .Values.node.volumeAttachLimit }}
-            - --volume-attach-limit={{ . }}
+            - {{ printf "--volume-attach-limit=%v" (.) | quote }}
             {{- end }}
             {{- with .Values.node.metadataSources }}
-            - --metadata-sources={{ . }}
+            - {{ printf "--metadata-sources=%v" (.) | quote }}
             {{- end }}
             {{- if .Values.node.legacyXFS }}
             - --legacy-xfs=true
             {{- end}}
             {{- with .Values.node.loggingFormat }}
-            - --logging-format={{ . }}
+            - {{ printf "--logging-format=%v" (.) | quote }}
             {{- end }}
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.node.logLevel }}
+            - {{ printf "--v=%v" (.Values.node.logLevel) | quote }}
             {{- end }}
             {{- if .Values.node.otelTracing }}
             - --enable-otel-tracing=true
             {{- end}}
-            {{- range .Values.node.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.node.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: CSI_ENDPOINT
@@ -115,9 +115,9 @@ spec:
             {{- end }}
             {{- with .Values.node.otelTracing }}
             - name: OTEL_SERVICE_NAME
-              value: {{ .otelServiceName }}
+              value: {{ .otelServiceName | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .otelExporterEndpoint }}
+              value: {{ .otelExporterEndpoint | quote }}
             {{- end }}
             {{- if .Values.fips }}
             - name: AWS_USE_FIPS_ENDPOINT
@@ -138,7 +138,7 @@ spec:
           {{- end }}
           volumeMounts:
             - name: kubelet-dir
-              mountPath: {{ .Values.node.kubeletPath }}
+              mountPath: {{ .Values.node.kubeletPath | quote }}
               mountPropagation: "Bidirectional"
             - name: plugin-dir
               mountPath: /csi
@@ -192,8 +192,8 @@ spec:
                 command: ["/bin/aws-ebs-csi-driver", "pre-stop-hook"]
           terminationMessagePolicy: FallbackToLogsOnError
         - name: node-driver-registrar
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.nodeDriverRegistrar.image.repository .Values.sidecars.nodeDriverRegistrar.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.nodeDriverRegistrar.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.nodeDriverRegistrar.image.repository .Values.sidecars.nodeDriverRegistrar.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.nodeDriverRegistrar.image.pullPolicy | quote }}
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -201,16 +201,16 @@ spec:
             {{- if .Values.debugLogs }}
             - --v=7
             {{- else }}
-            - --v={{ .Values.sidecars.nodeDriverRegistrar.logLevel }}
+            - {{ printf "--v=%v" (.Values.sidecars.nodeDriverRegistrar.logLevel) | quote }}
             {{- end }}
-            {{- range .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.nodeDriverRegistrar.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: {{ printf "%s/plugins/ebs.csi.aws.com/csi.sock" (trimSuffix "/" .Values.node.kubeletPath) }}
+              value: {{ printf "%s/plugins/ebs.csi.aws.com/csi.sock" (trimSuffix "/" .Values.node.kubeletPath) | quote }}
             {{- if .Values.proxy.http_proxy }}
             {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
             {{- end }}
@@ -234,7 +234,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
             - name: probe-dir
-              mountPath: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) }}
+              mountPath: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) | quote }}
           {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -252,12 +252,12 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
-          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag }}
-          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy }}
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.livenessProbe.image.pullPolicy | quote }}
           args:
             - --csi-address=/csi/csi.sock
-            {{- range .Values.sidecars.livenessProbe.additionalArgs }}
-            - {{ . }}
+            {{- with .Values.sidecars.livenessProbe.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
@@ -285,21 +285,21 @@ spec:
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
       {{- range .Values.imagePullSecrets }}
-        - name: {{ . }}
+        - name: {{ . | quote }}
       {{- end }}
       {{- end }}
       volumes:
         - name: kubelet-dir
           hostPath:
-            path: {{ .Values.node.kubeletPath }}
+            path: {{ .Values.node.kubeletPath | quote }}
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) }}
+            path: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) | quote }}
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
-            path: {{ printf "%s/plugins_registry/" (trimSuffix "/" .Values.node.kubeletPath) }}
+            path: {{ printf "%s/plugins_registry/" (trimSuffix "/" .Values.node.kubeletPath) | quote }}
             type: Directory
         - name: device-dir
           hostPath:

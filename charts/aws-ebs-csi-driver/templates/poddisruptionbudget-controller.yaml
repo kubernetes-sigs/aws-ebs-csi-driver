@@ -3,7 +3,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: ebs-csi-controller
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 spec:
@@ -12,11 +12,11 @@ spec:
       app: ebs-csi-controller
       {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
   {{- if .Values.controller.podDisruptionBudget.unhealthyPodEvictionPolicy }}
-  unhealthyPodEvictionPolicy: {{ .Values.controller.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+  unhealthyPodEvictionPolicy: {{ .Values.controller.podDisruptionBudget.unhealthyPodEvictionPolicy | quote }}
   {{- end }}
   {{- if or .Values.controller.podDisruptionBudget.maxUnavailable .Values.controller.podDisruptionBudget.minAvailable }}
-  maxUnavailable: {{ .Values.controller.podDisruptionBudget.maxUnavailable }}
-  minAvailable: {{ .Values.controller.podDisruptionBudget.minAvailable }}
+  maxUnavailable: {{ include "aws-ebs-csi-driver.int-or-string" .Values.controller.podDisruptionBudget.maxUnavailable }}
+  minAvailable: {{ include "aws-ebs-csi-driver.int-or-string" .Values.controller.podDisruptionBudget.minAvailable }}
   {{- else }}
   {{- /* Default behavior if neither maxUnavailable nor minAvailable are specified in values */}}
   {{- if le (.Values.controller.replicaCount | int) 2 }}

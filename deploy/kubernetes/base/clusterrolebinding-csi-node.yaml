@@ -5,10 +5,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ebs-csi-node-getter-binding
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 subjects:
   - kind: ServiceAccount
-    name: ebs-csi-node-sa
+    name: "ebs-csi-node-sa"
 roleRef:
   kind: ClusterRole
   name: ebs-csi-node-role

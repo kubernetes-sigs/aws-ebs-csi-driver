@@ -4,7 +4,7 @@
 kind: VolumeSnapshotClass
 apiVersion: snapshot.storage.k8s.io/v1
 metadata:
-  name: {{ .name }}
+  name: {{ .name | quote }}
   {{- with .annotations }}
   annotations: {{- . | toYaml | trim | nindent 4 }}
   {{- end }}
@@ -12,7 +12,7 @@ metadata:
   labels: {{- . | toYaml | trim | nindent 4 }}
   {{- end }}
 driver: ebs.csi.aws.com
-deletionPolicy: {{ .deletionPolicy }}
+deletionPolicy: {{ .deletionPolicy | quote }}
 {{- with .parameters }}
 parameters: {{- . | toYaml | trim | nindent 2 }}
 {{- end }}

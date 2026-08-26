@@ -5,7 +5,7 @@ kind: CSIDriver
 metadata:
   name: ebs.csi.aws.com
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 spec:
   attachRequired: true
   podInfoOnMount: false

@@ -5,10 +5,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ebs-csi-resizer-binding
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: "aws-ebs-csi-driver"
 subjects:
   - kind: ServiceAccount
-    name: ebs-csi-controller-sa
+    name: "ebs-csi-controller-sa"
 roleRef:
   kind: ClusterRole
   name: ebs-external-resizer-role

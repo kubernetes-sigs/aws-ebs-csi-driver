@@ -135,7 +135,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: ebs-csi-driver-test
-    namespace: {{ .Release.Namespace }}
+    namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: ebs-csi-driver-test
@@ -198,7 +198,7 @@ metadata:
 spec:
   containers:
     - name: kubetest2
-      image: {{ .Values.helmTester.image }}
+      image: {{ .Values.helmTester.image | quote }}
       resources:
         requests:
           cpu: 2000m

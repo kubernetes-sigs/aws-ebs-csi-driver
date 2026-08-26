@@ -8,8 +8,8 @@ metadata:
     {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.controller.serviceAccount.name }}
-    namespace: {{ .Release.Namespace }}
+    name: {{ .Values.controller.serviceAccount.name | quote }}
+    namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: ebs-external-attacher-role
