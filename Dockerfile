@@ -25,7 +25,7 @@ ARG VERSION
 ARG GOFIPS140=certified
 RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH GOFIPS140=$GOFIPS140 make
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:4202b690839528b40a24d94fef0ed43bd9dd0f3b7f105669e6d084f2ece9ffab AS linux-al2023
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:68d1923aebc0eb6312d8d07250e7023392c97c6ed297928fa7d721c9856746ed AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENV GODEBUG=fips140=off
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
