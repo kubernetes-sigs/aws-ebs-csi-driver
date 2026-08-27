@@ -1,6 +1,76 @@
+# v1.65.0
+
+## Changes by Kind
+
+### Other (Cleanup or Flake)
+
+- Quote all user-supplied values rendered into container args and `priorityClassName` in the chart templates, so configuration values are always emitted as single YAML scalars. ([#2996](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2996), [@mdzraf](https://github.com/mdzraf))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/Azure/go-ansiterm: [306776e → faa5f7b](https://github.com/Azure/go-ansiterm/compare/306776e...faa5f7b)
+- github.com/aws/aws-sdk-go-v2/config: [v1.32.37 → v1.32.40](https://github.com/aws/aws-sdk-go-v2/compare/config/v1.32.37...config/v1.32.40)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.19.36 → v1.19.39](https://github.com/aws/aws-sdk-go-v2/compare/credentials/v1.19.36...credentials/v1.19.39)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.18.37 → v1.18.40](https://github.com/aws/aws-sdk-go-v2/compare/feature/ec2/imds/v1.18.37...feature/ec2/imds/v1.18.40)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.4.37 → v1.4.40](https://github.com/aws/aws-sdk-go-v2/compare/internal/configsources/v1.4.37...internal/configsources/v1.4.40)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.7.37 → v2.7.40](https://github.com/aws/aws-sdk-go-v2/compare/internal/endpoints/v2/v2.7.37...internal/endpoints/v2/v2.7.40)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.4.38 → v1.4.41](https://github.com/aws/aws-sdk-go-v2/compare/internal/v4a/v1.4.38...internal/v4a/v1.4.41)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.321.2 → v1.324.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ec2/v1.321.2...service/ec2/v1.324.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.17 → v1.13.19](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/accept-encoding/v1.13.17...service/internal/accept-encoding/v1.13.19)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.13.37 → v1.13.40](https://github.com/aws/aws-sdk-go-v2/compare/service/internal/presigned-url/v1.13.37...service/internal/presigned-url/v1.13.40)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.267.0 → v1.269.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sagemaker/v1.267.0...service/sagemaker/v1.269.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.5.6 → v1.6.0](https://github.com/aws/aws-sdk-go-v2/compare/service/signin/v1.5.6...service/signin/v1.6.0)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.33.6 → v1.34.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sso/v1.33.6...service/sso/v1.34.0)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.38.6 → v1.39.0](https://github.com/aws/aws-sdk-go-v2/compare/service/ssooidc/v1.38.6...service/ssooidc/v1.39.0)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.45.6 → v1.46.0](https://github.com/aws/aws-sdk-go-v2/compare/service/sts/v1.45.6...service/sts/v1.46.0)
+- github.com/aws/aws-sdk-go-v2: [v1.43.6 → v1.44.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.6...v1.44.0)
+- github.com/aws/smithy-go: [v1.27.8 → v1.28.1](https://github.com/aws/smithy-go/compare/v1.27.8...v1.28.1)
+- github.com/fxamacker/cbor/v2: [v2.9.2 → v2.9.3](https://github.com/fxamacker/cbor/compare/v2.9.2...v2.9.3)
+- github.com/go-openapi/jsonreference: [v1.0.0 → v1.0.1](https://github.com/go-openapi/jsonreference/compare/v1.0.0...v1.0.1)
+- github.com/go-openapi/swag/cmdutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/cmdutils/v0.28.0...cmdutils/v0.29.1)
+- github.com/go-openapi/swag/conv: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/conv/v0.28.0...conv/v0.29.1)
+- github.com/go-openapi/swag/fileutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/fileutils/v0.28.0...fileutils/v0.29.1)
+- github.com/go-openapi/swag/jsonutils/fixtures_test: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/jsonutils/fixtures_test/v0.28.0...jsonutils/fixtures_test/v0.29.1)
+- github.com/go-openapi/swag/jsonutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/jsonutils/v0.28.0...jsonutils/v0.29.1)
+- github.com/go-openapi/swag/loading: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/loading/v0.28.0...loading/v0.29.1)
+- github.com/go-openapi/swag/mangling: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/mangling/v0.28.0...mangling/v0.29.1)
+- github.com/go-openapi/swag/netutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/netutils/v0.28.0...netutils/v0.29.1)
+- github.com/go-openapi/swag/pools: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/pools/v0.28.0...pools/v0.29.1)
+- github.com/go-openapi/swag/stringutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/stringutils/v0.28.0...stringutils/v0.29.1)
+- github.com/go-openapi/swag/typeutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/typeutils/v0.28.0...typeutils/v0.29.1)
+- github.com/go-openapi/swag/yamlutils: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/yamlutils/v0.28.0...yamlutils/v0.29.1)
+- github.com/go-openapi/swag: [v0.28.0 → v0.29.1](https://github.com/go-openapi/swag/compare/v0.28.0...v0.29.1)
+- github.com/go-openapi/testify/enable/yaml/v2: [v2.6.0 → v2.6.1](https://github.com/go-openapi/testify/compare/enable/yaml/v2/v2.6.0...enable/yaml/v2/v2.6.1)
+- github.com/go-openapi/testify/v2: [v2.6.0 → v2.6.1](https://github.com/go-openapi/testify/compare/v2.6.0...v2.6.1)
+- github.com/moby/term: [v0.5.0 → v0.5.2](https://github.com/moby/term/compare/v0.5.0...v0.5.2)
+- github.com/stretchr/testify: [v1.12.0 → v1.12.1](https://github.com/stretchr/testify/compare/v1.12.0...v1.12.1)
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.70.0 → v0.71.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/metric: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/sdk/metric: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/sdk: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/trace: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel: v1.45.0 → v1.46.0
+- google.golang.org/genproto/googleapis/api: ec0a776 → da73d73
+- google.golang.org/genproto/googleapis/rpc: ec0a776 → da73d73
+- google.golang.org/grpc: v1.83.0 → v1.83.2
+- k8s.io/api: v0.36.3 → v0.37.0
+- k8s.io/apimachinery: v0.36.3 → v0.37.0
+- k8s.io/client-go: v0.36.3 → v0.37.0
+- k8s.io/component-base: v0.36.3 → v0.37.0
+- k8s.io/kube-openapi: d427ff9 → be32def
+- k8s.io/mount-utils: v0.36.3 → v0.37.0
+- k8s.io/streaming: v0.36.3 → v0.37.0
+
+### Removed
+_Nothing has changed._
+
 # v1.64.0
-
-
 
 ## Dependencies
 
