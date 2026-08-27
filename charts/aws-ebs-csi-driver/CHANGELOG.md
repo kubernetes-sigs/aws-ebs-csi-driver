@@ -1,5 +1,26 @@
 # Helm chart
 
+## 2.65.0
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This release of the Helm chart fixes an issue that allowed injecting arbitrary YAML into the resulting chart by using newlines, quotes, and other whitespace/control characters inside of string parameters ([#2996](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/2996), [@mdzraf](https://github.com/mdzraf)).
+
+We recommend you upgrade immediately if ALL of the following apply to you:
+- You install the EBS CSI Driver via Helm on behalf of (potentially malicious) third parties
+- You allow the third party to specify Helm parameters, or otherwise pass untrusted input inside the parameters
+- The third party does not already have full access to the cluster you install the Chart onto
+
+### Dependencies
+ - Bumped EBS CSI Driver to `v1.65.0`
+ - Bumped `csi-attacher` to `v4.12.0-eksbuild.6`
+ - Bumped `csi-node-driver-registrar` to `v2.17.0-eksbuild.6`
+ - Bumped `csi-provisioner` to `v6.3.0-eksbuild.5`
+ - Bumped `csi-resizer` to `v2.2.1-eksbuild.4`
+ - Bumped `csi-snapshotter` to `v8.6.0-eksbuild.6`
+ - Bumped `livenessprobe` to `v2.19.0-eksbuild.6`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.5-eksbuild.6`
+
 ## 2.64.0
 ### Dependencies
  - Bumped EBS CSI Driver to `v1.64.0`
