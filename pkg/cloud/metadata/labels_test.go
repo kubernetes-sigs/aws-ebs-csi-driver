@@ -62,7 +62,7 @@ func TestGetMetadata(t *testing.T) {
 				makeInstance("i-001", 2, []string{"vol-001", "vol-002"}),
 			},
 			want: map[string]enisVolumes{
-				"i-001": {ENIs: 2, Volumes: 1},
+				"i-001": {ENIs: 2, Volumes: 1, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 		},
 		{
@@ -76,8 +76,8 @@ func TestGetMetadata(t *testing.T) {
 				makeInstance("i-002", 3, []string{"vol-002", "vol-003", "vol-004"}),
 			},
 			want: map[string]enisVolumes{
-				"i-001": {ENIs: 1, Volumes: 0},
-				"i-002": {ENIs: 3, Volumes: 2},
+				"i-001": {ENIs: 1, Volumes: 0, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
+				"i-002": {ENIs: 3, Volumes: 2, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 		},
 		{
@@ -92,7 +92,7 @@ func TestGetMetadata(t *testing.T) {
 				makeInstance("i-001", 1, []string{"vol-001", "vol-002"}),
 			},
 			want: map[string]enisVolumes{
-				"i-001": {ENIs: 1, Volumes: 0},
+				"i-001": {ENIs: 1, Volumes: 0, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 		},
 		{
@@ -107,7 +107,7 @@ func TestGetMetadata(t *testing.T) {
 				makeInstance("i-001", 1, []string{"vol-001", "vol-002"}),
 			},
 			want: map[string]enisVolumes{
-				"i-001": {ENIs: 1, Volumes: 0},
+				"i-001": {ENIs: 1, Volumes: 0, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 		},
 		{
@@ -138,6 +138,12 @@ func TestGetMetadata(t *testing.T) {
 				mockCloud.EXPECT().GetInstancesPatching(ctx, expectedNodeIDs).
 					Return(tt.instances, tt.cloudErr).Times(1)
 			}
+			if !tt.wantErr {
+				mockCloud.EXPECT().GetInstanceTypesInfo(ctx, gomock.Eq([]string{"c5.large"})).
+					Return(map[string]cloud.InstanceTypeInfo{
+						"c5.large": {MaxAttachments: 27, AttachmentType: "shared"},
+					}, nil).Times(1)
+			}
 
 			pvInformer := setupPVInformer(t, tt.pvs)
 
@@ -161,22 +167,26 @@ func TestPatchSingleNode(t *testing.T) {
 		metadata    map[string]enisVolumes
 		wantENIs    string
 		wantVolumes string
+		wantLimit   string
+		wantType    string
 		wantErr     bool
 	}{
 		{
 			name: "patch node successfully",
 			node: makeNode("i-001", "aws:///us-west-2a/i-001"),
 			metadata: map[string]enisVolumes{
-				"i-001": {ENIs: 3, Volumes: 5},
+				"i-001": {ENIs: 3, Volumes: 5, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 			wantENIs:    "3",
 			wantVolumes: "5",
+			wantLimit:   "27",
+			wantType:    "shared",
 		},
 		{
 			name: "invalid provider ID",
 			node: makeNode("i-001", "invalid"),
 			metadata: map[string]enisVolumes{
-				"i-001": {ENIs: 1, Volumes: 1},
+				"i-001": {ENIs: 1, Volumes: 1, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"},
 			},
 			wantErr: true,
 		},
@@ -201,6 +211,12 @@ func TestPatchSingleNode(t *testing.T) {
 				}
 				if got := node.Labels[VolumesLabel]; got != tt.wantVolumes {
 					t.Errorf("Volumes label = %v, want %v", got, tt.wantVolumes)
+				}
+				if got := node.Labels[VolumeAttachmentLimitLabel]; got != tt.wantLimit {
+					t.Errorf("VolumeAttachmentLimit label = %v, want %v", got, tt.wantLimit)
+				}
+				if got := node.Labels[VolumeAttachmentTypeLabel]; got != tt.wantType {
+					t.Errorf("VolumeAttachmentType label = %v, want %v", got, tt.wantType)
 				}
 			}
 		})
@@ -395,6 +411,10 @@ func TestUpdateMetadataEC2(t *testing.T) {
 			} else {
 				instances := []*types.Instance{makeInstance("i-001", tt.metadata["i-001"].ENIs, []string{"vol-001", "vol-002", "vol-003", "vol-004"})}
 				mockCloud.EXPECT().GetInstancesPatching(ctx, []string{"i-001"}).Return(instances, nil)
+				mockCloud.EXPECT().GetInstanceTypesInfo(ctx, gomock.Eq([]string{"c5.large"})).
+					Return(map[string]cloud.InstanceTypeInfo{
+						"c5.large": {MaxAttachments: 27, AttachmentType: "shared"},
+					}, nil)
 			}
 
 			err := updateMetadataEC2(ctx, clientset, mockCloud, nodeList, pvInformer)
@@ -448,6 +468,10 @@ func TestPatchNewNodes(t *testing.T) {
 
 			instances := []*types.Instance{makeInstance("i-001", tt.metadata["i-001"].ENIs, []string{"vol-001", "vol-002"})}
 			mockCloud.EXPECT().GetInstancesPatching(ctx, []string{"i-001"}).Return(instances, nil).MinTimes(1)
+			mockCloud.EXPECT().GetInstanceTypesInfo(ctx, gomock.Eq([]string{"c5.large"})).
+				Return(map[string]cloud.InstanceTypeInfo{
+					"c5.large": {MaxAttachments: 27, AttachmentType: "shared"},
+				}, nil).MinTimes(1)
 
 			patched := make(chan struct{})
 			clientset.PrependReactor("patch", "nodes", func(action clienttesting.Action) (bool, runtime.Object, error) {
@@ -491,8 +515,10 @@ func TestPatchNewNodes(t *testing.T) {
 func makeNode(name, providerID string) corev1.Node {
 	return corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: make(map[string]string),
+			Name: name,
+			Labels: map[string]string{
+				corev1.LabelInstanceTypeStable: "c5.large",
+			},
 		},
 		Spec: corev1.NodeSpec{
 			ProviderID: providerID,
@@ -513,6 +539,7 @@ func makeInstance(id string, numENIs int, volumeIDs []string) *types.Instance {
 
 	return &types.Instance{
 		InstanceId:          &id,
+		InstanceType:        types.InstanceTypeC5Large,
 		NetworkInterfaces:   make([]types.InstanceNetworkInterface, numENIs),
 		BlockDeviceMappings: blockDevices,
 	}
@@ -583,4 +610,97 @@ func setupPVInformer(t *testing.T, pvs []corev1.PersistentVolume) cache.SharedIn
 	factory.Start(stopCh)
 	cache.WaitForCacheSync(stopCh, pvInformer.HasSynced)
 	return pvInformer
+}
+
+func TestGetVolumeAttachmentInfo(t *testing.T) {
+	tests := []struct {
+		name              string
+		instanceType      string
+		instanceTypesInfo map[string]cloud.InstanceTypeInfo
+		wantLimit         int
+		wantType          string
+	}{
+		{
+			name:         "uses API data when available",
+			instanceType: "c5.large",
+			instanceTypesInfo: map[string]cloud.InstanceTypeInfo{
+				"c5.large": {MaxAttachments: 27, AttachmentType: "shared"},
+			},
+			wantLimit: 27,
+			wantType:  "shared",
+		},
+		{
+			name:         "applies dedicated override from API data",
+			instanceType: "i8ge.metal-24xl",
+			instanceTypesInfo: map[string]cloud.InstanceTypeInfo{
+				"i8ge.metal-24xl": {MaxAttachments: 128, AttachmentType: "shared"},
+			},
+			wantLimit: 128,
+			wantType:  "dedicated",
+		},
+		{
+			name:              "falls back to static table when API data missing",
+			instanceType:      "c5.large",
+			instanceTypesInfo: map[string]cloud.InstanceTypeInfo{},
+			wantLimit:         27,
+			wantType:          "shared",
+		},
+		{
+			name:              "falls back to static table when API data nil",
+			instanceType:      "c5.large",
+			instanceTypesInfo: nil,
+			wantLimit:         27,
+			wantType:          "shared",
+		},
+		{
+			name:         "falls back when API returns zero attachments",
+			instanceType: "c5.large",
+			instanceTypesInfo: map[string]cloud.InstanceTypeInfo{
+				"c5.large": {MaxAttachments: 0, AttachmentType: "shared"},
+			},
+			wantLimit: 27,
+			wantType:  "shared",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotLimit, gotType := getVolumeAttachmentInfo(tt.instanceType, tt.instanceTypesInfo)
+			if gotLimit != tt.wantLimit {
+				t.Errorf("getVolumeAttachmentInfo() limit = %v, want %v", gotLimit, tt.wantLimit)
+			}
+			if gotType != tt.wantType {
+				t.Errorf("getVolumeAttachmentInfo() type = %v, want %v", gotType, tt.wantType)
+			}
+		})
+	}
+}
+
+func TestGetMetadataWithDITFallback(t *testing.T) {
+	initVariables()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockCloud := cloud.NewMockCloud(ctrl)
+	nodes := []corev1.Node{makeNode("i-001", "aws:///us-west-2a/i-001")}
+	nodeList := &corev1.NodeList{Items: nodes}
+
+	instances := []*types.Instance{makeInstance("i-001", 2, []string{"vol-001", "vol-002"})}
+	mockCloud.EXPECT().GetInstancesPatching(ctx, []string{"i-001"}).Return(instances, nil)
+	// Simulate DIT failure - should fall back to static table
+	mockCloud.EXPECT().GetInstanceTypesInfo(ctx, gomock.Eq([]string{"c5.large"})).Return(nil, errors.New("DIT API error"))
+
+	pvInformer := setupPVInformer(t, nil)
+	got, err := getMetadata(ctx, mockCloud, nodeList, pvInformer)
+
+	if err != nil {
+		t.Fatalf("getMetadata() unexpected error: %v", err)
+	}
+
+	want := enisVolumes{ENIs: 2, Volumes: 1, VolumeAttachmentLimit: 27, VolumeAttachmentType: "shared"}
+	if got["i-001"] != want {
+		t.Errorf("getMetadata() = %v, want %v", got["i-001"], want)
+	}
 }

@@ -142,6 +142,10 @@ func (d *fakeCloud) GetInstancesPatching(ctx context.Context, nodeIDs []string) 
 	return []*types.Instance{}, nil
 }
 
+func (d *fakeCloud) GetInstanceTypesInfo(ctx context.Context, instanceTypes []string) (map[string]cloud.InstanceTypeInfo, error) {
+	return map[string]cloud.InstanceTypeInfo{}, nil
+}
+
 func (d *fakeCloud) ListSnapshots(ctx context.Context, sourceVolumeID string, maxResults int32, nextToken string) (*cloud.ListSnapshotsResponse, error) {
 	var s []*cloud.Snapshot
 	startIndex := 0

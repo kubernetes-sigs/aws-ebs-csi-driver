@@ -26,6 +26,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/kubernetes-csi/csi-lib-utils/leaderelection"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud/limits"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,11 +59,19 @@ var (
 
 	// ENIsLabel is the label name for the number of ENIs on a node.
 	ENIsLabel string
+
+	// VolumeAttachmentLimitLabel is the label name for the volume attachment limit on a node.
+	VolumeAttachmentLimitLabel string
+
+	// VolumeAttachmentTypeLabel is the label name for the volume attachment type on a node.
+	VolumeAttachmentTypeLabel string
 )
 
 type enisVolumes struct {
-	ENIs    int
-	Volumes int
+	ENIs                  int
+	Volumes               int
+	VolumeAttachmentLimit int
+	VolumeAttachmentType  string
 }
 
 // initVariables initializes variables that depend on driver name.
@@ -71,6 +80,8 @@ func initVariables() {
 	once.Do(func() {
 		VolumesLabel = util.GetDriverName() + "/non-csi-ebs-volumes-count"
 		ENIsLabel = util.GetDriverName() + "/enis-count"
+		VolumeAttachmentLimitLabel = util.GetDriverName() + "/volume-attachment-limit"
+		VolumeAttachmentTypeLabel = util.GetDriverName() + "/volume-attachment-type"
 	})
 }
 
@@ -221,8 +232,8 @@ func getNodes(ctx context.Context, kubeclient kubernetes.Interface) (*v1.NodeLis
 	return nodes, nil
 }
 
-func updateMetadataEC2(ctx context.Context, kubeclient kubernetes.Interface, cloud cloud.Cloud, nodes *v1.NodeList, pvInformer cache.SharedIndexInformer) error {
-	enisVolumeMap, err := getMetadata(ctx, cloud, nodes, pvInformer)
+func updateMetadataEC2(ctx context.Context, kubeclient kubernetes.Interface, c cloud.Cloud, nodes *v1.NodeList, pvInformer cache.SharedIndexInformer) error {
+	enisVolumeMap, err := getMetadata(ctx, c, nodes, pvInformer)
 	if err != nil {
 		klog.ErrorS(err, "Unable to get ENI/Volume count")
 		return err
@@ -236,7 +247,7 @@ func updateMetadataEC2(ctx context.Context, kubeclient kubernetes.Interface, clo
 }
 
 // getMetadata calls the EC2 API to get the number of ENIs and non-CSI managed volumes attached to each node.
-func getMetadata(ctx context.Context, cloud cloud.Cloud, nodes *v1.NodeList, pvInformer cache.SharedIndexInformer) (map[string]enisVolumes, error) {
+func getMetadata(ctx context.Context, c cloud.Cloud, nodes *v1.NodeList, pvInformer cache.SharedIndexInformer) (map[string]enisVolumes, error) {
 	nodeIds := make([]string, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		id, err := parseProviderID(&node)
@@ -247,11 +258,29 @@ func getMetadata(ctx context.Context, cloud cloud.Cloud, nodes *v1.NodeList, pvI
 			nodeIds = append(nodeIds, id)
 		}
 	}
-	respList, err := cloud.GetInstancesPatching(ctx, nodeIds)
+	respList, err := c.GetInstancesPatching(ctx, nodeIds)
 
 	if err != nil {
 		klog.ErrorS(err, "Failed to describe instances")
 		return nil, err
+	}
+
+	// Collect unique instance types from DescribeInstances response and get their attachment info
+	uniqueTypes := make(map[string]struct{})
+	for _, instance := range respList {
+		uniqueTypes[string(instance.InstanceType)] = struct{}{}
+	}
+	typeList := make([]string, 0, len(uniqueTypes))
+	for t := range uniqueTypes {
+		typeList = append(typeList, t)
+	}
+
+	var instanceTypesInfo map[string]cloud.InstanceTypeInfo
+	if len(typeList) > 0 {
+		instanceTypesInfo, err = c.GetInstanceTypesInfo(ctx, typeList)
+		if err != nil {
+			klog.ErrorS(err, "Failed to describe instance types, falling back to static table")
+		}
 	}
 
 	enisVolumesMap := make(map[string]enisVolumes, len(respList))
@@ -265,10 +294,33 @@ func getMetadata(ctx context.Context, cloud cloud.Cloud, nodes *v1.NodeList, pvI
 			// -1 for root volume because we eventually add this back in when calculating allocatable count in getVolumesLimit()
 			numBlockDeviceMappings = getNonCSIManagedVolumes(pvInformer, instance.BlockDeviceMappings) - 1
 		}
-		enisVolumesMap[*instance.InstanceId] = enisVolumes{ENIs: numAttachedENIs, Volumes: numBlockDeviceMappings}
+
+		instanceType := string(instance.InstanceType)
+		attachLimit, attachType := getVolumeAttachmentInfo(instanceType, instanceTypesInfo)
+
+		enisVolumesMap[*instance.InstanceId] = enisVolumes{
+			ENIs:                  numAttachedENIs,
+			Volumes:               numBlockDeviceMappings,
+			VolumeAttachmentLimit: attachLimit,
+			VolumeAttachmentType:  attachType,
+		}
 	}
 
 	return enisVolumesMap, nil
+}
+
+// getVolumeAttachmentInfo returns the volume attachment limit and type for an instance type.
+// It prefers DescribeInstanceTypes data, falling back to the static table.
+// The dedicatedInstances override is always applied.
+func getVolumeAttachmentInfo(instanceType string, instanceTypesInfo map[string]cloud.InstanceTypeInfo) (int, string) {
+	if info, ok := instanceTypesInfo[instanceType]; ok && info.MaxAttachments > 0 && info.AttachmentType != "" {
+		attachType := info.AttachmentType
+		if limits.IsDedicatedOverride(instanceType) {
+			attachType = util.AttachmentDedicated
+		}
+		return info.MaxAttachments, attachType
+	}
+	return limits.GetVolumeLimits(instanceType)
 }
 
 // patchNodes patches the labels of each node to have the number of ENIs and non-CSI managed volumes attached to each node.
@@ -319,6 +371,8 @@ func patchSingleNode(ctx context.Context, node v1.Node, enisVolumeMap map[string
 	numBlockDeviceMappings := enisVolumeMap[instanceID].Volumes
 	newNode.Labels[VolumesLabel] = strconv.Itoa(numBlockDeviceMappings)
 	newNode.Labels[ENIsLabel] = strconv.Itoa(numAttachedENIs)
+	newNode.Labels[VolumeAttachmentLimitLabel] = strconv.Itoa(enisVolumeMap[instanceID].VolumeAttachmentLimit)
+	newNode.Labels[VolumeAttachmentTypeLabel] = enisVolumeMap[instanceID].VolumeAttachmentType
 
 	oldData, err := json.Marshal(node)
 	if err != nil {

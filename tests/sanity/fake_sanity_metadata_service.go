@@ -65,3 +65,11 @@ func (m *fakeMetadataService) GetNumBlockDeviceMappings() int {
 func (m *fakeMetadataService) GetOutpostArn() arn.ARN {
 	return m.outpostArn
 }
+
+func (m *fakeMetadataService) GetVolumeAttachmentLimit() int {
+	return 0
+}
+
+func (m *fakeMetadataService) GetVolumeAttachmentType() string {
+	return ""
+}

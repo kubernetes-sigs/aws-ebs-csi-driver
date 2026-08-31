@@ -817,9 +817,15 @@ func (d *NodeService) getVolumesLimit() int64 {
 		return d.options.VolumeAttachLimit
 	}
 
-	instanceType := d.metadata.GetInstanceType()
-	availableAttachments, limitType := limits.GetVolumeLimits(instanceType)
-	klog.V(4).InfoS("getVolumesLimit: Retrieved inputs", "instanceType", instanceType, "attachmentLimit", availableAttachments, "limitType", limitType)
+	availableAttachments := d.metadata.GetVolumeAttachmentLimit()
+	limitType := d.metadata.GetVolumeAttachmentType()
+
+	// Fallback to static table if labels are not set (non-metadata-labeler sources)
+	if availableAttachments == 0 || limitType == "" {
+		instanceType := d.metadata.GetInstanceType()
+		availableAttachments, limitType = limits.GetVolumeLimits(instanceType)
+	}
+	klog.V(4).InfoS("getVolumesLimit: Retrieved inputs", "attachmentLimit", availableAttachments, "limitType", limitType)
 
 	// Calculate reserved volume attachments (additional EBS volumes)
 	reservedVolumeAttachments := d.options.ReservedVolumeAttachments

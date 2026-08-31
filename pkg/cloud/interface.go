@@ -42,5 +42,12 @@ type Cloud interface {
 	AvailabilityZones(ctx context.Context) (map[string]struct{}, error)
 	DryRun(ctx context.Context) error
 	GetInstancesPatching(ctx context.Context, nodeIDs []string) ([]*types.Instance, error)
+	GetInstanceTypesInfo(ctx context.Context, instanceTypes []string) (map[string]InstanceTypeInfo, error)
 	LockSnapshot(ctx context.Context, lockOptions *SnapshotLockOptions) (err error)
+}
+
+// InstanceTypeInfo contains volume attachment information for an instance type.
+type InstanceTypeInfo struct {
+	MaxAttachments int
+	AttachmentType string
 }
