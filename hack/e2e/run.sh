@@ -147,7 +147,7 @@ else
     # Regex matching volume expansion tests susceptible to transient failures on Windows due to defragsvc contention.
     WINDOWS_VOLUME_EXPAND_REGEX="volume-expand|expansion of pvcs created for ephemeral"
 
-    TEST_PACKAGE_VERSION=$(curl -L https://dl.k8s.io/release/stable-${packageVersion}.txt)
+    TEST_PACKAGE_VERSION=${TEST_PACKAGE_VERSION:-$(curl -L https://dl.k8s.io/release/stable-${packageVersion}.txt)}
 
     run_kubetest2() {
       local run_id="$1"
@@ -162,6 +162,7 @@ else
         --skip-regex="${skip}" \
         --focus-regex="${focus}" \
         --test-package-version="${TEST_PACKAGE_VERSION}" \
+        ${KUBETEST2_USE_BUILT_BINARIES:+--use-built-binaries} \
         --parallel=${GINKGO_PARALLEL} \
         ${extra_ginkgo_args:+--ginkgo-args="${extra_ginkgo_args}"} \
         --test-args="-storage.testdriver=${PWD}/manifests.yaml -kubeconfig=${KUBECONFIG} -node-os-distro=${NODE_OS_DISTRO}"
