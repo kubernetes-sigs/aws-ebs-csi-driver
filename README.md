@@ -28,7 +28,7 @@ The Helm chart is published through the GitHub Pages Helm repository and as an O
 
 | Chart Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Chart | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver) Chart |
 |---------------|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| 2.65.0        | registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver:2.65.0                                     | public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver:2.65.0                       |
+| 2.65.1        | registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver:2.65.1                                     | public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver:2.65.1                       |
 
 ## Releases
 
