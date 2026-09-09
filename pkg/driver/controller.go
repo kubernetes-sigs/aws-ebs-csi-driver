@@ -118,8 +118,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		iops                     int32
 		throughput               int32
 		volumeInitializationRate int32
-		isEncrypted              bool
-		encryptedKey             string
+		isEncrypted              *bool
 		kmsKeyID                 string
 		tagsToEvaluate           = make([]string, 0)
 		volumeTags               = map[string]string{
@@ -174,8 +173,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			}
 			throughput = int32(parseThroughput)
 		case EncryptedKey:
-			isEncrypted = isTrue(value)
-			encryptedKey = value
+			isEncrypted = aws.Bool(isTrue(value))
 		case KmsKeyIDKey:
 			kmsKeyID = value
 		case PVCNameKey:
@@ -362,9 +360,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 
 		if sourceVolume != nil {
-			if encryptedKey != "" && !isEncrypted {
-				return nil, status.Error(codes.InvalidArgument, "Cannot make an unencrypted clone")
-			}
 			volumeID = sourceVolume.GetVolumeId()
 		}
 	}
@@ -377,10 +372,6 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 		if err != nil {
 			return nil, status.Errorf(codes.NotFound, "Error source volume with volumeID %v not found: %v", volumeID, err)
-		}
-
-		if kmsKeyID != "" && sourceVolume.KmsKeyID != kmsKeyID {
-			return nil, status.Errorf(codes.InvalidArgument, "Cannot provision clone with different KMS key than source volume")
 		}
 
 		err = checkSourceTopology(req.GetAccessibilityRequirements(), sourceVolume.AvailabilityZone, sourceVolume.OutpostArn, sourceVolume.AvailabilityZoneID)

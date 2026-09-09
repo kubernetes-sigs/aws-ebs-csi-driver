@@ -1,6 +1,6 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/helm-template
 
-go 1.26.1
+go 1.27.0
 
 require sigs.k8s.io/yaml v1.6.0
 

@@ -265,7 +265,7 @@ type DiskOptions struct {
 	AvailabilityZone       string
 	AvailabilityZoneID     string
 	OutpostArn             string
-	Encrypted              bool
+	Encrypted              *bool
 	MultiAttachEnabled     bool
 	// KmsKeyID represents a fully qualified resource name to the key to use for encryption.
 	// example: arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef
@@ -794,15 +794,23 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 			TagSpecifications:  []types.TagSpecification{tagSpec},
 		}
+		if diskOptions.Encrypted != nil {
+			copyRequestInput.Encrypted = diskOptions.Encrypted
+		}
+		if len(diskOptions.KmsKeyID) > 0 {
+			copyRequestInput.KmsKeyId = aws.String(diskOptions.KmsKeyID)
+		}
 		size, outpostArn, volumeID, err = c.createCloneHelper(ctx, copyRequestInput, iops, diskOptions.Throughput)
 	} else {
 		createRequestInput := &ec2.CreateVolumeInput{
 			ClientToken:        aws.String(hex.EncodeToString(clientToken[:])),
 			Size:               aws.Int32(capacityGiB),
 			VolumeType:         types.VolumeType(createType),
-			Encrypted:          aws.Bool(diskOptions.Encrypted),
 			MultiAttachEnabled: aws.Bool(diskOptions.MultiAttachEnabled),
 			TagSpecifications:  []types.TagSpecification{tagSpec},
+		}
+		if diskOptions.Encrypted != nil {
+			createRequestInput.Encrypted = diskOptions.Encrypted
 		}
 		size, outpostArn, volumeID, err = c.createVolumeHelper(ctx, diskOptions, createRequestInput, iops, diskOptions.Throughput, zone, zoneID)
 	}
@@ -2494,8 +2502,7 @@ func (c *cloud) getAccountID(ctx context.Context) (string, error) {
 // and has the given code. More information on AWS error codes at:
 // https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html
 func isAWSError(err error, code string) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == code {
 			return true
 		}
@@ -2561,8 +2568,7 @@ func isAWSErrorInvalidParameterCombination(err error) bool {
 // isAWSErrorBlockDeviceInUse returns a boolean indicating whether the
 // given error appears to be a block device name already in use error.
 func isAWSErrorBlockDeviceInUse(err error) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == "InvalidParameterValue" && strings.Contains(apiErr.ErrorMessage(), "already in use") {
 			return true
 		}
@@ -2579,8 +2585,7 @@ func isAWSErrorAttachmentLimitExceeded(err error) bool {
 // isAWSHyperPodErrorAttachmentLimitExceeded checks if the error is an AttachmentLimitExceeded error.
 // This error is reported when the maximum number of attachments for an instance is exceeded.
 func isAWSHyperPodErrorAttachmentLimitExceeded(err error) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == ValidationException && strings.Contains(
 			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: AttachmentLimitExceeded") {
 			return true
@@ -2593,8 +2598,7 @@ func isAWSHyperPodErrorAttachmentLimitExceeded(err error) bool {
 // given error is a ValidationException error. This error is
 // reported when the specified volume doesn't exist.
 func isAWSHyperPodErrorVolumeNotFound(err error) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == ValidationException && strings.Contains(
 			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidVolume.NotFound") {
 			return true
@@ -2607,8 +2611,7 @@ func isAWSHyperPodErrorVolumeNotFound(err error) bool {
 // given error is a ValidationException error. This error is
 // reported when the resource is not in a correct state for the request.
 func isAWSHyperPodErrorIncorrectState(err error) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == ValidationException && strings.Contains(
 			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: IncorrectState") {
 			return true
@@ -2621,8 +2624,7 @@ func isAWSHyperPodErrorIncorrectState(err error) bool {
 // given error is a ValidationException error. This error is reported
 // when attempting to detach a volume from an instance to which it is not attached.
 func isAWSHyperPodErrorInvalidAttachmentNotFound(err error) bool {
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		if apiErr.ErrorCode() == ValidationException && strings.Contains(
 			apiErr.ErrorMessage(), "HyperPod - Ec2ErrCode: InvalidAttachment.NotFound") {
 			return true
@@ -2658,8 +2660,7 @@ func isAwsErrorSnapshotLimitExceeded(err error) bool {
 // isAWSErrorInvalidParameter returns a boolean indicating whether the
 // given error is caused by invalid parameters in a EC2 API request.
 func isAWSErrorInvalidParameter(err error) bool {
-	var apiError smithy.APIError
-	if errors.As(err, &apiError) {
+	if apiError, ok := errors.AsType[smithy.APIError](err); ok {
 		_, found := invalidParameterErrorCodes[apiError.ErrorCode()]
 		return found
 	}

@@ -230,3 +230,11 @@ _Note: This error is also possible for other reasons, such as a corrupted volume
 As a workaround, the `--legacy-xfs` CLI option can be set to `true` to format XFS volumes with features not supported on older kernels disabled. When deploying via Helm or as an EKS Addon, this parameter can be enabled via the `node.legacyXFS` parameter. **This parameter only affects volumes formatted after it is enabled. Already formatted volumes will need to be re-created.**
 
 When using this parameter, newer XFS features may not be available (such as reflinks). Additionally, volumes formatted with this feature enabled will likely experience issues if still in use in 2038.
+
+## Cross-Account Clones
+
+### Why does the AWS EBS CSI Driver not officially support cross-account clones?
+
+Cross-account shared volumes only permit `CopyVolumes` and `DescribeVolumes`, so cloning one requires creating a PV/PVC pair that Kubernetes can bind unintentionally — leaving workloads stuck (the volume cannot be attached) or PVs stuck deleting (`DeleteVolume` is not permitted on shared volumes).
+
+The driver does not block cross-account clones, but we strongly recommend against using them through the driver and do not officially support them.

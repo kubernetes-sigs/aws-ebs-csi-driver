@@ -31,7 +31,7 @@ func main() {
 	familyTypes := make(map[string]map[string]bool)
 
 	for _, instanceType := range limits.KnownInstanceTypes() {
-		family := strings.Split(instanceType, ".")[0]
+		family, _, _ := strings.Cut(instanceType, ".")
 
 		_, attachmentType := limits.GetVolumeLimits(instanceType)
 		if familyTypes[family] == nil {

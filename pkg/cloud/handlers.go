@@ -37,8 +37,7 @@ func RecordRequestsMiddleware(deprecatedMetrics bool) func(*middleware.Stack) er
 			output, metadata, err = next.HandleFinalize(ctx, input)
 			labels := createLabels(ctx)
 			if err != nil {
-				var apiErr smithy.APIError
-				if errors.As(err, &apiErr) {
+				if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 					if _, isThrottleError := retry.DefaultThrottleErrorCodes[apiErr.ErrorCode()]; isThrottleError {
 						operationName := awsmiddleware.GetOperationName(ctx)
 						labels = map[string]string{
@@ -76,8 +75,7 @@ func LogServerErrorsMiddleware() func(*middleware.Stack) error {
 		return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("LogServerErrorsMiddleware", func(ctx context.Context, input middleware.FinalizeInput, next middleware.FinalizeHandler) (output middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
 			output, metadata, err = next.HandleFinalize(ctx, input)
 			if err != nil {
-				var apiErr smithy.APIError
-				if errors.As(err, &apiErr) {
+				if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 					if _, isThrottleError := retry.DefaultThrottleErrorCodes[apiErr.ErrorCode()]; isThrottleError {
 						// Only log throttle errors under a high verbosity as we expect to see many of them
 						// under normal bursty/high-TPS workloads

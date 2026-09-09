@@ -64,9 +64,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{},
 					},
@@ -81,9 +79,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -103,9 +99,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -116,9 +110,7 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 				va := &storagev1.VolumeAttachment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "va-other-node",
-					},
+					Name: "va-other-node",
 					Spec: storagev1.VolumeAttachmentSpec{
 						NodeName: "test-node-2",
 						Attacher: "ebs.csi.aws.com",
@@ -134,9 +126,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -147,9 +137,7 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 				va := &storagev1.VolumeAttachment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "va-test-node",
-					},
+					Name: "va-test-node",
 					Spec: storagev1.VolumeAttachmentSpec{
 						NodeName: nodeName,
 						Attacher: "ebs.csi.aws.com",
@@ -174,9 +162,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -196,9 +182,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -209,9 +193,7 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 				va := &storagev1.VolumeAttachment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "va-other-node",
-					},
+					Name: "va-other-node",
 					Spec: storagev1.VolumeAttachmentSpec{
 						NodeName: "test-node-2",
 						Attacher: "ebs.csi.aws.com",
@@ -227,9 +209,7 @@ func TestPreStopHook(t *testing.T) {
 			setup: func(t *testing.T, nodeName string) kubernetes.Interface {
 				t.Helper()
 				node := &v1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nodeName,
-					},
+					Name: nodeName,
 					Spec: v1.NodeSpec{
 						Taints: []v1.Taint{
 							{
@@ -240,9 +220,7 @@ func TestPreStopHook(t *testing.T) {
 					},
 				}
 				va := &storagev1.VolumeAttachment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "va-karpenter-node",
-					},
+					Name: "va-karpenter-node",
 					Spec: storagev1.VolumeAttachmentSpec{
 						NodeName: nodeName,
 						Attacher: "ebs.csi.aws.com",

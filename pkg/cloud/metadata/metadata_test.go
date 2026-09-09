@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -40,13 +39,11 @@ func TestNewMetadataService(t *testing.T) {
 	defer ctrl.Finish()
 
 	defaultNodeSpec := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-node",
-			Labels: map[string]string{
-				corev1.LabelInstanceTypeStable: "c5.xlarge",
-				corev1.LabelTopologyRegion:     "us-west-2",
-				corev1.LabelTopologyZone:       "us-west-2a",
-			},
+		Name: "test-node",
+		Labels: map[string]string{
+			corev1.LabelInstanceTypeStable: "c5.xlarge",
+			corev1.LabelTopologyRegion:     "us-west-2",
+			corev1.LabelTopologyZone:       "us-west-2a",
 		},
 		Spec: corev1.NodeSpec{
 			ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -142,15 +139,13 @@ func TestNewMetadataService(t *testing.T) {
 			name:            "TestMetadataLabelerInstanceInfo: success metadata-labeler",
 			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-						ENIsLabel:                      "4",
-						VolumesLabel:                   "5",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
+					ENIsLabel:                      "4",
+					VolumesLabel:                   "5",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -169,15 +164,13 @@ func TestNewMetadataService(t *testing.T) {
 			name:            "TestMetadataLabelerInstanceInfo: Invalid volume label",
 			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-						ENIsLabel:                      "4",
-						VolumesLabel:                   "",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
+					ENIsLabel:                      "4",
+					VolumesLabel:                   "",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -189,14 +182,12 @@ func TestNewMetadataService(t *testing.T) {
 			name:            "TestMetadataLabelerInstanceInfo: Invalid ENI label",
 			metadataSources: []string{SourceMetadataLabeler},
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-						VolumesLabel:                   "5",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
+					VolumesLabel:                   "5",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -209,13 +200,11 @@ func TestNewMetadataService(t *testing.T) {
 			metadataSources: DefaultMetadataSources,
 			isHyperPodNode:  true,
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "hyperpod-i-1234567890abcdef0",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-					},
+				Name: "hyperpod-i-1234567890abcdef0",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
@@ -256,12 +245,10 @@ func TestNewMetadataService(t *testing.T) {
 
 			if tc.IMDSError == nil && !tc.imdsDisabled && (slices.Contains(tc.metadataSources, SourceIMDS)) && !tc.isHyperPodNode {
 				mockIMDS.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				mockIMDS.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab")),
@@ -322,9 +309,7 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Empty instance ID",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID: "",
-					},
+					InstanceID: "",
 				}, nil)
 			},
 			expectedError: errors.New("could not get valid EC2 instance ID"),
@@ -333,10 +318,8 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Empty instance type",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:   "i-1234567890abcdef0",
-						InstanceType: "",
-					},
+					InstanceID:   "i-1234567890abcdef0",
+					InstanceType: "",
 				}, nil)
 			},
 			expectedError: errors.New("could not get valid EC2 instance type"),
@@ -345,11 +328,9 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Empty region and invalid region from session",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:   "i-1234567890abcdef0",
-						InstanceType: "c5.xlarge",
-						Region:       "",
-					},
+					InstanceID:   "i-1234567890abcdef0",
+					InstanceType: "c5.xlarge",
+					Region:       "",
 				}, nil)
 			},
 			expectedError: errors.New("could not get valid EC2 region"),
@@ -358,12 +339,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Empty availability zone and invalid region from session",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "",
 				}, nil)
 			},
 			expectedError: errors.New("could not get valid EC2 availability zone"),
@@ -372,12 +351,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Error getting ENIs metadata",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(nil, errors.New("failed to get ENIs metadata"))
 			},
@@ -387,12 +364,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Error reading ENIs metadata content",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(errReader{}),
@@ -404,12 +379,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Error getting block device mappings metadata",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("eni-1\neni-2")),
@@ -422,12 +395,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Error reading block device mappings metadata content",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
@@ -442,12 +413,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Valid metadata with outpost ARN",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
@@ -479,12 +448,10 @@ func TestIMDSInstanceInfo(t *testing.T) {
 			name: "TestIMDSInstanceInfo: Valid metadata without outpost ARN",
 			mockIMDS: func(m *MockIMDS) {
 				m.EXPECT().GetInstanceIdentityDocument(testutil.AnyContext(), &imds.GetInstanceIdentityDocumentInput{}).Return(&imds.GetInstanceIdentityDocumentOutput{
-					InstanceIdentityDocument: imds.InstanceIdentityDocument{
-						InstanceID:       "i-1234567890abcdef0",
-						InstanceType:     "c5.xlarge",
-						Region:           "us-west-2",
-						AvailabilityZone: "us-west-2a",
-					},
+					InstanceID:       "i-1234567890abcdef0",
+					InstanceType:     "c5.xlarge",
+					Region:           "us-west-2",
+					AvailabilityZone: "us-west-2a",
 				}, nil)
 				m.EXPECT().GetMetadata(testutil.AnyContext(), &imds.GetMetadataInput{Path: EnisEndpoint}).Return(&imds.GetMetadataOutput{
 					Content: io.NopCloser(strings.NewReader("01:23:45:67:89:ab\n02:23:45:67:89:ab")),
@@ -562,9 +529,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: Empty provider ID",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
+				Name: "test-node",
 				Spec: corev1.NodeSpec{
 					ProviderID: "",
 				},
@@ -575,9 +540,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "Instance ID not found",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
+				Name: "test-node",
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/invalid-instance-id",
 				},
@@ -588,9 +551,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "Instance ID not found(hyperpod)",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
+				Name: "test-node",
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/hyperpod-clusterId",
 				},
@@ -601,9 +562,7 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: Missing instance type label",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
+				Name: "test-node",
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},
@@ -614,11 +573,9 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: Missing region label",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -630,12 +587,10 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: Missing availability zone label",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -647,13 +602,11 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: Valid instance info",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -672,15 +625,13 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: HyperPod instance with SageMaker labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
-						corev1.LabelTopologyRegion:             "us-west-2",
-						corev1.LabelTopologyZone:               "us-west-2a",
-						LabelSageMakerENICount:                 "3",
-						LabelSageMakerBlockDeviceMappingsCount: "2",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
+					corev1.LabelTopologyRegion:             "us-west-2",
+					corev1.LabelTopologyZone:               "us-west-2a",
+					LabelSageMakerENICount:                 "3",
+					LabelSageMakerBlockDeviceMappingsCount: "2",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
@@ -699,15 +650,13 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			name:     "TestKubernetesAPIInstanceInfo: HyperPod instance invalid SageMaker labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
-						corev1.LabelTopologyRegion:             "us-west-2",
-						corev1.LabelTopologyZone:               "us-west-2a",
-						LabelSageMakerENICount:                 "invalid-number",
-						LabelSageMakerBlockDeviceMappingsCount: "invalid-number",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable:         "ml.c5.xlarge",
+					corev1.LabelTopologyRegion:             "us-west-2",
+					corev1.LabelTopologyZone:               "us-west-2a",
+					LabelSageMakerENICount:                 "invalid-number",
+					LabelSageMakerBlockDeviceMappingsCount: "invalid-number",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///usw2-az2/sagemaker/cluster/hyperpod-abcde3ghij4l-i-1234567890abcdef0",
@@ -768,15 +717,13 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 			name:     "TestMetadataLabelerInstanceInfo: Valid instance info for metadata labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-					Labels: map[string]string{
-						corev1.LabelInstanceTypeStable: "c5.xlarge",
-						corev1.LabelTopologyRegion:     "us-west-2",
-						corev1.LabelTopologyZone:       "us-west-2a",
-						ENIsLabel:                      "5",
-						VolumesLabel:                   "4",
-					},
+				Name: "test-node",
+				Labels: map[string]string{
+					corev1.LabelInstanceTypeStable: "c5.xlarge",
+					corev1.LabelTopologyRegion:     "us-west-2",
+					corev1.LabelTopologyZone:       "us-west-2a",
+					ENIsLabel:                      "5",
+					VolumesLabel:                   "4",
 				},
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
@@ -795,9 +742,7 @@ func TestMetadataLabelerInstanceInfo(t *testing.T) {
 			name:     "TestMetadataLabelerInstanceInfo: non valid labels",
 			nodeName: "test-node",
 			node: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-node",
-				},
+				Name: "test-node",
 				Spec: corev1.NodeSpec{
 					ProviderID: "aws:///us-west-2a/i-1234567890abcdef0",
 				},

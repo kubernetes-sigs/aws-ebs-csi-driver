@@ -21,7 +21,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-provisioner
-      tag: "v6.3.0-eksbuild.6"
+      tag: "v6.3.0-eksbuild.7"
     logLevel: 2
     # Additional parameters provided by csi-provisioner.
     additionalArgs: []
@@ -48,7 +48,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-attacher
-      tag: "v4.12.0-eksbuild.7"
+      tag: "v4.12.0-eksbuild.8"
     # Tune leader lease election for csi-attacher.
     # Leader election is on by default.
     leaderElection:
@@ -77,7 +77,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-snapshotter
-      tag: "v8.6.0-eksbuild.7"
+      tag: "v8.6.0-eksbuild.8"
     logLevel: 2
     # Additional parameters provided by csi-snapshotter.
     additionalArgs: []
@@ -117,7 +117,7 @@ sidecars:
     image:
       pullPolicy: IfNotPresent
       repository: public.ecr.aws/csi-components/csi-resizer
-      tag: "v2.2.1-eksbuild.5"
+      tag: "v2.2.1-eksbuild.6"
     # Tune leader lease election for csi-resizer.
     # Leader election is on by default.
     leaderElection:

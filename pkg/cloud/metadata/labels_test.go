@@ -490,10 +490,8 @@ func TestPatchNewNodes(t *testing.T) {
 
 func makeNode(name, providerID string) corev1.Node {
 	return corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: make(map[string]string),
-		},
+		Name:   name,
+		Labels: make(map[string]string),
 		Spec: corev1.NodeSpec{
 			ProviderID: providerID,
 		},
@@ -520,7 +518,7 @@ func makeInstance(id string, numENIs int, volumeIDs []string) *types.Instance {
 
 func makeCSIPV(name, volumeHandle string) corev1.PersistentVolume {
 	return corev1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Name: name,
 		Spec: corev1.PersistentVolumeSpec{
 			PersistentVolumeSource: corev1.PersistentVolumeSource{
 				CSI: &corev1.CSIPersistentVolumeSource{
@@ -539,7 +537,7 @@ func makeCSIPVPtr(name, volumeHandle string) *corev1.PersistentVolume {
 
 func makeMigratedPV(name, volumeID string) corev1.PersistentVolume {
 	return corev1.PersistentVolume{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Name: name,
 		Spec: corev1.PersistentVolumeSpec{
 			PersistentVolumeSource: corev1.PersistentVolumeSource{
 				AWSElasticBlockStore: &corev1.AWSElasticBlockStoreVolumeSource{
