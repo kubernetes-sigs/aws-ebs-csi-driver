@@ -210,7 +210,7 @@ else
       --focus="${GINKGO_FOCUS}" \
       --skip="${GINKGO_SKIP}" \
       --junit-report="${JUNIT_REPORT:-${REPORT_DIR}/junit.xml}" \
-      "${TEST_PATH}" \
+      "${TEST_PATH_OVERRIDE:-${TEST_PATH}}" \
       -- \
       -kubeconfig="${KUBECONFIG}" \
       -gce-zone="${FIRST_ZONE}"
