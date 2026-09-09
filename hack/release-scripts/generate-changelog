@@ -98,7 +98,6 @@ generate_driver_changelog() {
   "$RELEASE_NOTES_BIN" \
     --org=kubernetes-sigs \
     --repo=aws-ebs-csi-driver \
-    --required-author="" \
     --start-rev="$PREV_DRIVER_VERSION" \
     --end-rev="$NEW_DRIVER_VERSION" \
     --markdown-links \
