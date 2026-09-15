@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"sigs.k8s.io/yaml"
@@ -32,16 +33,22 @@ import (
 
 const releaseName = "ebs-csi"
 
+func sourceDir() string {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("get source directory")
+	}
+	return filepath.Dir(file)
+}
+
 // chartPath returns the absolute path to the helm chart.
 func chartPath() string {
-	_, f, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(f), "..", "..", "charts", "aws-ebs-csi-driver")
+	return filepath.Join(sourceDir(), "..", "..", "charts", "aws-ebs-csi-driver")
 }
 
 // helmBin returns the path to the helm binary.
 func helmBin() string {
-	_, f, _, _ := runtime.Caller(0)
-	bin := filepath.Join(filepath.Dir(f), "..", "..", "bin", ".helm")
+	bin := filepath.Join(sourceDir(), "..", "..", "bin", ".helm")
 	if _, err := os.Stat(bin); err == nil {
 		return bin
 	}
@@ -50,12 +57,11 @@ func helmBin() string {
 
 // testdataPath returns the absolute path to a testdata values file.
 func testdataPath(name string) string {
-	_, f, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(f), "testdata", name+".yaml")
+	return filepath.Join(sourceDir(), "testdata", name+".yaml")
 }
 
 // obj is a generic JSON-like object parsed from YAML.
-type obj = map[string]interface{}
+type obj = map[string]any
 
 // loadValuesMap reads a testdata values YAML file as a generic map so tests can
 // read expected values from the same file they pass to `helm template`.
@@ -81,7 +87,7 @@ func loadValuesMap(t *testing.T, name string) obj {
 // renderChart runs helm template and returns parsed resources as generic maps.
 func renderChart(t *testing.T, valuesFile string) []obj {
 	t.Helper()
-	cmd := exec.Command(helmBin(), "template", releaseName, chartPath(), "-f", testdataPath(valuesFile))
+	cmd := exec.CommandContext(t.Context(), helmBin(), "template", releaseName, chartPath(), "-f", testdataPath(valuesFile))
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -100,7 +106,7 @@ func renderChartWithSet(t *testing.T, sets ...string) []obj {
 	for _, s := range sets {
 		args = append(args, "--set", s)
 	}
-	cmd := exec.Command(helmBin(), args...)
+	cmd := exec.CommandContext(t.Context(), helmBin(), args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -114,7 +120,7 @@ func renderChartWithSet(t *testing.T, sets ...string) []obj {
 func parseYAMLDocs(t *testing.T, data []byte) []obj {
 	t.Helper()
 	var out []obj
-	for _, doc := range bytes.Split(data, []byte("\n---")) {
+	for doc := range bytes.SplitSeq(data, []byte("\n---")) {
 		doc = bytes.TrimSpace(doc)
 		if len(doc) == 0 {
 			continue
@@ -167,7 +173,7 @@ func podSpec(t *testing.T, r obj) obj {
 func findContainer(t *testing.T, ps obj, name string) obj {
 	t.Helper()
 	for _, c := range nestedSlice(t, ps, "containers") {
-		cm := c.(obj)
+		cm := mustObj(t, c)
 		if cm["name"] == name {
 			return cm
 		}
@@ -178,7 +184,7 @@ func findContainer(t *testing.T, ps obj, name string) obj {
 
 // hasContainer returns true if the pod spec has a container with the given name.
 func hasContainer(ps obj, name string) bool {
-	containers, ok := ps["containers"].([]interface{})
+	containers, ok := ps["containers"].([]any)
 	if !ok {
 		return false
 	}
@@ -192,7 +198,7 @@ func hasContainer(ps obj, name string) bool {
 
 // containerArgs returns the args slice for a container.
 func containerArgs(c obj) []string {
-	args, ok := c["args"].([]interface{})
+	args, ok := c["args"].([]any)
 	if !ok {
 		return nil
 	}
@@ -205,12 +211,7 @@ func containerArgs(c obj) []string {
 
 // hasArg checks if a container has a specific arg.
 func hasArg(c obj, arg string) bool {
-	for _, a := range containerArgs(c) {
-		if a == arg {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(containerArgs(c), arg)
 }
 
 // hasArgAny checks if a container has any of the given args.
@@ -221,6 +222,24 @@ func hasArgAny(c obj, args ...string) bool {
 		}
 	}
 	return false
+}
+
+func mustObj(t *testing.T, value any) obj {
+	t.Helper()
+	result, ok := value.(obj)
+	if !ok {
+		t.Fatalf("value has type %T, want object", value)
+	}
+	return result
+}
+
+func mustString(t *testing.T, value any) string {
+	t.Helper()
+	result, ok := value.(string)
+	if !ok {
+		t.Fatalf("value has type %T, want string", value)
+	}
+	return result
 }
 
 // nested traverses a map by keys and returns the nested map.
@@ -241,7 +260,7 @@ func nested(t *testing.T, m obj, keys ...string) obj {
 }
 
 // nestedSlice traverses a map by keys and returns the nested slice.
-func nestedSlice(t *testing.T, m obj, keys ...string) []interface{} {
+func nestedSlice(t *testing.T, m obj, keys ...string) []any {
 	t.Helper()
 	cur := m
 	for i, k := range keys {
@@ -250,7 +269,7 @@ func nestedSlice(t *testing.T, m obj, keys ...string) []interface{} {
 			t.Fatalf("key %q not found", k)
 		}
 		if i == len(keys)-1 {
-			s, ok := val.([]interface{})
+			s, ok := val.([]any)
 			if !ok {
 				t.Fatalf("key %q is not a slice", k)
 			}

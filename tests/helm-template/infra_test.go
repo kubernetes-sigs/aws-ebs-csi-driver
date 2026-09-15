@@ -63,9 +63,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerPodAnnotations", func(t *testing.T) {
-		wantAnns, _ := want["controller"].(obj)["podAnnotations"].(obj)
+		wantAnns := nested(t, want, "controller", "podAnnotations")
 		tmpl := nested(t, deploy, "spec", "template", "metadata")
-		ann := tmpl["annotations"].(obj)
+		ann := nested(t, tmpl, "annotations")
 		for k, v := range wantAnns {
 			if ann[k] != v {
 				t.Errorf("controller pod annotation %q: got %v, want %v", k, ann[k], v)
@@ -74,9 +74,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerPodLabels", func(t *testing.T) {
-		wantLabels, _ := want["controller"].(obj)["podLabels"].(obj)
+		wantLabels := nested(t, want, "controller", "podLabels")
 		tmpl := nested(t, deploy, "spec", "template", "metadata")
-		labels := tmpl["labels"].(obj)
+		labels := nested(t, tmpl, "labels")
 		for k, v := range wantLabels {
 			if labels[k] != v {
 				t.Errorf("controller pod label %q: got %v, want %v", k, labels[k], v)
@@ -85,9 +85,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerDeploymentAnnotations", func(t *testing.T) {
-		wantAnns, _ := want["controller"].(obj)["deploymentAnnotations"].(obj)
+		wantAnns := nested(t, want, "controller", "deploymentAnnotations")
 		meta := nested(t, deploy, "metadata")
-		ann := meta["annotations"].(obj)
+		ann := nested(t, meta, "annotations")
 		for k, v := range wantAnns {
 			if ann[k] != v {
 				t.Errorf("deployment annotation %q: got %v, want %v", k, ann[k], v)
@@ -104,22 +104,22 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerTopologySpreadConstraints", func(t *testing.T) {
-		wantTSCs, _ := want["controller"].(obj)["topologySpreadConstraints"].([]interface{})
+		wantTSCs := nestedSlice(t, want, "controller", "topologySpreadConstraints")
 		if len(wantTSCs) == 0 {
 			t.Fatal("values file has no topologySpreadConstraints")
 		}
-		wantKey := wantTSCs[0].(obj)["topologyKey"]
+		wantKey := mustObj(t, wantTSCs[0])["topologyKey"]
 		tscs := nestedSlice(t, cPS, "topologySpreadConstraints")
 		if len(tscs) == 0 {
 			t.Fatal("no topologySpreadConstraints in render")
 		}
-		if got := tscs[0].(obj)["topologyKey"]; got != wantKey {
+		if got := mustObj(t, tscs[0])["topologyKey"]; got != wantKey {
 			t.Errorf("topologyKey: got %v, want %v", got, wantKey)
 		}
 	})
 
 	t.Run("controllerSecurityContext", func(t *testing.T) {
-		wantSC, _ := want["controller"].(obj)["securityContext"].(obj)
+		wantSC := nested(t, want, "controller", "securityContext")
 		sc := nested(t, cPS, "securityContext")
 		for k, v := range wantSC {
 			if sc[k] != v {
@@ -129,7 +129,7 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerContainerSecurityContext", func(t *testing.T) {
-		wantSC, _ := want["controller"].(obj)["containerSecurityContext"].(obj)
+		wantSC := nested(t, want, "controller", "containerSecurityContext")
 		sc := nested(t, ebsPlugin, "securityContext")
 		for k, v := range wantSC {
 			if sc[k] != v {
@@ -147,13 +147,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerEnv", func(t *testing.T) {
-		wantEnvs, _ := want["controller"].(obj)["env"].([]interface{})
+		wantEnvs := nestedSlice(t, want, "controller", "env")
 		envs := nestedSlice(t, ebsPlugin, "env")
 		for _, we := range wantEnvs {
-			wm := we.(obj)
+			wm := mustObj(t, we)
 			var found bool
 			for _, e := range envs {
-				em := e.(obj)
+				em := mustObj(t, e)
 				if em["name"] == wm["name"] && em["value"] == wm["value"] {
 					found = true
 				}
@@ -165,13 +165,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerVolumes", func(t *testing.T) {
-		wantVols, _ := want["controller"].(obj)["volumes"].([]interface{})
+		wantVols := nestedSlice(t, want, "controller", "volumes")
 		vols := nestedSlice(t, cPS, "volumes")
 		for _, wv := range wantVols {
-			wantName := wv.(obj)["name"]
+			wantName := mustObj(t, wv)["name"]
 			var found bool
 			for _, v := range vols {
-				if v.(obj)["name"] == wantName {
+				if mustObj(t, v)["name"] == wantName {
 					found = true
 				}
 			}
@@ -182,13 +182,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerVolumeMounts", func(t *testing.T) {
-		wantMounts, _ := want["controller"].(obj)["volumeMounts"].([]interface{})
+		wantMounts := nestedSlice(t, want, "controller", "volumeMounts")
 		mounts := nestedSlice(t, ebsPlugin, "volumeMounts")
 		for _, wm := range wantMounts {
-			wmObj := wm.(obj)
+			wmObj := mustObj(t, wm)
 			var found bool
 			for _, m := range mounts {
-				mm := m.(obj)
+				mm := mustObj(t, m)
 				if mm["name"] == wmObj["name"] && mm["mountPath"] == wmObj["mountPath"] {
 					found = true
 				}
@@ -200,9 +200,8 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerDnsConfig", func(t *testing.T) {
-		wantNS, _ := want["controller"].(obj)["dnsConfig"].(obj)["nameservers"].([]interface{})
-		dns := nested(t, cPS, "dnsConfig")
-		got := dns["nameservers"].([]interface{})
+		wantNS := nestedSlice(t, want, "controller", "dnsConfig", "nameservers")
+		got := nestedSlice(t, cPS, "dnsConfig", "nameservers")
 		for _, wn := range wantNS {
 			var found bool
 			for _, n := range got {
@@ -217,13 +216,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerInitContainers", func(t *testing.T) {
-		wantInits, _ := want["controller"].(obj)["initContainers"].([]interface{})
+		wantInits := nestedSlice(t, want, "controller", "initContainers")
 		inits := nestedSlice(t, cPS, "initContainers")
 		for _, wi := range wantInits {
-			wantName := wi.(obj)["name"]
+			wantName := mustObj(t, wi)["name"]
 			var found bool
 			for _, c := range inits {
-				if c.(obj)["name"] == wantName {
+				if mustObj(t, c)["name"] == wantName {
 					found = true
 				}
 			}
@@ -234,13 +233,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerTolerations", func(t *testing.T) {
-		wantTols, _ := want["controller"].(obj)["tolerations"].([]interface{})
+		wantTols := nestedSlice(t, want, "controller", "tolerations")
 		tols := nestedSlice(t, cPS, "tolerations")
 		for _, wt := range wantTols {
-			wtObj := wt.(obj)
+			wtObj := mustObj(t, wt)
 			var found bool
 			for _, tol := range tols {
-				tm := tol.(obj)
+				tm := mustObj(t, tol)
 				if tm["key"] == wtObj["key"] && tm["value"] == wtObj["value"] && tm["effect"] == wtObj["effect"] {
 					found = true
 				}
@@ -253,9 +252,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("controllerAdditionalArgs", func(t *testing.T) {
-		wantArgs, _ := want["controller"].(obj)["additionalArgs"].([]interface{})
+		wantArgs := nestedSlice(t, want, "controller", "additionalArgs")
 		for _, a := range wantArgs {
-			if !hasArg(ebsPlugin, a.(string)) {
+			if !hasArg(ebsPlugin, mustString(t, a)) {
 				t.Errorf("controller should have arg %q", a)
 			}
 		}
@@ -264,7 +263,7 @@ func TestInfra(t *testing.T) {
 	t.Run("nameOverride", func(t *testing.T) {
 		wantName, _ := nestedString(want, "nameOverride")
 		meta := nested(t, deploy, "metadata")
-		labels := meta["labels"].(obj)
+		labels := nested(t, meta, "labels")
 		if labels["app.kubernetes.io/name"] != wantName {
 			t.Errorf("app.kubernetes.io/name: got %v, want %s", labels["app.kubernetes.io/name"], wantName)
 		}
@@ -278,9 +277,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("customLabels/controller", func(t *testing.T) {
-		wantLabels, _ := want["customLabels"].(obj)
+		wantLabels := nested(t, want, "customLabels")
 		meta := nested(t, deploy, "metadata")
-		labels := meta["labels"].(obj)
+		labels := nested(t, meta, "labels")
 		for k, v := range wantLabels {
 			if labels[k] != v {
 				t.Errorf("controller label %q: got %v, want %v", k, labels[k], v)
@@ -312,9 +311,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodePodAnnotations", func(t *testing.T) {
-		wantAnns, _ := want["node"].(obj)["podAnnotations"].(obj)
+		wantAnns := nested(t, want, "node", "podAnnotations")
 		tmpl := nested(t, ds, "spec", "template", "metadata")
-		ann := tmpl["annotations"].(obj)
+		ann := nested(t, tmpl, "annotations")
 		for k, v := range wantAnns {
 			if ann[k] != v {
 				t.Errorf("node pod annotation %q: got %v, want %v", k, ann[k], v)
@@ -323,9 +322,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeDaemonSetAnnotations", func(t *testing.T) {
-		wantAnns, _ := want["node"].(obj)["daemonSetAnnotations"].(obj)
+		wantAnns := nested(t, want, "node", "daemonSetAnnotations")
 		meta := nested(t, ds, "metadata")
-		ann := meta["annotations"].(obj)
+		ann := nested(t, meta, "annotations")
 		for k, v := range wantAnns {
 			if ann[k] != v {
 				t.Errorf("daemonset annotation %q: got %v, want %v", k, ann[k], v)
@@ -357,13 +356,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeEnv", func(t *testing.T) {
-		wantEnvs, _ := want["node"].(obj)["env"].([]interface{})
+		wantEnvs := nestedSlice(t, want, "node", "env")
 		envs := nestedSlice(t, nodePlugin, "env")
 		for _, we := range wantEnvs {
-			wm := we.(obj)
+			wm := mustObj(t, we)
 			var found bool
 			for _, e := range envs {
-				em := e.(obj)
+				em := mustObj(t, e)
 				if em["name"] == wm["name"] && em["value"] == wm["value"] {
 					found = true
 				}
@@ -375,13 +374,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeVolumes", func(t *testing.T) {
-		wantVols, _ := want["node"].(obj)["volumes"].([]interface{})
+		wantVols := nestedSlice(t, want, "node", "volumes")
 		vols := nestedSlice(t, nPS, "volumes")
 		for _, wv := range wantVols {
-			wantName := wv.(obj)["name"]
+			wantName := mustObj(t, wv)["name"]
 			var found bool
 			for _, v := range vols {
-				if v.(obj)["name"] == wantName {
+				if mustObj(t, v)["name"] == wantName {
 					found = true
 				}
 			}
@@ -392,13 +391,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeVolumeMounts", func(t *testing.T) {
-		wantMounts, _ := want["node"].(obj)["volumeMounts"].([]interface{})
+		wantMounts := nestedSlice(t, want, "node", "volumeMounts")
 		mounts := nestedSlice(t, nodePlugin, "volumeMounts")
 		for _, wm := range wantMounts {
-			wmObj := wm.(obj)
+			wmObj := mustObj(t, wm)
 			var found bool
 			for _, m := range mounts {
-				mm := m.(obj)
+				mm := mustObj(t, m)
 				if mm["name"] == wmObj["name"] && mm["mountPath"] == wmObj["mountPath"] {
 					found = true
 				}
@@ -410,18 +409,17 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeAdditionalArgs", func(t *testing.T) {
-		wantArgs, _ := want["node"].(obj)["additionalArgs"].([]interface{})
+		wantArgs := nestedSlice(t, want, "node", "additionalArgs")
 		for _, a := range wantArgs {
-			if !hasArg(nodePlugin, a.(string)) {
+			if !hasArg(nodePlugin, mustString(t, a)) {
 				t.Errorf("node should have arg %q", a)
 			}
 		}
 	})
 
 	t.Run("nodeDnsConfig", func(t *testing.T) {
-		wantNS, _ := want["node"].(obj)["dnsConfig"].(obj)["nameservers"].([]interface{})
-		dns := nested(t, nPS, "dnsConfig")
-		got := dns["nameservers"].([]interface{})
+		wantNS := nestedSlice(t, want, "node", "dnsConfig", "nameservers")
+		got := nestedSlice(t, nPS, "dnsConfig", "nameservers")
 		for _, wn := range wantNS {
 			var found bool
 			for _, n := range got {
@@ -436,13 +434,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeInitContainers", func(t *testing.T) {
-		wantInits, _ := want["node"].(obj)["initContainers"].([]interface{})
+		wantInits := nestedSlice(t, want, "node", "initContainers")
 		inits := nestedSlice(t, nPS, "initContainers")
 		for _, wi := range wantInits {
-			wantName := wi.(obj)["name"]
+			wantName := mustObj(t, wi)["name"]
 			var found bool
 			for _, c := range inits {
-				if c.(obj)["name"] == wantName {
+				if mustObj(t, c)["name"] == wantName {
 					found = true
 				}
 			}
@@ -453,13 +451,13 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("nodeTolerations", func(t *testing.T) {
-		wantTols, _ := want["node"].(obj)["tolerations"].([]interface{})
+		wantTols := nestedSlice(t, want, "node", "tolerations")
 		tols := nestedSlice(t, nPS, "tolerations")
 		for _, wt := range wantTols {
-			wtObj := wt.(obj)
+			wtObj := mustObj(t, wt)
 			var found bool
 			for _, tol := range tols {
-				tm := tol.(obj)
+				tm := mustObj(t, tol)
 				if tm["key"] == wtObj["key"] && tm["value"] == wtObj["value"] {
 					found = true
 				}
@@ -471,9 +469,9 @@ func TestInfra(t *testing.T) {
 	})
 
 	t.Run("customLabels/node", func(t *testing.T) {
-		wantLabels, _ := want["customLabels"].(obj)
+		wantLabels := nested(t, want, "customLabels")
 		meta := nested(t, ds, "metadata")
-		labels := meta["labels"].(obj)
+		labels := nested(t, meta, "labels")
 		for k, v := range wantLabels {
 			if labels[k] != v {
 				t.Errorf("node label %q: got %v, want %v", k, labels[k], v)
@@ -512,10 +510,10 @@ func TestInfra(t *testing.T) {
 	}
 
 	t.Run("provisionerAdditionalArgs", func(t *testing.T) {
-		wantArgs, _ := want["sidecars"].(obj)["provisioner"].(obj)["additionalArgs"].([]interface{})
+		wantArgs := nestedSlice(t, want, "sidecars", "provisioner", "additionalArgs")
 		provisioner := findContainer(t, cPS, "csi-provisioner")
 		for _, a := range wantArgs {
-			if !hasArg(provisioner, a.(string)) {
+			if !hasArg(provisioner, mustString(t, a)) {
 				t.Errorf("provisioner should have arg %q", a)
 			}
 		}
@@ -572,14 +570,14 @@ func TestMiscellaneous(t *testing.T) {
 	})
 
 	t.Run("volumemodifierVolumeMounts", func(t *testing.T) {
-		wantMounts, _ := want["sidecars"].(obj)["volumemodifier"].(obj)["volumeMounts"].([]interface{})
+		wantMounts := nestedSlice(t, want, "sidecars", "volumemodifier", "volumeMounts")
 		c := findContainer(t, cPS, "volumemodifier")
 		mounts := nestedSlice(t, c, "volumeMounts")
 		for _, wm := range wantMounts {
-			wmObj := wm.(obj)
+			wmObj := mustObj(t, wm)
 			var found bool
 			for _, m := range mounts {
-				mm := m.(obj)
+				mm := mustObj(t, m)
 				if mm["name"] == wmObj["name"] && mm["mountPath"] == wmObj["mountPath"] {
 					found = true
 				}
@@ -667,10 +665,10 @@ func TestSelinux(t *testing.T) {
 
 	for _, wantPath := range []string{"/sys/fs/selinux", "/etc/selinux/config"} {
 		t.Run("nodeMount/"+wantPath, func(t *testing.T) {
-			mounts, _ := nodePlugin["volumeMounts"].([]interface{})
+			mounts := nestedSlice(t, nodePlugin, "volumeMounts")
 			var found bool
 			for _, m := range mounts {
-				if m.(obj)["mountPath"] == wantPath {
+				if mustObj(t, m)["mountPath"] == wantPath {
 					found = true
 				}
 			}
