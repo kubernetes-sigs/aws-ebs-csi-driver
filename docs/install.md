@@ -186,6 +186,12 @@ Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi
 For each container (including the controller, node, and sidecars), there is an `additionalArgs` that accepts arguments that are not explicitly specified, such as `--retry-interval-start`, `--retry-interval-max` and
 `--timeout` that provisioner and attacher provides, or `--kube-api-burst`, `--kube-api-qps` etc.
 
+##### VolumeLimitScaling support
+
+On Kubernetes 1.37 and later, the Helm chart [prevents Pods that use EBS volumes from being scheduled to nodes where the EBS CSI driver is not registered](https://kubernetes.io/docs/concepts/storage/storage-limits/#preventing-pod-placement-without-csi-driver). This is disabled by default on earlier Kubernetes versions. Set `preventPodSchedulingIfMissing` to `true` or `false` to override the version-based default regardless of the Kubernetes version (requires `VolumeLimitScaling` feature gate to be enabled).
+
+Using `preventPodSchedulingIfMissing` with [Cluster Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) requires CA to be configured with `--enable-csi-node-aware-scheduling=true` (the default in Cluster Autoscaler 1.37.0 and later). Without this option, Cluster Autoscaler might fail to scale up for pending Pods that use EBS volumes because its scheduling simulations do not include the required `CSINode` information. For more information, see [CSI volume attach limits and cluster autoscaler](https://kubernetes.io/docs/concepts/storage/storage-limits/#csi-volume-attach-limits-and-cluster-autoscaler). **Additional consideration is required for clusters using scale-from-zero, see [the relevant CA docs](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md#:~:text=When%20%2D%2Denable%2Dcsi%2Dnode%2Daware%2Dscheduling%20is%20enabled) for more information.**
+
 #### Once the driver has been deployed, verify the pods are running:
 ```sh
 kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-ebs-csi-driver
