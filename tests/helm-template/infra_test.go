@@ -648,6 +648,46 @@ func TestUseOldCSIDriver(t *testing.T) {
 	})
 }
 
+func TestPreventPodSchedulingIfMissing(t *testing.T) {
+	tests := []struct {
+		name        string
+		kubeVersion string
+		value       string
+		wantPresent bool
+		want        bool
+	}{
+		{name: "unsupported", kubeVersion: "1.35.10"},
+		{name: "alphaDefault", kubeVersion: "1.36.10"},
+		{name: "betaDefault", kubeVersion: "1.37.0", wantPresent: true, want: true},
+		{name: "laterDefault", kubeVersion: "1.38.0", wantPresent: true, want: true},
+		{name: "enabledOverride", kubeVersion: "1.36.10", value: "preventPodSchedulingIfMissing=true", wantPresent: true, want: true},
+		{name: "disabledOverride", kubeVersion: "1.37.0", value: "preventPodSchedulingIfMissing=false", wantPresent: true},
+		{name: "unsupportedEnabledOverride", kubeVersion: "1.35.10", value: "preventPodSchedulingIfMissing=true", wantPresent: true, want: true},
+		{name: "unsupportedDisabledOverride", kubeVersion: "1.35.10", value: "preventPodSchedulingIfMissing=false", wantPresent: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var sets []string
+			if test.value != "" {
+				sets = append(sets, test.value)
+			}
+			resources := renderChartWithKubeVersion(t, test.kubeVersion, sets...)
+			csiDriver := mustFind(t, resources, "CSIDriver", "ebs.csi.aws.com")
+			spec := nested(t, csiDriver, "spec")
+			got, ok := spec["preventPodSchedulingIfMissing"]
+
+			if ok != test.wantPresent {
+				t.Errorf("CSIDriver spec.preventPodSchedulingIfMissing presence: got %t, want %t", ok, test.wantPresent)
+				return
+			}
+			if ok && got != test.want {
+				t.Errorf("CSIDriver spec.preventPodSchedulingIfMissing: got %v, want %t", got, test.want)
+			}
+		})
+	}
+}
+
 // TestSelinux verifies that setting node.selinux=true sets seLinuxMount on the
 // CSIDriver and adds the SELinux host mounts to the node ebs-plugin container.
 // Skips the live cluster by asserting on rendered templates, so no
