@@ -18,6 +18,7 @@ package helmtemplate
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -44,7 +45,7 @@ func TestStandard(t *testing.T) {
 	})
 
 	t.Run("batching", func(t *testing.T) {
-		wantArg := fmt.Sprintf("--batching=%v", want["controller"].(obj)["batching"])
+		wantArg := fmt.Sprintf("--batching=%v", nested(t, want, "controller")["batching"])
 		if !hasArg(ebsPlugin, wantArg) {
 			t.Errorf("controller should have %s", wantArg)
 		}
@@ -101,7 +102,7 @@ func TestStandard(t *testing.T) {
 		tolerations := nestedSlice(t, nPS, "tolerations")
 		var found bool
 		for _, tol := range tolerations {
-			tm := tol.(obj)
+			tm := mustObj(t, tol)
 			if tm["operator"] == "Exists" && (tm["key"] == nil || tm["key"] == "") {
 				found = true
 			}
@@ -113,13 +114,10 @@ func TestStandard(t *testing.T) {
 
 	t.Run("nodeKubeletPath", func(t *testing.T) {
 		wantPath, _ := nestedString(want, "node", "kubeletPath")
-		mounts, ok := nodePlugin["volumeMounts"].([]interface{})
-		if !ok {
-			t.Fatal("no volumeMounts on node ebs-plugin")
-		}
+		mounts := nestedSlice(t, nodePlugin, "volumeMounts")
 		var found bool
 		for _, m := range mounts {
-			mm := m.(obj)
+			mm := mustObj(t, m)
 			if mm["mountPath"] == wantPath {
 				found = true
 			}
@@ -141,16 +139,13 @@ func TestStandard(t *testing.T) {
 
 	t.Run("nodeDisableMutation", func(t *testing.T) {
 		cr := mustFind(t, resources, "ClusterRole", "ebs-csi-node-role")
-		rules, ok := cr["rules"].([]interface{})
-		if !ok {
-			t.Fatal("no rules in ClusterRole")
-		}
+		rules := nestedSlice(t, cr, "rules")
 		for _, rule := range rules {
-			rm := rule.(obj)
-			res, _ := rm["resources"].([]interface{})
+			rm := mustObj(t, rule)
+			res := nestedSlice(t, rm, "resources")
 			for _, r := range res {
 				if r == "nodes" {
-					verbs, _ := rm["verbs"].([]interface{})
+					verbs := nestedSlice(t, rm, "verbs")
 					for _, v := range verbs {
 						if v == "patch" || v == "update" {
 							t.Errorf("node role should not have %s on nodes when disableMutation=true", v)
@@ -162,13 +157,13 @@ func TestStandard(t *testing.T) {
 	})
 
 	t.Run("storageClasses", func(t *testing.T) {
-		wantSCs, _ := want["storageClasses"].([]interface{})
+		wantSCs := nestedSlice(t, want, "storageClasses")
 		if len(wantSCs) == 0 {
 			t.Fatal("values file has no storageClasses")
 		}
-		wantSC := wantSCs[0].(obj)
-		wantName, _ := wantSC["name"].(string)
-		wantType, _ := wantSC["parameters"].(obj)["type"]
+		wantSC := mustObj(t, wantSCs[0])
+		wantName := mustString(t, wantSC["name"])
+		wantType := nested(t, wantSC, "parameters")["type"]
 		sc := mustFind(t, resources, "StorageClass", wantName)
 		params := nested(t, sc, "parameters")
 		if params["type"] != wantType {
@@ -177,13 +172,13 @@ func TestStandard(t *testing.T) {
 	})
 
 	t.Run("volumeSnapshotClasses", func(t *testing.T) {
-		wantVSCs, _ := want["volumeSnapshotClasses"].([]interface{})
+		wantVSCs := nestedSlice(t, want, "volumeSnapshotClasses")
 		if len(wantVSCs) == 0 {
 			t.Fatal("values file has no volumeSnapshotClasses")
 		}
-		wantVSC := wantVSCs[0].(obj)
-		wantName, _ := wantVSC["name"].(string)
-		wantDP, _ := wantVSC["deletionPolicy"].(string)
+		wantVSC := mustObj(t, wantVSCs[0])
+		wantName := mustString(t, wantVSC["name"])
+		wantDP := mustString(t, wantVSC["deletionPolicy"])
 		vsc := mustFind(t, resources, "VolumeSnapshotClass", wantName)
 		dp, ok := nestedString(vsc, "deletionPolicy")
 		if !ok || dp != wantDP {
@@ -194,7 +189,7 @@ func TestStandard(t *testing.T) {
 	t.Run("defaultStorageClass", func(t *testing.T) {
 		sc := mustFind(t, resources, "StorageClass", "ebs-csi-default-sc")
 		meta := nested(t, sc, "metadata")
-		ann := meta["annotations"].(obj)
+		ann := nested(t, meta, "annotations")
 		if ann["storageclass.kubernetes.io/is-default-class"] != "true" {
 			t.Error("default StorageClass should have is-default-class=true annotation")
 		}
@@ -239,7 +234,7 @@ func TestStandard(t *testing.T) {
 				ps = nPS
 			}
 			c := findContainer(t, ps, tc.container)
-			want := fmt.Sprintf("%d", int(wantLvl))
+			want := strconv.Itoa(int(wantLvl))
 			if !hasArgAny(c, "-v="+want, "--v="+want) {
 				t.Errorf("%s should have -v=%s", tc.container, want)
 			}
@@ -259,7 +254,7 @@ func TestStandard(t *testing.T) {
 	}
 	for _, tc := range leaderTests {
 		t.Run(tc.name, func(t *testing.T) {
-			enabled := want["sidecars"].(obj)[tc.valuesKey].(obj)["leaderElection"].(obj)["enabled"]
+			enabled := nested(t, want, "sidecars", tc.valuesKey, "leaderElection")["enabled"]
 			c := findContainer(t, cPS, tc.container)
 			expected := fmt.Sprintf("--leader-election=%v", enabled)
 			if !hasArg(c, expected) {
@@ -289,7 +284,7 @@ func assertServiceHasPort(t *testing.T, svc obj, name string, port int) {
 	t.Helper()
 	ports := nestedSlice(t, svc, "spec", "ports")
 	for _, p := range ports {
-		pm := p.(obj)
+		pm := mustObj(t, p)
 		pNum, _ := pm["port"].(float64)
 		if pm["name"] == name && int(pNum) == port {
 			return
