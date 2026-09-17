@@ -69,7 +69,7 @@ usage() {
 }
 
 check_dependencies_helper() {
-  local readonly dependencies=("kubectl" "aws" "eksctl" "gomplate" "jq")
+  local readonly dependencies=("kubectl" "aws" "eksctl" "gomplate" "jq" "prom2json")
 
   for cmd in "${dependencies[@]}"; do
     if ! command -v "${cmd}" &>/dev/null; then
