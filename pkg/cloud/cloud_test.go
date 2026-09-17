@@ -5145,6 +5145,91 @@ func TestExtractMaxIOPSFromError(t *testing.T) {
 	}
 }
 
+func TestCapIOPS(t *testing.T) {
+	gp3Limits := iopsLimits{
+		maxIops:      gp3FallbackMaxIOPS,
+		minIops:      gp3MinTotalIOPS,
+		maxIopsPerGb: gp3MaxIOPSPerGB,
+	}
+	testCases := []struct {
+		name                 string
+		requestedCapacityGiB int32
+		requestedIops        int32
+		iopsLimits           iopsLimits
+		allowIncrease        bool
+		expectedIops         int32
+	}{
+		{
+			name:                 "zero request uses default",
+			requestedCapacityGiB: 1,
+			iopsLimits:           gp3Limits,
+		},
+		{
+			name:                 "below minimum remains unchanged",
+			requestedCapacityGiB: 1,
+			requestedIops:        2999,
+			iopsLimits:           gp3Limits,
+			expectedIops:         2999,
+		},
+		{
+			name:                 "below minimum increases when enabled",
+			requestedCapacityGiB: 1,
+			requestedIops:        2999,
+			iopsLimits:           gp3Limits,
+			allowIncrease:        true,
+			expectedIops:         gp3MinTotalIOPS,
+		},
+		{
+			name:                 "minimum size caps at baseline",
+			requestedCapacityGiB: 1,
+			requestedIops:        3001,
+			iopsLimits:           gp3Limits,
+			expectedIops:         gp3MinTotalIOPS,
+		},
+		{
+			name:                 "below ratio crossover caps at baseline",
+			requestedCapacityGiB: 5,
+			requestedIops:        3001,
+			iopsLimits:           gp3Limits,
+			expectedIops:         gp3MinTotalIOPS,
+		},
+		{
+			name:                 "ratio crossover caps at baseline",
+			requestedCapacityGiB: 6,
+			requestedIops:        3001,
+			iopsLimits:           gp3Limits,
+			expectedIops:         gp3MinTotalIOPS,
+		},
+		{
+			name:                 "above ratio crossover caps at ratio",
+			requestedCapacityGiB: 7,
+			requestedIops:        3501,
+			iopsLimits:           gp3Limits,
+			expectedIops:         3500,
+		},
+		{
+			name:                 "global maximum takes precedence",
+			requestedCapacityGiB: 100,
+			requestedIops:        gp3FallbackMaxIOPS + 1,
+			iopsLimits:           gp3Limits,
+			expectedIops:         gp3FallbackMaxIOPS,
+		},
+		{
+			name:                 "no limits leaves request unchanged",
+			requestedCapacityGiB: 1,
+			requestedIops:        3001,
+			expectedIops:         3001,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualIops := capIOPS(VolumeTypeGP3, tc.requestedCapacityGiB, tc.requestedIops, tc.iopsLimits, tc.allowIncrease)
+			assert.Equal(t, tc.expectedIops, actualIops)
+		})
+	}
+}
+
 func TestGetVolumeLimits(t *testing.T) {
 	testCases := []struct {
 		name            string
