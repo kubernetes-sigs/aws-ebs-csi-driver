@@ -116,7 +116,7 @@ if [[ "${HELM_CT_TEST}" == true ]]; then
 
   KUBECONFIG="$KUBECONFIG" PATH="${BIN}:${PATH}" "${BIN}/ct" lint-and-install \
     --config="${BASE_DIR}/../../tests/ct-config.yaml" \
-    --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG},node.tolerateAllTaints=false"
+    --helm-extra-set-args="--set=image.repository=${IMAGE_NAME},image.tag=${IMAGE_TAG},node.tolerateAllTaints=false,controller.userAgentExtra=helm-test-dev"
   TEST_PASSED=$?
 
   if kill -0 $LOG_STREAM_PID 2>/dev/null; then
