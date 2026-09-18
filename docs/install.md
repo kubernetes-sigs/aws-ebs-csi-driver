@@ -183,6 +183,11 @@ helm upgrade --install aws-ebs-csi-driver \
 ```
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
+
+On Kubernetes 1.37 and later, the Helm chart [prevents Pods that use EBS volumes from being scheduled to nodes where the EBS CSI driver is not registered](https://kubernetes.io/docs/concepts/storage/storage-limits/#preventing-pod-placement-without-csi-driver). This is disabled by default on earlier Kubernetes versions. Set `preventPodSchedulingIfMissing` to `true` or `false` to override the version-based default regardless of the Kubernetes version.
+
+When you use [Cluster Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) 1.35.0 or later, ensure `--enable-csi-node-aware-scheduling=true` (the default in Cluster Autoscaler 1.37.0 and later) before you enable `preventPodSchedulingIfMissing`. Cluster Autoscaler 1.35 and 1.36 require this flag to be set explicitly. Without this option, Cluster Autoscaler might fail to scale up for pending Pods that use EBS volumes because its scheduling simulations do not include the required `CSINode` information. For more information, see [CSI volume attach limits and cluster autoscaler](https://kubernetes.io/docs/concepts/storage/storage-limits/#csi-volume-attach-limits-and-cluster-autoscaler).
+
 For each container (including the controller, node, and sidecars), there is an `additionalArgs` that accepts arguments that are not explicitly specified, such as `--retry-interval-start`, `--retry-interval-max` and
 `--timeout` that provisioner and attacher provides, or `--kube-api-burst`, `--kube-api-qps` etc.
 
