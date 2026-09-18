@@ -31,7 +31,11 @@ import (
 	frameworkconfig "k8s.io/kubernetes/test/e2e/framework/config"
 )
 
-const kubeconfigEnvVar = "KUBECONFIG"
+const (
+	kubeconfigEnvVar           = "KUBECONFIG"
+	awsSDKUserAgentAppIDEnvVar = "AWS_SDK_UA_APP_ID"
+	e2eUserAgentApplicationID  = "aws-ebs-csi-driver-e2e-dev"
+)
 
 //nolint:gochecknoinits
 func init() {
@@ -62,6 +66,10 @@ func init() {
 }
 
 func TestE2E(t *testing.T) {
+	if err := setE2EUserAgent(); err != nil {
+		t.Fatalf("Failed setting AWS SDK user agent application ID: %v", err)
+	}
+
 	RegisterFailHandler(Fail)
 
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
@@ -75,4 +83,8 @@ func TestE2E(t *testing.T) {
 		}
 	}
 	RunSpecsWithDefaultAndCustomReporters(t, "AWS EBS CSI Driver End-to-End Tests", r)
+}
+
+func setE2EUserAgent() error {
+	return os.Setenv(awsSDKUserAgentAppIDEnvVar, e2eUserAgentApplicationID)
 }

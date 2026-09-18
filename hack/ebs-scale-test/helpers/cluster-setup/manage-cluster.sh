@@ -68,6 +68,7 @@ deploy_ebs_csi_driver() {
   helm install aws-ebs-csi-driver \
     --namespace kube-system \
     --values "$DRIVER_VALUES_FILEPATH" \
+    --set controller.userAgentExtra="scale-test-dev" \
     --wait \
     --timeout 15m \
     "$path_to_chart"
@@ -113,6 +114,8 @@ deploy_karpenter() {
   helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter --version "${KARPENTER_VERSION}" --namespace "kube-system" --create-namespace \
     --set "settings.clusterName=${CLUSTER_NAME}" \
     --set "settings.interruptionQueue=${CLUSTER_NAME}" \
+    --set "controller.env[0].name=AWS_EXECUTION_ENV" \
+    --set "controller.env[0].value=aws-ebs-csi-driver-scale-test-dev" \
     --set controller.resources.requests.cpu=1 \
     --set controller.resources.requests.memory=2Gi \
     --set controller.resources.limits.cpu=2 \

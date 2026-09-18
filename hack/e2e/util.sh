@@ -56,7 +56,7 @@ function install_driver() {
     set +x
   elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
     set -x
-    kubectl --kubeconfig "${KUBECONFIG}" apply -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
+    kubectl --kubeconfig "${KUBECONFIG}" apply -k "${BASE_DIR}/kustomize"
     kubectl --kubeconfig "${KUBECONFIG}" --namespace kube-system wait --timeout 10m0s --for "condition=ready" pod -l "app.kubernetes.io/name=aws-ebs-csi-driver"
     set +x
   fi
@@ -66,6 +66,6 @@ function uninstall_driver() {
   if [[ ${DEPLOY_METHOD} == "helm" ]]; then
     ${BIN}/helm uninstall "aws-ebs-csi-driver" --namespace kube-system --kubeconfig "${KUBECONFIG}"
   elif [[ ${DEPLOY_METHOD} == "kustomize" ]]; then
-    kubectl --kubeconfig "${KUBECONFIG}" delete -k "${BASE_DIR}/../../deploy/kubernetes/overlays/stable"
+    kubectl --kubeconfig "${KUBECONFIG}" delete -k "${BASE_DIR}/kustomize"
   fi
 }
