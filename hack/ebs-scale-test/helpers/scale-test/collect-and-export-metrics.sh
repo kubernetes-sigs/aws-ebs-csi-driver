@@ -24,6 +24,7 @@ collect-and-export-metrics() {
 
   collect_metrics
   clean_metrics
+  convert_metrics_to_json
 
   echo "Collecting ebs-plugin logs"
   kubectl logs "$CONTROLLER_POD_NAME" -n kube-system >"$EXPORT_DIR/ebs-plugin-logs.txt"
@@ -81,6 +82,14 @@ clean_metrics() {
     grep -v "cloudprovider" |
     grep -v "promhttp" |
     grep -v "registered_metrics" >"$EXPORT_DIR/cleaned_data.txt"
+}
+
+convert_metrics_to_json() {
+  echo "Converting Prometheus metrics to JSON at $EXPORT_DIR/metrics.json"
+  # metrics.txt concatenates multiple scrape endpoints, so remove repeated
+  # HELP and TYPE metadata before parsing the samples.
+  grep -v '^#' "$METRICS_FILEPATH" |
+    prom2json >"$EXPORT_DIR/metrics.json"
 }
 
 (return 0 2>/dev/null) || (

@@ -21,6 +21,8 @@ export REPLICAS="1000"
 ```
 
 Results will be exported to a local directory (`$EXPORT_DIR`) and an S3 Bucket in your AWS account (`$S3_BUCKET`).
+The exported files include the raw Prometheus snapshot (`metrics.txt`) and the same samples converted to JSON
+(`metrics.json`).
 
 Note: Any `ebs-csi-controller` pod(s) will be restarted at the beginning of every scale run to clear metrics/logs.  
 
@@ -32,7 +34,9 @@ Additionally, please install the following commandline tools:
 - [gomplate](https://github.com/hairyhenderson/gomplate) - used to render configuration files based on environment variables.
 - [aws cli v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - [eksctl](https://eksctl.io/installation/)
+- [jq](https://jqlang.org/download/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [prom2json](https://github.com/prometheus/prom2json)
 
 ## Overridable parameters
 
