@@ -2944,9 +2944,12 @@ func capIOPS(volumeType string, requestedCapacityGiB int32, requestedIops int32,
 		klog.V(5).InfoS("[Debug] Capped IOPS, volume at the max supported limit", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "limit", iops)
 	}
 	maxIopsByCapacity := iopsLimits.maxIopsPerGb * requestedCapacityGiB
-	if maxIopsByCapacity > 0 && iops > maxIopsByCapacity && maxIopsByCapacity >= iopsLimits.minIops {
-		iops = maxIopsByCapacity
-		klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", iopsLimits.maxIopsPerGb, "limit", iops)
+	if maxIopsByCapacity > 0 {
+		maxIopsByCapacity = max(maxIopsByCapacity, iopsLimits.minIops)
+		if iops > maxIopsByCapacity {
+			iops = maxIopsByCapacity
+			klog.V(5).InfoS("[Debug] Capped IOPS for volume", "volumeType", volumeType, "requestedCapacityGiB", requestedCapacityGiB, "maxIOPSPerGB", iopsLimits.maxIopsPerGb, "limit", iops)
+		}
 	}
 	return iops
 }
