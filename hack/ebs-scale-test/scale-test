@@ -15,6 +15,8 @@
 
 ### This script helps setup, run, and cleanup an ebs-scale-test. See README.md
 set -euo pipefail
+export AWS_EXECUTION_ENV="aws-ebs-csi-driver-scale-test-dev"
+
 BASE_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
 ## Overridable environment variables. See README.md
