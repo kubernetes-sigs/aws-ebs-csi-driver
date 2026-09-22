@@ -35,7 +35,7 @@ create_cluster() {
 }
 
 cleanup_cluster() {
-  eksctl delete cluster "$CLUSTER_NAME"
+  eksctl delete cluster "$CLUSTER_NAME" --wait
 }
 
 ## Misc
@@ -46,7 +46,10 @@ check_lingering_volumes() {
     --query 'length(Volumes[*])' \
     --output text)
 
-  [[ lingering_vol_count -ne 0 ]] && echo "WARNING: detected $lingering_vol_count lingering ebs-scale-test EBS volumes in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-volumes --filters 'Name=tag-key,Values=ebs-scale-test'\` and audit their AWS resource tags. Note these volumes may belong to a different scalability run than $SCALABILITY_TEST_RUN_NAME"
+  [[ lingering_vol_count -ne 0 ]] && {
+    echo "WARNING: detected $lingering_vol_count lingering ebs-scale-test EBS volumes in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-volumes --filters 'Name=tag-key,Values=ebs-scale-test'\` and audit their AWS resource tags. Note these volumes may belong to a different scalability run than $SCALABILITY_TEST_RUN_NAME"
+    exit 1
+  }
 }
 
 check_lingering_snapshots() {
