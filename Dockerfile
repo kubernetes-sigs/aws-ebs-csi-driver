@@ -22,8 +22,7 @@ COPY . .
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
-ARG GOFIPS140=certified
-RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH GOFIPS140=$GOFIPS140 make
+RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH GOFIPS140=certified make
 
 FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:d4d7b498116f79b9de7bd31f9d4b0bf35948937604d8a2895c43752f3635f304 AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
