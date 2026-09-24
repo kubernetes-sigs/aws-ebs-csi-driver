@@ -46,10 +46,11 @@ check_lingering_volumes() {
     --query 'length(Volumes[*])' \
     --output text)
 
-  [[ lingering_vol_count -ne 0 ]] && {
+  if [[ lingering_vol_count -ne 0 ]]; then
     echo "WARNING: detected $lingering_vol_count lingering ebs-scale-test EBS volumes in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-volumes --filters 'Name=tag-key,Values=ebs-scale-test'\` and audit their AWS resource tags. Note these volumes may belong to a different scalability run than $SCALABILITY_TEST_RUN_NAME"
-    exit 1
-  }
+    return 1
+  fi
+  return 0
 }
 
 check_lingering_snapshots() {
@@ -58,7 +59,11 @@ check_lingering_snapshots() {
     --query 'length(Snapshots[*])' \
     --output text)
 
-  [[ lingering_snap_count -ne 0 ]] && echo "WARNING: detected $lingering_snap_count lingering ebs-scale-test EBS snapshots from run ${SCALABILITY_TEST_RUN_NAME} in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-snapshots --filters 'Name=tag:ebs-scale-test,Values=${SCALABILITY_TEST_RUN_NAME}'\` and audit their AWS resource tags."
+  if [[ lingering_snap_count -ne 0 ]]; then
+    echo "WARNING: detected $lingering_snap_count lingering ebs-scale-test EBS snapshots from run ${SCALABILITY_TEST_RUN_NAME} in $AWS_ACCOUNT_ID. Please run \`aws ec2 describe-snapshots --filters 'Name=tag:ebs-scale-test,Values=${SCALABILITY_TEST_RUN_NAME}'\` and audit their AWS resource tags."
+    return 1
+  fi
+  return 0
 }
 
 ## EBS CSI Driver
