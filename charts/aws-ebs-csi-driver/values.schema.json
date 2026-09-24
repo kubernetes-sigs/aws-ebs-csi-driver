@@ -311,6 +311,27 @@
             }
           }
         },
+        "networkPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enables a Kubernetes NetworkPolicy restricting traffic to/from the controller Deployment. Off by default.",
+              "default": false
+            },
+            "ingress": {
+              "type": "array",
+              "description": "Additional ingress rules for the controller NetworkPolicy.",
+              "default": []
+            },
+            "egress": {
+              "type": "array",
+              "description": "Additional egress rules for the controller NetworkPolicy.",
+              "default": []
+            }
+          }
+        },
         "priorityClassName": {
           "description": "Priority class for the controller Deployment",
           "type": "string",
@@ -778,6 +799,27 @@
           "type": ["object", "null"],
           "description": "DNS configuration for the node pods",
           "default": null
+        },
+        "networkPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enables a Kubernetes NetworkPolicy restricting traffic to/from the node DaemonSet. Off by default.",
+              "default": false
+            },
+            "ingress": {
+              "type": "array",
+              "description": "Additional ingress rules for the node NetworkPolicy.",
+              "default": []
+            },
+            "egress": {
+              "type": "array",
+              "description": "Additional egress rules for the node NetworkPolicy.",
+              "default": []
+            }
+          }
         }
       }
     },
