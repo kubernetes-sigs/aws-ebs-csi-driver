@@ -537,6 +537,10 @@ volumeSnapshotClasses: []
 # Intended for use with older clusters that cannot easily replace the CSIDriver object
 # This parameter should always be false for new installations
 useOldCSIDriver: false
+# Prevent pod scheduling when the EBS CSI driver is missing from a node.
+# When null, defaults to true on Kubernetes 1.37 and later.
+# Requires the VolumeLimitScaling feature gate.
+preventPodSchedulingIfMissing: null
 # nodeAllocatableUpdatePeriodSeconds updates the node's max attachable volume count by directing Kubelet to periodically call NodeGetInfo at the configured interval.
 # Kubernetes enforces a minimum update interval of 10 seconds. A value of -1 uses a automatically determined value dependent on metadata sources.
 # This parameter is supported in Kubernetes 1.33+ and requires the MutableCSINodeAllocatableCount feature gate to be enabled in kubelet and kube-apiserver.
