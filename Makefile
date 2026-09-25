@@ -301,7 +301,6 @@ image:
 		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
 		--build-arg=GOPROXY=$(GOPROXY) \
 		--build-arg=VERSION=$(VERSION) \
-		--build-arg=GOFIPS140=$(GOFIPS140) \
 		$(DOCKER_EXTRA_ARGS) \
 		.
 
