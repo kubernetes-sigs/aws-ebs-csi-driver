@@ -118,7 +118,7 @@
     },
     "fips": {
       "type": "boolean",
-      "description": "Enable FIPS 140-3 mode: activates the Go Cryptographic Module (CMVP #5247) at runtime via GODEBUG=fips140=on, and instructs the AWS SDK to use FIPS endpoints via AWS_USE_FIPS_ENDPOINT. See docs/fips.md for details.",
+      "description": "Enable FIPS 140-3 mode: instructs the AWS SDK to use FIPS endpoints via AWS_USE_FIPS_ENDPOINT and activates the Golang native FIPS 140-3 module (https://go.dev/doc/security/fips140).",
       "default": "false"
     },
     "debugLogs": {
