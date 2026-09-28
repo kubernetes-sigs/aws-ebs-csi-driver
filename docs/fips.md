@@ -2,7 +2,10 @@
 
 ## Overview
 
-The EBS CSI Driver is built with Go's native FIPS 140-3 cryptographic module ([CMVP Certificate #5247](https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/5247)). FIPS mode is disabled by default and can be activated at runtime without requiring a separate image.
+The EBS CSI Driver is built with [Golang's native FIPS 140-3 cryptographic module](https://go.dev/doc/security/fips140). FIPS mode is disabled by default and can be activated at runtime.
+
+- Versions `v1.63.0` to `v1.66.0` ship the latest version of the module associated with the release's Go version.
+- Versions `v1.67.0` and later ship a FIPS-certified version of the module (See [the Golang documentation](https://go.dev/doc/security/fips140#module-versions-validations-and-compatibility) for more information and links to the certificates).
 
 ## Enabling FIPS Mode
 
