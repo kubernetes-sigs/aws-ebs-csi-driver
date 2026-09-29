@@ -62,8 +62,7 @@ param_set_legacy-compat() {
 
 param_set_fips() {
   GINKGO_FOCUS="\[param:fips\]"
-  # Single flag; inlined instead of maintaining a one-line values file.
-  HELM_EXTRA_FLAGS="--set=fips=true"
+  HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true"
   FIPS_TEST=true
 }
 

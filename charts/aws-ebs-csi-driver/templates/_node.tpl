@@ -217,6 +217,10 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
@@ -259,6 +263,11 @@ spec:
             {{- with .Values.sidecars.livenessProbe.additionalArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- if .Values.fips }}
+          env:
+            - name: GODEBUG
+              value: "fips140=on"
+          {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}

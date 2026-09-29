@@ -276,6 +276,10 @@ spec:
             {{- with .Values.sidecars.provisioner.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
@@ -349,6 +353,10 @@ spec:
             {{- with .Values.sidecars.attacher.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
@@ -408,6 +416,10 @@ spec:
             {{- end }}
             {{- with .Values.sidecars.snapshotter.env }}
             {{- . | toYaml | nindent 12 }}
+            {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
@@ -481,6 +493,10 @@ spec:
             {{- with .Values.sidecars.volumemodifier.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
@@ -530,6 +546,12 @@ spec:
             {{- end }}
             {{- with .Values.sidecars.metadataLabeler.env }}
             {{- . | toYaml | nindent 12 }}
+            {{- end }}
+            {{- if .Values.fips }}
+            - name: AWS_USE_FIPS_ENDPOINT
+              value: "true"
+            - name: GODEBUG
+              value: "fips140=on"
             {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
@@ -601,6 +623,10 @@ spec:
             {{- with .Values.sidecars.resizer.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}
@@ -635,6 +661,11 @@ spec:
             {{- with .Values.sidecars.livenessProbe.additionalArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- if .Values.fips }}
+          env:
+            - name: GODEBUG
+              value: "fips140=on"
+          {{- end }}
           {{- with .Values.controller.envFrom }}
           envFrom:
             {{- . | toYaml | nindent 12 }}

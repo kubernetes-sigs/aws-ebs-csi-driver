@@ -221,6 +221,10 @@ spec:
             {{- with .Values.sidecars.nodeDriverRegistrar.env }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
           ports:
             - name: healthz-ndr
               containerPort: {{ .Values.sidecars.nodeDriverRegistrar.healthPort }}
@@ -260,6 +264,11 @@ spec:
             {{- else }}
             - --csi-address=unix:/csi/csi.sock
             {{- end }}
+          {{- if .Values.fips }}
+          env:
+            - name: GODEBUG
+              value: "fips140=on"
+          {{- end }}
           volumeMounts:
             - name: plugin-dir
               mountPath: C:\csi
