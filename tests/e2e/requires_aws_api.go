@@ -678,6 +678,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 	})
 
 	It("should copy a volume with different volume parameters", func() {
+		testTag := generateTagName()
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
 			Volumes: []testsuites.VolumeDetails{
@@ -700,6 +701,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 						ebscsidriver.EncryptedKey:  "true",
 						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeIO2,
 						ebscsidriver.IopsKey:       testsuites.DefaultIopsIoVolumes,
+						ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTag, testTagValue),
 					},
 					ClaimSize:   driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO2),
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
@@ -712,7 +714,12 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 			ClonedPod: clonedPod,
 			ValidateFunc: func() {
 				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
-					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + testTag),
+							Values: []string{testTagValue},
+						},
+					},
 				})
 				if err != nil {
 					Fail(fmt.Sprintf("failed to describe volume: %v", err))
@@ -722,8 +729,8 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
 				}
 
-				if result.Volumes[0].VolumeType != awscloud.VolumeTypeIO1 {
-					Fail(fmt.Sprintf("expected volume type %s, got %s", awscloud.VolumeTypeIO1, result.Volumes[0].VolumeType))
+				if result.Volumes[0].VolumeType != awscloud.VolumeTypeIO2 {
+					Fail(fmt.Sprintf("expected volume type %s, got %s", awscloud.VolumeTypeIO2, result.Volumes[0].VolumeType))
 				}
 			},
 		}
@@ -732,6 +739,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 	// This is a test to ensure driver logic is handled correctly when all params are omitted.
 	It("should copy a volume with all omitted params and not get same IOPS as source", func() {
 		sourceIops := "3012"
+		testTag := generateTagName()
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
 			Volumes: []testsuites.VolumeDetails{
@@ -753,6 +761,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 				{
 					CreateVolumeParameters: map[string]string{
 						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP3,
+						ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTag, testTagValue),
 					},
 					ClaimSize:   "7Gi",
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
@@ -765,7 +774,12 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 			ClonedPod: clonedPod,
 			ValidateFunc: func() {
 				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
-					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + testTag),
+							Values: []string{testTagValue},
+						},
+					},
 				})
 				if err != nil {
 					Fail(fmt.Sprintf("failed to describe volume: %v", err))
@@ -775,8 +789,9 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
 				}
 
-				if fmt.Sprintf("%d", result.Volumes[0].Iops) == sourceIops {
-					Fail(fmt.Sprintf("expected volume iops %d, to not be same as source %s", result.Volumes[0].Iops, sourceIops))
+				iops := aws.ToInt32(result.Volumes[0].Iops)
+				if fmt.Sprintf("%d", iops) == sourceIops {
+					Fail(fmt.Sprintf("expected volume iops %d, to not be same as source %s", iops, sourceIops))
 				}
 			},
 		}
@@ -784,6 +799,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 	})
 	It("should copy a volume to a bigger volume", func() {
 		cloneClaimSize := "3Gi"
+		testTag := generateTagName()
 		pod := testsuites.PodDetails{
 			Cmd: testsuites.PodCmdWriteToVolume("/mnt/test-1"),
 			Volumes: []testsuites.VolumeDetails{
@@ -805,6 +821,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 					CreateVolumeParameters: map[string]string{
 						ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
 						ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+						ebscsidriver.TagKeyPrefix:  fmt.Sprintf("%s=%s", testTag, testTagValue),
 					},
 					ClaimSize:   cloneClaimSize,
 					VolumeMount: testsuites.DefaultGeneratedVolumeMount,
@@ -817,7 +834,12 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 			ClonedPod: clonedPod,
 			ValidateFunc: func() {
 				result, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
-					VolumeIds: []string{clonedPod.Volumes[0].VolumeID},
+					Filters: []types.Filter{
+						{
+							Name:   aws.String("tag:" + testTag),
+							Values: []string{testTagValue},
+						},
+					},
 				})
 				if err != nil {
 					Fail(fmt.Sprintf("failed to describe volume: %v", err))
@@ -827,8 +849,9 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 					Fail(fmt.Sprintf("expected 1 volume, got %d", len(result.Volumes)))
 				}
 
-				if fmt.Sprintf("%dGi", result.Volumes[0].Size) != cloneClaimSize {
-					Fail(fmt.Sprintf("expected volume size to be %s, got %d", cloneClaimSize, result.Volumes[0].Size))
+				size := aws.ToInt32(result.Volumes[0].Size)
+				if fmt.Sprintf("%dGi", size) != cloneClaimSize {
+					Fail(fmt.Sprintf("expected volume size to be %s, got %d", cloneClaimSize, size))
 				}
 			},
 		}
