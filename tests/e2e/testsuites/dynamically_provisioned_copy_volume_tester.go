@@ -67,4 +67,8 @@ func (t *DynamicallyProvisionedCopyVolumeTest) Run(client clientset.Interface, n
 	defer tcpod.Cleanup()
 	By("checking that the pods command exits with no error")
 	tcpod.WaitForSuccess()
+
+	if t.ValidateFunc != nil {
+		t.ValidateFunc()
+	}
 }
