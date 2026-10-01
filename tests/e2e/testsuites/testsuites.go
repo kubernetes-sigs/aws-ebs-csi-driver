@@ -27,6 +27,7 @@ import (
 	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	awscloud "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
+	ebscsidriver "github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -400,24 +401,35 @@ func (t *TestPersistentVolumeClaim) ValidateProvisionedPersistentVolume() {
 				To(HaveLen(1))
 		}
 		if len(t.storageClass.AllowedTopologies) > 0 {
-			// The provisioner records the volume's zone in the PV's node
-			// affinity. The key it uses (e.g. topology.kubernetes.io/zone) is
-			// the same key the StorageClass's allowedTopologies specifies, so
-			// validate against that key rather than assuming a fixed one.
-			// A PV may carry several node-selector terms; find the one that
-			// constrains the topology key and confirm its value(s) fall within
-			// the StorageClass's allowed set.
+			// AZ-ID requests return a zone name. Check it against the EBS placement.
 			topologyKey := t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Key
 			allowedValues := t.storageClass.AllowedTopologies[0].MatchLabelExpressions[0].Values
+			if topologyKey == ebscsidriver.ZoneIDTopologyKey {
+				cfg, err := config.LoadDefaultConfig(context.Background())
+				framework.ExpectNoError(err)
+				Expect(t.persistentVolume.Spec.CSI).NotTo(BeNil())
+				volumes, err := ec2.NewFromConfig(cfg).DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+					VolumeIds: []string{t.persistentVolume.Spec.CSI.VolumeHandle},
+				})
+				framework.ExpectNoError(err)
+				Expect(volumes.Volumes).To(HaveLen(1))
+				Expect(allowedValues).To(ContainElement(aws.ToString(volumes.Volumes[0].AvailabilityZoneId)))
+				topologyKey = ebscsidriver.WellKnownZoneTopologyKey
+				allowedValues = []string{aws.ToString(volumes.Volumes[0].AvailabilityZone)}
+			}
 
 			keyFound := false
+			Expect(t.persistentVolume.Spec.NodeAffinity).NotTo(BeNil())
+			Expect(t.persistentVolume.Spec.NodeAffinity.Required).NotTo(BeNil())
 			for _, term := range t.persistentVolume.Spec.NodeAffinity.Required.NodeSelectorTerms {
 				for _, expr := range term.MatchExpressions {
 					if expr.Key != topologyKey {
 						continue
 					}
 					keyFound = true
+					Expect(expr.Values).NotTo(BeEmpty())
 					for _, v := range expr.Values {
+						Expect(v).NotTo(BeEmpty())
 						Expect(allowedValues).To(ContainElement(v))
 					}
 				}
@@ -472,6 +484,14 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 }
 
 func (t *TestPersistentVolumeClaim) Cleanup() {
+	if t.persistentVolume == nil {
+		claim, err := t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Get(context.Background(), t.persistentVolumeClaim.Name, metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		if claim.Spec.VolumeName != "" {
+			t.persistentVolume, err = t.client.CoreV1().PersistentVolumes().Get(context.Background(), claim.Spec.VolumeName, metav1.GetOptions{})
+			framework.ExpectNoError(err)
+		}
+	}
 	framework.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
 	err := e2epv.DeletePersistentVolumeClaim(context.Background(), t.client, t.persistentVolumeClaim.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
