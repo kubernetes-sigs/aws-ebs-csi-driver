@@ -39,6 +39,8 @@ type VolumeDetails struct {
 	VolumeBindingMode          *storagev1.VolumeBindingMode
 	AccessMode                 v1.PersistentVolumeAccessMode
 	AllowedTopologyValues      []string
+	AllowedTopologies          []v1.TopologySelectorTerm
+	SkipWaitForBound           bool // The caller waits after registering cleanup.
 	VolumeMode                 VolumeMode
 	VolumeMount                VolumeMountDetails
 	VolumeDevice               VolumeDeviceDetails
@@ -145,6 +147,9 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 	cleanupFuncs := make([]func(), 0)
 	By("setting up the StorageClass")
 	storageClass := csiDriver.GetDynamicProvisionStorageClass(volume.CreateVolumeParameters, volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
+	if volume.AllowedTopologies != nil {
+		storageClass.AllowedTopologies = volume.AllowedTopologies
+	}
 	tsc := NewTestStorageClass(client, namespace, storageClass)
 	createdStorageClass := tsc.Create()
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
@@ -165,7 +170,7 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
 	// PV will not be ready until PVC is used in a pod when volumeBindingMode: WaitForFirstConsumer
-	if volume.VolumeBindingMode == nil || *volume.VolumeBindingMode == storagev1.VolumeBindingImmediate {
+	if !volume.SkipWaitForBound && (volume.VolumeBindingMode == nil || *volume.VolumeBindingMode == storagev1.VolumeBindingImmediate) {
 		tpvc.WaitForBound()
 		tpvc.ValidateProvisionedPersistentVolume()
 	}

@@ -810,39 +810,57 @@ var _ = Describe("[ebs-csi-e2e] [functional] Topology Aware Dynamic Provisioning
 		test.Run(cs, ns)
 	})
 
-	// Requires env AWS_AVAILABILITY_ZONES, a comma separated list of AZs
-	It("[env] should allow for topology aware volume with specified zone in allowedTopologies", func() {
-		if os.Getenv(awsAvailabilityZonesEnv) == "" {
-			Skip(fmt.Sprintf("env %q not set", awsAvailabilityZonesEnv))
-		}
-		allowedTopologyZones := strings.Split(os.Getenv(awsAvailabilityZonesEnv), ",")
-		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
-		pods := []testsuites.PodDetails{
-			{
-				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
-				Volumes: []testsuites.VolumeDetails{
-					{
-						CreateVolumeParameters: map[string]string{
-							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
-							ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
-						},
-						ClaimSize:             driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
-						VolumeBindingMode:     &volumeBindingMode,
-						AllowedTopologyValues: allowedTopologyZones,
-						VolumeMount: testsuites.VolumeMountDetails{
-							NameGenerate:      "test-volume-",
-							MountPathGenerate: "/mnt/test-",
-						},
-					},
+	for _, tc := range []struct {
+		name        string
+		env         string
+		topologyKey string
+		bindingMode storagev1.VolumeBindingMode
+	}{
+		{
+			name:        "[env] should allow for topology aware volume with specified zone in allowedTopologies",
+			env:         awsAvailabilityZonesEnv,
+			topologyKey: ebscsidriver.WellKnownZoneTopologyKey,
+			bindingMode: storagev1.VolumeBindingWaitForFirstConsumer,
+		},
+		{
+			name:        "[env] [requires-aws-api] should provision a volume with AZ-ID-only topology and nonempty zone affinity",
+			env:         "AWS_AVAILABILITY_ZONE_IDS",
+			topologyKey: ebscsidriver.ZoneIDTopologyKey,
+			bindingMode: storagev1.VolumeBindingImmediate,
+		},
+	} {
+		It(tc.name, func() {
+			if os.Getenv(tc.env) == "" {
+				Skip(fmt.Sprintf("env %q not set", tc.env))
+			}
+			allowedValues := strings.Split(os.Getenv(tc.env), ",")
+			volume := testsuites.VolumeDetails{
+				CreateVolumeParameters: map[string]string{
+					ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+					ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
 				},
-			},
-		}
-		test := testsuites.DynamicallyProvisionedTopologyAwareVolumeTest{
-			CSIDriver: ebsDriver,
-			Pods:      pods,
-		}
-		test.Run(cs, ns)
-	})
+				ClaimSize:             driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+				VolumeBindingMode:     &tc.bindingMode,
+				AllowedTopologyValues: allowedValues,
+				VolumeMount:           testsuites.DefaultGeneratedVolumeMount,
+			}
+			if tc.topologyKey == ebscsidriver.ZoneIDTopologyKey {
+				volume.AllowedTopologyValues = nil
+				volume.AllowedTopologies = []v1.TopologySelectorTerm{{MatchLabelExpressions: []v1.TopologySelectorLabelRequirement{{
+					Key: tc.topologyKey, Values: []string{strings.TrimSpace(allowedValues[0])},
+				}}}}
+				volume.SkipWaitForBound = true
+			}
+			test := testsuites.DynamicallyProvisionedTopologyAwareVolumeTest{
+				CSIDriver: ebsDriver,
+				Pods: []testsuites.PodDetails{{
+					Cmd:     "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+					Volumes: []testsuites.VolumeDetails{volume},
+				}},
+			}
+			test.Run(cs, ns)
+		})
+	}
 })
 
 // multiAttachZone returns an availability zone with at least two schedulable
