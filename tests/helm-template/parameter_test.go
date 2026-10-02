@@ -116,6 +116,22 @@ func renderChartWithSet(t *testing.T, sets ...string) []obj {
 	return parseYAMLDocs(t, stdout.Bytes())
 }
 
+func renderChartWithKubeVersion(t *testing.T, kubeVersion string, sets ...string) []obj {
+	t.Helper()
+	args := []string{"template", releaseName, chartPath(), "--kube-version", kubeVersion}
+	for _, s := range sets {
+		args = append(args, "--set", s)
+	}
+	cmd := exec.Command(helmBin(), args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("helm template failed: %v\nstderr: %s", err, stderr.String())
+	}
+	return parseYAMLDocs(t, stdout.Bytes())
+}
+
 // parseYAMLDocs splits multi-doc YAML and converts each to a JSON-like map via sigs.k8s.io/yaml.
 func parseYAMLDocs(t *testing.T, data []byte) []obj {
 	t.Helper()
