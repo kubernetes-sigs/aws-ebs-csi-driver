@@ -294,32 +294,22 @@ echo "PASS: reflink is disabled on /mnt/test-1"
 		Expect(ds.Status.DesiredNumberScheduled).To(BeNumerically(">", 0))
 	})
 
-	It("[param:fips] should enable FIPS mode via container environment", func() {
-		// FIPS is a runtime toggle: the driver ships a single image built with
-		// GOFIPS140=certified, and fips=true activates the Go FIPS 140-3 module
-		// via GODEBUG=fips140=on plus AWS FIPS endpoints. There is no separate
-		// -fips image to assert on.
-		pods, err := cs.CoreV1().Pods(ebsNamespace).List(context.Background(), metav1.ListOptions{
-			LabelSelector: controllerLabel,
-		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(pods.Items).NotTo(BeEmpty())
-		var foundPlugin bool
-		for _, pod := range pods.Items {
-			for _, c := range pod.Spec.Containers {
-				if c.Name != ebsPluginContainer {
-					continue
+	It("[param:fips] should enable FIPS mode in all containers", func() {
+		for _, selector := range []string{controllerLabel, "app=ebs-csi-node"} {
+			pods, err := cs.CoreV1().Pods(ebsNamespace).List(context.Background(), metav1.ListOptions{
+				LabelSelector: selector,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pods.Items).NotTo(BeEmpty(), "should find pods with label %s", selector)
+			for _, pod := range pods.Items {
+				for _, c := range pod.Spec.Containers {
+					Expect(c.Env).To(ContainElement(v1.EnvVar{Name: "GODEBUG", Value: "fips140=on"}), "container %s in pod %s should run with GODEBUG=fips140=on", c.Name, pod.Name)
+					if c.Name == ebsPluginContainer || c.Name == "metadata-labeler" {
+						Expect(c.Env).To(ContainElement(v1.EnvVar{Name: "AWS_USE_FIPS_ENDPOINT", Value: "true"}), "container %s in pod %s should use AWS FIPS endpoints", c.Name, pod.Name)
+					}
 				}
-				foundPlugin = true
-				env := map[string]string{}
-				for _, e := range c.Env {
-					env[e.Name] = e.Value
-				}
-				Expect(env).To(HaveKeyWithValue("GODEBUG", "fips140=on"), "ebs-plugin should run with GODEBUG=fips140=on to activate the FIPS 140-3 module")
-				Expect(env).To(HaveKeyWithValue("AWS_USE_FIPS_ENDPOINT", "true"), "ebs-plugin should use AWS FIPS endpoints")
 			}
 		}
-		Expect(foundPlugin).To(BeTrue(), "controller pod should have an ebs-plugin container")
 	})
 
 	It("[param:metadataLabeler] should label nodes with EBS volume and ENI counts", func() {
