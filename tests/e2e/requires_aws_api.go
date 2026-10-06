@@ -31,7 +31,9 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/driver"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e/testsuites"
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	restclientset "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -857,6 +859,134 @@ var _ = Describe("[ebs-csi-e2e] [functional] [requires-aws-api] Dynamic Provisio
 		}
 		test.Run(cs, ns)
 	})
+
+	for _, tc := range []struct {
+		name            string
+		conflictingZone bool
+		conflictingID   bool
+	}{
+		{name: "should copy a volume with AZ-ID-only topology"},
+		{name: "should reject a clone with a matching zone and conflicting AZ ID", conflictingID: true},
+		{name: "should reject a clone with a matching AZ ID and conflicting zone", conflictingZone: true},
+	} {
+		It(tc.name, func() {
+			sourceMarker := "clone-source-" + uuid.NewString()
+			sourceBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+			cloneBindingMode := storagev1.VolumeBindingImmediate
+			var sourceVolume types.Volume
+			test := testsuites.DynamicallyProvisionedCopyVolumeTest{
+				CSIDriver: ebsDriver,
+				Pod: testsuites.PodDetails{
+					Cmd: fmt.Sprintf("echo '%s' > /mnt/test-1/data && grep -Fx '%s' /mnt/test-1/data && sync", sourceMarker, sourceMarker),
+					Volumes: []testsuites.VolumeDetails{{
+						CreateVolumeParameters: map[string]string{
+							ebscsidriver.EncryptedKey:  "true",
+							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+							ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+						},
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeBindingMode: &sourceBindingMode,
+						VolumeMount:       testsuites.DefaultGeneratedVolumeMount,
+					}},
+				},
+				ClonedPod: testsuites.PodDetails{
+					Cmd: fmt.Sprintf("grep -Fx '%s' /mnt/test-1/data && echo 'clone-only' >> /mnt/test-1/data && grep -Fx 'clone-only' /mnt/test-1/data && sync", sourceMarker),
+					Volumes: []testsuites.VolumeDetails{{
+						CreateVolumeParameters: map[string]string{
+							ebscsidriver.EncryptedKey:  "true",
+							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeGP2,
+							ebscsidriver.FSTypeKey:     ebscsidriver.FSTypeExt4,
+						},
+						ClaimSize:         driver.MinimumSizeForVolumeType(awscloud.VolumeTypeGP2),
+						VolumeBindingMode: &cloneBindingMode,
+						VolumeMount:       testsuites.DefaultGeneratedVolumeMount,
+					}},
+				},
+				CloneAllowedTopologies: func(sourcePV *v1.PersistentVolume) []v1.TopologySelectorTerm {
+					volumes, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+						VolumeIds: []string{sourcePV.Spec.CSI.VolumeHandle},
+					})
+					framework.ExpectNoError(err)
+					Expect(volumes.Volumes).To(HaveLen(1))
+					sourceVolume = volumes.Volumes[0]
+					Expect(aws.ToString(sourceVolume.AvailabilityZone)).NotTo(BeEmpty())
+					Expect(aws.ToString(sourceVolume.AvailabilityZoneId)).NotTo(BeEmpty())
+					zone := aws.ToString(sourceVolume.AvailabilityZone)
+					zoneID := aws.ToString(sourceVolume.AvailabilityZoneId)
+					if tc.conflictingZone || tc.conflictingID {
+						zones, err := ec2Client.DescribeAvailabilityZones(context.Background(), &ec2.DescribeAvailabilityZonesInput{
+							Filters: []types.Filter{{Name: aws.String("zone-type"), Values: []string{"availability-zone"}}},
+						})
+						framework.ExpectNoError(err)
+						found := false
+						for _, other := range zones.AvailabilityZones {
+							if aws.ToString(other.ZoneId) == zoneID {
+								continue
+							}
+							if tc.conflictingZone {
+								zone = aws.ToString(other.ZoneName)
+							} else {
+								zoneID = aws.ToString(other.ZoneId)
+							}
+							found = true
+							break
+						}
+						if !found {
+							Skip("conflicting clone topology requires a second availability zone")
+						}
+					}
+					expressions := []v1.TopologySelectorLabelRequirement{{
+						Key: ebscsidriver.ZoneIDTopologyKey, Values: []string{zoneID},
+					}}
+					if tc.conflictingZone || tc.conflictingID {
+						expressions = append(expressions, v1.TopologySelectorLabelRequirement{
+							Key: ebscsidriver.WellKnownZoneTopologyKey, Values: []string{zone},
+						})
+					}
+					return []v1.TopologySelectorTerm{{MatchLabelExpressions: expressions}}
+				},
+				ValidateClone: func(sourcePV *v1.PersistentVolume, clonePVC *v1.PersistentVolumeClaim, clonePV *v1.PersistentVolume) {
+					if clonePV == nil {
+						volumes, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+							Filters: []types.Filter{{Name: aws.String("tag:CSIVolumeName"), Values: []string{"pvc-" + string(clonePVC.UID)}}},
+						})
+						framework.ExpectNoError(err)
+						Expect(volumes.Volumes).To(BeEmpty(), "the rejected clone must not create an EBS volume")
+						return
+					}
+					Expect(clonePV.Spec.CSI.VolumeHandle).NotTo(Equal(sourcePV.Spec.CSI.VolumeHandle))
+					volumes, err := ec2Client.DescribeVolumes(context.Background(), &ec2.DescribeVolumesInput{
+						VolumeIds: []string{clonePV.Spec.CSI.VolumeHandle},
+					})
+					framework.ExpectNoError(err)
+					Expect(volumes.Volumes).To(HaveLen(1))
+					clone := volumes.Volumes[0]
+					Expect(aws.ToString(clone.SourceVolumeId)).To(Equal(sourcePV.Spec.CSI.VolumeHandle))
+					Expect(aws.ToString(clone.AvailabilityZone)).To(Equal(aws.ToString(sourceVolume.AvailabilityZone)))
+					Expect(aws.ToString(clone.AvailabilityZoneId)).To(Equal(aws.ToString(sourceVolume.AvailabilityZoneId)))
+					Expect(aws.ToString(clone.OutpostArn)).To(Equal(aws.ToString(sourceVolume.OutpostArn)))
+					for _, pv := range []*v1.PersistentVolume{sourcePV, clonePV} {
+						Expect(pv.Spec.NodeAffinity).NotTo(BeNil())
+						Expect(pv.Spec.NodeAffinity.Required).NotTo(BeNil())
+						found := false
+						for _, term := range pv.Spec.NodeAffinity.Required.NodeSelectorTerms {
+							for _, expression := range term.MatchExpressions {
+								if expression.Key == ebscsidriver.WellKnownZoneTopologyKey {
+									Expect(expression.Values).To(Equal([]string{aws.ToString(sourceVolume.AvailabilityZone)}))
+									found = true
+								}
+							}
+						}
+						Expect(found).To(BeTrue(), "source and clone PV affinity must contain the actual zone name")
+					}
+				},
+			}
+			if tc.conflictingZone || tc.conflictingID {
+				test.ExpectedProvisioningError = "rpc error: code = ResourceExhausted desc = Cannot provision volume with the specified topology constraints"
+			}
+			test.Run(cs, ns)
+		})
+	}
 
 	It("should validate GP3 volume IOPS are not capped at 16000 when requesting 16001", func() {
 		testTag := generateTagName()

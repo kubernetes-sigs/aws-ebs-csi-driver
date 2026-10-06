@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -363,9 +364,7 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			volumeID = sourceVolume.GetVolumeId()
 		}
 	}
-	var zone string
-	var zoneID string
-	var outpostArn string
+	var sourceTopology *volumeTopology
 	// create or clone a new volume
 	if volumeID != "" {
 		sourceVolume, err := d.cloud.GetDiskByID(ctx, volumeID)
@@ -374,17 +373,15 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return nil, status.Errorf(codes.NotFound, "Error source volume with volumeID %v not found: %v", volumeID, err)
 		}
 
-		err = checkSourceTopology(req.GetAccessibilityRequirements(), sourceVolume.AvailabilityZone, sourceVolume.OutpostArn, sourceVolume.AvailabilityZoneID)
-		if err != nil {
-			return nil, err
+		sourceTopology = &volumeTopology{
+			zone:       sourceVolume.AvailabilityZone,
+			zoneID:     sourceVolume.AvailabilityZoneID,
+			outpostArn: sourceVolume.OutpostArn,
 		}
-		zone = sourceVolume.AvailabilityZone
-		zoneID = sourceVolume.AvailabilityZoneID
-		outpostArn = sourceVolume.OutpostArn
-	} else {
-		zone = pickAvailabilityZone(req.GetAccessibilityRequirements())
-		zoneID = pickAvailabilityZoneID(req.GetAccessibilityRequirements())
-		outpostArn = getOutpostArn(req.GetAccessibilityRequirements())
+	}
+	topology, err := pickVolumeTopology(req.GetAccessibilityRequirements(), sourceTopology)
+	if err != nil {
+		return nil, err
 	}
 
 	opts := &cloud.DiskOptions{
@@ -395,9 +392,9 @@ func (d *ControllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		AllowIOPSPerGBIncrease:   allowIOPSPerGBIncrease,
 		IOPS:                     iops,
 		Throughput:               throughput,
-		AvailabilityZone:         zone,
-		AvailabilityZoneID:       zoneID,
-		OutpostArn:               outpostArn,
+		AvailabilityZone:         topology.zone,
+		AvailabilityZoneID:       topology.zoneID,
+		OutpostArn:               topology.outpostArn,
 		Encrypted:                isEncrypted,
 		KmsKeyID:                 kmsKeyID,
 		SnapshotID:               snapshotID,
@@ -1066,118 +1063,82 @@ func (d *ControllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	return response, nil
 }
 
-// pickAvailabilityZone selects 1 zone given topology requirement.
-// if not found, empty string is returned.
-func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
-	if requirement == nil {
-		return ""
-	}
-	for _, topology := range requirement.GetPreferred() {
-		zone, exists := topology.GetSegments()[WellKnownZoneTopologyKey]
-		if exists {
-			return zone
-		}
-
-		zone, exists = topology.GetSegments()[ZoneTopologyKey]
-		if exists {
-			return zone
-		}
-	}
-	for _, topology := range requirement.GetRequisite() {
-		zone, exists := topology.GetSegments()[WellKnownZoneTopologyKey]
-		if exists {
-			return zone
-		}
-		zone, exists = topology.GetSegments()[ZoneTopologyKey]
-		if exists {
-			return zone
-		}
-	}
-	return ""
+type volumeTopology struct {
+	zone       string
+	zoneID     string
+	outpostArn string
 }
 
-func pickAvailabilityZoneID(requirement *csi.TopologyRequirement) string {
+// pickVolumeTopology converts a CSI topology requirement into AWS topology that can be passed to cloud (and ultimately EC2 CreateVolume).
+func pickVolumeTopology(requirement *csi.TopologyRequirement, sourceTopology *volumeTopology) (volumeTopology, error) {
+	var fallback volumeTopology
+	// For clones, instead of falling back to random selection we use the source volume's topology verbatim.
+	if sourceTopology != nil {
+		fallback = *sourceTopology
+	}
+
+	// No topology requirement was passed in at all, let cloud pick a random AZ.
 	if requirement == nil {
-		return ""
+		return fallback, nil
 	}
-	for _, topology := range requirement.GetPreferred() {
-		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
-		if exists {
-			return zone
+
+	// The CSI spec requires that we attempt to use the topologies from preferred in the order they appear:
+	// "An SP MUST attempt to make the provisioned volume available using the preferred topologies in order from first to last."
+	//
+	// CSI requires all preferred topologies are also in requisite, so if we find a valid preferred topology we can stop looking:
+	// "If requisite is specified, all topologies in preferred list MUST also be present in the list of requisite topologies."
+	//
+	// The simplest way to implement this correctly is to loop through the preferred and then requisite topologies in order
+	// and accept the first legal topology from the list. On Kubernetes, the first topology in the preferred list will be
+	// the topology of the selected node when using WaitForFirstConsumer.
+	for _, topology := range slices.Concat(requirement.GetPreferred(), requirement.GetRequisite()) {
+		if selected, ok := parseVolumeTopology(topology); ok {
+			// If there is a source topology (i.e. clone source), it must be a superset (or match) of the selected topology.
+			if sourceTopology != nil {
+				_, hasOutpost := topology.GetSegments()[AwsOutpostIDKey]
+				if selected.zone != "" && selected.zone != sourceTopology.zone ||
+					selected.zoneID != "" && selected.zoneID != sourceTopology.zoneID ||
+					hasOutpost && selected.outpostArn != sourceTopology.outpostArn {
+					continue
+				}
+			}
+			return selected, nil
 		}
 	}
-	for _, topology := range requirement.GetRequisite() {
-		zone, exists := topology.GetSegments()[ZoneIDTopologyKey]
-		if exists {
-			return zone
-		}
+
+	// The CO passed in a set of requisite topologies, but none of them could be used. The CSI spec mandates we MUST fail here:
+	// "If the list of requisite topologies is specified and the SP is unable to make the provisioned volume
+	// available from any of the requisite topologies it MUST fail the CreateVolume call."
+	if len(requirement.GetRequisite()) > 0 {
+		return volumeTopology{}, status.Error(codes.ResourceExhausted, "Cannot provision volume with the specified topology constraints")
 	}
-	return ""
+
+	// The CO passed in a set of preferred topologies (without any requisite), but none of them could be used.
+	// We will let cloud pick a random AZ as if the CO had passed in no topology requirement at all.
+	return fallback, nil
 }
 
-func getOutpostArn(requirement *csi.TopologyRequirement) string {
-	if requirement == nil {
-		return ""
-	}
-	for _, topology := range requirement.GetPreferred() {
-		_, exists := topology.GetSegments()[AwsOutpostIDKey]
-		if exists {
-			return BuildOutpostArn(topology.GetSegments())
-		}
-	}
-	for _, topology := range requirement.GetRequisite() {
-		_, exists := topology.GetSegments()[AwsOutpostIDKey]
-		if exists {
-			return BuildOutpostArn(topology.GetSegments())
-		}
+func parseVolumeTopology(topology *csi.Topology) (volumeTopology, bool) {
+	segments := topology.GetSegments()
+	// If a topology has both the well-known and deprecated topology zone keys,
+	// we use the zone from the well-known key and ignore the deprecated key.
+	zone, hasZone := segments[WellKnownZoneTopologyKey]
+	if !hasZone {
+		zone = segments[ZoneTopologyKey]
 	}
 
-	return ""
-}
-
-// Check if source volumes topology matches with clones requisite topology requirements.
-func checkSourceTopology(requirement *csi.TopologyRequirement, sourceVolumeZone string, sourceVolumeOutpostArn string, sourceVolumeZoneID string) error {
-	if requirement.GetRequisite() == nil || requirement == nil {
-		return nil
+	// We allow a topology to contain both an AZ and AZ ID, EC2 will reject if they don't match.
+	zoneID := segments[ZoneIDTopologyKey]
+	if zone == "" && zoneID == "" {
+		// Topologies that do not contain an AZ or AZ ID are illegal, we ignore them.
+		return volumeTopology{}, false
 	}
-	for _, toplogy := range requirement.GetRequisite() {
-		zone, hasZone := toplogy.GetSegments()[WellKnownZoneTopologyKey]
-		if hasZone && zone == sourceVolumeZone {
-			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
-			if hasOutpost {
-				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
-					return nil
-				}
-			} else {
-				return nil
-			}
-		}
 
-		zone, hasZone = toplogy.GetSegments()[ZoneTopologyKey]
-		if hasZone && zone == sourceVolumeZone {
-			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
-			if hasOutpost {
-				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
-					return nil
-				}
-			} else {
-				return nil
-			}
-		}
-
-		zoneid, hasZoneID := toplogy.GetSegments()[ZoneIDTopologyKey]
-		if hasZoneID && zoneid == sourceVolumeZoneID {
-			_, hasOutpost := toplogy.GetSegments()[AwsOutpostIDKey]
-			if hasOutpost {
-				if BuildOutpostArn(toplogy.GetSegments()) == sourceVolumeOutpostArn {
-					return nil
-				}
-			} else {
-				return nil
-			}
-		}
-	}
-	return status.Errorf(codes.ResourceExhausted, "Cannot provision clone with the specified topology constraints")
+	return volumeTopology{
+		zone:       zone,
+		zoneID:     zoneID,
+		outpostArn: BuildOutpostArn(segments),
+	}, true
 }
 
 func newCreateVolumeResponse(disk *cloud.Disk, ctx map[string]string) *csi.CreateVolumeResponse {

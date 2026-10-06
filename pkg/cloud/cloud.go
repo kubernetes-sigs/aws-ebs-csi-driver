@@ -886,7 +886,15 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 
 	klog.V(7).InfoS("CreateDisk: volume created successfully", "volumeName", volumeName, "volume", volume)
 
-	return &Disk{CapacityGiB: size, VolumeID: volumeID, AvailabilityZone: zone, SnapshotID: diskOptions.SnapshotID, SourceVolumeID: diskOptions.SourceVolumeID, OutpostArn: outpostArn}, nil
+	return &Disk{
+		CapacityGiB:        size,
+		VolumeID:           volumeID,
+		AvailabilityZone:   aws.ToString(volume.AvailabilityZone),
+		AvailabilityZoneID: aws.ToString(volume.AvailabilityZoneId),
+		SnapshotID:         diskOptions.SnapshotID,
+		SourceVolumeID:     diskOptions.SourceVolumeID,
+		OutpostArn:         outpostArn,
+	}, nil
 }
 
 func (c *cloud) createCloneHelper(ctx context.Context, input *ec2.CopyVolumesInput, iops int32, throughput int32) (int32, string, string, error) {
@@ -1791,11 +1799,12 @@ func (c *cloud) GetDiskByName(ctx context.Context, name string, capacityBytes in
 	}
 
 	return &Disk{
-		VolumeID:         aws.ToString(volume.VolumeId),
-		CapacityGiB:      *volume.Size,
-		AvailabilityZone: aws.ToString(volume.AvailabilityZone),
-		SnapshotID:       aws.ToString(volume.SnapshotId),
-		OutpostArn:       aws.ToString(volume.OutpostArn),
+		VolumeID:           aws.ToString(volume.VolumeId),
+		CapacityGiB:        *volume.Size,
+		AvailabilityZone:   aws.ToString(volume.AvailabilityZone),
+		AvailabilityZoneID: aws.ToString(volume.AvailabilityZoneId),
+		SnapshotID:         aws.ToString(volume.SnapshotId),
+		OutpostArn:         aws.ToString(volume.OutpostArn),
 	}, nil
 }
 
@@ -1810,11 +1819,12 @@ func (c *cloud) GetDiskByID(ctx context.Context, volumeID string) (*Disk, error)
 	}
 
 	disk := &Disk{
-		VolumeID:         aws.ToString(volume.VolumeId),
-		AvailabilityZone: aws.ToString(volume.AvailabilityZone),
-		OutpostArn:       aws.ToString(volume.OutpostArn),
-		Attachments:      getVolumeAttachmentsList(*volume),
-		KmsKeyID:         aws.ToString(volume.KmsKeyId),
+		VolumeID:           aws.ToString(volume.VolumeId),
+		AvailabilityZone:   aws.ToString(volume.AvailabilityZone),
+		AvailabilityZoneID: aws.ToString(volume.AvailabilityZoneId),
+		OutpostArn:         aws.ToString(volume.OutpostArn),
+		Attachments:        getVolumeAttachmentsList(*volume),
+		KmsKeyID:           aws.ToString(volume.KmsKeyId),
 	}
 
 	if volume.Size != nil {

@@ -2821,6 +2821,281 @@ func TestCreateVolume(t *testing.T) {
 	}
 }
 
+func TestCreateVolumeTopologySelection(t *testing.T) {
+	volumeSize := int64(5 * 1024 * 1024 * 1024)
+	volumeCapabilities := []*csi.VolumeCapability{
+		{
+			AccessType: &csi.VolumeCapability_Mount{
+				Mount: &csi.VolumeCapability_MountVolume{},
+			},
+			AccessMode: &csi.VolumeCapability_AccessMode{
+				Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+			},
+		},
+	}
+	outpostArn, err := arn.Parse(strings.ReplaceAll(testOutpostARN, "outpost/", ""))
+	require.NoError(t, err)
+
+	regionalTopology := func(zone string) *csi.Topology {
+		return &csi.Topology{
+			Segments: map[string]string{
+				ZoneTopologyKey:          zone,
+				WellKnownZoneTopologyKey: zone,
+				OSTopologyKey:            "linux",
+			},
+		}
+	}
+	outpostTopology := func(zone string) *csi.Topology {
+		segments := map[string]string{
+			OSTopologyKey:   "linux",
+			AwsAccountIDKey: outpostArn.AccountID,
+			AwsOutpostIDKey: outpostArn.Resource,
+			AwsRegionKey:    outpostArn.Region,
+			AwsPartitionKey: outpostArn.Partition,
+		}
+		if zone != "" {
+			segments[ZoneTopologyKey] = zone
+			segments[WellKnownZoneTopologyKey] = zone
+		}
+		return &csi.Topology{Segments: segments}
+	}
+
+	testCases := []struct {
+		name               string
+		requirement        *csi.TopologyRequirement
+		expectedZone       string
+		expectedZoneID     string
+		expectedOutpostArn string
+		expectedCode       codes.Code
+	}{
+		{
+			name: "regional preferred topology does not use Outpost requisite fields",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{outpostTopology("us-west-2a"), regionalTopology(expZone)},
+				Preferred: []*csi.Topology{regionalTopology(expZone)},
+			},
+			expectedZone: expZone,
+		},
+		{
+			name: "Outpost preferred topology does not use regional requisite fields",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							WellKnownZoneTopologyKey: expZone,
+							ZoneIDTopologyKey:        expZoneID,
+						},
+					},
+					outpostTopology("us-west-2a"),
+				},
+				Preferred: []*csi.Topology{outpostTopology("us-west-2a")},
+			},
+			expectedZone:       "us-west-2a",
+			expectedOutpostArn: testOutpostARN,
+		},
+		{
+			name: "partial Outpost preferred topology does not hide a later regional topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					regionalTopology(expZone),
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					regionalTopology(expZone),
+				},
+			},
+			expectedZone: expZone,
+		},
+		{
+			name: "partial Outpost requisite topology does not hide a later regional topology",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					regionalTopology(expZone),
+				},
+			},
+			expectedZone: expZone,
+		},
+		{
+			name: "skip zoneless Outpost rather than complete it from a later entry",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					outpostTopology(""),
+					regionalTopology(expZone),
+					outpostTopology("us-west-2a"),
+				},
+				Requisite: []*csi.Topology{
+					outpostTopology(""),
+					regionalTopology(expZone),
+					outpostTopology("us-west-2a"),
+				},
+			},
+			expectedZone: expZone,
+		},
+		{
+			name: "skip zoneless Outpost requisite before a usable Outpost",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{outpostTopology(""), outpostTopology("us-west-2a")},
+			},
+			expectedZone:       "us-west-2a",
+			expectedOutpostArn: testOutpostARN,
+		},
+		{
+			name: "fail zoneless Outpost requisite without creating a volume",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{outpostTopology("")},
+				Requisite: []*csi.Topology{outpostTopology("")},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "fail partial Outpost requisite without creating a volume",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+				},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "OS-only requisite has no usable placement",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{OSTopologyKey: "linux"}},
+				},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "skip unknown-only preferred entry for complete Outpost placement",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{"example.com/rack": "rack-1"}},
+					outpostTopology("us-west-2a"),
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{"example.com/rack": "rack-1"}},
+					outpostTopology("us-west-2a"),
+				},
+			},
+			expectedZone:       "us-west-2a",
+			expectedOutpostArn: testOutpostARN,
+		},
+		{
+			name: "unknown keys do not hide incomplete Outpost placement",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{
+						AwsOutpostIDKey:    outpostArn.Resource,
+						"example.com/rack": "rack-1",
+					}},
+				},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "unusable preferred without requisite allows unrestricted placement",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{outpostTopology("")},
+			},
+		},
+		{
+			name: "zone ID preferred does not use a later zone name",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+					regionalTopology(expZone),
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+					regionalTopology(expZone),
+				},
+			},
+			expectedZoneID: expZoneID,
+		},
+		{
+			name: "mixed immediate binding keeps coarse preferred topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					regionalTopology("us-west-2a"),
+					regionalTopology(expZone),
+					outpostTopology("us-west-2a"),
+				},
+				Requisite: []*csi.Topology{
+					regionalTopology("us-west-2a"),
+					regionalTopology(expZone),
+					outpostTopology("us-west-2a"),
+				},
+			},
+			expectedZone: "us-west-2a",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &csi.CreateVolumeRequest{
+				Name:                      "test-volume",
+				CapacityRange:             &csi.CapacityRange{RequiredBytes: volumeSize},
+				VolumeCapabilities:        volumeCapabilities,
+				AccessibilityRequirements: tc.requirement,
+			}
+			expectedOpts := &cloud.DiskOptions{
+				CapacityBytes:      volumeSize,
+				AvailabilityZone:   tc.expectedZone,
+				AvailabilityZoneID: tc.expectedZoneID,
+				OutpostArn:         tc.expectedOutpostArn,
+				Tags: map[string]string{
+					cloud.VolumeNameTagKey:   req.GetName(),
+					cloud.AwsEbsDriverTagKey: "true",
+				},
+			}
+			resolvedZone := tc.expectedZone
+			if resolvedZone == "" {
+				resolvedZone = expZone
+			}
+			mockDisk := &cloud.Disk{
+				VolumeID:           "vol-test",
+				AvailabilityZone:   resolvedZone,
+				AvailabilityZoneID: tc.expectedZoneID,
+				CapacityGiB:        util.BytesToGiB(volumeSize),
+				OutpostArn:         tc.expectedOutpostArn,
+			}
+
+			mockCtl := gomock.NewController(t)
+			mockCloud := cloud.NewMockCloud(mockCtl)
+			if tc.expectedCode == codes.OK {
+				mockCloud.EXPECT().CreateDisk(testutil.AnyContext(), req.GetName(), expectedOpts).Return(mockDisk, nil)
+			}
+
+			driver := ControllerService{
+				cloud:    mockCloud,
+				inFlight: internal.NewInFlight(),
+				options:  &Options{},
+			}
+
+			response, err := driver.CreateVolume(t.Context(), req)
+			require.Equal(t, tc.expectedCode, status.Code(err))
+			if tc.expectedCode != codes.OK {
+				require.Nil(t, response)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, response.GetVolume().GetAccessibleTopology(), 1)
+			segments := response.GetVolume().GetAccessibleTopology()[0].GetSegments()
+			assert.Equal(t, resolvedZone, segments[WellKnownZoneTopologyKey])
+			if tc.expectedOutpostArn != "" {
+				assert.Equal(t, outpostArn.Resource, segments[AwsOutpostIDKey])
+				assert.Equal(t, outpostArn.Partition, segments[AwsPartitionKey])
+				assert.Equal(t, outpostArn.Region, segments[AwsRegionKey])
+				assert.Equal(t, outpostArn.AccountID, segments[AwsAccountIDKey])
+			} else {
+				assert.NotContains(t, segments, AwsOutpostIDKey)
+			}
+		})
+	}
+}
+
 func TestCreateVolumeWithFormattingParameters(t *testing.T) {
 	stdVolCap := []*csi.VolumeCapability{
 		{
@@ -3148,7 +3423,7 @@ func TestDeleteVolume(t *testing.T) {
 	}
 }
 
-func TestCheckSourceTopology(t *testing.T) {
+func TestPickVolumeTopologyForClone(t *testing.T) {
 	testCases := []struct {
 		name                   string
 		requirement            *csi.TopologyRequirement
@@ -3156,7 +3431,89 @@ func TestCheckSourceTopology(t *testing.T) {
 		sourceVolumeOutpostArn string
 		sourceVolumeZoneID     string
 		expErr                 bool
+		expectedCode           codes.Code
+		expectedTopology       *volumeTopology
 	}{
+		{
+			name:               "nil requirement keeps source placement",
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+		},
+		{
+			name: "matching zone and zone ID",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{{Segments: map[string]string{
+					WellKnownZoneTopologyKey: expZone,
+					ZoneIDTopologyKey:        expZoneID,
+				}}},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+		},
+		{
+			name: "matching zone does not hide conflicting zone ID",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{{Segments: map[string]string{
+					WellKnownZoneTopologyKey: expZone,
+					ZoneIDTopologyKey:        "usw2-az1",
+				}}},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+			expErr:             true,
+		},
+		{
+			name: "matching zone ID does not hide conflicting zone",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{{Segments: map[string]string{
+					WellKnownZoneTopologyKey: "us-east-1a",
+					ZoneIDTopologyKey:        expZoneID,
+				}}},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+			expErr:             true,
+		},
+		{
+			name: "skip conflicting preferred entry for later matching entry",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone, ZoneIDTopologyKey: "usw2-az1"}},
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone, ZoneIDTopologyKey: "usw2-az1"}},
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+				},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+			expectedTopology:   &volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "fall back from preferred to matching requisite entry",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{WellKnownZoneTopologyKey: "us-east-1a"}},
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{WellKnownZoneTopologyKey: "us-east-1a"}},
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+				},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+			expectedTopology:   &volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "reject incomplete requisite for clone",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{{Segments: map[string]string{AwsOutpostIDKey: "op-test"}}},
+			},
+			sourceVolumeZone:   expZone,
+			sourceVolumeZoneID: expZoneID,
+			expectedCode:       codes.ResourceExhausted,
+		},
 		{
 			name:                   "no requirement",
 			requirement:            &csi.TopologyRequirement{},
@@ -3225,7 +3582,7 @@ func TestCheckSourceTopology(t *testing.T) {
 			},
 			sourceVolumeZone:       expZone,
 			sourceVolumeOutpostArn: "arn:aws:outposts:us-west-2:222222222222:outpost/aa-aaaaaaaaaaaaaaaaa",
-			expErr:                 false,
+			expErr:                 true,
 		},
 		{
 			name: "matching AZ wrong outpostARN",
@@ -3395,28 +3752,57 @@ func TestCheckSourceTopology(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := checkSourceTopology(tc.requirement, tc.sourceVolumeZone, tc.sourceVolumeOutpostArn, tc.sourceVolumeZoneID)
-			if err != nil && !tc.expErr {
-				t.Fatalf("Unexpected error: %v", err)
-			} else if tc.expErr && status.Code(err) != codes.ResourceExhausted {
-				t.Fatalf("Incorrect error code expected ResourceExhausted (8) but got : %v", err)
+			sourceTopology := volumeTopology{
+				zone:       tc.sourceVolumeZone,
+				zoneID:     tc.sourceVolumeZoneID,
+				outpostArn: tc.sourceVolumeOutpostArn,
+			}
+			expectedCode := tc.expectedCode
+			if tc.expErr {
+				expectedCode = codes.ResourceExhausted
+			}
+			actual, err := pickVolumeTopology(tc.requirement, &sourceTopology)
+			require.Equal(t, expectedCode, status.Code(err))
+			if expectedCode == codes.OK {
+				expected := sourceTopology
+				if tc.expectedTopology != nil {
+					expected = *tc.expectedTopology
+				}
+				assert.Equal(t, expected, actual)
+			} else {
+				assert.Equal(t, volumeTopology{}, actual)
 			}
 		})
 	}
 }
 
-func TestPickAvailabilityZone(t *testing.T) {
+func TestPickVolumeTopology(t *testing.T) {
+	rawOutpostArn := testOutpostARN
+	outpostArn, _ := arn.Parse(strings.ReplaceAll(rawOutpostArn, "outpost/", ""))
+	zonelessOutpost := &csi.Topology{
+		Segments: map[string]string{
+			AwsAccountIDKey: outpostArn.AccountID,
+			AwsOutpostIDKey: outpostArn.Resource,
+			AwsRegionKey:    outpostArn.Region,
+			AwsPartitionKey: outpostArn.Partition,
+		},
+	}
+
 	testCases := []struct {
-		name        string
-		requirement *csi.TopologyRequirement
-		expZone     string
+		name         string
+		requirement  *csi.TopologyRequirement
+		expected     volumeTopology
+		expectedCode codes.Code
 	}{
 		{
-			name: "Return WellKnownZoneTopologyKey if present from preferred",
+			name: "prefer well-known zone key",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
 						Segments: map[string]string{ZoneTopologyKey: ""},
+					},
+					{
+						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
 					},
 				},
 				Preferred: []*csi.Topology{
@@ -3425,88 +3811,231 @@ func TestPickAvailabilityZone(t *testing.T) {
 					},
 				},
 			},
-			expZone: "foobar",
+			expected: volumeTopology{zone: "foobar"},
 		},
 		{
-			name: "Return WellKnownZoneTopologyKey if present from requisite",
+			name: "use deprecated zone key",
 			requirement: &csi.TopologyRequirement{
-				Requisite: []*csi.Topology{
-					{
-						Segments: map[string]string{ZoneTopologyKey: expZone, WellKnownZoneTopologyKey: "foobar"},
-					},
-				},
-			},
-			expZone: "foobar",
-		},
-		{
-			name: "Pick from preferred",
-			requirement: &csi.TopologyRequirement{
-				Requisite: []*csi.Topology{
-					{
-						Segments: map[string]string{ZoneTopologyKey: ""},
-					},
-				},
 				Preferred: []*csi.Topology{
 					{
 						Segments: map[string]string{ZoneTopologyKey: expZone},
 					},
 				},
 			},
-			expZone: expZone,
+			expected: volumeTopology{zone: expZone},
 		},
 		{
-			name: "Pick from requisite",
-			requirement: &csi.TopologyRequirement{
-				Requisite: []*csi.Topology{
-					{
-						Segments: map[string]string{ZoneTopologyKey: expZone},
-					},
-				},
-			},
-			expZone: expZone,
-		},
-		{
-			name: "Pick from empty topology",
-			requirement: &csi.TopologyRequirement{
-				Preferred: []*csi.Topology{{}},
-				Requisite: []*csi.Topology{{}},
-			},
-			expZone: "",
-		},
-		{
-			name:        "Topology Requirement is nil",
-			requirement: nil,
-			expZone:     "",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := pickAvailabilityZone(tc.requirement)
-			if actual != tc.expZone {
-				t.Fatalf("Expected zone %v, got zone: %v", tc.expZone, actual)
-			}
-		})
-	}
-}
-
-func TestGetOutpostArn(t *testing.T) {
-	expRawOutpostArn := testOutpostARN
-	outpostArn, _ := arn.Parse(strings.ReplaceAll(expRawOutpostArn, "outpost/", ""))
-	testCases := []struct {
-		name          string
-		requirement   *csi.TopologyRequirement
-		expZone       string
-		expOutpostArn string
-	}{
-		{
-			name: "Get from preferred",
+			name: "fall back to requisite",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
 						Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
 					},
 				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip OS-only preferred topology for a usable requisite zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{"kubernetes.io/os": "linux"},
+					},
+				},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{"kubernetes.io/os": "linux"},
+					},
+					{
+						Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
+					},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "unknown-only requisite has no usable placement",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{
+						OSTopologyKey:      "linux",
+						"example.com/rack": "rack-1",
+					}},
+				},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "unknown keys do not affect preferred zone placement",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{
+						WellKnownZoneTopologyKey: expZone,
+						"example.com/rack":       "rack-1",
+					}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "unknown keys do not affect requisite zone ID placement",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{
+						ZoneIDTopologyKey:  expZoneID,
+						"example.com/rack": "rack-1",
+					}},
+				},
+			},
+			expected: volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "incomplete preferred Outpost and unknown-only requisite have no usable placement",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{zonelessOutpost},
+				Requisite: []*csi.Topology{
+					zonelessOutpost,
+					{Segments: map[string]string{"example.com/rack": "rack-1"}},
+				},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "skip partial Outpost before preferred zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip partial Outpost before requisite zone",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip partial Outpost preferred topology for requisite zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{AwsOutpostIDKey: outpostArn.Resource}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip empty zone before preferred zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{WellKnownZoneTopologyKey: ""}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip complete zoneless Outpost before preferred zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					zonelessOutpost,
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip complete zoneless Outpost before requisite zone",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					zonelessOutpost,
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "skip complete zoneless Outpost preferred for requisite zone",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{zonelessOutpost},
+				Requisite: []*csi.Topology{
+					zonelessOutpost,
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "fail complete zoneless Outpost requisite",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{zonelessOutpost},
+				Requisite: []*csi.Topology{zonelessOutpost},
+			},
+			expectedCode: codes.ResourceExhausted,
+		},
+		{
+			name: "unusable preferred without requisite allows unrestricted placement",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{zonelessOutpost},
+			},
+		},
+		{
+			name: "select zone ID",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{ZoneIDTopologyKey: expZoneID},
+					},
+				},
+			},
+			expected: volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "keep preferred zone ID without a later zone name",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "keep requisite zone ID without a later zone name",
+			requirement: &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "keep preferred zone ID without a requisite zone name",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+				},
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{ZoneIDTopologyKey: expZoneID}},
+					{Segments: map[string]string{WellKnownZoneTopologyKey: expZone}},
+				},
+			},
+			expected: volumeTopology{zoneID: expZoneID},
+		},
+		{
+			name: "select Outpost",
+			requirement: &csi.TopologyRequirement{
 				Preferred: []*csi.Topology{
 					{
 						Segments: map[string]string{
@@ -3519,11 +4048,13 @@ func TestGetOutpostArn(t *testing.T) {
 					},
 				},
 			},
-			expZone:       expZone,
-			expOutpostArn: expRawOutpostArn,
+			expected: volumeTopology{
+				zone:       expZone,
+				outpostArn: rawOutpostArn,
+			},
 		},
 		{
-			name: "Get from requisite",
+			name: "select Outpost from requisite",
 			requirement: &csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
@@ -3537,32 +4068,142 @@ func TestGetOutpostArn(t *testing.T) {
 					},
 				},
 			},
-			expZone:       expZone,
-			expOutpostArn: expRawOutpostArn,
+			expected: volumeTopology{
+				zone:       expZone,
+				outpostArn: rawOutpostArn,
+			},
 		},
 		{
-			name: "Get from empty topology",
+			name: "select only fields from preferred regional topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							WellKnownZoneTopologyKey: expZone,
+						},
+					},
+				},
+				Requisite: []*csi.Topology{
+					{
+						Segments: map[string]string{WellKnownZoneTopologyKey: expZone},
+					},
+					{
+						Segments: map[string]string{
+							WellKnownZoneTopologyKey: "us-west-2a",
+							ZoneIDTopologyKey:        "usw2-az1",
+							AwsAccountIDKey:          outpostArn.AccountID,
+							AwsOutpostIDKey:          outpostArn.Resource,
+							AwsRegionKey:             outpostArn.Region,
+							AwsPartitionKey:          outpostArn.Partition,
+						},
+					},
+				},
+			},
+			expected: volumeTopology{zone: expZone},
+		},
+		{
+			name: "select only fields from first Outpost topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							WellKnownZoneTopologyKey: expZone,
+							AwsAccountIDKey:          outpostArn.AccountID,
+							AwsOutpostIDKey:          outpostArn.Resource,
+							AwsRegionKey:             outpostArn.Region,
+							AwsPartitionKey:          outpostArn.Partition,
+						},
+					},
+					{
+						Segments: map[string]string{
+							WellKnownZoneTopologyKey: "us-west-2a",
+							ZoneIDTopologyKey:        "usw2-az1",
+						},
+					},
+				},
+			},
+			expected: volumeTopology{
+				zone:       expZone,
+				outpostArn: rawOutpostArn,
+			},
+		},
+		{
+			name: "keep coarse preferred topology before full Outpost topology",
+			requirement: &csi.TopologyRequirement{
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          "us-west-2a",
+							WellKnownZoneTopologyKey: "us-west-2a",
+							OSTopologyKey:            "linux",
+						},
+					},
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          expZone,
+							WellKnownZoneTopologyKey: expZone,
+							OSTopologyKey:            "linux",
+						},
+					},
+					{
+						Segments: map[string]string{
+							ZoneTopologyKey:          "us-west-2a",
+							WellKnownZoneTopologyKey: "us-west-2a",
+							OSTopologyKey:            "linux",
+							AwsAccountIDKey:          outpostArn.AccountID,
+							AwsOutpostIDKey:          outpostArn.Resource,
+							AwsRegionKey:             outpostArn.Region,
+							AwsPartitionKey:          outpostArn.Partition,
+						},
+					},
+				},
+			},
+			expected: volumeTopology{zone: "us-west-2a"},
+		},
+		{
+			name: "empty topology",
 			requirement: &csi.TopologyRequirement{
 				Preferred: []*csi.Topology{{}},
 				Requisite: []*csi.Topology{{}},
 			},
-			expZone:       "",
-			expOutpostArn: "",
+			expectedCode: codes.ResourceExhausted,
 		},
 		{
-			name:          "Topology Requirement is nil",
-			requirement:   nil,
-			expZone:       "",
-			expOutpostArn: "",
+			name:        "empty requirement",
+			requirement: &csi.TopologyRequirement{},
+		},
+		{
+			name: "nil requirement",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := getOutpostArn(tc.requirement)
-			if actual != tc.expOutpostArn {
-				t.Fatalf("Expected %v, got outpostArn: %v", tc.expOutpostArn, actual)
+			actual, err := pickVolumeTopology(tc.requirement, nil)
+			assert.Equal(t, tc.expectedCode, status.Code(err))
+			assert.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestPickVolumeTopologyIncompletePlacement(t *testing.T) {
+	for _, key := range []string{
+		WellKnownZoneTopologyKey, ZoneTopologyKey, ZoneIDTopologyKey,
+		AwsPartitionKey, AwsRegionKey, AwsAccountIDKey, AwsOutpostIDKey,
+	} {
+		t.Run(key, func(t *testing.T) {
+			value := "present"
+			if key == WellKnownZoneTopologyKey || key == ZoneTopologyKey || key == ZoneIDTopologyKey {
+				value = ""
 			}
+			requirement := &csi.TopologyRequirement{
+				Requisite: []*csi.Topology{
+					{Segments: map[string]string{key: value, "example.com/rack": "rack-1"}},
+				},
+			}
+			actual, err := pickVolumeTopology(requirement, nil)
+			assert.Equal(t, codes.ResourceExhausted, status.Code(err))
+			assert.Equal(t, volumeTopology{}, actual)
 		})
 	}
 }
