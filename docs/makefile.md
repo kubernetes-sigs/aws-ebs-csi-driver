@@ -20,7 +20,7 @@ All other tools are downloaded for you at runtime.
 
 ### `make cluster/image`
 
-Build and push an image of the driver for local development. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`. Setting `FIPS` to `true` will build an image using a FIPS-validated cryptographic library.
+Build and push an image of the driver for local development. Environment variables are accepted to override the `REGISTRY`, `IMAGE` name, and image `TAG`.
 
 ### `make all-push`
 
@@ -209,6 +209,10 @@ Run the EBS CSI functional E2E tests (the `[functional]` labeled specs) against 
 ### `make e2e/external-windows`
 
 Run the Kubernetes upstream [external storage E2E tests](https://github.com/kubernetes/kubernetes/blob/master/test/e2e/README.md) with Windows tests enabled. Requires a cluster with Windows nodes.
+
+### `make e2e/external-fips` and `make e2e/external-windows-fips`
+
+Enable FIPS mode in the standard driver image and run two upstream storage smoke tests: data persistence and offline volume expansion. Both tests provision and delete volumes. Both suites use the default filesystem test pattern. The Windows suite requires Windows nodes.
 
 ### `make e2e/external-kustomize`
 
