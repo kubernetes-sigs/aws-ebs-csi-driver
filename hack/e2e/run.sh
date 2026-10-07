@@ -188,7 +188,7 @@ else
       loudecho "Running volume-expand tests (with flake retries)"
       run_kubetest2 "e2e-kubernetes-volume-expand" \
         "${GINKGO_SKIP}" \
-        "${GINKGO_FOCUS}.*(${WINDOWS_VOLUME_EXPAND_REGEX})" \
+        "${GINKGO_WINDOWS_VOLUME_EXPAND_FOCUS:-${GINKGO_FOCUS}.*(${WINDOWS_VOLUME_EXPAND_REGEX})}" \
         "--flake-attempts=2"
       VOLUME_EXPAND_PASSED=$?
 

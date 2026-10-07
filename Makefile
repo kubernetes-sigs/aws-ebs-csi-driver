@@ -52,6 +52,8 @@ CLUSTER_TYPE?=kops
 
 GINKGO_WINDOWS_SKIP?="\[Disruptive\]|\[Serial\]|\[Flaky\]|\[LinuxOnly\]|\[Feature:VolumeSnapshotDataSource\]|\(xfs\)|\(ext4\)|\(block volmode\)"
 GINKGO_BOTTLEROCKET_SKIP?="\[Disruptive\]|\[Serial\]|\[Flaky\]|should not mount / map unused volumes in a pod \[LinuxOnly\]"
+GINKGO_FIPS_VOLUME_FOCUS=External.Storage.*\[Testpattern: Dynamic PV \(default fs\)\].*volumes should store data
+GINKGO_FIPS_EXPAND_FOCUS=External.Storage.*\[Testpattern: Dynamic PV \(default fs\)\(allowExpansion\)\].*volume-expand Verify if offline PVC expansion works
 
 # split words on hyphen, access by 1-index
 word-hyphen = $(word $2,$(subst -, ,$1))
@@ -170,7 +172,9 @@ e2e/external-eks-bottlerocket: bin/helm bin/kubetest2
 
 .PHONY: e2e/external-fips
 e2e/external-fips: bin/helm bin/kubetest2
-	HELM_EXTRA_FLAGS="--set=fips=true" \
+	GINKGO_FOCUS="$(GINKGO_FIPS_VOLUME_FOCUS)|$(GINKGO_FIPS_EXPAND_FOCUS)" \
+	EBS_INSTALL_SNAPSHOT=false \
+	HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows
@@ -184,10 +188,11 @@ e2e/external-windows: bin/helm bin/kubetest2
 .PHONY: e2e/external-windows-fips
 e2e/external-windows-fips: bin/helm bin/kubetest2
 	WINDOWS=true \
+	GINKGO_FOCUS="$(GINKGO_FIPS_VOLUME_FOCUS)" \
+	GINKGO_WINDOWS_VOLUME_EXPAND_FOCUS="$(GINKGO_FIPS_EXPAND_FOCUS)" \
 	GINKGO_SKIP=$(GINKGO_WINDOWS_SKIP) \
-	GINKGO_PARALLEL=15 \
 	EBS_INSTALL_SNAPSHOT="false" \
-	HELM_EXTRA_FLAGS="--set=fips=true" \
+	HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external-windows-hostprocess
@@ -272,10 +277,6 @@ test-e2e-%:
 
 test-helm-chart:
 	./hack/prow-e2e.sh test-helm-chart
-
-.PHONY: test-images 
-test-images: bin/aws 
-	./hack/e2e/test-images.sh 
 
 ## Builds
 

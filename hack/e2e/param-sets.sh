@@ -28,7 +28,7 @@
 #   standard            - Volume tagging (EC2 API) and defaultFsType (mount check)
 #   miscellaneous       - Metadata labeler node labels and additional DaemonSet scheduling
 #   node-component-only - Deploys only node DaemonSet without controller
-#   fips                - Builds FIPS image then validates it is deployed
+#   fips                - Validates runtime FIPS settings
 #   legacy-compat       - legacyXFS behavior
 
 set -euo pipefail
@@ -63,7 +63,6 @@ param_set_legacy-compat() {
 param_set_fips() {
   GINKGO_FOCUS="\[param:fips\]"
   HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true"
-  FIPS_TEST=true
 }
 
 # Load a parameter set by name, exporting GINKGO_FOCUS and HELM_EXTRA_FLAGS.
@@ -83,7 +82,6 @@ load_param_set() {
   # Clear state that a previous set's param_set_* function may have set,
   # so sets are independent of run order.
   unset HELM_OVERRIDE_K8S_TAG_CLUSTER_ID
-  unset FIPS_TEST
   "$func"
   if [[ -z "$HELM_EXTRA_FLAGS" ]]; then
     HELM_EXTRA_FLAGS="--values=${VALUES_FILE}"
@@ -94,20 +92,12 @@ load_param_set() {
   export TEST_PATH="${TEST_PATH:-./tests/e2e/...}"
   export JUNIT_REPORT="${REPORT_DIR:-/logs/artifacts}/junit-params-${name}.xml"
   if [[ -n "${EBS_INSTALL_SNAPSHOT+x}" ]]; then export EBS_INSTALL_SNAPSHOT; fi
-  if [[ -n "${FIPS_TEST+x}" ]]; then export FIPS_TEST; fi
   if [[ -n "${HELM_OVERRIDE_K8S_TAG_CLUSTER_ID+x}" ]]; then export HELM_OVERRIDE_K8S_TAG_CLUSTER_ID; fi
 }
 
 # Run a single parameter set
 run_param_set() {
   load_param_set "$1"
-  if [[ "${FIPS_TEST:-}" == "true" ]]; then
-    echo "### Building FIPS image for param set: $1"
-    FIPS_TEST=true make cluster/image || {
-      echo "FIPS image build failed!" >&2
-      return 1
-    }
-  fi
   echo "### Running parameter set: $1"
   ./hack/e2e/run.sh
 }
