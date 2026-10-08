@@ -131,7 +131,7 @@ function install_ct() {
 function install_eksctl() {
   INSTALL_PATH="${1}"
 
-  install_tar_binary "${INSTALL_PATH}" "https://github.com/weaveworks/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_${OS^}_${ARCH}.tar.gz" "eksctl"
+  install_tar_binary "${INSTALL_PATH}" "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_${OS^}_${ARCH}.tar.gz" "eksctl"
 }
 
 function install_ginkgo() {
