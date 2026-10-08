@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+
+readonly ROOT_DIRECTORY="$(git rev-parse --show-toplevel)"
+readonly INSTALL_SCRIPT="${ROOT_DIRECTORY}/hack/tools/install.sh"
+readonly -a VERSION_SOURCES=(
+  "AWSCLI_VERSION aws/aws-cli"
+  "CT_VERSION helm/chart-testing"
+  "EKSCTL_VERSION eksctl-io/eksctl"
+  "GINKGO_VERSION onsi/ginkgo"
+  "GOLANGCI_LINT_VERSION golangci/golangci-lint"
+  "GOMPLATE_VERSION hairyhenderson/gomplate"
+  "GOVULNCHECK_VERSION golang/vuln"
+  "HELM_VERSION helm/helm"
+  "KOPS_VERSION kubernetes/kops"
+  "MOCKGEN_VERSION golang/mock"
+  "RELEASE_NOTES_VERSION kubernetes/release"
+  "SHFMT_VERSION mvdan/sh"
+)
+
+for SOURCE in "${VERSION_SOURCES[@]}"; do
+  read -r VARIABLE REPOSITORY <<<"${SOURCE}"
+
+  CURRENT_VERSION="$(sed -nE "s/^${VARIABLE}=\"([^\"]+)\"$/\1/p" "${INSTALL_SCRIPT}")"
+  TAG_PATTERN='^v?[0-9]+[.][0-9]+[.][0-9]+$'
+  if [[ "${VARIABLE}" == "KOPS_VERSION" ]]; then
+    TAG_PATTERN='^v?[0-9]+[.][0-9]+[.][0-9]+(-[0-9A-Za-z.-]+)?$'
+  fi
+  LATEST_VERSION="$(
+    git ls-remote --refs --tags "https://github.com/${REPOSITORY}.git" |
+      awk -F/ -v pattern="${TAG_PATTERN}" '$3 ~ pattern { print $3 }' |
+      sort -V |
+      tail -n 1
+  )"
+
+  if [[ -z "${CURRENT_VERSION}" || -z "${LATEST_VERSION}" ]]; then
+    echo "Unable to resolve ${VARIABLE} from ${REPOSITORY}" >&2
+    exit 1
+  fi
+
+  if [[ "${CURRENT_VERSION}" == v* ]]; then
+    [[ "${LATEST_VERSION}" == v* ]] || LATEST_VERSION="v${LATEST_VERSION}"
+  else
+    LATEST_VERSION="${LATEST_VERSION#v}"
+  fi
+
+  sed -i -E "s|^${VARIABLE}=\"[^\"]+\"$|${VARIABLE}=\"${LATEST_VERSION}\"|" "${INSTALL_SCRIPT}"
+  echo "${VARIABLE}: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
+done
+
+CURRENT_VERSION="$(sed -nE 's/^KUBETEST2_VERSION="([^"]+)"$/\1/p' "${INSTALL_SCRIPT}")"
+LATEST_VERSION="$(go list -m -f '{{.Version}}' sigs.k8s.io/kubetest2@latest)"
+sed -i -E "s|^KUBETEST2_VERSION=\"[^\"]+\"$|KUBETEST2_VERSION=\"${LATEST_VERSION}\"|" "${INSTALL_SCRIPT}"
+echo "KUBETEST2_VERSION: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
