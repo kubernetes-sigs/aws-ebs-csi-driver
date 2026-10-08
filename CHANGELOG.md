@@ -1,3 +1,95 @@
+# v1.66.1
+
+This is a security patch release. It refreshes the AL2023 base image of the
+driver container, resolving the following advisories:
+
+- [CVE-2026-16742](https://explore.alas.aws.amazon.com/CVE-2026-16742.html) (High) in `systemd-libs`
+- [CVE-2026-89161](https://explore.alas.aws.amazon.com/CVE-2026-89161.html) (High) in `pcre2`
+
+It also updates the six Kubernetes CSI sidecar containers to versions rebuilt with patched
+dependencies, resolving [CVE-2026-81870](https://nvd.nist.gov/vuln/detail/CVE-2026-81870) (Low) in
+`go.opentelemetry.io/otel`, builds the driver with Go 1.27.1, and upgrades the
+driver's Go dependencies.
+([#3033](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3033), [@torredil](https://github.com/torredil))
+
+This release also includes a fix for the FIPS certified module build.
+([#3027](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3027), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+### Added
+- go.opentelemetry.io/otel/log: v1.47.0
+- golang.org/x/exp/typeparams: 2478ac8
+- google.golang.org/api: v0.278.0
+
+### Changed
+- cloud.google.com/go/auth: v0.18.2 → v0.20.0
+- github.com/BurntSushi/toml: [v0.3.1 → a339e1f](https://github.com/BurntSushi/toml/compare/v0.3.1...a339e1f)
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.33.0 → v1.34.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/v1.33.0...v1.34.0)
+- github.com/aws/aws-sdk-go-v2: [v1.47.0 → v1.47.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.47.0...v1.47.1)
+- github.com/aws/aws-sdk-go-v2/config: [v1.33.4 → v1.33.7](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.4...v1.33.7)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.20.4 → v1.20.7](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.4...v1.20.7)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.20.0 → v1.20.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.0...v1.20.1)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.5.3 → v1.5.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.3...v1.5.4)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.8.3 → v2.8.4](https://github.com/aws/aws-sdk-go-v2/compare/v2.8.3...v2.8.4)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.5.3 → v1.5.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.3...v1.5.4)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.331.0 → v1.338.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.331.0...v1.338.2)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.14.3 → v1.14.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.14.3...v1.14.4)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.276.0 → v1.282.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.276.0...v1.282.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.10.0 → v1.10.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.10.0...v1.10.2)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.38.0 → v1.38.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.0...v1.38.2)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.43.0 → v1.43.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.0...v1.43.2)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.50.0 → v1.51.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.50.0...v1.51.2)
+- github.com/aws/smithy-go: [v1.28.1 → v1.28.4](https://github.com/aws/smithy-go/compare/v1.28.1...v1.28.4)
+- github.com/fxamacker/cbor/v2: [v2.9.3 → v2.9.6](https://github.com/fxamacker/cbor/compare/v2.9.3...v2.9.6)
+- github.com/go-openapi/analysis: [v0.25.5 → v1.0.0](https://github.com/go-openapi/analysis/compare/v0.25.5...v1.0.0)
+- github.com/go-openapi/errors: [v0.22.8 → v0.22.9](https://github.com/go-openapi/errors/compare/v0.22.8...v0.22.9)
+- github.com/go-openapi/jsonpointer: [v1.0.1 → v1.0.2](https://github.com/go-openapi/jsonpointer/compare/v1.0.1...v1.0.2)
+- github.com/go-openapi/jsonreference: [v1.0.2 → v1.0.3](https://github.com/go-openapi/jsonreference/compare/v1.0.2...v1.0.3)
+- github.com/go-openapi/loads: [v0.25.0 → v0.25.2](https://github.com/go-openapi/loads/compare/v0.25.0...v0.25.2)
+- github.com/go-openapi/runtime: [v0.33.0 → v0.33.2](https://github.com/go-openapi/runtime/compare/v0.33.0...v0.33.2)
+- github.com/go-openapi/runtime/server-middleware: [v0.30.0 → v0.33.2](https://github.com/go-openapi/runtime/compare/v0.30.0...v0.33.2)
+- github.com/go-openapi/spec: [v0.22.9 → v1.0.0](https://github.com/go-openapi/spec/compare/v0.22.9...v1.0.0)
+- github.com/go-openapi/strfmt: [v0.27.0 → v0.27.2](https://github.com/go-openapi/strfmt/compare/v0.27.0...v0.27.2)
+- github.com/go-openapi/testify/v2: [v2.7.0 → v2.8.0](https://github.com/go-openapi/testify/compare/v2.7.0...v2.8.0)
+- github.com/go-openapi/validate: [v0.26.1 → v1.0.0](https://github.com/go-openapi/validate/compare/v0.26.1...v1.0.0)
+- github.com/googleapis/enterprise-certificate-proxy: [v0.3.11 → v0.3.15](https://github.com/googleapis/enterprise-certificate-proxy/compare/v0.3.11...v0.3.15)
+- github.com/googleapis/gax-go/v2: [v2.17.0 → v2.22.0](https://github.com/googleapis/gax-go/compare/v2.17.0...v2.22.0)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.30.0 → v2.31.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.30.0...v2.31.0)
+- github.com/klauspost/compress: [v1.19.1 → v1.20.1](https://github.com/klauspost/compress/compare/v1.19.1...v1.20.1)
+- github.com/oapi-codegen/runtime: [v1.6.0 → v1.7.0](https://github.com/oapi-codegen/runtime/compare/v1.6.0...v1.7.0)
+- github.com/oklog/ulid/v2: [v2.1.1 → v2.1.2](https://github.com/oklog/ulid/compare/v2.1.1...v2.1.2)
+- github.com/prometheus/client_golang: [v1.24.1 → v1.25.0](https://github.com/prometheus/client_golang/compare/v1.24.1...v1.25.0)
+- github.com/prometheus/common: [v0.71.0 → v0.72.0](https://github.com/prometheus/common/compare/v0.71.0...v0.72.0)
+- github.com/spiffe/go-spiffe/v2: [v2.7.0 → v2.8.1](https://github.com/spiffe/go-spiffe/compare/v2.7.0...v2.8.1)
+- go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc: v0.71.0 → v0.72.0
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.70.0 → v0.71.0
+- go.opentelemetry.io/otel: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/exporters/stdout/stdouttrace: v1.45.0 → v1.46.0
+- go.opentelemetry.io/otel/metric: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/sdk: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/sdk/metric: v1.46.0 → v1.47.0
+- go.opentelemetry.io/otel/trace: v1.46.0 → v1.47.0
+- go.opentelemetry.io/proto/otlp: v1.11.0 → v1.11.1
+- golang.org/x/exp: 509febe → 85c1c22
+- golang.org/x/telemetry: a038080 → 4bcc4b2
+- golang.org/x/tools: v0.49.0 → v0.50.0
+- google.golang.org/genproto/googleapis/api: f8649dd → fad4113
+- google.golang.org/genproto/googleapis/rpc: f8649dd → fad4113
+- google.golang.org/grpc: v1.83.2 → v1.84.0
+- honnef.co/go/tools: ea95bdf → v0.8.1
+- k8s.io/api: v0.37.0 → v0.37.1
+- k8s.io/apimachinery: v0.37.0 → v0.37.1
+- k8s.io/client-go: v0.37.0 → v0.37.1
+- k8s.io/component-base: v0.37.0 → v0.37.1
+- k8s.io/mount-utils: v0.37.0 → v0.37.1
+- k8s.io/streaming: v0.37.0 → v0.37.1
+
+### Removed
+_Nothing has changed._
+
 # v1.66.0
 
 ## Changes by Kind
