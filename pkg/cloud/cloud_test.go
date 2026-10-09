@@ -1812,6 +1812,48 @@ func TestCreateDisk(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:       "success: multi-attach with IO1",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(4),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:         VolumeTypeIO1,
+				MultiAttachEnabled: true,
+				IOPSPerGB:          50,
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCreateVolumeInput: &ec2.CreateVolumeInput{
+				Iops: aws.Int32(200),
+			},
+			expErr: nil,
+		},
+		{
+			name:       "success: clone multi-attach with IO1",
+			volumeName: "vol-test-name",
+			diskOptions: &DiskOptions{
+				CapacityBytes:      util.GiBToBytes(4),
+				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
+				VolumeType:         VolumeTypeIO1,
+				MultiAttachEnabled: true,
+				IOPSPerGB:          50,
+				AvailabilityZone:   defaultZone,
+				SourceVolumeID:     "vol-test-id",
+			},
+			expDisk: &Disk{
+				VolumeID:         "vol-test",
+				CapacityGiB:      4,
+				AvailabilityZone: defaultZone,
+			},
+			expCopyVolumesInput: &ec2.CopyVolumesInput{
+				Iops: aws.Int32(200),
+			},
+			expErr: nil,
+		},
+		{
 			name:       "success: create volume from snapshot with initialization rate",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
@@ -1846,21 +1888,24 @@ func TestCreateDisk(t *testing.T) {
 			expErr:             fmt.Errorf("could not create volume in EC2: %w", errors.New("InvalidParameterCombination")),
 		},
 		{
-			name:       "failure: multi-attach with GP3",
+			name:       "failure: multi-attach with GP3 rejected by EC2",
 			volumeName: "vol-test-name",
 			diskOptions: &DiskOptions{
 				CapacityBytes:      util.GiBToBytes(4),
 				Tags:               map[string]string{VolumeNameTagKey: "vol-test", AwsEbsDriverTagKey: "true"},
 				VolumeType:         VolumeTypeGP3,
 				MultiAttachEnabled: true,
-				IOPSPerGB:          10000,
 			},
-			expDisk: &Disk{
-				VolumeID:         "vol-test",
-				CapacityGiB:      4,
-				AvailabilityZone: defaultZone,
+			expDisk:              nil,
+			expCreateVolumeInput: &ec2.CreateVolumeInput{},
+			expCreateVolumeErr: &smithy.GenericAPIError{
+				Code:    "InvalidParameterCombination",
+				Message: "The parameter MultiAttachEnabled is not supported for gp3 volumes",
 			},
-			expErr: errors.New("CreateDisk: multi-attach is only supported for io2 volumes"),
+			expErr: fmt.Errorf("%w: %w", ErrInvalidArgument, &smithy.GenericAPIError{
+				Code:    "InvalidParameterCombination",
+				Message: "The parameter MultiAttachEnabled is not supported for gp3 volumes",
+			}),
 		},
 		{
 			name:       "success: create volume returned volume limit exceeded error, but volume exists",

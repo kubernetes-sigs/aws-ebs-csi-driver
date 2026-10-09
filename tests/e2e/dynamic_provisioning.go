@@ -325,6 +325,63 @@ var _ = Describe("[ebs-csi-e2e] [functional] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
+	It("should succeed multi-attach with dynamically provisioned IO1 block device", func() {
+		zone := multiAttachZone(cs)
+		if zone == "" {
+			Fail("no availability zone has two or more schedulable worker nodes; multi-attach requires a cluster with at least two nodes in one AZ")
+		}
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		allowedTopologyValues := []string{zone}
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						CreateVolumeParameters: map[string]string{
+							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeIO1,
+							ebscsidriver.IopsKey:       testsuites.DefaultIopsIoVolumes,
+						},
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:            v1.ReadWriteMany,
+						VolumeBindingMode:     &volumeBindingMode,
+						AllowedTopologyValues: allowedTopologyValues,
+					},
+				},
+			},
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						CreateVolumeParameters: map[string]string{
+							ebscsidriver.VolumeTypeKey: awscloud.VolumeTypeIO1,
+							ebscsidriver.IopsKey:       testsuites.DefaultIopsIoVolumes,
+						},
+						ClaimSize:  driver.MinimumSizeForVolumeType(awscloud.VolumeTypeIO1),
+						VolumeMode: testsuites.Block,
+						VolumeDevice: testsuites.VolumeDeviceDetails{
+							NameGenerate: "test-block-volume-",
+							DevicePath:   "/dev/xvda",
+						},
+						AccessMode:        v1.ReadWriteMany,
+						VolumeBindingMode: &volumeBindingMode,
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedMultiAttachTest{
+			CSIDriver:  ebsDriver,
+			Pods:       pods,
+			VolumeMode: testsuites.Block,
+			VolumeType: awscloud.VolumeTypeIO1,
+			AccessMode: v1.ReadWriteMany,
+			RunningPod: true,
+		}
+		test.Run(cs, ns)
+	})
+
 	It("should fail to multi-attach dynamically provisioned IO2 block device - not enabled", func() {
 		zone := multiAttachZone(cs)
 		if zone == "" {
@@ -435,7 +492,7 @@ var _ = Describe("[ebs-csi-e2e] [functional] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It("should fail to multi-attach non io2 VolumeType", func() {
+	It("should fail to multi-attach non io1/io2 VolumeType", func() {
 		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		pods := []testsuites.PodDetails{
 			{
