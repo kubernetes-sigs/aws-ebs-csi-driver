@@ -236,17 +236,19 @@ update-image-dependencies: update-sidecar-dependencies
 update-ci-dependencies:
 	./hack/update-ci-dependencies
 
-# Prepare a release: upgrade Go dependencies, refresh sidecar digests/tags,
-# regenerate all generated files, and run unit tests. Leaves a diff ready
-# to be committed.
+# Prepare a release: upgrade Go and Go dependencies, refresh Dockerfile base
+# image and sidecar digests/tags, regenerate all generated files, and run unit
+# tests and the vulnerability scan. Leaves a diff ready to be committed.
 .PHONY: pre-release
 pre-release:
-	go get -u ./...
-	go -C ./tests/e2e get -u ./...
+	go get -u ./... go@latest
+	go -C ./tests/e2e get -u ./... go@latest
+	./hack/release-scripts/update-base-images
 	$(MAKE) update-sidecar-dependencies
 	$(MAKE) update
 	$(MAKE) test
 	$(MAKE) verify
+	$(MAKE) security
 	@echo "Pre-release updates succeeded! Review the diff and commit it as the release PR."
 
 # Generate the post-release PR file changes and draft changelog
