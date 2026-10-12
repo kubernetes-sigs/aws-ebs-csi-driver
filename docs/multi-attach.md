@@ -7,7 +7,8 @@ Multi-attach is enabled by specifying `ReadWriteMany` for the `PersistentVolumeC
 ## Important
 
 - Application-level coordination (e.g., via I/O fencing) is required to use multi-attach safely. Failure to do so can result in data loss and silent data corruption. Refer to the AWS documentation on Multi-Attach for more information.
-- Currently, the EBS CSI driver only supports multi-attach for `IO2` volumes in `Block` mode.
+- Currently, the EBS CSI driver only supports multi-attach for volumes in `Block` mode. EBS supports multi-attach for `IO1` and `IO2` volumes only, and AWS recommends `IO2` for better performance, consistency, and durability at a lower cost.
+- The volume type of a multi-attach enabled volume can only be [modified](modify-volume.md) between `IO1` and `IO2`, including while the volume is attached.
 
 Refer to the official AWS documentation on [Multi-Attach](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volumes-multi.html) for more information, best practices, and limitations of this capability.
 

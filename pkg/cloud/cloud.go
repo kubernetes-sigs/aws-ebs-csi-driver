@@ -728,10 +728,6 @@ func (c *cloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *
 		createType = VolumeTypeGP3
 	}
 
-	if diskOptions.MultiAttachEnabled && createType != VolumeTypeIO2 {
-		return nil, errors.New("CreateDisk: multi-attach is only supported for io2 volumes")
-	}
-
 	tags := make([]types.Tag, 0, len(diskOptions.Tags))
 	for key, value := range diskOptions.Tags {
 		tags = append(tags, types.Tag{Key: aws.String(key), Value: aws.String(value)})
