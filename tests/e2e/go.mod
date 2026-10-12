@@ -204,4 +204,4 @@ replace (
 	k8s.io/streaming => k8s.io/streaming v0.37.1
 )
 
-go 1.27.0
+go 1.27.2
