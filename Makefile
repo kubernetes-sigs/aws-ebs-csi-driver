@@ -232,6 +232,10 @@ update-sidecar-dependencies: update-truth-sidecars generate-sidecar-tags update/
 update-image-dependencies: update-sidecar-dependencies
 	./hack/release-scripts/update-e2e-images
 
+.PHONY: update-ci-dependencies
+update-ci-dependencies:
+	./hack/update-ci-dependencies
+
 # Prepare a release: upgrade Go dependencies, refresh sidecar digests/tags,
 # regenerate all generated files, and run unit tests. Leaves a diff ready
 # to be committed.
