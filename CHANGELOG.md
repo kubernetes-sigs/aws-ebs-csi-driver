@@ -1,3 +1,68 @@
+# v1.67.0
+
+## Changes by Kind
+
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+Stop accepting invalid topology in create/clone operations, and fix AZ-ID topology handling. **Invalid `StorageClass` topologies that do not contain an AZ or AZ ID that were previously accepted by the EBS CSI Driver will now be rejected.** ([#3030](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3030), [@ConnorJC3](https://github.com/ConnorJC3))
+
+
+### Feature
+
+- Enable FIPS on sidecars when Helm `fips` parameter is `true` ([#3028](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3028), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Bug or Regression
+
+- Add r9g types to volume limits ([#3020](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3020), [@olyazavr](https://github.com/olyazavr))
+- Properly cap volume iops when the requested iops are below the volume type's minimum allowed iops ([#3021](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3021), [@ConnorJC3](https://github.com/ConnorJC3))
+
+### Other (Cleanup or Flake)
+
+- Allow mult-attach for io1 volumes. ([#3040](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3040), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+### Added
+_Nothing has changed._
+
+### Changed
+- github.com/Masterminds/semver/v3: [v3.5.0 → v3.4.0](https://github.com/Masterminds/semver/compare/v3.5.0...v3.4.0)
+- github.com/Microsoft/go-winio: [v0.6.2 → v0.6.3](https://github.com/Microsoft/go-winio/compare/v0.6.2...v0.6.3)
+- github.com/aws/aws-sdk-go-v2: [v1.47.1 → v1.47.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.47.1...v1.47.3)
+- github.com/aws/aws-sdk-go-v2/config: [v1.33.7 → v1.33.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.7...v1.33.9)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.20.7 → v1.20.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.7...v1.20.9)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.20.1 → v1.20.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.1...v1.20.3)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.5.4 → v1.5.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.4...v1.5.6)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.8.4 → v2.8.6](https://github.com/aws/aws-sdk-go-v2/compare/v2.8.4...v2.8.6)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.5.4 → v1.5.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.4...v1.5.6)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.338.2 → v1.338.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.338.2...v1.338.4)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.19 → v1.13.21](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.19...v1.13.21)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.14.4 → v1.14.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.14.4...v1.14.6)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.282.1 → v1.282.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.282.1...v1.282.3)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.10.2 → v1.10.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.10.2...v1.10.4)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.38.2 → v1.38.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.2...v1.38.4)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.43.2 → v1.43.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.2...v1.43.4)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.51.2 → v1.51.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.51.2...v1.51.4)
+- github.com/aws/smithy-go: [v1.28.4 → v1.28.5](https://github.com/aws/smithy-go/compare/v1.28.4...v1.28.5)
+- github.com/emicklei/go-restful/v3: [v3.13.0 → v3.14.0](https://github.com/emicklei/go-restful/compare/v3.13.0...v3.14.0)
+- github.com/google/pprof: [ef3492d → 545e8a4](https://github.com/google/pprof/compare/ef3492d...545e8a4)
+- github.com/kubernetes-csi/csi-test/v5: [d41e43d → v5.6.0](https://github.com/kubernetes-csi/csi-test/compare/d41e43d...v5.6.0)
+- github.com/prometheus/common: [v0.72.0 → v0.72.1](https://github.com/prometheus/common/compare/v0.72.0...v0.72.1)
+- github.com/sirupsen/logrus: [v1.9.3 → v1.10.2](https://github.com/sirupsen/logrus/compare/v1.9.3...v1.10.2)
+- golang.org/x/crypto: v0.57.0 → v0.58.0
+- golang.org/x/net: v0.59.0 → v0.61.0
+- golang.org/x/sync: v0.23.0 → v0.24.0
+- golang.org/x/sys: v0.48.0 → v0.49.0
+- golang.org/x/telemetry: 4bcc4b2 → ed294f9
+- golang.org/x/term: v0.46.0 → v0.47.0
+- golang.org/x/text: v0.42.0 → v0.43.0
+- golang.org/x/tools: v0.50.0 → v0.51.0
+
+### Removed
+_Nothing has changed._
+
 # v1.66.1
 
 This is a security patch release. It refreshes the AL2023 base image of the

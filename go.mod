@@ -129,4 +129,4 @@ replace github.com/kubernetes-csi/csi-proxy/v2 => github.com/kubernetes-csi/csi-
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 
-go 1.27.0
+go 1.27.2
