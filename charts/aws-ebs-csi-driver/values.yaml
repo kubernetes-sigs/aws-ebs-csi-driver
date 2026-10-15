@@ -370,6 +370,13 @@ controller:
 
   # dnsConfig for the controller pods
   dnsConfig: {}
+
+  networkPolicy:
+    # Enable a k8s-native NetworkPolicy for the controller Deployment.
+    # Off by default so it has no effect on existing installs.
+    enabled: false
+    ingress: []
+    egress: []
 node:
   # Enable SELinux-only optimizations on the EBS CSI Driver node pods
   # Must only be set true if all linux nodes in the DaemonSet have SELinux enabled
@@ -494,6 +501,11 @@ node:
 
   # dnsConfig for the node pods
   dnsConfig: {}
+
+  networkPolicy:
+    enabled: false
+    ingress: []
+    egress: []
 additionalDaemonSets:
 # Additional node DaemonSets, using the node config structure
 # See docs/additional-daemonsets.md for more information
