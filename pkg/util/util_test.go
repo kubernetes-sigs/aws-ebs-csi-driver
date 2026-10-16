@@ -23,6 +23,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -262,59 +263,50 @@ func TestSanitizeRequest(t *testing.T) {
 
 func TestWaitUntilTimeOrContext(t *testing.T) {
 	tests := []struct {
-		name        string
+		name string
+		// wakeupDelay and ctxTimeout are relative to the start of the test body.
 		wakeupDelay time.Duration
 		ctxTimeout  time.Duration
-		expectWait  bool
+		// expectedElapsed is the exact wait, since the virtual clock removes jitter.
+		expectedElapsed time.Duration
 	}{
-		// TODO replace sleeps with testing/synctest once go 1.25 releases
 		{
-			name:        "context cancellation before wakeup time",
-			wakeupDelay: 100 * time.Millisecond,
-			ctxTimeout:  50 * time.Millisecond,
-			expectWait:  false,
+			name:            "context cancellation before wakeup time",
+			wakeupDelay:     100 * time.Millisecond,
+			ctxTimeout:      50 * time.Millisecond,
+			expectedElapsed: 50 * time.Millisecond,
 		},
 		{
-			name:        "wakeup time before context cancellation",
-			wakeupDelay: 50 * time.Millisecond,
-			ctxTimeout:  100 * time.Millisecond,
-			expectWait:  true,
+			name:            "wakeup time before context cancellation",
+			wakeupDelay:     50 * time.Millisecond,
+			ctxTimeout:      100 * time.Millisecond,
+			expectedElapsed: 50 * time.Millisecond,
 		},
 		{
-			name:        "wakeup time in the past",
-			wakeupDelay: -50 * time.Millisecond,
-			ctxTimeout:  100 * time.Millisecond,
-			expectWait:  false,
+			name:            "wakeup time in the past",
+			wakeupDelay:     -50 * time.Millisecond,
+			ctxTimeout:      100 * time.Millisecond,
+			expectedElapsed: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wakeup := time.Now().Add(tt.wakeupDelay)
-			ctx, cancel := context.WithTimeout(context.Background(), tt.ctxTimeout)
-			defer cancel()
+			// Inside the bubble the clock is virtual, so the wait is exact and
+			// the assertion needs no tolerance window for scheduler overhead.
+			synctest.Test(t, func(t *testing.T) {
+				wakeup := time.Now().Add(tt.wakeupDelay)
+				ctx, cancel := context.WithTimeout(context.Background(), tt.ctxTimeout)
+				defer cancel()
 
-			start := time.Now()
-			WaitUntilTimeOrContext(ctx, wakeup)
-			elapsed := time.Since(start)
+				start := time.Now()
+				WaitUntilTimeOrContext(ctx, wakeup)
+				elapsed := time.Since(start)
 
-			// Allow buffers for test execution overhead
-			switch {
-			// If we expect to wait until wakeup time, the elapsed time should be close to wakeupDelay
-			case tt.expectWait:
-				if elapsed < tt.wakeupDelay-10*time.Millisecond {
-					t.Errorf("Expected to wait until wakeup time, but returned too early. Elapsed: %v, Expected: ~%v", elapsed, tt.wakeupDelay)
+				if elapsed != tt.expectedElapsed {
+					t.Errorf("WaitUntilTimeOrContext() waited %v, expected exactly %v", elapsed, tt.expectedElapsed)
 				}
-			// If we expect context cancellation to happen first, elapsed time should be close to ctxTimeout
-			case tt.wakeupDelay > 0:
-				if elapsed < tt.ctxTimeout-10*time.Millisecond {
-					t.Errorf("Expected to wait until context cancellation, but returned too early. Elapsed: %v, Expected: ~%v", elapsed, tt.ctxTimeout)
-				}
-			default:
-				if elapsed > 10*time.Millisecond {
-					t.Errorf("Expected immediate return for past wakeup time, but waited %v", elapsed)
-				}
-			}
+			})
 		})
 	}
 }
