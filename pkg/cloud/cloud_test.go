@@ -5109,7 +5109,10 @@ func TestIsVolumeInitialized(t *testing.T) {
 						return execBatchDescribeVolumeStatus(mockEC2, ids)
 					}),
 					volumeStatusIDBatcherSlow: batcher.New(500, testInitializationSleep, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
-						return execBatchDescribeVolumeStatus(mockEC2, ids) // TODO remove test sleeps once Go 1.25 releases with testing/synctest package
+						// TODO remove test sleeps with testing/synctest. Blocked on Batcher.taskManager,
+						// which never exits. Inside a bubble synctest panics with "deadlock: main
+						// bubble goroutine has exited but blocked goroutines remain".
+						return execBatchDescribeVolumeStatus(mockEC2, ids)
 					}),
 				},
 			}

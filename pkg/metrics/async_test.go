@@ -26,7 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: Replace sleep with time-based tests once Go testing/synctest stable in Go 1.25.
+// TODO: Replace sleep with testing/synctest. Blocked on the cache-cleanup goroutine started by
+// InitializeAsyncEC2Metrics, which loops on its ticker forever. Inside a bubble it never exits and
+// synctest panics with "deadlock: main bubble goroutine has exited but blocked goroutines remain".
+// Needs a stop path on AsyncEC2Collector first.
 const windowsRequiredSleepDuration = time.Millisecond * 75
 
 func TestAsyncCollector(t *testing.T) {
