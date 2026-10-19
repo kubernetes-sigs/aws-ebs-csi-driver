@@ -26,7 +26,6 @@ import (
 
 const (
 	testExpiration = time.Millisecond * 100
-	testSleep      = time.Millisecond * 80
 	testKey        = "key"
 )
 
@@ -38,9 +37,6 @@ var (
 func TestExpiringCache(t *testing.T) {
 	t.Parallel()
 
-	// Run inside a synctest bubble so the sleeps below are virtualized: they
-	// take no real time and the expiration timers fire at exactly the
-	// simulated deadline, instead of racing wall-clock timing under load.
 	synctest.Test(t, func(t *testing.T) {
 		cache := New[string, string](testExpiration)
 
@@ -58,14 +54,12 @@ func TestExpiringCache(t *testing.T) {
 		assert.True(t, ok, "Should be able to Get() after Set()ing it (after overwrite)")
 		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after overwrite)")
 
-		time.Sleep(testSleep)
-		synctest.Wait()
+		synctest.Sleep(testExpiration - time.Nanosecond)
 		value, ok = cache.Get(testKey)
 		assert.True(t, ok, "Should be able to Get() after sleeping less than the expiration delay")
 		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after sleep)")
 
-		time.Sleep(testSleep * 2)
-		synctest.Wait()
+		synctest.Sleep(testExpiration)
 		value, ok = cache.Get(testKey)
 		assert.False(t, ok, "Should not be able to Get() value after it expires")
 		assert.Nil(t, value, "Value should be nil when Get() returns not ok (after expiration)")

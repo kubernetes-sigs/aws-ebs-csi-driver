@@ -292,8 +292,6 @@ func TestWaitUntilTimeOrContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Inside the bubble the clock is virtual, so the wait is exact and
-			// the assertion needs no tolerance window for scheduler overhead.
 			synctest.Test(t, func(t *testing.T) {
 				wakeup := time.Now().Add(tt.wakeupDelay)
 				ctx, cancel := context.WithTimeout(context.Background(), tt.ctxTimeout)
