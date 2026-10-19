@@ -59,6 +59,11 @@ func TestExpiringCache(t *testing.T) {
 		assert.True(t, ok, "Should be able to Get() after sleeping less than the expiration delay")
 		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after sleep)")
 
+		synctest.Sleep(testExpiration - time.Nanosecond)
+		value, ok = cache.Get(testKey)
+		assert.True(t, ok, "Should be able to Get() past the original expiration, because Get() refreshes it")
+		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after refresh)")
+
 		synctest.Sleep(testExpiration)
 		value, ok = cache.Get(testKey)
 		assert.False(t, ok, "Should not be able to Get() value after it expires")
