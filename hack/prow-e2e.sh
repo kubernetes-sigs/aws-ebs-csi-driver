@@ -23,6 +23,49 @@ make bin/aws
 
 case ${1} in
 test-e2e-functional)
+  echo "===BEGIN=== RUNNING CLEANUP, SKIPPING E2E TESTS"
+  PROTECTED_STACKS=$(bin/aws cloudformation describe-stacks --region us-west-2 \
+    --query 'Stacks[?contains(StackName, `eksctl`) && EnableTerminationProtection == `true`].[StackId, RootId]' \
+    --output text) || exit 1
+  while read -r STACK_ID ROOT_ID; do
+    [[ -n "${STACK_ID}" ]] || continue
+    [[ "${ROOT_ID}" == "None" ]] || STACK_ID="${ROOT_ID}"
+    echo "Disabling termination protection for ${STACK_ID}"
+    bin/aws cloudformation update-termination-protection --region us-west-2 \
+      --stack-name "${STACK_ID}" --no-enable-termination-protection
+  done <<<"${PROTECTED_STACKS}"
+
+  make bin/eksctl || exit 1
+  EKS_CLUSTER_NAMES=$(bin/aws eks list-clusters --region us-west-2 --query clusters --output text) || exit 1
+  CLEANUP_CUTOFF=$(date -u -d '6 hours ago' +%s) || exit 1
+  for EKS_CLUSTER_NAME in ${EKS_CLUSTER_NAMES}; do
+    [[ "${EKS_CLUSTER_NAME}" =~ ^e2e-[0-9]+-k8s-local$ ]] || continue
+    CLUSTER_METADATA=$(bin/aws eks describe-cluster --region us-west-2 --name "${EKS_CLUSTER_NAME}" \
+      --query 'cluster.[createdAt, status, tags.Shared]' --output text) || continue
+    read -r CREATED_AT CLUSTER_STATUS SHARED_TAG <<<"${CLUSTER_METADATA}"
+    [[ "${CLUSTER_STATUS}" != "DELETING" && "${SHARED_TAG}" != "Ignore" ]] || continue
+    CREATED_AT_EPOCH=$(date -d "${CREATED_AT}" +%s) || continue
+    ((CREATED_AT_EPOCH < CLEANUP_CUTOFF)) || continue
+    echo "Starting deletion of EKS cluster ${EKS_CLUSTER_NAME}, created ${CREATED_AT}"
+    bin/eksctl delete cluster --region us-west-2 --name "${EKS_CLUSTER_NAME}" --force --wait=false
+  done
+
+  EKSCTL_STACK_IDS=$(bin/aws cloudformation describe-stacks --region us-west-2 \
+    --query 'Stacks[?contains(StackName, `eksctl`) && StackStatus != `DELETE_IN_PROGRESS`].StackId' \
+    --output text) || exit 1
+  for STACK_ID in ${EKSCTL_STACK_IDS}; do
+    echo "Starting deletion of CloudFormation stack ${STACK_ID}"
+    bin/aws cloudformation delete-stack --region us-west-2 --stack-name "${STACK_ID}"
+  done
+
+  EIP_ALLOCATION_IDS=$(bin/aws ec2 describe-addresses --region us-west-2 \
+    --query 'Addresses[?AssociationId == `null` && NetworkInterfaceId == `null` && ServiceManaged == `null` && !Tags[?Key == `Shared` && Value == `Ignore`]].AllocationId' \
+    --output text) || exit 1
+  for ALLOCATION_ID in ${EIP_ALLOCATION_IDS}; do
+    echo "Releasing unused Elastic IP ${ALLOCATION_ID}"
+    bin/aws ec2 release-address --region us-west-2 --allocation-id "${ALLOCATION_ID}"
+  done
+  echo "===END=== RUNNING CLEANUP, SKIPPING E2E TESTS"
   TEST="functional"
   ;;
 test-e2e-disruptive)
@@ -98,6 +141,9 @@ test-e2e-parameters)
   exit 1
   ;;
 esac
+
+echo "SKIPPING ALL E2E TESTS, ABORTING"
+exit 1
 
 export CLUSTER_NAME="e2e-${BUILD_ID:-${RANDOM}}.k8s.local"
 # Use S3 bucket created for CI
