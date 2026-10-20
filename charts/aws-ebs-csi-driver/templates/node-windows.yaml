@@ -6,8 +6,8 @@
 {{$args := dict
   "NodeName" (printf "ebs-csi-node-%s" $name)
   "Values" (dict
-    "node" (deepCopy $.Values.node | mustMerge $values)
+    "node" (mustMergeOverwrite (deepCopy $.Values.node) (deepCopy $values))
   )
 }}
-{{- include "node-windows" (deepCopy $ | mustMerge $args) -}}
+{{- include "node-windows" (mustMergeOverwrite (deepCopy $) $args) -}}
 {{- end }}
