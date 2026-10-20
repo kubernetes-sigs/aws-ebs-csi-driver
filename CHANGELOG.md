@@ -1,3 +1,55 @@
+# v1.67.1
+
+## Changes by Kind
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This release fixes `CVE-2026-111943` which resulted from the compromise of a trusted intermediate CA. These keys could allow attackers to issue fraudulent HTTPS certificates for websites they do not control, such as the AWS API.
+
+**We recommend users upgrade immediately to `v1.67.1` or `v1.66.2` of the EBS CSI Driver.** For more information about this issue, see the [Golang issue tracker](https://go.dev/issue/82345) and [Mozilla `dev-security-policy` announcement](https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/0R3XLJL6FuE).
+
+### Bug or Regression
+
+- Fixed `additionalDaemonSets` ignoring `false` and `0` values. ([#3052](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3052), [@torredil](https://github.com/torredil))
+- Use correct images in Kustomize `ecr` and `gcr` overlays. ([#3059](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3059), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+<details><summary>Added</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details><summary>Changed</summary>
+
+- github.com/Microsoft/go-winio: [v0.6.3 → v0.6.4](https://github.com/Microsoft/go-winio/compare/v0.6.3...v0.6.4)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.338.4 → v1.339.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.338.4...v1.339.0)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.282.3 → v1.284.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.282.3...v1.284.1)
+- github.com/go-openapi/loads: [v0.25.2 → v0.25.3](https://github.com/go-openapi/loads/compare/v0.25.2...v0.25.3)
+- github.com/go-openapi/runtime: [v0.33.2 → v0.33.3](https://github.com/go-openapi/runtime/compare/v0.33.2...v0.33.3)
+- github.com/go-openapi/runtime/server-middleware: [v0.33.2 → v0.33.3](https://github.com/go-openapi/runtime/compare/v0.33.2...v0.33.3)
+- github.com/go-openapi/spec: [v1.0.0 → v1.0.1](https://github.com/go-openapi/spec/compare/v1.0.0...v1.0.1)
+- github.com/go-openapi/strfmt: [v0.27.2 → v0.27.3](https://github.com/go-openapi/strfmt/compare/v0.27.2...v0.27.3)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.31.0 → v2.32.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.31.0...v2.32.0)
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.71.0 → v0.72.0
+- go.opentelemetry.io/otel/exporters/stdout/stdouttrace: v1.46.0 → v1.47.0
+- golang.org/x/exp: 85c1c22 → f0251eb
+- golang.org/x/mod: v0.41.0 → v0.42.0
+- golang.org/x/telemetry: ed294f9 → 97e8ea7
+- golang.org/x/tools: v0.51.0 → v0.52.0
+- google.golang.org/genproto/googleapis/api: fad4113 → ce908d2
+- google.golang.org/genproto/googleapis/rpc: fad4113 → ce908d2
+- honnef.co/go/tools: v0.8.1 → v0.8.2
+
+</details>
+
+<details><summary>Removed</summary>
+
+_Nothing has changed._
+
+</details>
 # v1.67.0
 
 ## Changes by Kind
