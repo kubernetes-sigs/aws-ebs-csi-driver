@@ -678,3 +678,57 @@ func TestSelinux(t *testing.T) {
 		})
 	}
 }
+
+func TestAdditionalDaemonSetsFalsyOverrides(t *testing.T) {
+	resources := renderChartWithSet(t,
+		"node.selinux=true",
+		"additionalDaemonSets.extra.selinux=false",
+		"additionalDaemonSets.extra.logLevel=0",
+		"additionalDaemonSets.extra.enableWindows=false",
+	)
+	csiDriver := mustFind(t, resources, "CSIDriver", "ebs.csi.aws.com")
+	defaultDS := mustFind(t, resources, "DaemonSet", "ebs-csi-node")
+	extraDS := mustFind(t, resources, "DaemonSet", "ebs-csi-node-extra")
+
+	hasSelinuxVolume := func(ds obj) bool {
+		for _, v := range nestedSlice(t, podSpec(t, ds), "volumes") {
+			if mustObj(t, v)["name"] == "selinux-sysfs" {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("seLinuxMountSet", func(t *testing.T) {
+		spec := nested(t, csiDriver, "spec")
+		if spec["seLinuxMount"] != true {
+			t.Errorf("CSIDriver spec.seLinuxMount: got %v, want true", spec["seLinuxMount"])
+		}
+	})
+
+	t.Run("defaultSelinuxVolume", func(t *testing.T) {
+		if !hasSelinuxVolume(defaultDS) {
+			t.Error("default DaemonSet should have the selinux-sysfs volume")
+		}
+	})
+
+	t.Run("extraSelinuxFalse", func(t *testing.T) {
+		if hasSelinuxVolume(extraDS) {
+			t.Error("additional DaemonSet with selinux=false should not have the selinux-sysfs volume")
+		}
+	})
+
+	t.Run("extraLogLevelZero", func(t *testing.T) {
+		c := findContainer(t, podSpec(t, extraDS), "ebs-plugin")
+		if !hasArg(c, "--v=0") {
+			t.Errorf("additional DaemonSet with logLevel=0 should have --v=0, got args %v", containerArgs(c))
+		}
+	})
+
+	t.Run("extraEnableWindowsFalse", func(t *testing.T) {
+		_, found := find(resources, "DaemonSet", "ebs-csi-node-extra-windows")
+		if found {
+			t.Error("additional DaemonSet with enableWindows=false should not render a Windows DaemonSet")
+		}
+	})
+}
