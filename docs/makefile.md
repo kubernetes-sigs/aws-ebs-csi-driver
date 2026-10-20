@@ -226,7 +226,7 @@ Test the EBS CSI Driver Helm chart via the [Helm `chart-testing` tool](https://g
 
 ### `make pre-release`
 
-Performs the in-repo preparation for a driver release: upgrades Go dependencies (root and `tests/e2e` modules), refreshes the sidecar image digests and tags, regenerates all generated files (`make update`), and runs the unit tests. Leaves a diff ready to be committed as the pre-release PR.
+Performs the in-repo preparation for a driver release: upgrades Go and Go dependencies (root and `tests/e2e` modules), refreshes the Dockerfile base image and sidecar digests and tags, regenerates all generated files (`make update`), and runs the unit tests and the vulnerability scan (`make security`). Leaves a diff ready to be committed as the pre-release PR.
 
 ### `make post-release`
 
