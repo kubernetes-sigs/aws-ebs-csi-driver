@@ -23,6 +23,15 @@ make bin/aws
 
 case ${1} in
 test-e2e-functional)
+  echo "===BEGIN=== RUNNING CLEANUP, SKIPPING E2E TESTS"
+  JANITOR_BUCKET="aws-ebs-csi-driver-janitor-${BUILD_ID:-${RANDOM}-${RANDOM}}"
+  bin/aws s3api create-bucket --bucket "${JANITOR_BUCKET}" --region us-west-2 --create-bucket-configuration LocationConstraint=us-west-2 || exit 1
+  trap 'bin/aws s3 rb "s3://${JANITOR_BUCKET}" --force --region us-west-2' EXIT
+  docker run --rm --mount type=bind,src=/etc/aws-cred,dst=/etc/aws-cred,readonly --env AWS_SHARED_CREDENTIALS_FILE="$AWS_SHARED_CREDENTIALS_FILE" gcr.io/k8s-staging-boskos/aws-janitor:v20260819-fdaf2e0 --ttl=10m --path="s3://${JANITOR_BUCKET}/objs.json" --exclude-tags=Shared=Ignore --clean-ecr-repositories=aws-ebs-csi-driver
+  # Run twice to force cleanup
+  echo "===REDO=== RUNNING CLEANUP, SKIPPING E2E TESTS"
+  docker run --rm --mount type=bind,src=/etc/aws-cred,dst=/etc/aws-cred,readonly --env AWS_SHARED_CREDENTIALS_FILE="$AWS_SHARED_CREDENTIALS_FILE" gcr.io/k8s-staging-boskos/aws-janitor:v20260819-fdaf2e0 --ttl=10m --path="s3://${JANITOR_BUCKET}/objs.json" --exclude-tags=Shared=Ignore --clean-ecr-repositories=aws-ebs-csi-driver
+  echo "===END=== RUNNING CLEANUP, SKIPPING E2E TESTS"
   TEST="functional"
   ;;
 test-e2e-disruptive)
@@ -98,6 +107,9 @@ test-e2e-parameters)
   exit 1
   ;;
 esac
+
+echo "SKIPPING ALL E2E TESTS, ABORTING"
+exit 1
 
 export CLUSTER_NAME="e2e-${BUILD_ID:-${RANDOM}}.k8s.local"
 # Use S3 bucket created for CI
