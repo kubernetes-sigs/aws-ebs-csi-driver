@@ -1,3 +1,75 @@
+# v1.66.2
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This release fixes `CVE-2026-111943` which resulted from the compromise of a trusted intermediate CA. These keys could allow attackers to issue fraudulent HTTPS certificates for websites they do not control, such as the AWS API.
+
+**We recommend users upgrade immediately to `v1.67.1` or `v1.66.2` of the EBS CSI Driver.** For more information about this issue, see the [Golang issue tracker](https://go.dev/issue/82345) and [Mozilla `dev-security-policy` announcement](https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/0R3XLJL6FuE).
+
+### Bug or Regression
+
+- Use correct images in Kustomize `ecr` and `gcr` overlays. ([#3059](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3059), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## Dependencies
+
+<details><summary>Added</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details><summary>Changed</summary>
+
+- github.com/Microsoft/go-winio: [v0.6.2 → v0.6.4](https://github.com/Microsoft/go-winio/compare/v0.6.2...v0.6.4)
+- github.com/aws/aws-sdk-go-v2: [v1.47.1 → v1.47.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.47.1...v1.47.3)
+- github.com/aws/aws-sdk-go-v2/config: [v1.33.7 → v1.33.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.7...v1.33.9)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.20.7 → v1.20.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.7...v1.20.9)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.20.1 → v1.20.3](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.1...v1.20.3)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.5.4 → v1.5.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.4...v1.5.6)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.8.4 → v2.8.6](https://github.com/aws/aws-sdk-go-v2/compare/v2.8.4...v2.8.6)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.5.4 → v1.5.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.4...v1.5.6)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.338.2 → v1.339.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.338.2...v1.339.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.19 → v1.13.21](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.19...v1.13.21)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.14.4 → v1.14.6](https://github.com/aws/aws-sdk-go-v2/compare/v1.14.4...v1.14.6)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.282.1 → v1.284.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.282.1...v1.284.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.10.2 → v1.10.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.10.2...v1.10.4)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.38.2 → v1.38.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.2...v1.38.4)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.43.2 → v1.43.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.2...v1.43.4)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.51.2 → v1.51.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.51.2...v1.51.4)
+- github.com/aws/smithy-go: [v1.28.4 → v1.28.5](https://github.com/aws/smithy-go/compare/v1.28.4...v1.28.5)
+- github.com/emicklei/go-restful/v3: [v3.13.0 → v3.14.0](https://github.com/emicklei/go-restful/compare/v3.13.0...v3.14.0)
+- github.com/go-openapi/loads: [v0.25.2 → v0.25.3](https://github.com/go-openapi/loads/compare/v0.25.2...v0.25.3)
+- github.com/go-openapi/runtime: [v0.33.2 → v0.33.3](https://github.com/go-openapi/runtime/compare/v0.33.2...v0.33.3)
+- github.com/go-openapi/runtime/server-middleware: [v0.33.2 → v0.33.3](https://github.com/go-openapi/runtime/compare/v0.33.2...v0.33.3)
+- github.com/go-openapi/spec: [v1.0.0 → v1.0.1](https://github.com/go-openapi/spec/compare/v1.0.0...v1.0.1)
+- github.com/go-openapi/strfmt: [v0.27.2 → v0.27.3](https://github.com/go-openapi/strfmt/compare/v0.27.2...v0.27.3)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.31.0 → v2.32.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.31.0...v2.32.0)
+- github.com/prometheus/common: [v0.72.0 → v0.72.1](https://github.com/prometheus/common/compare/v0.72.0...v0.72.1)
+- github.com/sirupsen/logrus: [v1.9.3 → v1.10.2](https://github.com/sirupsen/logrus/compare/v1.9.3...v1.10.2)
+- go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp: v0.71.0 → v0.72.0
+- go.opentelemetry.io/otel/exporters/stdout/stdouttrace: v1.46.0 → v1.47.0
+- golang.org/x/crypto: v0.57.0 → v0.58.0
+- golang.org/x/exp: 85c1c22 → f0251eb
+- golang.org/x/mod: v0.41.0 → v0.42.0
+- golang.org/x/net: v0.59.0 → v0.61.0
+- golang.org/x/sync: v0.23.0 → v0.24.0
+- golang.org/x/sys: v0.48.0 → v0.49.0
+- golang.org/x/telemetry: 4bcc4b2 → 97e8ea7
+- golang.org/x/term: v0.46.0 → v0.47.0
+- golang.org/x/text: v0.42.0 → v0.43.0
+- golang.org/x/tools: v0.50.0 → v0.52.0
+- google.golang.org/genproto/googleapis/api: fad4113 → ce908d2
+- google.golang.org/genproto/googleapis/rpc: fad4113 → ce908d2
+- honnef.co/go/tools: v0.8.1 → v0.8.2
+
+</details>
+
+<details><summary>Removed</summary>
+
+_Nothing has changed._
+
+</details>
 # v1.66.1
 
 This is a security patch release. It refreshes the AL2023 base image of the
