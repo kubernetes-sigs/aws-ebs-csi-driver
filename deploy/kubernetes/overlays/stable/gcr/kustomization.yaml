@@ -16,7 +16,7 @@ images:
     newTag: v2.20.0
   - name: public.ecr.aws/csi-components/csi-snapshotter
     newName: registry.k8s.io/sig-storage/csi-snapshotter
-    newTag: v8.6.0
+    newTag: v8.7.0
   - name: public.ecr.aws/csi-components/external-resizer
     newName: registry.k8s.io/sig-storage/csi-resizer
     newTag: v2.3.0
