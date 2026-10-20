@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.27.1@sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2 AS builder
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.27.3@sha256:957861185dbf29d93668ace41e011d091c6e779953d47f0316ef2cc58e28fe2b AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 RUN go env -w GOCACHE=/gocache GOMODCACHE=/gomodcache
 COPY go.* .
@@ -24,24 +24,24 @@ ARG TARGETARCH
 ARG VERSION
 RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH GOFIPS140=certified make
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:89b397944a80e7435ab67accff8729c79a9fc54e5eb5639d5ba8d54a96091c0d AS linux-al2023
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:f00fe504d6e8a75f619743f829b86ea1a88fe46e8cd2dbb4a67c0a70905b91d0 AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENV GODEBUG=fips140=off
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:1809@sha256:b4e46d9241a95ccc50ef73123714acb295472737a01cba52577dab153fdadf49 AS windows-ltsc2019
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:1809@sha256:4287cb03c77a1ccbb7a4f1cbe280545f5a22522b22389cb2acc9c89503a471bc AS windows-ltsc2019
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENV GODEBUG=fips140=off
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2022@sha256:75f0e07262f526660444f06f5b27c834580802808489a8e6f2b7f6db11310571 AS windows-ltsc2022
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2022@sha256:feb7680e34f3edaa8c34800496b785570feafdc0888465990ba33a4faddd5156 AS windows-ltsc2022
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENV GODEBUG=fips140=off
 ENTRYPOINT ["/aws-ebs-csi-driver.exe"]
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2025@sha256:d9c384028f72213ede7e69bd473e1dc24b35e4f9538eb4d829b02492393a3fb9 AS windows-ltsc2025
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-windows-base:ltsc2025@sha256:23b6f5c624c0fd7ef4dea247a205641cc0fc3f72acec67fb422e4a523b7ebcc1 AS windows-ltsc2025
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver.exe /aws-ebs-csi-driver.exe
 ENV PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;${PATH}"
 ENV GODEBUG=fips140=off
