@@ -1,5 +1,24 @@
 # Helm chart
 
+## 2.67.1
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This release fixes `CVE-2026-111943` which resulted from the compromise of a trusted intermediate CA. These keys could allow attackers to issue fraudulent HTTPS certificates for websites they do not control, such as the AWS API.
+
+**We recommend users upgrade immediately to `v1.67.1` or `v1.66.2` of the EBS CSI Driver.** For more information about this issue, see the [Golang issue tracker](https://go.dev/issue/82345) and [Mozilla `dev-security-policy` announcement](https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/0R3XLJL6FuE).
+
+### Dependencies
+ - Bumped EBS CSI Driver to `v1.67.1`
+ - Bumped `csi-attacher` to `v4.13.0-eksbuild.2`
+ - Bumped `csi-node-driver-registrar` to `v2.18.0-eksbuild.2`
+ - Bumped `csi-provisioner` to `v6.4.0-eksbuild.2`
+ - Bumped `csi-resizer` to `v2.3.0-eksbuild.2`
+ - Bumped `csi-snapshotter` to `v8.7.0-eksbuild.1`
+ - Bumped `livenessprobe` to `v2.20.0-eksbuild.2`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.6-eksbuild.3`
+
 ## 2.67.0
 ### Dependencies
  - Bumped EBS CSI Driver to `v1.67.0`
@@ -10,6 +29,25 @@
  - Bumped `csi-snapshotter` to `v8.6.0-eksbuild.10`
  - Bumped `livenessprobe` to `v2.20.0-eksbuild.1`
  - Bumped `volume-modifier-for-k8s` to `v0.9.6-eksbuild.2`
+
+## 2.66.2
+
+### Urgent Upgrade Notes
+*(No, really, you MUST read this before you upgrade)*
+
+This release fixes `CVE-2026-111943` which resulted from the compromise of a trusted intermediate CA. These keys could allow attackers to issue fraudulent HTTPS certificates for websites they do not control, such as the AWS API.
+
+**We recommend users upgrade immediately to `v1.67.1` or `v1.66.2` of the EBS CSI Driver.** For more information about this issue, see the [Golang issue tracker](https://go.dev/issue/82345) and [Mozilla `dev-security-policy` announcement](https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/0R3XLJL6FuE).
+
+### Dependencies
+ - Bumped EBS CSI Driver to `v1.66.2`
+ - Bumped `csi-attacher` to `v4.13.0-eksbuild.2`
+ - Bumped `csi-node-driver-registrar` to `v2.18.0-eksbuild.2`
+ - Bumped `csi-provisioner` to `v6.4.0-eksbuild.2`
+ - Bumped `csi-resizer` to `v2.3.0-eksbuild.2`
+ - Bumped `csi-snapshotter` to `v8.7.0-eksbuild.1`
+ - Bumped `livenessprobe` to `v2.20.0-eksbuild.2`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.6-eksbuild.3`
 
 ## 2.66.1
 ### Dependencies
