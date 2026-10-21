@@ -50,6 +50,7 @@ _Nothing has changed._
 _Nothing has changed._
 
 </details>
+
 # v1.67.0
 
 ## Changes by Kind
@@ -187,6 +188,7 @@ _Nothing has changed._
 _Nothing has changed._
 
 </details>
+
 # v1.66.1
 
 This is a security patch release. It refreshes the AL2023 base image of the
