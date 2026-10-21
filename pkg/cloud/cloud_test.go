@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -4991,6 +4992,29 @@ func TestWaitForAttachmentState(t *testing.T) {
 	}
 }
 
+type testVolumeStatusBatcher struct {
+	delay time.Duration
+	ec2   util.EC2API
+}
+
+func newTestVolumeStatusBatcher(delay time.Duration, ec2Client util.EC2API) volumeStatusBatcher {
+	return &testVolumeStatusBatcher{
+		delay: delay,
+		ec2:   ec2Client,
+	}
+}
+
+func (b *testVolumeStatusBatcher) AddTask(volumeID string, resultChan chan batcher.BatchResult[*types.VolumeStatusItem]) {
+	go func() {
+		synctest.Sleep(b.delay)
+		results, err := execBatchDescribeVolumeStatus(b.ec2, []string{volumeID})
+		resultChan <- batcher.BatchResult[*types.VolumeStatusItem]{
+			Result: results[volumeID],
+			Err:    err,
+		}
+	}()
+}
+
 func TestIsVolumeInitialized(t *testing.T) {
 	volID := "vol-test"
 	volumeStatusInitialized := types.VolumeStatusItem{
@@ -5031,7 +5055,7 @@ func TestIsVolumeInitialized(t *testing.T) {
 		cacheHit           bool
 		cachedInitialized  bool
 		cachedAddedETATime time.Duration
-		expectSleep        bool
+		expectedWait       time.Duration
 		expErr             error
 	}{
 		{
@@ -5052,23 +5076,23 @@ func TestIsVolumeInitialized(t *testing.T) {
 			cachedInitialized: true,
 		},
 		{
-			name:        "cache hit + no ETA: call DSV slowly",
-			cacheHit:    true,
-			dvsOutput:   &volumeStatusInitialized,
-			expectSleep: true,
+			name:         "cache hit + no ETA: call DSV slowly",
+			cacheHit:     true,
+			dvsOutput:    &volumeStatusInitialized,
+			expectedWait: testInitializationSleep,
 		},
 		{
 			name:               "cache hit + yes ETA: sleep then call DSV which returns initialized",
 			cacheHit:           true,
 			cachedAddedETATime: testInitializationSleep,
 			dvsOutput:          &volumeStatusInitialized,
-			expectSleep:        true,
+			expectedWait:       testInitializationSleep,
 		},
 		{
 			name:               "cache hit + yes ETA: should have initialized, call DSV ASAP",
 			dvsOutput:          &volumeStatusInitialized,
 			cacheHit:           true,
-			cachedAddedETATime: 1,
+			cachedAddedETATime: -time.Nanosecond,
 		},
 		{
 			name: "edge case cache miss: DSV doesn't return initialization-state, still return true",
@@ -5086,63 +5110,58 @@ func TestIsVolumeInitialized(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Prepare volumeInitializations cache
-			volInitCache := expiringcache.New[string, volumeInitialization](cacheForgetDelay)
-			if tc.cacheHit {
-				vi := &volumeInitialization{
-					initialized: tc.cachedInitialized,
+			synctest.Test(t, func(t *testing.T) {
+				// Prepare volumeInitializations cache
+				volInitCache := expiringcache.New[string, volumeInitialization](cacheForgetDelay)
+				if tc.cacheHit {
+					vi := &volumeInitialization{
+						initialized: tc.cachedInitialized,
+					}
+					if tc.cachedAddedETATime != 0 {
+						vi.estimatedInitializationTime = time.Now().Add(tc.cachedAddedETATime)
+					}
+					volInitCache.Set(volID, vi)
 				}
-				if tc.cachedAddedETATime != 0 {
-					vi.estimatedInitializationTime = time.Now().Add(tc.cachedAddedETATime)
+
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := NewMockEC2API(mockCtrl)
+				c := &cloud{
+					region:                "test-region",
+					ec2:                   mockEC2,
+					volumeInitializations: volInitCache,
+					bm: &batcherManager{
+						volumeStatusIDBatcherFast: newTestVolumeStatusBatcher(0, mockEC2),
+						volumeStatusIDBatcherSlow: newTestVolumeStatusBatcher(testInitializationSleep, mockEC2),
+					},
 				}
-				volInitCache.Set(volID, vi)
-			}
 
-			mockCtrl := gomock.NewController(t)
-			mockEC2 := NewMockEC2API(mockCtrl)
-			c := &cloud{
-				region:                "test-region",
-				ec2:                   mockEC2,
-				volumeInitializations: volInitCache,
-				bm: &batcherManager{
-					volumeStatusIDBatcherFast: batcher.New(500, 0, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
-						return execBatchDescribeVolumeStatus(mockEC2, ids)
-					}),
-					volumeStatusIDBatcherSlow: batcher.New(500, testInitializationSleep, func(ids []string) (map[string]*types.VolumeStatusItem, error) {
-						// TODO remove test sleeps with testing/synctest. Blocked on Batcher.taskManager,
-						// which never exits. Inside a bubble synctest panics with "deadlock: main
-						// bubble goroutine has exited but blocked goroutines remain".
-						return execBatchDescribeVolumeStatus(mockEC2, ids)
-					}),
-				},
-			}
+				// If tc.dvsOutput nil, we should NOT expect a DVS call.
+				if tc.dvsOutput != nil {
+					mockEC2.EXPECT().DescribeVolumeStatus(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumeStatusInput{})).Return(&ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{*tc.dvsOutput}}, nil).MinTimes(1)
+				}
 
-			// If tc.dvsOutput nil, we should NOT expect a DVS call.
-			if tc.dvsOutput != nil {
-				mockEC2.EXPECT().DescribeVolumeStatus(testutil.AnyContext(), testutil.EC2Input(&ec2.DescribeVolumeStatusInput{})).Return(&ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{*tc.dvsOutput}}, nil).MinTimes(1)
-			}
+				startTime := time.Now()
+				res, err := c.IsVolumeInitialized(t.Context(), volID)
 
-			startTime := time.Now()
-			res, err := c.IsVolumeInitialized(t.Context(), volID)
+				if (err == nil) != (tc.expErr == nil) || !errors.Is(err, tc.expErr) {
+					t.Fatalf("IsVolumeInitialized() didn't return expected err. Expected %v got %v", tc.expErr, err)
+				}
 
-			if (err == nil) != (tc.expErr == nil) || !errors.Is(err, tc.expErr) {
-				t.Fatalf("IsVolumeInitialized() didn't return expected err. Expected %v got %v", tc.expErr, err)
-			}
+				if tc.dvsOutput != nil && res != !isVolumeStatusInitializing(*tc.dvsOutput) {
+					t.Fatalf("IsVolumeInitialized() returned wrong result. Expected %t got %t", !isVolumeStatusInitializing(*tc.dvsOutput), res)
+				}
 
-			if tc.dvsOutput != nil && res != !isVolumeStatusInitializing(*tc.dvsOutput) {
-				t.Fatalf("IsVolumeInitialized() returned wrong result. Expected %t got %t", !isVolumeStatusInitializing(*tc.dvsOutput), res)
-			}
+				if elapsed := time.Since(startTime); elapsed != tc.expectedWait {
+					t.Fatalf("IsVolumeInitialized() waited %v before polling DescribeVolumeStatus, expected %v", elapsed, tc.expectedWait)
+				}
 
-			if tc.expectSleep && time.Since(startTime) < (testInitializationSleep/2) {
-				t.Fatalf("IsVolumeInitialized() polled DescribeVolumeStatus too early when we know volume %s is not ready yet", volID)
-			}
-
-			// Check cache after test
-			if tc.dvsOutput != nil {
-				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, *tc.dvsOutput)
-			} else {
-				confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, volumeStatusInitialized)
-			}
+				// Check cache after test
+				if tc.dvsOutput != nil {
+					confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, *tc.dvsOutput)
+				} else {
+					confirmInitializationCacheUpdated(t, c.volumeInitializations, volID, volumeStatusInitialized)
+				}
+			})
 		})
 	}
 }
