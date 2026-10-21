@@ -18,6 +18,7 @@ package expiringcache
 
 import (
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,6 @@ import (
 
 const (
 	testExpiration = time.Millisecond * 100
-	testSleep      = time.Millisecond * 80
 	testKey        = "key"
 )
 
@@ -37,35 +37,42 @@ var (
 func TestExpiringCache(t *testing.T) {
 	t.Parallel()
 
-	cache := New[string, string](testExpiration)
+	synctest.Test(t, func(t *testing.T) {
+		cache := New[string, string](testExpiration)
 
-	value, ok := cache.Get(testKey)
-	assert.False(t, ok, "Should not be able to Get() value before Set()ing it")
-	assert.Nil(t, value, "Value should be nil when Get() returns not ok")
+		value, ok := cache.Get(testKey)
+		assert.False(t, ok, "Should not be able to Get() value before Set()ing it")
+		assert.Nil(t, value, "Value should be nil when Get() returns not ok")
 
-	cache.Set(testKey, &testValue1)
-	value, ok = cache.Get(testKey)
-	assert.True(t, ok, "Should be able to Get() after Set()ing it")
-	assert.Equal(t, &testValue1, value, "Should Get() the same value that was Set()")
+		cache.Set(testKey, &testValue1)
+		value, ok = cache.Get(testKey)
+		assert.True(t, ok, "Should be able to Get() after Set()ing it")
+		assert.Equal(t, &testValue1, value, "Should Get() the same value that was Set()")
 
-	cache.Set(testKey, &testValue2)
-	value, ok = cache.Get(testKey)
-	assert.True(t, ok, "Should be able to Get() after Set()ing it (after overwrite)")
-	assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after overwrite)")
+		cache.Set(testKey, &testValue2)
+		value, ok = cache.Get(testKey)
+		assert.True(t, ok, "Should be able to Get() after Set()ing it (after overwrite)")
+		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after overwrite)")
 
-	time.Sleep(testSleep)
-	value, ok = cache.Get(testKey)
-	assert.True(t, ok, "Should be able to Get() after sleeping less than the expiration delay")
-	assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after sleep)")
+		synctest.Sleep(testExpiration - time.Nanosecond)
+		value, ok = cache.Get(testKey)
+		assert.True(t, ok, "Should be able to Get() after sleeping less than the expiration delay")
+		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after sleep)")
 
-	time.Sleep(testSleep * 2)
-	value, ok = cache.Get(testKey)
-	assert.False(t, ok, "Should not be able to Get() value after it expires")
-	assert.Nil(t, value, "Value should be nil when Get() returns not ok (after expiration)")
+		synctest.Sleep(testExpiration - time.Nanosecond)
+		value, ok = cache.Get(testKey)
+		assert.True(t, ok, "Should be able to Get() past the original expiration, because Get() refreshes it")
+		assert.Equal(t, &testValue2, value, "Should Get() the same value that was Set() (after refresh)")
 
-	cache.Set(testKey, &testValue1)
-	cache.Remove(testKey)
-	value, ok = cache.Get(testKey)
-	assert.False(t, ok, "Should not be able to Get() value after it is removed")
-	assert.Nil(t, value, "Value should be nil when Get() returns not ok (after removal)")
+		synctest.Sleep(testExpiration)
+		value, ok = cache.Get(testKey)
+		assert.False(t, ok, "Should not be able to Get() value after it expires")
+		assert.Nil(t, value, "Value should be nil when Get() returns not ok (after expiration)")
+
+		cache.Set(testKey, &testValue1)
+		cache.Remove(testKey)
+		value, ok = cache.Get(testKey)
+		assert.False(t, ok, "Should not be able to Get() value after it is removed")
+		assert.Nil(t, value, "Value should be nil when Get() returns not ok (after removal)")
+	})
 }
