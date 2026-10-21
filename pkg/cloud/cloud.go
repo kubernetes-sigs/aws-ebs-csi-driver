@@ -386,6 +386,10 @@ type volumeBatcherType int
 // snapshotBatcherType is an enum representing the types of snapshot batchers available.
 type snapshotBatcherType int
 
+type volumeStatusBatcher interface {
+	AddTask(task string, resultChan chan batcher.BatchResult[*types.VolumeStatusItem])
+}
+
 // batcherManager maintains a collection of batchers for different types of tasks.
 type batcherManager struct {
 	volumeIDBatcher             *batcher.Batcher[string, *types.Volume]
@@ -394,8 +398,8 @@ type batcherManager struct {
 	snapshotIDBatcher           *batcher.Batcher[string, *types.Snapshot]
 	snapshotTagBatcher          *batcher.Batcher[string, *types.Snapshot]
 	volumeModificationIDBatcher *batcher.Batcher[string, *types.VolumeModification]
-	volumeStatusIDBatcherSlow   *batcher.Batcher[string, *types.VolumeStatusItem]
-	volumeStatusIDBatcherFast   *batcher.Batcher[string, *types.VolumeStatusItem]
+	volumeStatusIDBatcherSlow   volumeStatusBatcher
+	volumeStatusIDBatcherFast   volumeStatusBatcher
 }
 
 type cloud struct {
@@ -1628,7 +1632,7 @@ func execBatchDescribeVolumeStatus(svc util.EC2API, input []string) (map[string]
 func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.VolumeStatusItem, error) {
 	ch := make(chan batcher.BatchResult[*types.VolumeStatusItem])
 
-	var b *batcher.Batcher[string, *types.VolumeStatusItem]
+	var b volumeStatusBatcher
 	if callASAP {
 		b = c.bm.volumeStatusIDBatcherFast
 	} else {
