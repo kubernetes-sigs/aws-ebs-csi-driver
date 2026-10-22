@@ -61,7 +61,7 @@ $ kubectl get pvc data -o jsonpath='{.status.healthStatus}' | jq
 
 The [`aws:ebs:pause-volume-io`](https://docs.aws.amazon.com/ebs/latest/userguide/ebs-fis-pause-io.html) FIS action pauses the I/O of a volume attached to a Nitro instance. While a `gp3` volume is paused, `io-performance` becomes `stalled` after two to four minutes, and it returns to `normal` two to three minutes after the pause ends. The PVC condition follows within one `--list-volumes-interval`.
 
-1. Create a cluster with the `CSIVolumeHealth` feature gate on `kube-apiserver` (for `make cluster/create`, add `CSIVolumeHealth: "true"` to `spec.kubeAPIServer.featureGates` in `hack/e2e/kops/patch-cluster.yaml` before the cluster is created), and install the driver with `sidecars.healthMonitor.enabled=true`.
+1. Create a cluster with the `CSIVolumeHealth` feature gate on `kube-apiserver` (`make cluster/create` enables it on kops clusters), and install the driver with `sidecars.healthMonitor.enabled=true`.
 2. Create a `gp3` PVC and a pod that keeps writing to it, for example with `dd if=/dev/zero of=/data/out bs=1M count=32 oflag=direct conv=fsync` in a loop.
 3. Create an IAM role that `fis.amazonaws.com` can assume, with `ec2:DescribeVolumes`, `tag:GetResources` and `ec2:PauseVolumeIO`.
 4. Create and start an experiment that pauses the volume for 10 minutes:
