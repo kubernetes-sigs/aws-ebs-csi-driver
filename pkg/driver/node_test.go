@@ -2048,9 +2048,9 @@ func TestNodeGetCapabilities(t *testing.T) {
 		t.Fatalf("Expected %d capabilities, but got %d", len(expectedCaps), len(resp.GetCapabilities()))
 	}
 
-	for i, cap := range resp.GetCapabilities() {
-		if cap.GetRpc().GetType() != expectedCaps[i].GetRpc().GetType() {
-			t.Fatalf("Expected capability %v, but got %v", expectedCaps[i].GetRpc().GetType(), cap.GetRpc().GetType())
+	for i, capability := range resp.GetCapabilities() {
+		if capability.GetRpc().GetType() != expectedCaps[i].GetRpc().GetType() {
+			t.Fatalf("Expected capability %v, but got %v", expectedCaps[i].GetRpc().GetType(), capability.GetRpc().GetType())
 		}
 	}
 }

@@ -187,6 +187,7 @@ replace (
 	k8s.io/kms => k8s.io/kms v0.37.1
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.37.1
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.37.1
+	// Keep kube-openapi aligned with Kubernetes v0.37.1, which uses structured-merge-diff/v6.
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.37.1
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.37.1
