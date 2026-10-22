@@ -33,8 +33,6 @@ linters:
     - interfacebloat # No more than 10 interface methods
     - ireturn # Accept interfaces return concrete types
     - lll # Limit line length
-    - loggercheck # Temporarily disable new linter for release
-    - predeclared # Temporarily disable new linter for release
     - maintidx # Maintainability index
     - mnd # Magic Number Detection. Many false positives
     - nestif # Don't allow too many nested if statements

@@ -127,6 +127,7 @@ require (
 // Workaround https://github.com/kubernetes-csi/csi-proxy/issues/411
 replace github.com/kubernetes-csi/csi-proxy/v2 => github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
 
+// Keep kube-openapi aligned with Kubernetes v0.37.1, which uses structured-merge-diff/v6.
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 
 go 1.27.3

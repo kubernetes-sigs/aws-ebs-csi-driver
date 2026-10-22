@@ -1713,7 +1713,7 @@ func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.
 			// abort the attachment by calling DetachVolume and failing the ControllerPublishVolume RPC entirely to
 			// force a retry to occur with a fresh slate.
 			if attachmentState == types.VolumeAttachmentStateAttaching && attachment.AttachTime != nil && time.Since(*attachment.AttachTime) > stuckAttachingTimeout {
-				klog.InfoS("WaitForAttachmentState: attachment stuck in attaching state, detaching", "volumeID", volumeID, "instanceID", expectedInstance, "attachTime", attachment.AttachTime)
+				klog.InfoS("WaitForAttachmentState: attachment stuck in attaching state, detaching", "volumeID", volumeID, "instanceID", expectedInstance, "attachTime", aws.ToTime(attachment.AttachTime))
 				_, err := c.ec2.DetachVolume(ctx, &ec2.DetachVolumeInput{
 					VolumeId:   aws.String(volumeID),
 					InstanceId: aws.String(expectedInstance),
