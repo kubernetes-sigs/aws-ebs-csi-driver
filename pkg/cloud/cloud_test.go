@@ -5144,6 +5144,222 @@ func TestIsVolumeInitialized(t *testing.T) {
 	}
 }
 
+func TestGetVolumeStatus(t *testing.T) {
+	volumeStatus := types.VolumeStatusItem{
+		VolumeId: aws.String(defaultVolumeID),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("stalled")},
+			},
+			Status: types.VolumeStatusInfoStatusImpaired,
+		},
+	}
+	volumeNotFoundErr := &smithy.GenericAPIError{Code: "InvalidVolume.NotFound"}
+	genericErr := errors.New("generic EC2 API error")
+
+	testCases := []struct {
+		name                 string
+		dvsOutput            *ec2.DescribeVolumeStatusOutput
+		dvsErr               error
+		expectDescribeVolume bool
+		volumeState          types.VolumeState
+		describeVolumesErr   error
+		expVolumeStatus      *types.VolumeStatusItem
+		expErr               error
+	}{
+		{
+			name:                 "success: volume in the in-use state",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			volumeState:          types.VolumeStateInUse,
+			expVolumeStatus:      &volumeStatus,
+		},
+		{
+			name:                 "success: volume in the available state",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			volumeState:          types.VolumeStateAvailable,
+			expVolumeStatus:      &volumeStatus,
+		},
+		{
+			name:   "fail: volume not found",
+			dvsErr: volumeNotFoundErr,
+			expErr: ErrNotFound,
+		},
+		{
+			name:   "fail: invalid volume ID",
+			dvsErr: &smithy.GenericAPIError{Code: "InvalidVolumeID.Malformed"},
+			expErr: ErrNotFound,
+		},
+		{
+			name:      "fail: DescribeVolumeStatus returned no volume",
+			dvsOutput: &ec2.DescribeVolumeStatusOutput{},
+			expErr:    ErrNotFound,
+		},
+		{
+			name:                 "fail: DescribeVolumeStatus still returns a deleted volume",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			describeVolumesErr:   volumeNotFoundErr,
+			expErr:               ErrNotFound,
+		},
+		{
+			name:                 "fail: volume in the deleting state",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			volumeState:          types.VolumeStateDeleting,
+			expErr:               ErrNotFound,
+		},
+		{
+			name:                 "fail: volume in the deleted state",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			volumeState:          types.VolumeStateDeleted,
+			expErr:               ErrNotFound,
+		},
+		{
+			name:   "fail: DescribeVolumeStatus returned generic error",
+			dvsErr: genericErr,
+			expErr: genericErr,
+		},
+		{
+			name:                 "fail: DescribeVolumes returned generic error",
+			dvsOutput:            &ec2.DescribeVolumeStatusOutput{VolumeStatuses: []types.VolumeStatusItem{volumeStatus}},
+			expectDescribeVolume: true,
+			describeVolumesErr:   genericErr,
+			expErr:               genericErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		for _, batching := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s (batching %t)", tc.name, batching), func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				mockEC2 := NewMockEC2API(mockCtrl)
+				c, ok := newCloud(mockEC2).(*cloud)
+				if !ok {
+					t.Fatalf("could not assert cloudInstance as type cloud, %v", c)
+				}
+				if batching {
+					// A batcher manager without batchers: going through a batcher panics instead of hanging the test.
+					c.bm = &batcherManager{}
+				}
+
+				// gomock.Eq(ctx) also checks that the calls are made with the caller's context.
+				ctx := t.Context()
+				mockEC2.EXPECT().DescribeVolumeStatus(gomock.Eq(ctx), gomock.Eq(&ec2.DescribeVolumeStatusInput{
+					VolumeIds: []string{defaultVolumeID},
+				})).Return(tc.dvsOutput, tc.dvsErr)
+				if tc.expectDescribeVolume {
+					mockEC2.EXPECT().DescribeVolumes(gomock.Eq(ctx), gomock.Eq(&ec2.DescribeVolumesInput{
+						VolumeIds: []string{defaultVolumeID},
+					})).Return(&ec2.DescribeVolumesOutput{Volumes: []types.Volume{{VolumeId: aws.String(defaultVolumeID), State: tc.volumeState}}}, tc.describeVolumesErr)
+				}
+
+				volumeStatus, err := c.GetVolumeStatus(ctx, defaultVolumeID)
+				require.ErrorIs(t, err, tc.expErr)
+				assert.Equal(t, tc.expVolumeStatus, volumeStatus)
+			})
+		}
+	}
+}
+
+func TestListVolumeStatuses(t *testing.T) {
+	volumeStatus := types.VolumeStatusItem{
+		VolumeId: aws.String(defaultVolumeID),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("stalled")},
+			},
+			Status: types.VolumeStatusInfoStatusImpaired,
+		},
+	}
+	impairedOrWarning := []types.Filter{
+		{
+			Name:   aws.String("volume-status.status"),
+			Values: []string{"impaired", "warning"},
+		},
+	}
+	genericErr := errors.New("generic EC2 API error")
+
+	testCases := []struct {
+		name        string
+		maxResults  int32
+		nextToken   string
+		expDVSInput *ec2.DescribeVolumeStatusInput
+		dvsOutput   *ec2.DescribeVolumeStatusOutput
+		dvsErr      error
+		expResponse *ListVolumeStatusesResponse
+		expErr      error
+	}{
+		{
+			name: "success: default page size",
+			expDVSInput: &ec2.DescribeVolumeStatusInput{
+				Filters:    impairedOrWarning,
+				MaxResults: aws.Int32(1000),
+			},
+			dvsOutput: &ec2.DescribeVolumeStatusOutput{
+				VolumeStatuses: []types.VolumeStatusItem{volumeStatus},
+				NextToken:      aws.String("next-token"),
+			},
+			expResponse: &ListVolumeStatusesResponse{
+				VolumeStatuses: []types.VolumeStatusItem{volumeStatus},
+				NextToken:      "next-token",
+			},
+		},
+		{
+			name:       "success: max results and next token",
+			maxResults: 5,
+			nextToken:  "token",
+			expDVSInput: &ec2.DescribeVolumeStatusInput{
+				Filters:    impairedOrWarning,
+				MaxResults: aws.Int32(5),
+				NextToken:  aws.String("token"),
+			},
+			dvsOutput:   &ec2.DescribeVolumeStatusOutput{},
+			expResponse: &ListVolumeStatusesResponse{},
+		},
+		{
+			name:       "fail: max results 1, below the EC2 minimum",
+			maxResults: 1,
+			expErr:     ErrInvalidMaxResults,
+		},
+		{
+			name:       "fail: max results 4, below the EC2 minimum",
+			maxResults: 4,
+			expErr:     ErrInvalidMaxResults,
+		},
+		{
+			name: "fail: DescribeVolumeStatus returned generic error",
+			expDVSInput: &ec2.DescribeVolumeStatusInput{
+				Filters:    impairedOrWarning,
+				MaxResults: aws.Int32(1000),
+			},
+			dvsErr: genericErr,
+			expErr: genericErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockEC2 := NewMockEC2API(mockCtrl)
+			c := newCloud(mockEC2)
+
+			ctx := t.Context()
+			if tc.expDVSInput != nil {
+				mockEC2.EXPECT().DescribeVolumeStatus(gomock.Eq(ctx), gomock.Eq(tc.expDVSInput)).Return(tc.dvsOutput, tc.dvsErr)
+			}
+
+			response, err := c.ListVolumeStatuses(ctx, tc.maxResults, tc.nextToken)
+			require.ErrorIs(t, err, tc.expErr)
+			assert.Equal(t, tc.expResponse, response)
+		})
+	}
+}
+
 func TestDryRun(t *testing.T) {
 	testCases := []struct {
 		name                string

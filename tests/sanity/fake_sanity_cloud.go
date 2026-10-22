@@ -230,6 +230,28 @@ func (d *fakeCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (b
 	return true, nil
 }
 
+func (d *fakeCloud) GetVolumeStatus(ctx context.Context, volumeID string) (*types.VolumeStatusItem, error) {
+	_, exists := d.disks[volumeID]
+	if !exists {
+		return nil, cloud.ErrNotFound
+	}
+	return &types.VolumeStatusItem{
+		VolumeId: &volumeID,
+		VolumeStatus: &types.VolumeStatusInfo{
+			Status: types.VolumeStatusInfoStatusOk,
+		},
+	}, nil
+}
+
+func (d *fakeCloud) ListVolumeStatuses(ctx context.Context, maxResults int32, nextToken string) (*cloud.ListVolumeStatusesResponse, error) {
+	// EC2 filters after paginating, so a page can be empty and still have a NextToken. Returning one makes csi-sanity
+	// cover the next_token cache that NewControllerService sets up.
+	if len(nextToken) == 0 {
+		return &cloud.ListVolumeStatusesResponse{NextToken: "page-2"}, nil
+	}
+	return &cloud.ListVolumeStatusesResponse{}, nil
+}
+
 func (d *fakeCloud) DryRun(ctx context.Context) error {
 	return nil
 }

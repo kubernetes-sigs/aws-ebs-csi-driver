@@ -114,6 +114,14 @@ const (
 	VolumeStatusInitializedState  = "completed"
 )
 
+// Volume status check results reported by EC2 DescribeVolumeStatus, which the AWS SDK has no type for.
+const (
+	VolumeStatusIOEnabledFailed               = "failed"
+	VolumeStatusIOPerformanceStalled          = "stalled"
+	VolumeStatusIOPerformanceSeverelyDegraded = "severely-degraded"
+	VolumeStatusIOPerformanceDegraded         = "degraded"
+)
+
 // Defaults.
 const (
 	// DefaultVolumeSize represents the default volume size.
@@ -163,6 +171,9 @@ const (
 const (
 	// maxInstancesDescribed is the maximum number of instances described in each EC2 Describe Instances call.
 	maxInstancesDescribed = 1000
+
+	// maxVolumeStatusesDescribed is the MaxResults that ListVolumeStatuses sends to EC2 when maxResults is 0.
+	maxVolumeStatusesDescribed = 1000
 )
 
 var (
@@ -317,6 +328,12 @@ type Snapshot struct {
 type ListSnapshotsResponse struct {
 	Snapshots []*Snapshot
 	NextToken string
+}
+
+// ListVolumeStatusesResponse is a page of EC2 DescribeVolumeStatus results and the NextToken for the next page.
+type ListVolumeStatusesResponse struct {
+	VolumeStatuses []types.VolumeStatusItem
+	NextToken      string
 }
 
 // SnapshotOptions represents parameters to create an EBS snapshot.
@@ -1644,6 +1661,80 @@ func (c *cloud) describeVolumeStatus(volumeID string, callASAP bool) (*types.Vol
 	return r.Result, nil
 }
 
+// GetVolumeStatus returns the EC2 DescribeVolumeStatus result of a volume, or ErrNotFound if the volume doesn't exist or
+// is being deleted. It doesn't use the batchers: they ignore the caller's context, and a volume that is not found fails
+// the whole batch.
+func (c *cloud) GetVolumeStatus(ctx context.Context, volumeID string) (*types.VolumeStatusItem, error) {
+	request := &ec2.DescribeVolumeStatusInput{
+		VolumeIds: []string{volumeID},
+	}
+
+	response, err := c.ec2.DescribeVolumeStatus(ctx, request)
+	if err != nil {
+		if isAWSErrorVolumeNotFound(err) || isAWSErrorVolumeIDMalformed(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if len(response.VolumeStatuses) == 0 {
+		return nil, ErrNotFound
+	}
+
+	// DescribeVolumeStatus keeps reporting a deleted volume while it is deleting, which can take over an hour, and for
+	// a few minutes after; DescribeVolumes reports it as deleting, deleted or not found.
+	volumes, err := describeVolumes(ctx, c.ec2, &ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeID},
+	})
+	if err != nil {
+		if isAWSErrorVolumeNotFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	for _, volume := range volumes {
+		if volume.State == types.VolumeStateDeleting || volume.State == types.VolumeStateDeleted {
+			return nil, ErrNotFound
+		}
+	}
+
+	return &response.VolumeStatuses[0], nil
+}
+
+// ListVolumeStatuses returns a page of EC2 DescribeVolumeStatus results for the volumes in the region whose status is
+// impaired or warning. If maxResults is 0, each page covers up to maxVolumeStatusesDescribed volumes. EC2 filters the
+// results after paginating, so a page can be empty and still have a NextToken.
+func (c *cloud) ListVolumeStatuses(ctx context.Context, maxResults int32, nextToken string) (*ListVolumeStatusesResponse, error) {
+	if maxResults > 0 && maxResults < 5 {
+		return nil, ErrInvalidMaxResults
+	}
+	if maxResults == 0 {
+		maxResults = maxVolumeStatusesDescribed
+	}
+
+	request := &ec2.DescribeVolumeStatusInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("volume-status.status"),
+				Values: []string{string(types.VolumeStatusInfoStatusImpaired), string(types.VolumeStatusInfoStatusWarning)},
+			},
+		},
+		MaxResults: aws.Int32(maxResults),
+	}
+	if len(nextToken) != 0 {
+		request.NextToken = aws.String(nextToken)
+	}
+
+	response, err := c.ec2.DescribeVolumeStatus(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListVolumeStatusesResponse{
+		VolumeStatuses: response.VolumeStatuses,
+		NextToken:      aws.ToString(response.NextToken),
+	}, nil
+}
+
 // WaitForAttachmentState polls until the attachment status is the expected value.
 func (c *cloud) WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool, expectedCardIndex *int32) (*types.VolumeAttachment, error) {
 	var attachment *types.VolumeAttachment
@@ -2528,6 +2619,13 @@ func isAWSErrorInstanceNotFound(err error) bool {
 // reported when the specified volume doesn't exist.
 func isAWSErrorVolumeNotFound(err error) bool {
 	return isAWSError(err, "InvalidVolume.NotFound")
+}
+
+// isAWSErrorVolumeIDMalformed returns a boolean indicating whether the
+// given error is an AWS InvalidVolumeID.Malformed error. This error is
+// reported when the specified volume ID is not valid.
+func isAWSErrorVolumeIDMalformed(err error) bool {
+	return isAWSError(err, "InvalidVolumeID.Malformed")
 }
 
 // isAWSErrorIncorrectState returns a boolean indicating whether the
