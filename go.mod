@@ -61,6 +61,7 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-openapi/jsonreference v1.0.3 // indirect
 	github.com/go-openapi/swag v0.29.2 // indirect
@@ -123,9 +124,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 )
-
-// Workaround https://github.com/kubernetes-csi/csi-proxy/issues/411
-replace github.com/kubernetes-csi/csi-proxy/v2 => github.com/kubernetes-csi/csi-proxy/v2 v2.0.0-alpha.1
 
 // Keep kube-openapi aligned with Kubernetes v0.37.1, which uses structured-merge-diff/v6.
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
