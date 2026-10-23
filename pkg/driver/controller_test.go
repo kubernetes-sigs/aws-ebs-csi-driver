@@ -33,8 +33,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/plugin"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/testutil"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
@@ -42,6 +44,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 )
 
 const (
@@ -6435,6 +6439,432 @@ func TestIsValidCapabilityForNodeLocal(t *testing.T) {
 	}
 }
 
+func TestControllerGetCapabilities(t *testing.T) {
+	awsDriver, _, _ := createControllerService(t)
+
+	resp, err := awsDriver.ControllerGetCapabilities(t.Context(), &csi.ControllerGetCapabilitiesRequest{})
+	require.NoError(t, err)
+
+	caps := []csi.ControllerServiceCapability_RPC_Type{}
+	for _, capability := range resp.GetCapabilities() {
+		caps = append(caps, capability.GetRpc().GetType())
+	}
+	assert.Equal(t, []csi.ControllerServiceCapability_RPC_Type{
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
+		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
+		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+		csi.ControllerServiceCapability_RPC_MODIFY_VOLUME,
+		csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH,
+		csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH,
+	}, caps)
+}
+
+// Volume statuses returned by EC2 DescribeVolumeStatus. Unless noted otherwise, they were captured in us-west-2 for
+// volumes attached to c5.large nodes, before, during and after an AWS FIS aws:ebs:pause-volume-io experiment that
+// paused their I/O for 10 minutes.
+var (
+	// A new gp3 volume, before its first I/O performance check.
+	gp3NewVolumeStatus = types.VolumeStatusItem{
+		Actions:            []types.VolumeStatusAction{},
+		AvailabilityZone:   aws.String("us-west-2a"),
+		AvailabilityZoneId: aws.String("usw2-az2"),
+		Events:             []types.VolumeStatusEvent{},
+		VolumeId:           aws.String("vol-041d64aaa8be8ddb4"),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("no-data-available")},
+			},
+			Status: types.VolumeStatusInfoStatusInsufficientData,
+		},
+	}
+	// The same gp3 volume four minutes into the pause.
+	gp3PausedVolumeStatus = types.VolumeStatusItem{
+		Actions:            []types.VolumeStatusAction{},
+		AvailabilityZone:   aws.String("us-west-2a"),
+		AvailabilityZoneId: aws.String("usw2-az2"),
+		Events: []types.VolumeStatusEvent{
+			{
+				Description: aws.String("I/O throughput (0%) is severely impacted"),
+				EventId:     aws.String("evol-13428613"),
+				EventType:   aws.String("io-performance:stalled"),
+				NotBefore:   aws.Time(time.Date(2026, 10, 21, 16, 51, 42, 0, time.UTC)),
+			},
+		},
+		VolumeId: aws.String("vol-041d64aaa8be8ddb4"),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("stalled")},
+			},
+			Status: types.VolumeStatusInfoStatusImpaired,
+		},
+	}
+	// The same gp3 volume after the pause. The ended event keeps its io-performance:stalled type.
+	gp3RecoveredVolumeStatus = types.VolumeStatusItem{
+		Actions:            []types.VolumeStatusAction{},
+		AvailabilityZone:   aws.String("us-west-2a"),
+		AvailabilityZoneId: aws.String("usw2-az2"),
+		Events: []types.VolumeStatusEvent{
+			{
+				Description: aws.String("I/O throughput (> 90%) is as expected"),
+				EventId:     aws.String("evol-e6730ad8"),
+				EventType:   aws.String("io-performance:stalled"),
+				NotAfter:    aws.Time(time.Date(2026, 10, 21, 17, 1, 42, 0, time.UTC)),
+				NotBefore:   aws.Time(time.Date(2026, 10, 21, 16, 51, 42, 0, time.UTC)),
+			},
+		},
+		VolumeId: aws.String("vol-041d64aaa8be8ddb4"),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("normal")},
+			},
+			Status: types.VolumeStatusInfoStatusOk,
+		},
+	}
+	// A gp2 volume four minutes into the same pause. gp2 has no I/O performance check, so nothing changes.
+	gp2PausedVolumeStatus = types.VolumeStatusItem{
+		Actions:            []types.VolumeStatusAction{},
+		AvailabilityZone:   aws.String("us-west-2a"),
+		AvailabilityZoneId: aws.String("usw2-az2"),
+		Events:             []types.VolumeStatusEvent{},
+		VolumeId:           aws.String("vol-0ede047266c04ca29"),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("not-applicable")},
+			},
+			Status: types.VolumeStatusInfoStatusOk,
+		},
+	}
+	// The impaired volume from the example response in the EC2 DescribeVolumeStatus API reference. FIS can't make the
+	// io-enabled check fail.
+	ioDisabledVolumeStatus = types.VolumeStatusItem{
+		Actions: []types.VolumeStatusAction{
+			{
+				Code:        aws.String("enable-volume-io"),
+				Description: aws.String("THIS IS AN EXAMPLE"),
+				EventId:     aws.String("evol-61a54008"),
+				EventType:   aws.String("potential-data-inconsistency"),
+			},
+		},
+		AvailabilityZone: aws.String("us-east-1d"),
+		Events: []types.VolumeStatusEvent{
+			{
+				Description: aws.String("THIS IS AN EXAMPLE"),
+				EventId:     aws.String("evol-61a54008"),
+				EventType:   aws.String("potential-data-inconsistency"),
+				NotAfter:    aws.Time(time.Date(2011, 12, 1, 15, 0, 0, 0, time.UTC)),
+				NotBefore:   aws.Time(time.Date(2011, 12, 1, 14, 0, 0, 0, time.UTC)),
+			},
+		},
+		VolumeId: aws.String("vol-1234567890abcdef1"),
+		VolumeStatus: &types.VolumeStatusInfo{
+			Details: []types.VolumeStatusDetails{
+				{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("failed")},
+			},
+			Status: types.VolumeStatusInfoStatusImpaired,
+		},
+	}
+
+	ioDisabledHealthStatus = &csi.VolumeHealth_VolumeHealthEntry{
+		Status:  csi.VolumeHealthErrorType_INACCESSIBLE,
+		Reason:  "IODisabled",
+		Message: "I/O to the volume is disabled (EC2 volume status check io-enabled: failed)",
+	}
+	ioPerformanceStalledHealthStatus = &csi.VolumeHealth_VolumeHealthEntry{
+		Status:  csi.VolumeHealthErrorType_INACCESSIBLE,
+		Reason:  "IOPerformanceStalled",
+		Message: "I/O to the volume is stalled (EC2 volume status check io-performance: stalled)",
+	}
+	ioPerformanceSeverelyDegradedHealthStatus = &csi.VolumeHealth_VolumeHealthEntry{
+		Status:  csi.VolumeHealthErrorType_DEGRADED,
+		Reason:  "IOPerformanceSeverelyDegraded",
+		Message: "I/O performance is severely degraded (EC2 volume status check io-performance: severely-degraded)",
+	}
+	ioPerformanceDegradedHealthStatus = &csi.VolumeHealth_VolumeHealthEntry{
+		Status:  csi.VolumeHealthErrorType_DEGRADED,
+		Reason:  "IOPerformanceDegraded",
+		Message: "I/O performance is degraded (EC2 volume status check io-performance: degraded)",
+	}
+)
+
+// volumeStatusWithDetails returns a copy of volumeStatus with the given status and status check results.
+func volumeStatusWithDetails(volumeStatus types.VolumeStatusItem, status types.VolumeStatusInfoStatus, details ...types.VolumeStatusDetails) types.VolumeStatusItem {
+	volumeStatus.VolumeStatus = &types.VolumeStatusInfo{
+		Details: details,
+		Status:  status,
+	}
+	return volumeStatus
+}
+
+func TestVolumeHealthStatuses(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		volumeStatus           types.VolumeStatusItem
+		expectedHealthStatuses []*csi.VolumeHealth_VolumeHealthEntry
+	}{
+		{
+			name:         "volume without status",
+			volumeStatus: types.VolumeStatusItem{VolumeId: aws.String("vol-041d64aaa8be8ddb4")},
+		},
+		{
+			name:         "new gp3 volume",
+			volumeStatus: gp3NewVolumeStatus,
+		},
+		{
+			name:                   "gp3 volume with paused I/O",
+			volumeStatus:           gp3PausedVolumeStatus,
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceStalledHealthStatus},
+		},
+		{
+			name:         "gp3 volume after paused I/O",
+			volumeStatus: gp3RecoveredVolumeStatus,
+		},
+		{
+			name:         "gp2 volume with paused I/O",
+			volumeStatus: gp2PausedVolumeStatus,
+		},
+		{
+			name:                   "volume with disabled I/O",
+			volumeStatus:           ioDisabledVolumeStatus,
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioDisabledHealthStatus},
+		},
+		// The cases below use documented status check results that EC2 didn't return in the FIS experiments.
+		{
+			name: "volume with severely degraded I/O performance",
+			volumeStatus: volumeStatusWithDetails(gp3PausedVolumeStatus, types.VolumeStatusInfoStatusWarning,
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("severely-degraded")},
+			),
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceSeverelyDegradedHealthStatus},
+		},
+		{
+			name: "volume with degraded I/O performance",
+			volumeStatus: volumeStatusWithDetails(gp3PausedVolumeStatus, types.VolumeStatusInfoStatusWarning,
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("degraded")},
+			),
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceDegradedHealthStatus},
+		},
+		{
+			name: "volume with disabled and stalled I/O",
+			volumeStatus: volumeStatusWithDetails(gp3PausedVolumeStatus, types.VolumeStatusInfoStatusImpaired,
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("failed")},
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("stalled")},
+			),
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioDisabledHealthStatus, ioPerformanceStalledHealthStatus},
+		},
+		{
+			name: "initializing volume with degraded I/O performance",
+			volumeStatus: volumeStatusWithDetails(gp3NewVolumeStatus, types.VolumeStatusInfoStatusWarning,
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoEnabled, Status: aws.String("passed")},
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameIoPerformance, Status: aws.String("degraded")},
+				types.VolumeStatusDetails{Name: types.VolumeStatusNameInitializationState, Status: aws.String("initializing")},
+			),
+			expectedHealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceDegradedHealthStatus},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			healthStatuses := volumeHealthStatuses(&tc.volumeStatus)
+			if diff := cmp.Diff(tc.expectedHealthStatuses, healthStatuses, protocmp.Transform()); diff != "" {
+				t.Fatalf("volumeHealthStatuses() returned unexpected health statuses (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestVolumeHealthStatusFields(t *testing.T) {
+	// The CO writes the reason and message to pvc.status.healthStatus, where the API server rejects a reason that is not a
+	// valid condition reason. The CSI spec limits strings to 128 bytes.
+	for _, healthStatus := range []*csi.VolumeHealth_VolumeHealthEntry{
+		ioDisabledHealthStatus,
+		ioPerformanceStalledHealthStatus,
+		ioPerformanceSeverelyDegradedHealthStatus,
+		ioPerformanceDegradedHealthStatus,
+	} {
+		assert.Empty(t, metav1validation.IsValidConditionReason(healthStatus.GetReason()), healthStatus.GetReason())
+		assert.LessOrEqual(t, len(healthStatus.GetReason()), 128, healthStatus.GetReason())
+		assert.LessOrEqual(t, len(healthStatus.GetMessage()), 128, healthStatus.GetMessage())
+	}
+}
+
+func TestControllerGetVolumeHealth(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		volumeID             string
+		volumeStatus         *types.VolumeStatusItem
+		cloudErr             error
+		expectCloudCall      bool
+		expectedVolumeHealth *csi.VolumeHealth
+		expectedCode         codes.Code
+	}{
+		{
+			name:            "success: healthy volume",
+			volumeID:        "vol-041d64aaa8be8ddb4",
+			volumeStatus:    &gp3RecoveredVolumeStatus,
+			expectCloudCall: true,
+			expectedVolumeHealth: &csi.VolumeHealth{
+				VolumeId: "vol-041d64aaa8be8ddb4",
+			},
+		},
+		{
+			name:            "success: unhealthy volume",
+			volumeID:        "vol-041d64aaa8be8ddb4",
+			volumeStatus:    &gp3PausedVolumeStatus,
+			expectCloudCall: true,
+			expectedVolumeHealth: &csi.VolumeHealth{
+				VolumeId:       "vol-041d64aaa8be8ddb4",
+				HealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceStalledHealthStatus},
+			},
+		},
+		{
+			name:     "success: node-local volume",
+			volumeID: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			expectedVolumeHealth: &csi.VolumeHealth{
+				VolumeId: NodeLocalVolumeHandlePrefix + "dev/xvdf",
+			},
+		},
+		{
+			name:         "fail: no volume ID",
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:            "fail: volume not found",
+			volumeID:        "vol-073d6bf3ff0db637b",
+			cloudErr:        cloud.ErrNotFound,
+			expectCloudCall: true,
+			expectedCode:    codes.NotFound,
+		},
+		{
+			name:            "fail: cloud error",
+			volumeID:        "vol-041d64aaa8be8ddb4",
+			cloudErr:        errors.New("RequestLimitExceeded"),
+			expectCloudCall: true,
+			expectedCode:    codes.Internal,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			awsDriver, _, mockCloud := createControllerService(t)
+			if tc.expectCloudCall {
+				mockCloud.EXPECT().GetVolumeStatus(gomock.Eq(t.Context()), gomock.Eq(tc.volumeID)).Return(tc.volumeStatus, tc.cloudErr)
+			}
+
+			resp, err := awsDriver.ControllerGetVolumeHealth(t.Context(), &csi.ControllerGetVolumeHealthRequest{VolumeId: tc.volumeID})
+			if tc.expectedCode != codes.OK {
+				checkExpectedErrorCode(t, err, tc.expectedCode)
+				return
+			}
+			require.NoError(t, err)
+			if diff := cmp.Diff(tc.expectedVolumeHealth, resp.GetVolumeHealth(), protocmp.Transform()); diff != "" {
+				t.Fatalf("ControllerGetVolumeHealth() returned unexpected volume health (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestControllerListVolumeHealth(t *testing.T) {
+	// DescribeVolumeStatus NextTokens are 364 bytes, more than the 128 bytes CSI allows for next_token.
+	ec2NextToken := strings.Repeat("t", 364)
+
+	t.Run("success: one page", func(t *testing.T) {
+		awsDriver, _, mockCloud := createControllerService(t)
+		mockCloud.EXPECT().ListVolumeStatuses(gomock.Eq(t.Context()), gomock.Eq(int32(0)), gomock.Eq("")).Return(&cloud.ListVolumeStatusesResponse{
+			VolumeStatuses: []types.VolumeStatusItem{gp3PausedVolumeStatus, gp3RecoveredVolumeStatus, ioDisabledVolumeStatus},
+		}, nil)
+
+		resp, err := awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{})
+		require.NoError(t, err)
+		expected := &csi.ControllerListVolumeHealthResponse{
+			Entries: []*csi.VolumeHealth{
+				{
+					VolumeId:       "vol-041d64aaa8be8ddb4",
+					HealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioPerformanceStalledHealthStatus},
+				},
+				{
+					VolumeId:       "vol-1234567890abcdef1",
+					HealthStatuses: []*csi.VolumeHealth_VolumeHealthEntry{ioDisabledHealthStatus},
+				},
+			},
+		}
+		if diff := cmp.Diff(expected, resp, protocmp.Transform()); diff != "" {
+			t.Fatalf("ControllerListVolumeHealth() returned unexpected response (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("success: pages", func(t *testing.T) {
+		awsDriver, _, mockCloud := createControllerService(t)
+		gomock.InOrder(
+			mockCloud.EXPECT().ListVolumeStatuses(gomock.Eq(t.Context()), gomock.Eq(int32(5)), gomock.Eq("")).Return(&cloud.ListVolumeStatusesResponse{
+				NextToken: ec2NextToken,
+			}, nil),
+			mockCloud.EXPECT().ListVolumeStatuses(gomock.Eq(t.Context()), gomock.Eq(int32(5)), gomock.Eq(ec2NextToken)).Return(&cloud.ListVolumeStatusesResponse{
+				VolumeStatuses: []types.VolumeStatusItem{gp3PausedVolumeStatus},
+			}, nil),
+		)
+
+		// EC2 filters after paginating, so a page can be empty and still have more pages after it.
+		resp, err := awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{MaxEntries: 5})
+		require.NoError(t, err)
+		assert.Empty(t, resp.GetEntries())
+		assert.NotEmpty(t, resp.GetNextToken())
+		assert.LessOrEqual(t, len(resp.GetNextToken()), 128)
+
+		resp, err = awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{MaxEntries: 5, StartingToken: resp.GetNextToken()})
+		require.NoError(t, err)
+		assert.Len(t, resp.GetEntries(), 1)
+		assert.Empty(t, resp.GetNextToken())
+	})
+
+	t.Run("fail: unknown starting token", func(t *testing.T) {
+		awsDriver, _, _ := createControllerService(t)
+		_, err := awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{StartingToken: ec2NextToken})
+		checkExpectedErrorCode(t, err, codes.Aborted)
+	})
+
+	t.Run("fail: negative max entries", func(t *testing.T) {
+		awsDriver, _, _ := createControllerService(t)
+		_, err := awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{MaxEntries: -1})
+		checkExpectedErrorCode(t, err, codes.InvalidArgument)
+	})
+
+	errorTestCases := []struct {
+		name         string
+		maxEntries   int32
+		cloudErr     error
+		expectedCode codes.Code
+	}{
+		{
+			name:         "fail: max entries below the EC2 minimum",
+			maxEntries:   1,
+			cloudErr:     cloud.ErrInvalidMaxResults,
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name:         "fail: cloud error",
+			cloudErr:     errors.New("RequestLimitExceeded"),
+			expectedCode: codes.Internal,
+		},
+	}
+	for _, tc := range errorTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			awsDriver, _, mockCloud := createControllerService(t)
+			mockCloud.EXPECT().ListVolumeStatuses(gomock.Eq(t.Context()), gomock.Eq(tc.maxEntries), gomock.Eq("")).Return(nil, tc.cloudErr)
+
+			_, err := awsDriver.ControllerListVolumeHealth(t.Context(), &csi.ControllerListVolumeHealthRequest{MaxEntries: tc.maxEntries})
+			checkExpectedErrorCode(t, err, tc.expectedCode)
+		})
+	}
+}
+
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
 	t.Helper()
 	if err == nil {
@@ -6455,9 +6885,10 @@ func createControllerService(t *testing.T) (ControllerService, *gomock.Controlle
 	mockCtl := gomock.NewController(t)
 	mockCloud := cloud.NewMockCloud(mockCtl)
 	awsDriver := ControllerService{
-		cloud:    mockCloud,
-		inFlight: internal.NewInFlight(),
-		options:  &Options{},
+		cloud:              mockCloud,
+		inFlight:           internal.NewInFlight(),
+		options:            &Options{},
+		volumeHealthTokens: expiringcache.New[string, string](volumeHealthTokenExpiration),
 	}
 	return awsDriver, mockCtl, mockCloud
 }
