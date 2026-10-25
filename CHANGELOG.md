@@ -1,3 +1,32 @@
+# v1.67.2
+
+## Changes by Kind
+
+
+### Uncategorized
+
+- Upgrade base images and sidecar images. ([#3074](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3074), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+<details><summary>Added</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details><summary>Changed</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details><summary>Removed</summary>
+
+_Nothing has changed._
+
+</details>
+
 # v1.67.1
 
 ## Changes by Kind
