@@ -25,7 +25,7 @@ In order to take advantage of this feature, the following prerequisites must be 
 - EBS CSI Driver version `v1.46.0` or later
 - The EBS CSI Driver must be using [IMDS Metadata](install.md#imds-ec2-metadata)
   * IMDS must be the only enabled or preferred metadata source
-  * The EBS CSI Driver node pods must be able to access IMDS (when using IMDSv2, a hop limit of 2 or greater is required)
+  * The EBS CSI Driver node pods must be able to access IMDS: run them with host networking (Helm parameter `node.hostNetwork: true`). Don't raise the IMDSv2 hop limit to 2 instead, which exposes IMDS to every pod on the node
 
 _Note: If the Kubernetes version is upgraded or the feature gate is enabled after the driver is installed, a re-installation or upgrade is necessary to enable the feature (this will cause the appropriate configuration to be rendered in the Kubernetes `CSIDriver` object)._
 
@@ -217,7 +217,7 @@ Containers:
 
 The driver supports the use of [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) (Instance Metadata Service Version 2).
 
-To use IMDSv2 with the driver in a containerized environment like Amazon EKS, please ensure that the hop limit for IMDSv2 responses is set to 2 or greater. This is because the default hop limit of 1 is incompatible with containerized applications on Kubernetes that run in a separate network namespace from the instance.
+To use IMDSv2 with the driver in a containerized environment like Amazon EKS, run the node pods with host networking (Helm parameter `node.hostNetwork: true`), so that the IMDSv2 hop limit of 1 still works. Don't set the hop limit to 2: it applies to the whole instance, so it exposes IMDS, and the node's IAM credentials, to every pod on the node.
 
 ## XFS on Older Kernels (e.g. Amazon Linux 2)
 

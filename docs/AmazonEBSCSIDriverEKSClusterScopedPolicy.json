@@ -113,6 +113,20 @@
       }
     },
     {
+      "Sid": "AttachDetachVolumesToEKSStandardTaggedInstance",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:DetachVolume"
+      ],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/eks:eks-cluster-name": "${aws:PrincipalTag/eks-cluster-name}"
+        }
+      }
+    },
+    {
       "Sid": "AttachDetachVolumesToManuallyTaggedInstance",
       "Effect": "Allow",
       "Action": [

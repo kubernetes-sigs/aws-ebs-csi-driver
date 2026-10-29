@@ -8,9 +8,9 @@
 
 * Important: If you intend to use the Volume Snapshot feature, the [Kubernetes Volume Snapshot CRDs](https://github.com/kubernetes-csi/external-snapshotter/tree/master/client/config/crd) must be installed **before** the EBS CSI driver. For installation instructions, see [CSI Snapshotter Usage](https://github.com/kubernetes-csi/external-snapshotter#usage).
 
-### Metadata
+### Instance type, zone, and attachment limit metadata sources
 
-The EBS CSI Driver uses a metadata source in order to gather necessary information about the environment to function. The driver currently supports two metadata sources: [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) or Kubernetes.
+The EBS CSI Driver needs to know which instance it runs on (instance ID and type), its region and Availability Zone, and how many EBS volumes the node can still attach, which it reports to Kubernetes for scheduling. It reads this from a metadata source. The driver currently supports three metadata sources: [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html), Kubernetes, and the (alpha) metadata labeler.
 
 The controller `Deployment` can skip metadata if the region is provided via the `AWS_REGION` environment variable (Helm parameter `controller.region`). The node `DaemonSet` requires metadata and will not function without access to one of the sources.
 
@@ -18,13 +18,15 @@ You may override the default metadata behavior of attempting IMDS, then falling 
 
 #### IMDS (EC2) Metadata
 
-If the driver is able to access IMDS, it will utilize that as a preferred source of metadata. The EBS CSI Driver supports IMDSv1 and IMDSv2 (and will prefer IMDSv2 if both are available). However, by default, [IMDSv2 uses a hop limit of 1](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html#instance-metadata-v2-how-it-works). That will prevent the driver from accessing IMDSv2 if run inside a container with the default IMDSv2 configuration.
+If the driver is able to access IMDS, it will utilize that as a preferred source of metadata. IMDS is the only source that reports the ENIs and EBS volumes attached to the instance, which the node needs to compute its volume attachment limit (see [Kubernetes Metadata](#kubernetes-metadata)).
 
-In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit). CNI plugins other than the [Amazon VPC CNI plugin](https://github.com/aws/amazon-vpc-cni-k8s) may add additional routing layers and necessitate a higher hop limit. Consult the documentation of your CNI plugin as needed.
+The EBS CSI Driver supports IMDSv1 and IMDSv2 (and will prefer IMDSv2 if both are available). With IMDSv2's [default hop limit of 1](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html#instance-metadata-v2-how-it-works), a pod in its own network namespace cannot reach IMDS. To give the node pods access to IMDS, run them with host networking (Helm parameter `node.hostNetwork: true`), so that the hop limit of 1 still works.
+
+Don't raise the hop limit to 2 instead: it is set per instance, so it exposes IMDS, and the node's IAM instance role credentials, to every pod on the node. Only the node pods need IMDS; set `controller.region` so that the controller does not.
 
 #### Kubernetes Metadata
 
-By default, if the driver is unable to reach IMDS, it will fall back to using the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
+With this source, the driver reads its metadata from the Kubernetes API. For this metadata source to work, the driver pods must have access to the Kubernetes API server. Additionally, the Kubernetes node objects must include the following information:
 
 - Instance ID (in the `Node`'s `ProviderID`)
 - Instance Type (in the label `node.kubernetes.io/instance-type`)
@@ -33,7 +35,7 @@ By default, if the driver is unable to reach IMDS, it will fall back to using th
 
 These values are typically set by the [AWS CCM](https://github.com/kubernetes/cloud-provider-aws). You must have the AWS CCM or a similar tool installed in your cluster providing these values for Kubernetes metadata to function.
 
-Kubernetes metadata does not provide information about the number of ENIs or EBS volumes attached to an instance. Thus, when performing volume limit calculations, node pods using Kubernetes metadata will assume one ENI and one EBS volume (the root volume) is attached.
+Kubernetes metadata does not provide information about the number of ENIs or EBS volumes attached to an instance. Thus, when performing volume limit calculations, node pods using Kubernetes metadata will assume one ENI and one EBS volume (the root volume) is attached. On instance types with a [shared volume attachment limit](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html), where ENIs and NVMe instance store volumes count against the same limit as EBS volumes, the node can over-report how many volumes it can attach (see [#2543](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2543)). The metadata labeler below provides these counts without IMDS access. A future Kubernetes feature, `CSIControllerGetNodeInfo` ([KEP-6011](https://github.com/kubernetes/enhancements/issues/6011), targeting alpha in Kubernetes v1.38), will let the driver's controller report each node's attachment limit, so that nodes can use Kubernetes metadata without IMDS.
 
 #### Metadata Labeler
 
@@ -54,17 +56,23 @@ To enable this metadata source:
 > [!NOTE]  
 > The example policy and documentation below use the [`aws` partition in ARNs](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html). When installing the EBS CSI Driver on other partitions, replace instances of `arn:aws:` with the local partition, such as `arn:aws-us-gov:` for AWS GovCloud.
 
-The driver requires IAM permissions to talk to Amazon EBS to manage the volume on user's behalf. [The example policy here](./AmazonEBSCSIDriverPolicyV2.json) defines these permissions. AWS maintains a [managed policy version of the example policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonEBSCSIDriverPolicyV2.html), available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicyV2`.
+The driver requires IAM permissions to talk to Amazon EBS to manage volumes on the user's behalf. Only the controller (`ebs-csi-controller-sa`) needs AWS credentials. There are two policies to choose from:
 
-The baseline example policy scopes permissions to volumes and snapshots crated by the EBS CSI Driver. Review the following if this affects your workflow:
+* **`AmazonEBSCSIDriverEKSClusterScopedPolicy` (recommended for new EKS clusters)**: [The example policy here](./AmazonEBSCSIDriverEKSClusterScopedPolicy.json) matches the [AWS managed policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonEBSCSIDriverEKSClusterScopedPolicy.html), available at ARN `arn:aws:iam::aws:policy/AmazonEBSCSIDriverEKSClusterScopedPolicy`. It limits each cluster's driver to the volumes and snapshots tagged `ebs.csi.aws.com/cluster-name=<cluster name>`, so clusters that share an AWS account are isolated from each other. It requires [EKS Pod Identity](#eks-only-eks-pod-identity), which supplies the cluster name, and `controller.k8sTagClusterId` (`--k8s-tag-cluster-id`) set to the EKS cluster name, so that the driver adds that tag to the volumes and snapshots it creates. A volume or snapshot carries one cluster name, so this policy cannot share resources between clusters.
+* **`AmazonEBSCSIDriverPolicyV2`**: [The example policy here](./AmazonEBSCSIDriverPolicyV2.json) defines these permissions. AWS maintains a [managed policy version of the example policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonEBSCSIDriverPolicyV2.html), available at ARN `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicyV2`. It scopes the driver to volumes and snapshots tagged `ebs.csi.aws.com/cluster=true`, a tag every cluster's driver writes. Use it when volumes or snapshots move between clusters in one account, for example to statically provision a volume or restore a snapshot that another cluster created. It does not isolate clusters from each other. Use it also with IRSA, a `Secret`, or anywhere EKS Pod Identity is not available.
+
+> [!IMPORTANT]
+> The `AmazonEBSCSIDriverEKSClusterScopedPolicy` steps below are for new clusters. In an existing cluster, volumes and snapshots created before `controller.k8sTagClusterId` was set have no `ebs.csi.aws.com/cluster-name` tag, so the policy denies attaching, resizing, snapshotting, restoring or deleting them. Set `controller.k8sTagClusterId` first, then tag the existing volumes and snapshots (and any self-managed node instances) `ebs.csi.aws.com/cluster-name=<cluster name>` before you replace `AmazonEBSCSIDriverPolicyV2` with this policy.
+
+Both policies scope permissions by tag to the volumes and snapshots the EBS CSI Driver created. Review the following if this affects your workflow:
 
 <details>
 <summary>Static provisioning (importing externally-created volumes or snapshots)</summary>
 <br>
-<code>AmazonEBSCSIDriverPolicyV2</code> scopes permissions to volumes and snapshots tagged with <code>ebs.csi.aws.com/cluster: true</code>. The driver automatically applies this tag to dynamically provisioned resources. If you use <a href="https://github.com/kubernetes-sigs/aws-ebs-csi-driver/tree/master/examples/kubernetes/static-provisioning">static provisioning</a> (i.e. importing externally-created EBS volumes or snapshots), you must manually tag those resources with <code>ebs.csi.aws.com/cluster: true</code> for the driver to manage them. For more details, see <a href="https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2918">the announcement</a>.
+<code>AmazonEBSCSIDriverPolicyV2</code> scopes permissions to volumes and snapshots tagged with <code>ebs.csi.aws.com/cluster: true</code>, and <code>AmazonEBSCSIDriverEKSClusterScopedPolicy</code> to those tagged with <code>ebs.csi.aws.com/cluster-name: &lt;cluster name&gt;</code>. The driver automatically applies both tags to dynamically provisioned resources (the second one when <code>controller.k8sTagClusterId</code> is set). If you use <a href="https://github.com/kubernetes-sigs/aws-ebs-csi-driver/tree/master/examples/kubernetes/static-provisioning">static provisioning</a> (i.e. importing externally-created EBS volumes or snapshots), you must manually tag those resources with the tag your policy checks for the driver to manage them. For more details, see <a href="https://github.com/kubernetes-sigs/aws-ebs-csi-driver/issues/2918">the announcement</a>.
 </details>
 
-The baseline example policy also excludes permissions for some rarer and potentially dangerous usecases. For these usecases, additional statements are necessary:
+Both policies also exclude permissions for some rarer and potentially dangerous usecases. For these usecases, additional statements are necessary:
 
 <details>
 <summary>Encrypted EBS Volumes via KMS</summary>
@@ -86,7 +94,7 @@ To create and manage encrypted EBS volumes, the EBS CSI Driver requires access t
 <details>
 <summary>Modifying tags of existing volumes</summary>
 <br>
-Modification of tags of existing volumes can, in some configurations, allow the driver to bypass tag-based policies and restrictions, so it is not included in the default policy. Below is an example statement that will grant the EBS CSI Driver the ability to modify tags of any volume or snapshot:
+Both policies let the driver modify tags (for VolumeAttributesClass tag changes) only on volumes it manages, and never the tags the policies check. Modification of tags of other volumes and snapshots can allow the driver to bypass tag-based policies and restrictions, so it is not included in either policy. Do not add it alongside <code>AmazonEBSCSIDriverEKSClusterScopedPolicy</code>: the driver could then tag any volume or snapshot for its own cluster, which defeats cluster isolation. Below is an example statement that will grant the EBS CSI Driver the ability to modify tags of any volume or snapshot:
 <pre>
 { 
   "Effect": "Allow",
@@ -109,9 +117,62 @@ There are several options to pass credentials to the EBS CSI Driver, each docume
 
 When using EKS pod identity with the EBS CSI Driver, [configure the role's trust policy and assign it](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-association.html) to the `ebs-csi-controller-sa` service account in the namespace the EBS CSI Driver is deployed (typically `kube-system`). Using EKS Pod Identity requires [installation of the EKS Pod Identity agent](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-agent-setup.html) if it is not already installed on the cluster.
 
+To use `AmazonEBSCSIDriverEKSClusterScopedPolicy` with EKS Pod Identity, follow these steps. One IAM role and policy can be shared by every cluster in the account, and each cluster's driver is still limited to its own volumes and snapshots: the trust policy names no cluster, and EKS adds the cluster name to the credentials as the `eks-cluster-name` session tag. Create the role once, and repeat steps 1, 3 and 4 for each cluster.
+
+1. Install the EKS Pod Identity Agent add-on, if it is not already installed. The agent must be installed as an EKS add-on; the driver itself can be installed with Helm, Kustomize or as the EKS add-on.
+   ```sh
+   aws eks create-addon --cluster-name my-cluster --addon-name eks-pod-identity-agent
+   ```
+
+2. Create a role with the standard [EKS Pod Identity trust policy](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-role.html), and attach the managed policy:
+   ```sh
+   aws iam create-role --role-name ebs-csi-driver-cluster-scoped \
+     --assume-role-policy-document file://pod-identity-trust-policy.json
+   aws iam attach-role-policy --role-name ebs-csi-driver-cluster-scoped \
+     --policy-arn arn:aws:iam::aws:policy/AmazonEBSCSIDriverEKSClusterScopedPolicy
+   ```
+   Optionally, also attach a policy that denies EC2 calls outside the cluster's region; see [below](#optional-limit-the-driver-to-its-clusters-region).
+
+3. Associate the role with the controller service account. Do this before you install the driver, so that the first controller pod gets credentials:
+   ```sh
+   aws eks create-pod-identity-association --cluster-name my-cluster --namespace kube-system \
+     --service-account ebs-csi-controller-sa \
+     --role-arn arn:aws:iam::111122223333:role/ebs-csi-driver-cluster-scoped
+   ```
+
+4. When you [deploy the driver](#deploy-driver), set the cluster ID to the EKS cluster name, because the policy compares the `ebs.csi.aws.com/cluster-name` tag with the `eks-cluster-name` session tag:
+   ```sh
+   helm upgrade --install aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --namespace kube-system \
+     --set controller.k8sTagClusterId=my-cluster
+   ```
+   Without Helm, pass `--k8s-tag-cluster-id=my-cluster` to the `controller` command.
+
+##### Optional: limit the driver to its cluster's region
+
+`AmazonEBSCSIDriverEKSClusterScopedPolicy` allows every region. The driver makes no cross-region calls, so you can also attach this deny-only policy to the role. It denies every EC2 call outside the region of the cluster named by the `eks-cluster-arn` session tag:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyEC2OutsideClusterRegion",
+      "Effect": "Deny",
+      "Action": "ec2:*",
+      "Resource": "*",
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalTag/eks-cluster-arn": "arn:*:eks:${aws:RequestedRegion}:*:cluster/*"
+        }
+      }
+    }
+  ]
+}
+```
+A deny-only policy grants nothing, so it is safe to attach alongside any allow policy. It fails closed: credentials without the `eks-cluster-arn` session tag (anything other than EKS Pod Identity) are denied every EC2 call. It covers only `ec2:*`, so the KMS calls EBS makes on the driver's behalf for encrypted volumes are not affected.
+
 #### IAM Roles for ServiceAccounts (i.e. IRSA)
 
-[IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) is a method of enabling pods using a Kubernetes ServiceAccount to exchange the service account token for IAM credentials. Using IRSA requires a specially configured trust policy on the role, as well as setup of an OIDC endpoint for the cluster. On EKS, [refer to the EKS docs for setting up IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html#:~:text=Enable%20IAM%20roles%20for%20service%20accounts%20by%20completing%20the%20following%20procedures:). On other cluster providers, refer to their documentation for steps to setup IRSA.
+[IAM roles for ServiceAccounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) is a method of enabling pods using a Kubernetes ServiceAccount to exchange the service account token for IAM credentials. Using IRSA requires a specially configured trust policy on the role, as well as setup of an OIDC endpoint for the cluster. On EKS, [refer to the EKS docs for setting up IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html#:~:text=Enable%20IAM%20roles%20for%20service%20accounts%20by%20completing%20the%20following%20procedures:). On self-managed clusters, IRSA requires a public OIDC issuer for the cluster, an IAM OIDC identity provider for that issuer, and the [`amazon-eks-pod-identity-webhook`](https://github.com/aws/amazon-eks-pod-identity-webhook) running in the cluster.
 
 When deploying via Helm, the parameter `controller.serviceAccount.annotations` can be used to add the necessary annotation for IRSA, for example with the following values:
 ```yaml
@@ -120,6 +181,8 @@ controller:
     annotations:
       eks.amazonaws.com/role-arn: arn:aws:iam::123412341234:role/ebs-csi-role
 ```
+
+`AmazonEBSCSIDriverEKSClusterScopedPolicy` does not work with IRSA, because IRSA credentials carry no cluster name. Use `AmazonEBSCSIDriverPolicyV2` with IRSA.
 
 #### Secret Object
 
@@ -130,12 +193,6 @@ awsAccessSecret:
   keyId: key_id # This is the name of the key on the secret that holds the AWS Key ID
   accessKey: access_key # This is the name of the key on the secret that holds the AWS Secret Access Key
 ```
-
-#### (Not Recommended) IAM Instance Profile
-
-[EC2 IAM Instance Profiles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) enable sharing IAM credentials with software running on EC2 instances. The policy must be attached to the instance IAM role, and the EBS CSI Driver must be able to reach IMDS in order to retrieve the credentials. In order for the driver to access IMDS, it either must be run in host networking mode, or with a [hop limit of at least 2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-existing-instances.html#modify-PUT-response-hop-limit).
-
-This method is not recommended in production environments because any pod or software running on the node with access to IMDS could assume the role and access the wide permissions of the EBS CSI Driver, violating the best practice of [restricting pod access to the instance role](https://aws.github.io/aws-eks-best-practices/security/docs/iam/#restrict-access-to-the-instance-profile-assigned-to-the-worker-node).
 
 ### Configure driver toleration settings
 By default, the driver controller tolerates taint `CriticalAddonsOnly` and has `tolerationSeconds` configured as `300`; and the driver node tolerates all taints. If you don't want to deploy the driver node on all nodes, please set Helm `Value.node.tolerateAllTaints` to false before deployment. Add policies to `Value.node.tolerations` to configure customized toleration for nodes.
