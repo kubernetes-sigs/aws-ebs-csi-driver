@@ -1,0 +1,80 @@
+{{- if and (not .Values.nodeComponentOnly) .Values.controller.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ebs-csi-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "aws-ebs-csi-driver.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: ebs-csi-controller
+      {{- include "aws-ebs-csi-driver.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Always allow kubelet health checks against the ebs-plugin container,
+    # regardless of any additional rules supplied below.
+    - ports:
+        - protocol: TCP
+          port: 9808
+    {{- if .Values.controller.enableMetrics }}
+    # Always allow metrics scraping on the controller + sidecar metrics ports
+    # when metrics are enabled, regardless of any additional rules below.
+    - ports:
+        - protocol: TCP
+          port: 3301
+        - protocol: TCP
+          port: 3302
+        - protocol: TCP
+          port: 3303
+        - protocol: TCP
+          port: 3304
+        - protocol: TCP
+          port: 3305
+        - protocol: TCP
+          port: 3306
+        - protocol: TCP
+          port: 3307
+    {{- end }}
+    {{- with .Values.controller.networkPolicy.ingress }}
+    # Additional user-supplied ingress rules, appended to the defaults above.
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  egress:
+    # Always allow DNS resolution and HTTPS (EC2/EBS/KMS/STS API calls,
+    # kube-apiserver, etc.), regardless of any additional rules below.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+    # Always allow IMDS access (IPv4 + IPv6), required when the controller is
+    # not using IRSA/Pod Identity and falls back to the node's IAM instance role.
+    - to:
+        - ipBlock:
+            cidr: 169.254.169.254/32
+        - ipBlock:
+            cidr: fd00:ec2::254/128
+      ports:
+        - protocol: TCP
+          port: 80
+    # Always allow EKS Pod Identity Agent access, required when using Pod Identity for controller credentials.
+    - to:
+        - ipBlock:
+            cidr: 169.254.170.23/32
+      ports:
+        - protocol: TCP
+          port: 80
+    {{- with .Values.controller.networkPolicy.egress }}
+    # Additional user-supplied egress rules, appended to the defaults above.
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
