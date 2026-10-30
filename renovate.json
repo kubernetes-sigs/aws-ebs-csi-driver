@@ -1,0 +1,127 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "enabledManagers": ["gomod", "dockerfile", "github-actions", "cloudbuild", "pip_requirements", "custom.regex"],
+  "ignorePaths": ["**/node_modules/**", "**/bower_components/**", "**/vendor/**", "**/examples/**", "**/__fixtures__/**"],
+  "labels": ["dependencies", "ok-to-test"],
+  "commitBodyTable": false,
+  "automerge": false,
+  "pinDigests": true,
+  "schedule": ["* * * * 1"],
+  "prConcurrentLimit": 5,
+  "separateMajorMinor": false,
+  "separateMultipleMajor": false,
+  "groupSingleUpdates": true,
+  "prBodyNotes": ["/kind cleanup\n\n```release-note\nNONE\n```"],
+  "gomod": {
+    "postUpdateOptions": ["gomodTidyAll"]
+  },
+  "pip_requirements": {
+    "managerFilePatterns": ["/^hack/tools/.*-requirements\\.in$/"]
+  },
+  "packageRules": [
+    {
+      "description": "Pin container image digests",
+      "matchDatasources": ["docker"],
+      "pinDigests": true
+    },
+    {
+      "description": "Group dependency updates",
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest", "pinDigest", "bump"],
+      "groupName": "dependencies"
+    },
+    {
+      "description": "Group CI dependency updates",
+      "matchFileNames": [".github/workflows/**", "cloudbuild.yaml", "hack/tools/**", "charts/aws-ebs-csi-driver/values.yaml"],
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest", "pinDigest", "bump"],
+      "groupName": "CI dependencies"
+    },
+    {
+      "description": "Require approval for major upgrades",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Update the Go compiler in both modules",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["golang"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Preserve compatibility replacements",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["replace"],
+      "enabled": false
+    },
+    {
+      "description": "Update Kubernetes requirements and replacements together",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["k8s.io/**", "!k8s.io/klog/**", "!k8s.io/utils", "!k8s.io/kube-openapi"],
+      "enabled": true
+    },
+    {
+      "description": "Require approval for Kubernetes minor upgrades",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["k8s.io/**", "!k8s.io/klog/**", "!k8s.io/utils", "!k8s.io/kube-openapi"],
+      "matchUpdateTypes": ["minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Prevent client-go upgrade to retracted versions",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["k8s.io/client-go"],
+      "allowedVersions": "<1.0.0"
+    },
+    {
+      "description": "Keep the selected EKS Distro base image tags",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["public.ecr.aws/eks-distro-build-tooling/**"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "enabled": false
+    },
+    {
+      "description": "Keep Cloud Build images on dated release tags",
+      "matchPackageNames": ["gcr.io/k8s-staging-test-infra/gcb-docker-gcloud"],
+      "versioning": "regex:^v(?<patch>\\d{8})-[a-f0-9]+$"
+    },
+    {
+      "description": "Keep Helm test images on the master variant",
+      "matchPackageNames": ["us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e"],
+      "versioning": "regex:^v(?<patch>\\d{8})-[a-f0-9]+(?<compatibility>-master)$"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Tool versions next to GitHub source comments",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/tools/install\\.sh$/"],
+      "matchStrings": ["# https://github\\.com/(?<depName>[\\w-]+/[\\w.-]+)(?:/tags)?(?:\\r?\\n#[^\\r\\n]*)*\\r?\\n[A-Z_]+_VERSION=\"v?(?<currentValue>\\d+\\.\\d+\\.\\d+(?:-[^\"]+)?)\""],
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+(?:-[\\w.-]+)?)$"
+    },
+    {
+      "description": "Go vulnerability scanner",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/tools/install\\.sh$/"],
+      "matchStrings": ["GOVULNCHECK_VERSION=\"(?<currentValue>v[^\"]+)\""],
+      "depNameTemplate": "golang.org/x/vuln",
+      "datasourceTemplate": "go"
+    },
+    {
+      "description": "Kubetest2 pseudo-version",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/tools/install\\.sh$/"],
+      "matchStrings": ["KUBETEST2_VERSION=\"(?<currentValue>v[^\"]+)\""],
+      "depNameTemplate": "sigs.k8s.io/kubetest2",
+      "datasourceTemplate": "go"
+    },
+    {
+      "description": "Helm test image",
+      "customType": "regex",
+      "managerFilePatterns": ["/^charts/aws-ebs-csi-driver/values\\.yaml$/"],
+      "matchStrings": ["image: \"(?<depName>us-central1-docker\\.pkg\\.dev/k8s-staging-test-infra/images/kubekins-e2e):(?<currentValue>[^\"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\""],
+      "datasourceTemplate": "docker",
+      "autoReplaceStringTemplate": "image: \"{{{depName}}}:{{{newValue}}}{{#if newDigest}}@{{{newDigest}}}{{/if}}\""
+    }
+  ]
+}
