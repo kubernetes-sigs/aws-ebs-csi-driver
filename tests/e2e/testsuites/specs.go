@@ -187,9 +187,12 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 	By("setting up the PV")
 	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.PreProvisionedVolumeFsType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, volume.AccessMode, volumeMode, volume.AvailabilityZone)
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
-	tpv.Create()
+	createdPV := tpv.Create()
 	By("setting up the PVC")
 	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, nil, volume.AccessMode)
+	// Parallel specs create identical claims; an unpinned claim can bind to
+	// another spec's PV, whose EBS volume that spec then deletes.
+	tpvc.volumeName = createdPV.Name
 	tpvc.Create()
 	cleanupFuncs = append(cleanupFuncs, tpvc.DeleteBoundPersistentVolume)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)

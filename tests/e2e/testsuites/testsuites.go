@@ -323,6 +323,7 @@ type TestPersistentVolumeClaim struct {
 	persistentVolumeClaim          *v1.PersistentVolumeClaim
 	requestedPersistentVolumeClaim *v1.PersistentVolumeClaim
 	dataSource                     *v1.TypedLocalObjectReference
+	volumeName                     string
 }
 
 func NewTestPersistentVolumeClaim(c clientset.Interface, ns *v1.Namespace, claimSize string, volumeMode VolumeMode, sc *storagev1.StorageClass, accessMode v1.PersistentVolumeAccessMode) *TestPersistentVolumeClaim {
@@ -366,6 +367,7 @@ func (t *TestPersistentVolumeClaim) Create() {
 		storageClassName = t.storageClass.Name
 	}
 	t.requestedPersistentVolumeClaim = generatePVC(t.namespace.Name, storageClassName, t.claimSize, t.volumeMode, t.dataSource, t.accessMode)
+	t.requestedPersistentVolumeClaim.Spec.VolumeName = t.volumeName
 	t.persistentVolumeClaim, err = t.client.CoreV1().PersistentVolumeClaims(t.namespace.Name).Create(context.Background(), t.requestedPersistentVolumeClaim, metav1.CreateOptions{})
 	framework.ExpectNoError(err)
 }
