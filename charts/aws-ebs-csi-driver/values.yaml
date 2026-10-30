@@ -189,6 +189,25 @@ sidecars:
         type: RuntimeDefault
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
+  healthMonitor:
+    # ALPHA: Enable the csi-external-health-monitor-controller sidecar to report EC2 volume status checks as
+    # PersistentVolumeClaim health conditions. Requires Kubernetes 1.37+ and the CSIVolumeHealth feature gate on kube-apiserver.
+    enabled: false
+    env: []
+    image:
+      pullPolicy: IfNotPresent
+      repository: public.ecr.aws/csi-components/csi-external-health-monitor-controller
+      tag: "v0.19.0-eksbuild.2"
+    leaderElection:
+      enabled: true
+    logLevel: 2
+    additionalArgs: []
+    resources: {}
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
 proxy:
   http_proxy:
   no_proxy:

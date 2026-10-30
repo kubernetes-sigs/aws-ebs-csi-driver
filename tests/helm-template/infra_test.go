@@ -17,6 +17,7 @@ limitations under the License.
 package helmtemplate
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -729,6 +730,98 @@ func TestAdditionalDaemonSetsFalsyOverrides(t *testing.T) {
 		_, found := find(resources, "DaemonSet", "ebs-csi-node-extra-windows")
 		if found {
 			t.Error("additional DaemonSet with enableWindows=false should not render a Windows DaemonSet")
+		}
+	})
+}
+
+// TestHealthMonitor verifies that the csi-external-health-monitor-controller sidecar, its RBAC and its metrics
+// Service only render when sidecars.healthMonitor.enabled=true.
+func TestHealthMonitor(t *testing.T) {
+	const container = "csi-external-health-monitor-controller"
+
+	t.Run("disabledByDefault", func(t *testing.T) {
+		resources := renderChartWithSet(t, "controller.enableMetrics=true")
+		if hasContainer(podSpec(t, mustFind(t, resources, "Deployment", "ebs-csi-controller")), container) {
+			t.Errorf("controller should not have %s by default", container)
+		}
+		for kind, name := range map[string]string{
+			"ClusterRole":        "ebs-external-health-monitor-role",
+			"ClusterRoleBinding": "ebs-csi-health-monitor-binding",
+			"Service":            "ebs-csi-controller-health-monitor",
+		} {
+			_, found := find(resources, kind, name)
+			if found {
+				t.Errorf("%s/%s should not render by default", kind, name)
+			}
+		}
+	})
+
+	resources := renderChartWithSet(t, "sidecars.healthMonitor.enabled=true", "controller.enableMetrics=true")
+
+	t.Run("sidecar", func(t *testing.T) {
+		c := findContainer(t, podSpec(t, mustFind(t, resources, "Deployment", "ebs-csi-controller")), container)
+		for _, arg := range []string{"--csi-address=$(ADDRESS)", "--v=2", "--leader-election=true", "--http-endpoint=0.0.0.0:3308"} {
+			if !hasArg(c, arg) {
+				t.Errorf("%s should have %s, got args %v", container, arg, containerArgs(c))
+			}
+		}
+		hasAddress := slices.ContainsFunc(nestedSlice(t, c, "env"), func(e any) bool {
+			em, ok := e.(obj)
+			return ok && em["name"] == "ADDRESS" && em["value"] == "/var/lib/csi/sockets/pluginproxy/csi.sock"
+		})
+		if !hasAddress {
+			t.Errorf("%s should have the ADDRESS env var", container)
+		}
+		mountsSocket := slices.ContainsFunc(nestedSlice(t, c, "volumeMounts"), func(m any) bool {
+			mm, ok := m.(obj)
+			return ok && mm["name"] == "socket-dir" && mm["mountPath"] == "/var/lib/csi/sockets/pluginproxy/"
+		})
+		if !mountsSocket {
+			t.Errorf("%s should mount socket-dir", container)
+		}
+	})
+
+	t.Run("rbac", func(t *testing.T) {
+		// The rules are regenerated from the sidecar's rbac.yaml, so only check the one it needs to write PVC health.
+		cr := mustFind(t, resources, "ClusterRole", "ebs-external-health-monitor-role")
+		canPatchStatus := false
+		for _, rule := range nestedSlice(t, cr, "rules") {
+			rm := mustObj(t, rule)
+			if slices.Contains(nestedSlice(t, rm, "resources"), any("persistentvolumeclaims/status")) && slices.Contains(nestedSlice(t, rm, "verbs"), any("patch")) {
+				canPatchStatus = true
+			}
+		}
+		if !canPatchStatus {
+			t.Error("ClusterRole should allow patching persistentvolumeclaims/status")
+		}
+
+		crb := mustFind(t, resources, "ClusterRoleBinding", "ebs-csi-health-monitor-binding")
+		roleName, _ := nestedString(crb, "roleRef", "name")
+		if roleName != "ebs-external-health-monitor-role" {
+			t.Errorf("ClusterRoleBinding roleRef: got %q, want ebs-external-health-monitor-role", roleName)
+		}
+		subject := mustObj(t, nestedSlice(t, crb, "subjects")[0])
+		if subject["name"] != "ebs-csi-controller-sa" {
+			t.Errorf("ClusterRoleBinding subject: got %v, want ebs-csi-controller-sa", subject["name"])
+		}
+	})
+
+	t.Run("metrics", func(t *testing.T) {
+		svc := mustFind(t, resources, "Service", "ebs-csi-controller-health-monitor")
+		assertServiceHasPort(t, svc, "metrics", 3308)
+	})
+
+	t.Run("nonDefaults", func(t *testing.T) {
+		resources := renderChartWithSet(t, "sidecars.healthMonitor.enabled=true", "sidecars.healthMonitor.leaderElection.enabled=false",
+			"sidecars.healthMonitor.logLevel=5", "sidecars.healthMonitor.additionalArgs={--list-volumes-interval=10m}")
+		c := findContainer(t, podSpec(t, mustFind(t, resources, "Deployment", "ebs-csi-controller")), container)
+		for _, arg := range []string{"--leader-election=false", "--v=5", "--list-volumes-interval=10m"} {
+			if !hasArg(c, arg) {
+				t.Errorf("%s should have %s, got args %v", container, arg, containerArgs(c))
+			}
+		}
+		if hasArg(c, "--http-endpoint=0.0.0.0:3308") {
+			t.Errorf("%s should not serve metrics without controller.enableMetrics, got args %v", container, containerArgs(c))
 		}
 	})
 }

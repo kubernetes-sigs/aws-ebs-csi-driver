@@ -54,6 +54,15 @@ because the prometheus.io annotations don't allow specifying multiple ports */}}
   "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
   "Release" .Release "Capabilities" .Capabilities) -}}
 {{- end }}
+{{- if .Values.sidecars.healthMonitor.enabled }}
+{{- include "metrics" (dict
+  "Name" "ebs-csi-controller-health-monitor"
+  "TargetPod" "ebs-csi-controller"
+  "Port" 3308
+  "ServiceMonitor" .Values.controller.serviceMonitor
+  "EnableAnnotations" .Values.controller.enablePrometheusAnnotations
+  "Release" .Release "Capabilities" .Capabilities) -}}
+{{- end }}
 {{- end }}
 {{- if .Values.node.enableMetrics }}
 {{- include "metrics" (dict
