@@ -40,7 +40,7 @@ const (
 	DefaultSizeIncreaseGi = int32(1)
 
 	DefaultModificationTimeout   = 3 * time.Minute
-	DefaultResizeTimout          = 1 * time.Minute
+	DefaultResizeTimout          = 3 * time.Minute // one csi-resizer retry after its 60s ControllerExpandVolume deadline
 	DefaultK8sAPIPollingInterval = 5 * time.Second
 
 	Iops       = "iops"
