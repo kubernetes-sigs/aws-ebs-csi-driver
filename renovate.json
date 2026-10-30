@@ -54,16 +54,17 @@
       "enabled": false
     },
     {
-      "description": "Update Kubernetes requirements and replacements together",
+      "description": "Update Kubernetes requirements and replacements",
       "matchManagers": ["gomod"],
       "matchPackageNames": ["k8s.io/**", "!k8s.io/klog/**", "!k8s.io/utils", "!k8s.io/kube-openapi"],
       "enabled": true
     },
     {
-      "description": "Require approval for Kubernetes minor upgrades",
+      "description": "Group Kubernetes replacement updates",
       "matchManagers": ["gomod"],
-      "matchPackageNames": ["k8s.io/**", "!k8s.io/klog/**", "!k8s.io/utils", "!k8s.io/kube-openapi"],
-      "matchUpdateTypes": ["minor"],
+      "matchDepTypes": ["replace"],
+      "matchPackageNames": ["k8s.io/**"],
+      "groupName": "Kubernetes replacements",
       "dependencyDashboardApproval": true
     },
     {
