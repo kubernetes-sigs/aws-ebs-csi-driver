@@ -59,6 +59,10 @@ AMI_PARAMETER=${AMI_PARAMETER:-/aws/service/ami-amazon-linux-latest/al2023-ami-k
 AMI_ID=$(aws ssm get-parameters --names ${AMI_PARAMETER} --region ${AWS_REGION} --query 'Parameters[0].Value' --output text)
 
 CREATE_MISSING_ECR_REPO=${CREATE_MISSING_ECR_REPO:-"true"}
+# AWS FIS assumes this role to pause volume I/O in the [Disruptive] volume health e2e test
+CREATE_MISSING_FIS_ROLE=${CREATE_MISSING_FIS_ROLE:-"false"}
+FIS_ROLE_NAME=${FIS_ROLE_NAME:-ebs-csi-e2e-fis}
+export FIS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${FIS_ROLE_NAME}"
 IMAGE_NAME=${IMAGE_NAME:-${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/aws-ebs-csi-driver}
 IMAGE_TAG=${IMAGE_TAG:-$(md5sum <<<"${CLUSTER_NAME}.${CLUSTER_TYPE}" | awk '{ print $1 }')}
 IMAGE_ARCH=${IMAGE_ARCH:-amd64}

@@ -157,7 +157,8 @@ e2e/disruptive: bin/helm bin/ginkgo
 	GINKGO_SKIP="\[Flaky\]" \
 	GINKGO_PARALLEL=1 \
 	EBS_INSTALL_SNAPSHOT=false \
-	HELM_EXTRA_FLAGS="--set=sidecars.metadataLabeler.enabled=true,node.metadataSources='metadata-labeler'" \
+	CREATE_MISSING_FIS_ROLE=true \
+	HELM_EXTRA_FLAGS="--set=sidecars.metadataLabeler.enabled=true,node.metadataSources='metadata-labeler',sidecars.healthMonitor.enabled=true,sidecars.healthMonitor.additionalArgs[0]='--list-volumes-interval=1m'" \
 	./hack/e2e/run.sh
 
 .PHONY: e2e/external

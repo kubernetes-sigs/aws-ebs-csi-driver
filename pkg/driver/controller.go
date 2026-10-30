@@ -18,6 +18,8 @@ package driver
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"maps"
@@ -34,6 +36,7 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/coalescer"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver/internal"
+	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/expiringcache"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/plugin"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util/template"
@@ -59,11 +62,16 @@ var (
 		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 		csi.ControllerServiceCapability_RPC_MODIFY_VOLUME,
+		csi.ControllerServiceCapability_RPC_GET_VOLUME_HEALTH,
+		csi.ControllerServiceCapability_RPC_LIST_VOLUME_HEALTH,
 	}
 )
 
 const trueStr = "true"
 const isManagedByDriver = trueStr
+
+// volumeHealthTokenExpiration is how long a next_token returned by ControllerListVolumeHealth stays valid.
+const volumeHealthTokenExpiration = 10 * time.Minute
 
 // ControllerService represents the controller service of CSI driver.
 type ControllerService struct {
@@ -71,6 +79,9 @@ type ControllerService struct {
 	inFlight              *internal.InFlight
 	options               *Options
 	modifyVolumeCoalescer coalescer.Coalescer[modifyVolumeRequest, int32]
+	// volumeHealthTokens maps the next_token values returned by ControllerListVolumeHealth to EC2 NextTokens,
+	// which are longer than the 128 bytes the CSI spec allows for a string field.
+	volumeHealthTokens expiringcache.ExpiringCache[string, string]
 	rpc.UnimplementedModifyServer
 	csi.UnimplementedControllerServer
 }
@@ -82,6 +93,7 @@ func NewControllerService(c cloud.Cloud, o *Options) *ControllerService {
 		options:               o,
 		inFlight:              internal.NewInFlight(),
 		modifyVolumeCoalescer: newModifyVolumeCoalescer(c, o),
+		volumeHealthTokens:    expiringcache.New[string, string](volumeHealthTokenExpiration),
 	}
 }
 
@@ -757,6 +769,137 @@ func (d *ControllerService) ControllerModifyVolume(ctx context.Context, req *csi
 func (d *ControllerService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	klog.V(4).InfoS("ControllerGetVolume: called", "args", req)
 	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (d *ControllerService) ControllerGetVolumeHealth(ctx context.Context, req *csi.ControllerGetVolumeHealthRequest) (*csi.ControllerGetVolumeHealthResponse, error) {
+	klog.V(4).InfoS("ControllerGetVolumeHealth: called", "args", util.SanitizeRequest(req))
+
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	volumeHealth := &csi.VolumeHealth{VolumeId: volumeID}
+
+	// A node-local volume is a different EBS volume on each node, so there is no single volume to check.
+	if isNodeLocalVolume(volumeID) {
+		return &csi.ControllerGetVolumeHealthResponse{VolumeHealth: volumeHealth}, nil
+	}
+
+	volumeStatus, err := d.cloud.GetVolumeStatus(ctx, volumeID)
+	if err != nil {
+		if errors.Is(err, cloud.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "Volume %q not found", volumeID)
+		}
+		return nil, status.Errorf(codes.Internal, "Could not get health of volume %q: %v", volumeID, err)
+	}
+
+	volumeHealth.HealthStatuses = volumeHealthStatuses(volumeStatus)
+	return &csi.ControllerGetVolumeHealthResponse{VolumeHealth: volumeHealth}, nil
+}
+
+func (d *ControllerService) ControllerListVolumeHealth(ctx context.Context, req *csi.ControllerListVolumeHealthRequest) (*csi.ControllerListVolumeHealthResponse, error) {
+	klog.V(4).InfoS("ControllerListVolumeHealth: called", "args", util.SanitizeRequest(req))
+
+	maxEntries := req.GetMaxEntries()
+	if maxEntries < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "MaxEntries %d must not be negative", maxEntries)
+	}
+
+	var ec2NextToken string
+	startingToken := req.GetStartingToken()
+	if len(startingToken) != 0 {
+		token, ok := d.volumeHealthTokens.Get(startingToken)
+		if !ok {
+			return nil, status.Errorf(codes.Aborted, "Invalid starting token %q", startingToken)
+		}
+		ec2NextToken = *token
+	}
+
+	page, err := d.cloud.ListVolumeStatuses(ctx, maxEntries, ec2NextToken)
+	if err != nil {
+		if errors.Is(err, cloud.ErrInvalidMaxResults) {
+			return nil, status.Errorf(codes.InvalidArgument, "Error mapping MaxEntries to AWS MaxResults: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "Could not list volume health: %v", err)
+	}
+
+	// The CSI spec says the Plugin SHOULD omit volumes with no known adverse health condition.
+	var entries []*csi.VolumeHealth
+	for _, volumeStatus := range page.VolumeStatuses {
+		healthStatuses := volumeHealthStatuses(&volumeStatus)
+		if len(healthStatuses) == 0 {
+			continue
+		}
+		entries = append(entries, &csi.VolumeHealth{
+			VolumeId:       aws.ToString(volumeStatus.VolumeId),
+			HealthStatuses: healthStatuses,
+		})
+	}
+
+	var nextToken string
+	if len(page.NextToken) != 0 {
+		hash := sha256.Sum256([]byte(page.NextToken))
+		nextToken = hex.EncodeToString(hash[:])
+		// Cache a copy: a pointer into page would keep the whole page in the cache.
+		d.volumeHealthTokens.Set(nextToken, aws.String(page.NextToken))
+	}
+
+	return &csi.ControllerListVolumeHealthResponse{
+		Entries:   entries,
+		NextToken: nextToken,
+	}, nil
+}
+
+// volumeHealthStatuses maps the results of the EC2 volume status checks to CSI volume health statuses.
+// It reads only the status check details: events outlive the condition they describe.
+func volumeHealthStatuses(volumeStatus *types.VolumeStatusItem) []*csi.VolumeHealth_VolumeHealthEntry {
+	if volumeStatus.VolumeStatus == nil {
+		return nil
+	}
+
+	var healthStatuses []*csi.VolumeHealth_VolumeHealthEntry
+	for _, detail := range volumeStatus.VolumeStatus.Details {
+		healthStatus := volumeHealthStatus(detail.Name, aws.ToString(detail.Status))
+		if healthStatus != nil {
+			healthStatuses = append(healthStatuses, healthStatus)
+		}
+	}
+	return healthStatuses
+}
+
+// volumeHealthStatus maps the result of one EC2 volume status check to a CSI volume health status, or returns nil if
+// the result is not an adverse condition. Messages are fixed strings because every message change makes the CO patch
+// the PVC and reset status.healthStatus.lastTransitionTime.
+func volumeHealthStatus(check types.VolumeStatusName, result string) *csi.VolumeHealth_VolumeHealthEntry {
+	switch {
+	case check == types.VolumeStatusNameIoEnabled && result == cloud.VolumeStatusIOEnabledFailed:
+		return &csi.VolumeHealth_VolumeHealthEntry{
+			Status:  csi.VolumeHealthErrorType_INACCESSIBLE,
+			Reason:  "IODisabled",
+			Message: "I/O to the volume is disabled (EC2 volume status check io-enabled: failed)",
+		}
+	case check == types.VolumeStatusNameIoPerformance && result == cloud.VolumeStatusIOPerformanceStalled:
+		return &csi.VolumeHealth_VolumeHealthEntry{
+			Status:  csi.VolumeHealthErrorType_INACCESSIBLE,
+			Reason:  "IOPerformanceStalled",
+			Message: "I/O to the volume is stalled (EC2 volume status check io-performance: stalled)",
+		}
+	case check == types.VolumeStatusNameIoPerformance && result == cloud.VolumeStatusIOPerformanceSeverelyDegraded:
+		return &csi.VolumeHealth_VolumeHealthEntry{
+			Status:  csi.VolumeHealthErrorType_DEGRADED,
+			Reason:  "IOPerformanceSeverelyDegraded",
+			Message: "I/O performance is severely degraded (EC2 volume status check io-performance: severely-degraded)",
+		}
+	case check == types.VolumeStatusNameIoPerformance && result == cloud.VolumeStatusIOPerformanceDegraded:
+		return &csi.VolumeHealth_VolumeHealthEntry{
+			Status:  csi.VolumeHealthErrorType_DEGRADED,
+			Reason:  "IOPerformanceDegraded",
+			Message: "I/O performance is degraded (EC2 volume status check io-performance: degraded)",
+		}
+	default:
+		return nil
+	}
 }
 
 func isValidVolumeCapabilities(v []*csi.VolumeCapability) bool {
