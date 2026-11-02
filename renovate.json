@@ -19,6 +19,17 @@
   "pip_requirements": {
     "managerFilePatterns": ["/^hack/tools/.*-requirements\\.in$/"]
   },
+  "customDatasources": {
+    "kubernetes-stable": {
+      "defaultRegistryUrlTemplate": "https://dl.k8s.io/release/stable.txt",
+      "format": "plain"
+    },
+    "eks-kubernetes": {
+      "defaultRegistryUrlTemplate": "https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html",
+      "format": "plain",
+      "transformTemplates": ["{\"releases\": [$match($substringBefore($substringAfter($join(releases.version, \"\\n\"), 'id=\"available-versions\"'), 'id=\"available-versions-extended\"'), /<code[^>]*>(\\d+\\.\\d+)<\\/code>/).{\"version\": groups[0]}]}"]
+    }
+  },
   "packageRules": [
     {
       "description": "Pin container image digests",
@@ -32,14 +43,9 @@
     },
     {
       "description": "Group CI dependency updates",
-      "matchFileNames": [".github/workflows/**", "cloudbuild.yaml", "hack/tools/**", "charts/aws-ebs-csi-driver/values.yaml"],
+      "matchFileNames": [".github/workflows/**", "cloudbuild.yaml", "hack/tools/**", "hack/e2e/config.sh", "charts/aws-ebs-csi-driver/values.yaml"],
       "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest", "pinDigest", "bump"],
       "groupName": "CI dependencies"
-    },
-    {
-      "description": "Require approval for major upgrades",
-      "matchUpdateTypes": ["major"],
-      "dependencyDashboardApproval": true
     },
     {
       "description": "Update the Go compiler in both modules",
@@ -64,8 +70,7 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["replace"],
       "matchPackageNames": ["k8s.io/**"],
-      "groupName": "Kubernetes replacements",
-      "dependencyDashboardApproval": true
+      "groupName": "Kubernetes replacements"
     },
     {
       "description": "Prevent client-go upgrade to retracted versions",
@@ -115,6 +120,24 @@
       "matchStrings": ["KUBETEST2_VERSION=\"(?<currentValue>v[^\"]+)\""],
       "depNameTemplate": "sigs.k8s.io/kubetest2",
       "datasourceTemplate": "go"
+    },
+    {
+      "description": "Kubernetes version for kOps e2e tests",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/e2e/config\\.sh$/"],
+      "matchStrings": ["K8S_VERSION_KOPS=\\$\\{K8S_VERSION_KOPS:-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\}"],
+      "depNameTemplate": "kubernetes/kubernetes",
+      "datasourceTemplate": "custom.kubernetes-stable",
+      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
+    },
+    {
+      "description": "Kubernetes version for EKS e2e tests",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/e2e/config\\.sh$/"],
+      "matchStrings": ["K8S_VERSION_EKSCTL=\\$\\{K8S_VERSION_EKSCTL:-(?<currentValue>\\d+\\.\\d+)\\}"],
+      "depNameTemplate": "amazon-eks",
+      "datasourceTemplate": "custom.eks-kubernetes",
+      "versioningTemplate": "loose"
     },
     {
       "description": "Helm test image",
