@@ -34,6 +34,7 @@ managedNodeGroups:
   - instanceType: m5.2xlarge
     amiFamily: AmazonLinux2023
     name: add-on-ng
+    privateNetworking: true
     desiredCapacity: 2
     minSize: 1
     maxSize: 3
@@ -42,6 +43,7 @@ managedNodeGroups:
   - instanceType: m7a.48xlarge
     amiFamily: AmazonLinux2023
     name: pre-allocated-ng
+    privateNetworking: true
     desiredCapacity: {{ .Env.PRE_ALLOCATED_NODES }}
 {{- end }}
 

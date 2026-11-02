@@ -56,6 +56,7 @@ spec:
   subnetSelectorTerms:
     - tags:
         karpenter.sh/discovery: "{{ .Env.CLUSTER_NAME }}"
+        kubernetes.io/role/internal-elb: "1"
   securityGroupSelectorTerms:
     - tags:
         karpenter.sh/discovery: "{{ .Env.CLUSTER_NAME }}"
