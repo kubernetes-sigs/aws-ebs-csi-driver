@@ -25,7 +25,7 @@ CT_VERSION="v3.15.0"
 # https://github.com/eksctl-io/eksctl
 EKSCTL_VERSION="v0.231.0"
 # https://github.com/onsi/ginkgo
-GINKGO_VERSION="v2.33.1"
+GINKGO_VERSION="v2.34.0"
 # https://github.com/golangci/golangci-lint
 GOLANGCI_LINT_VERSION="v2.15.0"
 # https://github.com/hairyhenderson/gomplate
