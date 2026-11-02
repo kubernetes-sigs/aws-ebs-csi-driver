@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/kubernetes-sigs/aws-ebs-csi-driver v1.67.2
-	github.com/onsi/ginkgo/v2 v2.33.1
+	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
