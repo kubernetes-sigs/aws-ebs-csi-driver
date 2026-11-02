@@ -24,9 +24,12 @@ TEMP_DIR=$(mktemp -d)
 trap "rm -rf \"${TEMP_DIR}\"" EXIT
 cp "deploy/kubernetes/base/kustomization.yaml" "${TEMP_DIR}/kustomization.yaml"
 
-"${BIN}/helm" template --output-dir "${TEMP_DIR}" --skip-tests --api-versions 'storage.k8s.io/v1beta1/VolumeAttributesClass' --api-versions 'snapshot.storage.k8s.io/v1' --api-versions 'policy/v1/PodDisruptionBudget' --set 'controller.userAgentExtra=kustomize' kustomize charts/aws-ebs-csi-driver >/dev/null
+"${BIN}/helm" template --output-dir "${TEMP_DIR}" --skip-tests --api-versions 'storage.k8s.io/v1beta1/VolumeAttributesClass' --api-versions 'snapshot.storage.k8s.io/v1' --api-versions 'policy/v1/PodDisruptionBudget' --kube-version 1.33.0 --set 'controller.userAgentExtra=kustomize' kustomize charts/aws-ebs-csi-driver >/dev/null
 rm -rf "deploy/kubernetes/base"
 mv "${TEMP_DIR}/aws-ebs-csi-driver/templates" "deploy/kubernetes/base"
 
 sed -i '/namespace:/d' deploy/kubernetes/base/*
+# Kustomize's namespace transformer does not rewrite CEL expressions, so match the EBS CSI node pods' service account by name in any namespace.
+# Service account names cannot contain ':', so the suffix only matches a service account with exactly that name.
+sed -i -E "s|expression: request.userInfo.username == \"system:serviceaccount:[^:]*:([^\"]+)\"|expression: request.userInfo.username.startsWith('system:serviceaccount:') \&\& request.userInfo.username.endsWith(':\1')|" deploy/kubernetes/base/validatingadmissionpolicy-csi-node.yaml
 cp "${TEMP_DIR}/kustomization.yaml" "deploy/kubernetes/base/kustomization.yaml"

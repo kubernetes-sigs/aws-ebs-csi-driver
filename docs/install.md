@@ -202,6 +202,8 @@ There are potential race conditions on node startup (especially when a node is f
 
 This feature is activated by default, and cluster administrators should use the taint `ebs.csi.aws.com/agent-not-ready:NoExecute` (any effect will work, but `NoExecute` is recommended). For example, EKS Managed Node Groups [support automatically tainting nodes](https://docs.aws.amazon.com/eks/latest/userguide/node-taints-managed-node-groups.html).
 
+A ValidatingAdmissionPolicy, `ebs-csi-node`, limits the EBS CSI node pods' service account (`ebs-csi-node-sa`) to removing the `ebs.csi.aws.com/agent-not-ready` taint from the Node each pod runs on. It identifies the Node by the node name in the pod's service account token, and denies every other write to Nodes by that service account. Set `node.validatingAdmissionPolicy.enabled=false` to not install it. The policy is not installed when `node.serviceAccount.disableMutation=true`, because the node pods' service account then can't patch Nodes. The Kustomize manifests always include the policy.
+
 ### Deploy driver
 You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS managed add-on](https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html).
 

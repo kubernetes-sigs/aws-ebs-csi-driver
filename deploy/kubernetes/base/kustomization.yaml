@@ -20,3 +20,4 @@ resources:
 - serviceaccount-csi-node.yaml
 - role-leases.yaml
 - rolebinding-leases.yaml
+- validatingadmissionpolicy-csi-node.yaml
