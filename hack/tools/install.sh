@@ -19,7 +19,7 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.39.2"
+AWSCLI_VERSION="2.39.3"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.15.0"
 # https://github.com/eksctl-io/eksctl
