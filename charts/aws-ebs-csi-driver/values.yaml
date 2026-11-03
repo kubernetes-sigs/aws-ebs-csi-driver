@@ -451,6 +451,11 @@ node:
     # When enabled, some features of the EBS CSI Driver node pods will not function, such as taint removal.
     # Primarily useful in particularly security-sensitive environments, or on multi-tenant clusters that isolate tenants by node.
     disableMutation: false
+  validatingAdmissionPolicy:
+    # Install a ValidatingAdmissionPolicy that limits the EBS CSI node pods' service account to removing the
+    # ebs.csi.aws.com/agent-not-ready taint from the Node each pod runs on.
+    # Not installed when node.serviceAccount.disableMutation is true.
+    enabled: true
   # Enable the linux daemonset creation
   enableLinux: true
   enableWindows: true

@@ -714,6 +714,17 @@
             }
           }
         },
+        "validatingAdmissionPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Install a ValidatingAdmissionPolicy that limits the EBS CSI node pods' service account to removing the ebs.csi.aws.com/agent-not-ready taint from the Node each pod runs on. Not installed when node.serviceAccount.disableMutation is true.",
+              "default": true
+            }
+          }
+        },
         "terminationGracePeriodSeconds": {
           "type": "integer",
           "description": "Number of seconds to wait before forcefully terminating a stopping node pod",
