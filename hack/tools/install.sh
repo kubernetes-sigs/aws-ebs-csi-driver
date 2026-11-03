@@ -44,7 +44,7 @@ KUBETEST2_VERSION="v0.0.0-20261019132922-bd4ea193f2b2"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/kubernetes/release
-RELEASE_NOTES_VERSION="v0.22.0"
+RELEASE_NOTES_VERSION="v0.23.0"
 # https://github.com/mvdan/sh
 SHFMT_VERSION="v3.14.1"
 # https://pypi.org/project/yamale/
