@@ -14,6 +14,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 * **Volume Resizing** - Expand the volume by specifying a new size in the [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#expanding-persistent-volumes-claims) (PVC).
 * **Volume Modification** - Change the properties (type, iops, or throughput) [via a `VolumeAttributesClass`](examples/kubernetes/modify-volume).
 * **Node-Local Volumes** - Mount pre-attached, node-specific EBS volumes using a single cluster-wide PV/PVC for node-local caching scenarios.
+* **Volume Health** - Report EC2 volume status checks as [PersistentVolumeClaim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PVC) health conditions (alpha).
 
 ## Container Images
 
@@ -52,7 +53,7 @@ This policy is non-binding and subject to change.
 
 The EBS CSI Driver is compatible with all Kubernetes versions supported by [the Kubernetes project](https://kubernetes.io/releases/) and/or [Amazon EKS (including extended support versions)](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html).
 
-The EBS CSI Driver implements the [Container Storage Interface specification](https://github.com/container-storage-interface/spec/blob/master/spec.md) version `v1.9.0`.
+The EBS CSI Driver implements the [Container Storage Interface specification](https://github.com/container-storage-interface/spec/blob/master/spec.md) version `v1.13.0`.
 
 ## Documentation
 
@@ -63,6 +64,7 @@ The EBS CSI Driver implements the [Container Storage Interface specification](ht
 * [Frequently Asked Questions](docs/faq.md)
 * [Volume Tagging](docs/tagging.md)
 * [Volume Modification](docs/modify-volume.md)
+* [Volume Health](docs/volume-health.md)
 * [Kubernetes Examples](/examples/kubernetes)
 * [Driver Uninstallation](docs/install.md#uninstalling-the-ebs-csi-driver)
 * [Development and Contributing](CONTRIBUTING.md)

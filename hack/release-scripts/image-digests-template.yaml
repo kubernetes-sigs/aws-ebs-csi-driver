@@ -39,3 +39,8 @@ sidecars:
     image: public.ecr.aws/csi-components/csi-node-driver-registrar
   volumemodifier:
     image: public.ecr.aws/ebs-csi-driver/volume-modifier-for-k8s
+  healthMonitor:
+    image: public.ecr.aws/csi-components/csi-external-health-monitor-controller
+    repo: https://github.com/kubernetes-csi/external-health-monitor
+    rbacSource: deploy/kubernetes/external-health-monitor-controller/rbac.yaml
+    rbacDestination: clusterrole-health-monitor.yaml

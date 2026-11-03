@@ -62,7 +62,7 @@ param_set_legacy-compat() {
 
 param_set_fips() {
   GINKGO_FOCUS="\[param:fips\]"
-  HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true"
+  HELM_EXTRA_FLAGS="--set=fips=true,sidecars.metadataLabeler.enabled=true,sidecars.healthMonitor.enabled=true"
 }
 
 # Load a parameter set by name, exporting GINKGO_FOCUS and HELM_EXTRA_FLAGS.

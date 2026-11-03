@@ -1234,6 +1234,68 @@
               "type": "object"
             }
           }
+        },
+        "healthMonitor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "ALPHA: Enable the csi-external-health-monitor-controller sidecar to report EC2 volume status checks as PersistentVolumeClaim health conditions. Requires Kubernetes 1.37+ and the CSIVolumeHealth feature gate on kube-apiserver.",
+              "default": false
+            },
+            "additionalArgs": {
+              "type": "array",
+              "description": "Additional arguments passed to the csi-external-health-monitor-controller container",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            },
+            "resources": {
+              "type": ["object", "null"],
+              "default": null
+            },
+            "logLevel": {
+              "type": "integer",
+              "description": "Set the level of verbosity of the logs",
+              "default": 2
+            },
+            "leaderElection": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            },
+            "env": {
+              "type": "array",
+              "default": []
+            },
+            "image": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "pullPolicy": {
+                  "type": "string",
+                  "default": "IfNotPresent"
+                },
+                "tag": {
+                  "type": "string"
+                },
+                "repository": {
+                  "type": "string",
+                  "default": "public.ecr.aws/csi-components/csi-external-health-monitor-controller"
+                }
+              }
+            },
+            "securityContext": {
+              "type": "object"
+            }
+          }
         }
       }
     }

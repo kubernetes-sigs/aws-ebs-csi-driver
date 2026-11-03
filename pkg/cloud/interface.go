@@ -30,6 +30,8 @@ type Cloud interface {
 	ResizeOrModifyDisk(ctx context.Context, volumeID string, newSizeBytes int64, options *ModifyDiskOptions) (newSize int32, err error)
 	WaitForAttachmentState(ctx context.Context, expectedState types.VolumeAttachmentState, volumeID string, expectedInstance string, expectedDevice string, alreadyAssigned bool, expectedCardIndex *int32) (*types.VolumeAttachment, error)
 	IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error)
+	GetVolumeStatus(ctx context.Context, volumeID string) (volumeStatus *types.VolumeStatusItem, err error)
+	ListVolumeStatuses(ctx context.Context, maxResults int32, nextToken string) (listVolumeStatusesResponse *ListVolumeStatusesResponse, err error)
 	GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error)
 	GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error)
 	GetVolumeIDByNodeAndDevice(ctx context.Context, nodeID string, deviceName string) (volumeID string, err error)

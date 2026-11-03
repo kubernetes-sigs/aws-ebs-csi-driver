@@ -259,6 +259,21 @@ func (mr *MockCloudMockRecorder) GetVolumeIDByNodeAndDevice(ctx, nodeID, deviceN
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeIDByNodeAndDevice", reflect.TypeOf((*MockCloud)(nil).GetVolumeIDByNodeAndDevice), ctx, nodeID, deviceName)
 }
 
+// GetVolumeStatus mocks base method.
+func (m *MockCloud) GetVolumeStatus(ctx context.Context, volumeID string) (*types.VolumeStatusItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVolumeStatus", ctx, volumeID)
+	ret0, _ := ret[0].(*types.VolumeStatusItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVolumeStatus indicates an expected call of GetVolumeStatus.
+func (mr *MockCloudMockRecorder) GetVolumeStatus(ctx, volumeID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolumeStatus", reflect.TypeOf((*MockCloud)(nil).GetVolumeStatus), ctx, volumeID)
+}
+
 // IsVolumeInitialized mocks base method.
 func (m *MockCloud) IsVolumeInitialized(ctx context.Context, volumeID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -287,6 +302,21 @@ func (m *MockCloud) ListSnapshots(ctx context.Context, volumeID string, maxResul
 func (mr *MockCloudMockRecorder) ListSnapshots(ctx, volumeID, maxResults, nextToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSnapshots", reflect.TypeOf((*MockCloud)(nil).ListSnapshots), ctx, volumeID, maxResults, nextToken)
+}
+
+// ListVolumeStatuses mocks base method.
+func (m *MockCloud) ListVolumeStatuses(ctx context.Context, maxResults int32, nextToken string) (*ListVolumeStatusesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVolumeStatuses", ctx, maxResults, nextToken)
+	ret0, _ := ret[0].(*ListVolumeStatusesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVolumeStatuses indicates an expected call of ListVolumeStatuses.
+func (mr *MockCloudMockRecorder) ListVolumeStatuses(ctx, maxResults, nextToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolumeStatuses", reflect.TypeOf((*MockCloud)(nil).ListVolumeStatuses), ctx, maxResults, nextToken)
 }
 
 // LockSnapshot mocks base method.

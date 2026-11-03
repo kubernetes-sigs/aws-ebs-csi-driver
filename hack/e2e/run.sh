@@ -65,6 +65,16 @@ fi
 
 ## Deploy
 
+if [[ "${CREATE_MISSING_FIS_ROLE}" == true ]]; then
+  if ! aws iam get-role --role-name "${FIS_ROLE_NAME}" >/dev/null 2>&1; then
+    loudecho "Creating IAM role ${FIS_ROLE_NAME} for AWS FIS"
+    aws iam create-role --role-name "${FIS_ROLE_NAME}" --tags Key=Shared,Value=Ignore \
+      --assume-role-policy-document "file://${BASE_DIR}/fis/trust-policy.json" >/dev/null
+  fi
+  aws iam put-role-policy --role-name "${FIS_ROLE_NAME}" --policy-name pause-volume-io \
+    --policy-document "file://${BASE_DIR}/fis/pause-volume-io-policy.json"
+fi
+
 if [[ "${EBS_INSTALL_SNAPSHOT}" == true ]]; then
   loudecho "Applying snapshot controller and CRDs"
   kubectl apply --kubeconfig "${KUBECONFIG}" -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/"${EBS_INSTALL_SNAPSHOT_VERSION}"/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml

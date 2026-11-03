@@ -523,6 +523,60 @@ spec:
           {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         {{- end }}
+        {{- if .Values.sidecars.healthMonitor.enabled }}
+        - name: csi-external-health-monitor-controller
+          image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.healthMonitor.image.repository .Values.sidecars.healthMonitor.image.tag | quote }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.sidecars.healthMonitor.image.pullPolicy | quote }}
+          args:
+            - --csi-address=$(ADDRESS)
+            {{- if .Values.debugLogs }}
+            - --v=7
+            {{- else }}
+            - {{ printf "--v=%v" (.Values.sidecars.healthMonitor.logLevel) | quote }}
+            {{- end }}
+            - --leader-election={{ .Values.sidecars.healthMonitor.leaderElection.enabled | required "leader election state for csi-external-health-monitor-controller is required, must be set to true || false." }}
+            {{- if and (.Values.controller.enableMetrics) (not (regexMatch "(-http-endpoint)" (join " " .Values.sidecars.healthMonitor.additionalArgs))) }}
+            - --http-endpoint=0.0.0.0:3308
+            {{- end}}
+            {{- with .Values.sidecars.healthMonitor.additionalArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            {{- if .Values.proxy.http_proxy }}
+            {{- include "aws-ebs-csi-driver.http-proxy" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.sidecars.healthMonitor.env }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+            {{- if .Values.fips }}
+            - name: GODEBUG
+              value: "fips140=on"
+            {{- end }}
+          {{- with .Values.controller.envFrom }}
+          envFrom:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+          {{- if .Values.controller.enableMetrics }}
+          ports:
+            - name: metrics-health
+              containerPort: 3308
+              protocol: TCP
+          {{- end }}
+          {{- with default .Values.controller.resources .Values.sidecars.healthMonitor.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.sidecars.healthMonitor.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          terminationMessagePolicy: FallbackToLogsOnError
+        {{- end }}
         {{- if .Values.sidecars.metadataLabeler.enabled }}
         - name: metadata-labeler
           image: {{ include "aws-ebs-csi-driver.fullImagePath" $ | quote }}
