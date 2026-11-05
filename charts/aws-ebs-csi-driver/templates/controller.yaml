@@ -637,16 +637,16 @@ spec:
             - {{ printf "--v=%v" (.Values.sidecars.resizer.logLevel) | quote }}
             {{- end }}
             - --handle-volume-inuse-error=false
-            {{- with .Values.sidecars.resizer.leaderElection }}
-            - --leader-election={{ .enabled | default true }}
-            {{- if .leaseDuration }}
-            - {{ printf "--leader-election-lease-duration=%v" (.leaseDuration) | quote }}
+            - --leader-election={{ .Values.sidecars.resizer.leaderElection.enabled | required "leader election state for csi-resizer is required, must be set to true || false." }}
+            {{- if .Values.sidecars.resizer.leaderElection.enabled }}
+            {{- if .Values.sidecars.resizer.leaderElection.leaseDuration }}
+            - {{ printf "--leader-election-lease-duration=%v" (.Values.sidecars.resizer.leaderElection.leaseDuration) | quote }}
             {{- end }}
-            {{- if .renewDeadline }}
-            - {{ printf "--leader-election-renew-deadline=%v" (.renewDeadline) | quote }}
+            {{- if .Values.sidecars.resizer.leaderElection.renewDeadline }}
+            - {{ printf "--leader-election-renew-deadline=%v" (.Values.sidecars.resizer.leaderElection.renewDeadline) | quote }}
             {{- end }}
-            {{- if .retryPeriod }}
-            - {{ printf "--leader-election-retry-period=%v" (.retryPeriod) | quote }}
+            {{- if .Values.sidecars.resizer.leaderElection.retryPeriod }}
+            - {{ printf "--leader-election-retry-period=%v" (.Values.sidecars.resizer.leaderElection.retryPeriod) | quote }}
             {{- end }}
             {{- end }}
             {{- if not (regexMatch "(-kube-api-qps)|(-kube-api-burst)|(-workers)" (join " " .Values.sidecars.resizer.additionalArgs)) }}
