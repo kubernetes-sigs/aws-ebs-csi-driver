@@ -60,7 +60,10 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
     "${BASE_DIR}/kops/patch-cluster.yaml" \
     "${BASE_DIR}/kops/patch-node.yaml" \
     "s3://${KOPS_BUCKET}" \
-    "${BIN}/gomplate"
+    "${BIN}/gomplate" \
+    "${KOPS_BPA_API_ACCESS}" \
+    "${BIN}/aws" \
+    "${AWS_REGION}"
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_create_cluster \
     "$CLUSTER_NAME" \

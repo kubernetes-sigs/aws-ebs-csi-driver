@@ -63,6 +63,7 @@ Creates a cluster for running E2E tests against. There are many parameters that 
 - `NUM_AZS`: How many AZs to auto-detect when `AWS_AVAILABILITY_ZONES` is unset - defaults to `2`
 - `OUTPOST_ARN`: If set, create an additional nodegroup on an [outpost](https://aws.amazon.com/outposts/) (`eksctl clusters only)
 - `OUTPOST_INSTANCE_TYPE`: The instance type to use for the outpost nodegroup (only used when `OUTPOST_ARN` is non-empty) - defaults to `INSTANCE_TYPE`
+- `KOPS_BPA_API_ACCESS`: Comma-separated CIDRs allowed to reach the Kubernetes API, for accounts with [VPC Block Public Access](https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html) enabled (`kops` clusters only). See [the example below](#example-create-a-kops-cluster-in-an-account-with-vpc-block-public-access) - defaults to unset
 
 #### Example: Create a default (`kops`) cluster
 
@@ -116,6 +117,17 @@ export OUTPOST_INSTANCE_TYPE=c5.xlarge
 make cluster/create
 ```
 
+#### Example: Create a `kops` cluster in an account with VPC Block Public Access
+
+[VPC Block Public Access](https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html) (BPA) in ingress-only mode blocks the cluster's public subnets and its internet-facing API load balancer. When `KOPS_BPA_API_ACCESS` is set, the cluster uses private topology, API and SSH access is restricted to the given CIDRs, and the utility subnets (API load balancer and NAT gateways) get a BPA exclusion. `eksctl` clusters need no extra configuration.
+
+The CIDRs must cover every source IP the API load balancer sees from your machine. Behind NAT or a corporate network, that can differ from what IP-echo services report. Set the same value when running `make cluster/delete` so the exclusions are removed.
+
+```bash
+export KOPS_BPA_API_ACCESS="203.0.113.10/32,198.51.100.0/28"
+make cluster/create
+```
+
 ### `make cluster/image`
 
 Builds an image for use in the E2E tests. This will automatically build the most appropriate image (for example, skipping Windows builds unless `WINDOWS` is set to `true`).
@@ -159,7 +171,7 @@ eval "$(make cluster/kubeconfig)"
 
 ### `make cluster/delete`
 
-Deletes a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` as used when creating the cluster.
+Deletes a cluster created by `make cluster/create`. You must pass the same `CLUSTER_TYPE` and `CLUSTER_NAME` (and `KOPS_BPA_API_ACCESS`, if set) as used when creating the cluster.
 
 ### `make cluster/install`
 
