@@ -1,3 +1,86 @@
+# v1.68.0
+
+## Changes by Kind
+
+### Feature
+
+- Added ALPHA controller volume health monitoring based on EC2 volume status checks. This feature can be enabled by setting `sidecars.healthMonitor.enabled=true` (requires Kubernetes 1.37+ and the `CSIVolumeHealth` feature gate on kube-apiserver). ([#3070](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3070), [@torredil](https://github.com/torredil))
+- Install a `ValidatingAdmissionPolicy` by default to restrict the node pod's edits to only the taints on its local node. ([#3092](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3092), [@micahhausler](https://github.com/micahhausler))
+
+### Bug or Regression
+
+- Fixed `additionalDaemonSets` ignoring `false` and `0` values. ([#3046](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3046), [@torredil](https://github.com/torredil))
+
+## Dependencies
+
+<details><summary>Added</summary>
+
+- github.com/go-ole/go-ole: [v1.3.0](https://github.com/go-ole/go-ole/tree/v1.3.0)
+- github.com/pandatix/go-abnf: [v0.5.5](https://github.com/pandatix/go-abnf/tree/v0.5.5)
+
+</details>
+
+<details><summary>Changed</summary>
+
+- cel.dev/expr: v0.25.2 → v0.25.3
+- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp: [v1.34.0 → v1.35.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/compare/v1.34.0...v1.35.0)
+- github.com/aws/aws-sdk-go-v2: [v1.47.3 → v1.47.8](https://github.com/aws/aws-sdk-go-v2/compare/v1.47.3...v1.47.8)
+- github.com/aws/aws-sdk-go-v2/config: [v1.33.9 → v1.33.16](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.9...v1.33.16)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.20.9 → v1.20.16](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.9...v1.20.16)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.20.3 → v1.20.8](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.3...v1.20.8)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.5.6 → v1.5.11](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.6...v1.5.11)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.8.6 → v2.8.11](https://github.com/aws/aws-sdk-go-v2/compare/v2.8.6...v2.8.11)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.5.6 → v1.5.11](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.6...v1.5.11)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.339.0 → v1.344.2](https://github.com/aws/aws-sdk-go-v2/compare/v1.339.0...v1.344.2)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.21 → v1.13.24](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.21...v1.13.24)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.14.6 → v1.14.11](https://github.com/aws/aws-sdk-go-v2/compare/v1.14.6...v1.14.11)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.284.1 → v1.287.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.284.1...v1.287.1)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.10.4 → v1.12.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.10.4...v1.12.4)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.38.4 → v1.39.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.38.4...v1.39.4)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.43.4 → v1.44.4](https://github.com/aws/aws-sdk-go-v2/compare/v1.43.4...v1.44.4)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.51.4 → v1.51.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.51.4...v1.51.9)
+- github.com/aws/smithy-go: [v1.28.5 → v1.28.8](https://github.com/aws/smithy-go/compare/v1.28.5...v1.28.8)
+- github.com/envoyproxy/go-control-plane/envoy: [v1.37.0 → e6e3fd9](https://github.com/envoyproxy/go-control-plane/compare/v1.37.0...e6e3fd9)
+- github.com/fxamacker/cbor/v2: [v2.9.6 → v2.10.0](https://github.com/fxamacker/cbor/compare/v2.9.6...v2.10.0)
+- github.com/go-openapi/analysis: [v1.0.0 → v1.0.1](https://github.com/go-openapi/analysis/compare/v1.0.0...v1.0.1)
+- github.com/go-openapi/strfmt: [v0.27.3 → v0.27.4](https://github.com/go-openapi/strfmt/compare/v0.27.3...v0.27.4)
+- github.com/go-openapi/validate: [v1.0.0 → v1.0.1](https://github.com/go-openapi/validate/compare/v1.0.0...v1.0.1)
+- github.com/grpc-ecosystem/grpc-gateway/v2: [v2.32.0 → v2.33.0](https://github.com/grpc-ecosystem/grpc-gateway/compare/v2.32.0...v2.33.0)
+- github.com/kubernetes-csi/csi-proxy/v2: [v2.0.0-alpha.1 → v2.0.0-alpha.3](https://github.com/kubernetes-csi/csi-proxy/compare/v2.0.0-alpha.1...v2.0.0-alpha.3)
+- github.com/moby/sys/mountinfo: [v0.7.2 → v0.7.3](https://github.com/moby/sys/compare/v0.7.2...v0.7.3)
+- github.com/oapi-codegen/runtime: [v1.7.0 → v1.8.0](https://github.com/oapi-codegen/runtime/compare/v1.7.0...v1.8.0)
+- github.com/prometheus/common: [v0.72.1 → v0.73.1](https://github.com/prometheus/common/compare/v0.72.1...v0.73.1)
+- github.com/prometheus/procfs: [v0.22.0 → v0.23.0](https://github.com/prometheus/procfs/compare/v0.22.0...v0.23.0)
+- github.com/spf13/pflag: [v1.0.10 → v1.1.0](https://github.com/spf13/pflag/compare/v1.0.10...v1.1.0)
+- go.opentelemetry.io/contrib/detectors/gcp: v1.44.0 → v1.45.0
+- go.yaml.in/yaml/v2: v2.4.4 → v2.4.5
+- go.yaml.in/yaml/v3: v3.0.5 → v3.0.6
+- golang.org/x/net: v0.61.0 → v0.62.0
+- golang.org/x/oauth2: v0.37.0 → v0.38.0
+- golang.org/x/sys: v0.49.0 → v0.50.0
+- google.golang.org/genproto/googleapis/api: ce908d2 → d1e00e9
+- google.golang.org/genproto/googleapis/rpc: ce908d2 → d1e00e9
+- google.golang.org/grpc: v1.84.0 → v1.85.0
+- k8s.io/api: v0.37.1 → v0.37.2
+- k8s.io/apimachinery: v0.37.1 → v0.37.2
+- k8s.io/client-go: v0.37.1 → v0.37.2
+- k8s.io/component-base: v0.37.1 → v0.37.2
+- k8s.io/mount-utils: v0.37.1 → v0.37.2
+- k8s.io/streaming: v0.37.1 → v0.37.2
+- k8s.io/utils: cf1189d → ca04ba5
+
+</details>
+
+<details><summary>Removed</summary>
+
+- cloud.google.com/go/auth: v0.20.0
+- github.com/google/s2a-go: [v0.1.9](https://github.com/google/s2a-go/tree/v0.1.9)
+- github.com/googleapis/enterprise-certificate-proxy: [v0.3.15](https://github.com/googleapis/enterprise-certificate-proxy/tree/v0.3.15)
+- github.com/googleapis/gax-go/v2: [v2.22.0](https://github.com/googleapis/gax-go/tree/v2.22.0)
+- google.golang.org/api: v0.278.0
+
+</details>
+
 # v1.67.2
 
 ## Changes by Kind

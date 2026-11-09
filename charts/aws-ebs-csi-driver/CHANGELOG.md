@@ -1,5 +1,17 @@
 # Helm chart
 
+## 2.68.0
+### Dependencies
+ - Bumped EBS CSI Driver to `v1.68.0`
+ - Bumped `csi-attacher` to `v4.13.0-eksbuild.5`
+ - Bumped `csi-external-health-monitor-controller` to `v0.19.0-eksbuild.5`
+ - Bumped `csi-node-driver-registrar` to `v2.18.0-eksbuild.5`
+ - Bumped `csi-provisioner` to `v6.4.0-eksbuild.5`
+ - Bumped `csi-resizer` to `v2.3.0-eksbuild.5`
+ - Bumped `csi-snapshotter` to `v8.7.0-eksbuild.4`
+ - Bumped `livenessprobe` to `v2.20.0-eksbuild.5`
+ - Bumped `volume-modifier-for-k8s` to `v0.9.6-eksbuild.6`
+
 ## 2.67.2
 ### Dependencies
  - Bumped EBS CSI Driver to `v1.67.2`

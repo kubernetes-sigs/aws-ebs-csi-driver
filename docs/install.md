@@ -209,7 +209,7 @@ You may deploy the EBS CSI driver via Kustomize, Helm, or as an [Amazon EKS mana
 
 #### Kustomize
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.67"
+kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.68"
 ```
 
 *Note: Using the master branch to deploy the driver is not supported as the master branch may contain upcoming features incompatible with the currently released stable version of the driver.*
@@ -230,7 +230,7 @@ Install from registry.k8s.io:
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
     oci://registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver \
-    --version 2.67.2
+    --version 2.68.0
 ```
 
 Install from ECR Public:
@@ -238,7 +238,7 @@ Install from ECR Public:
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
     oci://public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver \
-    --version 2.67.2
+    --version 2.68.0
 ```
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.
