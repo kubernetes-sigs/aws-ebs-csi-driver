@@ -116,6 +116,13 @@ export OUTPOST_INSTANCE_TYPE=c5.xlarge
 make cluster/create
 ```
 
+#### VPC Block Public Access
+
+Clusters work in accounts with [VPC Block Public Access](https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html) (BPA) enabled:
+
+- `kops` clusters use private topology, so nodes and the control plane reach the internet through NAT. The utility subnets (API load balancer and NAT gateways) get a BPA exclusion, API access is left at the kops default.
+- `eksctl` nodegroups use private networking. Outpost nodegroups (`OUTPOST_ARN`) are not covered and have not been tested with BPA.
+
 ### `make cluster/image`
 
 Builds an image for use in the E2E tests. This will automatically build the most appropriate image (for example, skipping Windows builds unless `WINDOWS` is set to `true`).
