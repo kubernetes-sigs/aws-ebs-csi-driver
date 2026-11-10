@@ -3,11 +3,11 @@
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "enabledManagers": ["gomod", "dockerfile", "github-actions", "cloudbuild", "pip_requirements", "custom.regex"],
   "ignorePaths": ["**/node_modules/**", "**/bower_components/**", "**/vendor/**", "**/examples/**", "**/__fixtures__/**"],
-  "labels": ["dependencies", "ok-to-test"],
+  "labels": ["dependencies", "ok-to-test", "lgtm", "approved"],
   "commitBodyTable": false,
   "automerge": false,
   "pinDigests": true,
-  "schedule": ["* 7 * * 1"],
+  "schedule": ["* 0-7 * * 1,5"],
   "timezone": "America/New_York",
   "prConcurrentLimit": 5,
   "separateMajorMinor": false,
@@ -71,7 +71,8 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["replace"],
       "matchPackageNames": ["k8s.io/**"],
-      "groupName": "Kubernetes replacements"
+      "groupName": "Kubernetes replacements",
+      "labels": ["dependencies", "ok-to-test", "lgtm"]
     },
     {
       "description": "Prevent client-go upgrade to retracted versions",
