@@ -20,6 +20,11 @@
 
 VERSION?=v1.68.0
 
+# Retry goproxy pulls on Prow to avoid flaked jobs
+ifneq ($(PROW_JOB_ID),)
+GOPROXY = https://proxy.golang.org|https://proxy.golang.org|https://proxy.golang.org,direct
+endif
+
 PKG=github.com/kubernetes-sigs/aws-ebs-csi-driver
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u -Iseconds)
@@ -302,26 +307,23 @@ sub-image-%:
 .PHONY: image
 image:
 	BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker buildx build \
-		--platform=$(OS)/$(ARCH) \
+		--platform="$(OS)/$(ARCH)" \
 		--progress=plain \
-		--target=$(OS)-$(OSVERSION) \
+		--target="$(OS)-$(OSVERSION)" \
 		--output=type=registry \
-		-t=$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION) \
-		--build-arg=GOPROXY=$(GOPROXY) \
-		--build-arg=VERSION=$(VERSION) \
+		-t="$(IMAGE):$(TAG)-$(OS)-$(ARCH)-$(OSVERSION)" \
+		--build-arg="GOPROXY=$(GOPROXY)" \
+		--build-arg="VERSION=$(VERSION)" \
 		$(DOCKER_EXTRA_ARGS) \
 		.
 
 .PHONY: create-manifest
 create-manifest: all-image-registry
-# sed expression:
-# LHS: match 0 or more not space characters
-# RHS: replace with $(IMAGE):$(TAG)-& where & is what was matched on LHS
-	docker manifest create --amend $(IMAGE):$(TAG) $(shell echo $(ALL_OS_ARCH_OSVERSION) | sed -e "s~[^ ]*~$(IMAGE):$(TAG)\-&~g")
+	docker manifest create --amend "$(IMAGE):$(TAG)" $(foreach variant,$(ALL_OS_ARCH_OSVERSION),"$(IMAGE):$(TAG)-$(variant)")
 
 .PHONY: push-manifest
 push-manifest: create-manifest
-	docker manifest push --purge $(IMAGE):$(TAG)
+	docker manifest push --purge "$(IMAGE):$(TAG)"
 
 ## Helm chart
 # Package the Helm chart and push it to the staging OCI registry.
