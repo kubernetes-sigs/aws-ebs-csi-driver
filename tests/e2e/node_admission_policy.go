@@ -147,7 +147,14 @@ var _ = framework.Describe("[ebs-csi-e2e] [Disruptive] Node admission policy", f
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pods.Items).NotTo(BeEmpty())
 		By("restarting the EBS CSI node pod on " + ownNode)
-		Expect(cs.CoreV1().Pods(driverNamespace).Delete(ctx, pods.Items[0].Name, metav1.DeleteOptions{})).To(Succeed())
+		oldPod := pods.Items[0].Name
+		Expect(cs.CoreV1().Pods(driverNamespace).Delete(ctx, oldPod, metav1.DeleteOptions{})).To(Succeed())
+
+		// Wait for the old pod to be fully removed so it doesn't outlive the test and break log collection in hack/e2e/run.sh.
+		Eventually(func(g Gomega) {
+			_, err := cs.CoreV1().Pods(driverNamespace).Get(ctx, oldPod, metav1.GetOptions{})
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(2 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
 
 		Eventually(func(g Gomega) {
 			n, err := cs.CoreV1().Nodes().Get(ctx, ownNode, metav1.GetOptions{})
