@@ -44,6 +44,9 @@ OUTPOST_INSTANCE_TYPE=${OUTPOST_INSTANCE_TYPE:-${INSTANCE_TYPE}}
 K8S_VERSION_KOPS=${K8S_VERSION_KOPS:-1.37.2}
 K8S_VERSION_EKSCTL=${K8S_VERSION_EKSCTL:-1.37}
 
+# kops clusters only, for accounts with VPC Block Public Access enabled - see docs/makefile.md
+KOPS_BPA_API_ACCESS=${KOPS_BPA_API_ACCESS:-}
+
 # Override AMI - eksctl clusters only
 LINUX_AMI=${LINUX_AMI:-}
 WINDOWS_AMI=${WINDOWS_AMI:-}

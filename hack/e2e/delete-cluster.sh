@@ -33,7 +33,10 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
   kops_delete_cluster \
     "${BIN}/kops" \
     "${CLUSTER_NAME}" \
-    "s3://${KOPS_BUCKET}"
+    "s3://${KOPS_BUCKET}" \
+    "${KOPS_BPA_API_ACCESS}" \
+    "${BIN}/aws" \
+    "${AWS_REGION}"
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_delete_cluster \
     "${BIN}/eksctl" \
