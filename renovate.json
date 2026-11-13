@@ -123,6 +123,14 @@
       "datasourceTemplate": "go"
     },
     {
+      "description": "Kustomize version",
+      "customType": "regex",
+      "managerFilePatterns": ["/^hack/tools/install\\.sh$/"],
+      "matchStrings": ["KUSTOMIZE_VERSION=\"(?<currentValue>v[^\"]+)\""],
+      "depNameTemplate": "sigs.k8s.io/kustomize/kustomize/v5",
+      "datasourceTemplate": "go"
+    },
+    {
       "description": "Kubernetes version for kOps e2e tests",
       "customType": "regex",
       "managerFilePatterns": ["/^hack/e2e/config\\.sh$/"],
