@@ -89,14 +89,14 @@ test/coverage:
 	rm cover.out filtered_cover.out
 
 .PHONY: tools
-tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/mockgen bin/shfmt
+tools: bin/aws bin/ct bin/eksctl bin/ginkgo bin/golangci-lint bin/gomplate bin/helm bin/kops bin/kubetest2 bin/kustomize bin/mockgen bin/shfmt
 
 .PHONY: update
 update: update/gofix update/gofmt update/golangci-fix update/kustomize update/mockgen update/gomod update/shfmt update/generate-license-header
 	@echo "All updates succeeded!"
 
 .PHONY: verify
-verify: verify/govet verify/golangci-lint verify/update verify/volume-limits
+verify: verify/govet verify/golangci-lint verify/kustomize verify/update verify/volume-limits
 	@echo "All verifications passed!"
 
 .PHONY: cluster/create
@@ -393,6 +393,10 @@ verify/golangci-lint: bin/golangci-lint
 .PHONY: verify/govet
 verify/govet:
 	go vet $$(go list ./...)
+
+.PHONY: verify/kustomize
+verify/kustomize: bin/kustomize
+	./hack/verify-kustomize.sh
 
 .PHONY: verify/update
 verify/update: bin/helm bin/mockgen
