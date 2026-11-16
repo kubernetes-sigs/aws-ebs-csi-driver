@@ -65,6 +65,11 @@ for SOURCE in "${VERSION_SOURCES[@]}"; do
   echo "${VARIABLE}: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
 done
 
+CURRENT_VERSION="$(sed -nE 's/^KUSTOMIZE_VERSION="([^"]+)"$/\1/p' "${INSTALL_SCRIPT}")"
+LATEST_VERSION="$(go list -m -f '{{.Version}}' sigs.k8s.io/kustomize/kustomize/v5@latest)"
+sed -i -E "s|^KUSTOMIZE_VERSION=\"[^\"]+\"$|KUSTOMIZE_VERSION=\"${LATEST_VERSION}\"|" "${INSTALL_SCRIPT}"
+echo "KUSTOMIZE_VERSION: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
+
 CURRENT_VERSION="$(sed -nE 's/^KUBETEST2_VERSION="([^"]+)"$/\1/p' "${INSTALL_SCRIPT}")"
 LATEST_VERSION="$(go list -m -f '{{.Version}}' sigs.k8s.io/kubetest2@latest)"
 sed -i -E "s|^KUBETEST2_VERSION=\"[^\"]+\"$|KUBETEST2_VERSION=\"${LATEST_VERSION}\"|" "${INSTALL_SCRIPT}"

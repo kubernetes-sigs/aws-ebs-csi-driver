@@ -5,15 +5,15 @@ resources:
 images:
   - name: public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/aws-ebs-csi-driver
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-provisioner
+  - name: public.ecr.aws/csi-components/csi-provisioner
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-provisioner
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-attacher
+  - name: public.ecr.aws/csi-components/csi-attacher
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-attacher
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/livenessprobe
+  - name: public.ecr.aws/csi-components/livenessprobe
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/livenessprobe
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/csi-snapshotter
+  - name: public.ecr.aws/csi-components/csi-snapshotter
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-snapshotter
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/external-resizer
+  - name: public.ecr.aws/csi-components/csi-resizer
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-resizer
-  - name: public.ecr.aws/eks-distro/kubernetes-csi/node-driver-registrar
+  - name: public.ecr.aws/csi-components/csi-node-driver-registrar
     newName: 602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/csi-node-driver-registrar

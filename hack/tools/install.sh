@@ -41,6 +41,8 @@ KOPS_VERSION="v1.37.0-beta.1"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20261019132922-bd4ea193f2b2"
+# https://pkg.go.dev/sigs.k8s.io/kustomize/kustomize/v5
+KUSTOMIZE_VERSION="v5.8.3"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/kubernetes/release
@@ -185,6 +187,12 @@ function install_kubetest2() {
   INSTALL_PATH="${1}"
 
   install_go "${INSTALL_PATH}" "sigs.k8s.io/kubetest2/...@${KUBETEST2_VERSION}"
+}
+
+function install_kustomize() {
+  INSTALL_PATH="${1}"
+
+  install_go "${INSTALL_PATH}" "sigs.k8s.io/kustomize/kustomize/v5@${KUSTOMIZE_VERSION}"
 }
 
 function install_mockgen() {
