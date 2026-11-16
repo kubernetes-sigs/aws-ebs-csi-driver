@@ -237,8 +237,10 @@ spec:
               mountPath: C:\csi
             - name: registration-dir
               mountPath: C:\registration
+            {{- if not .Values.node.windowsHostProcess }}
             - name: probe-dir
               mountPath: C:\var\lib\kubelet\plugins\ebs.csi.aws.com
+            {{- end }}
           {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -317,12 +319,14 @@ spec:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
       {{- end }}
+      {{- if not .Values.node.windowsHostProcess }}
         - name: probe-dir
           {{- if .Values.node.probeDirVolume }}
           {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
           {{- else }}
           emptyDir: {}
           {{- end }}
+      {{- end }}
       {{- if .Values.node.dnsConfig }}
       dnsConfig:
         {{- toYaml .Values.node.dnsConfig | nindent 8 }}
