@@ -148,8 +148,11 @@ func (m *NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, err
 
 // handleGetDeviceNameFromMountError processes common error patterns for GetDeviceNameFromMount
 func handleGetDeviceNameFromMountError(err error) (string, int, error) {
+	if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) || errors.Is(err, windows.ERROR_PATH_NOT_FOUND) {
+		return "", 0, nil
+	}
 	// Handling common error pattern as seen in previous implementations
-	pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist`
+	pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist|^not a mounted folder$`
 	matched, matchErr := regexp.MatchString(pattern, err.Error())
 	if matched {
 		return "", 0, nil // No device found, but not an error condition

@@ -365,6 +365,9 @@ func (mounter *CSIProxyMounterV2) FormatAndMountSensitiveWithFormatOptions(sourc
 	if err != nil {
 		return err
 	}
+	if volumeIdResponse == nil || len(volumeIdResponse.VolumeIDs) == 0 {
+		return fmt.Errorf("no volumes found on disk %d", diskNumber)
+	}
 
 	// TODO: consider partitions and choose the right partition.
 	// For now just choose the first volume.
