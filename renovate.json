@@ -49,9 +49,10 @@
       "groupName": "CI dependencies"
     },
     {
-      "description": "Update the Go compiler in both modules",
+      "description": "Update the Go compiler and indirect dependencies in both modules",
       "matchManagers": ["gomod"],
-      "matchDepTypes": ["golang"],
+      "matchDepTypes": ["golang", "indirect"],
+      "enabled": true,
       "rangeStrategy": "bump"
     },
     {
