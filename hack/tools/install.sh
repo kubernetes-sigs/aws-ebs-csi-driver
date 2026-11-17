@@ -37,7 +37,7 @@ HELM_VERSION="v4.3.1"
 # https://github.com/kubernetes/kops
 # Commit is preferred over version if non-empty, and can
 # be used to test new Kubernetes releases earlier
-KOPS_VERSION="v1.37.0-beta.1"
+KOPS_VERSION="v1.37.0"
 KOPS_COMMIT=""
 # https://pkg.go.dev/sigs.k8s.io/kubetest2?tab=versions
 KUBETEST2_VERSION="v0.0.0-20261019132922-bd4ea193f2b2"
