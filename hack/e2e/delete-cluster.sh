@@ -37,7 +37,8 @@ if [[ "${CLUSTER_TYPE}" == "kops" ]]; then
 elif [[ "${CLUSTER_TYPE}" == "eksctl" ]]; then
   eksctl_delete_cluster \
     "${BIN}/eksctl" \
-    "${CLUSTER_NAME}"
+    "${CLUSTER_NAME}" \
+    "${KUBECONFIG}"
 else
   echo "Cluster type ${CLUSTER_TYPE} is invalid, must be kops or eksctl" >&2
   exit 1
