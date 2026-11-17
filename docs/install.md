@@ -230,7 +230,7 @@ Install from registry.k8s.io:
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
     oci://registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver \
-    --version 2.68.0
+    --version 2.68.1
 ```
 
 Install from ECR Public:
@@ -238,7 +238,7 @@ Install from ECR Public:
 helm upgrade --install aws-ebs-csi-driver \
     --namespace kube-system \
     oci://public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver \
-    --version 2.68.0
+    --version 2.68.1
 ```
 
 Review the [configuration values](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/charts/aws-ebs-csi-driver/values.yaml) for the Helm chart.

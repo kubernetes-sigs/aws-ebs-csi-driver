@@ -20,7 +20,7 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 
 | Driver Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Image | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver) Image |
 |----------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| v1.68.0        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.68.0                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.68.0                      |
+| v1.68.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.68.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.68.1                      |
 | v1.67.2        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.67.2                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.67.2                      |
 
 ## Helm Charts
@@ -29,7 +29,7 @@ The Helm chart is published through the GitHub Pages Helm repository and as an O
 
 | Chart Version | [registry.k8s.io](https://kubernetes.io/blog/2022/11/28/registry-k8s-io-faster-cheaper-ga/) Chart | [ECR Public](https://gallery.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver) Chart |
 |---------------|---------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| 2.68.0        | registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver:2.68.0                                     | public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver:2.68.0                       |
+| 2.68.1        | registry.k8s.io/provider-aws/charts/aws-ebs-csi-driver:2.68.1                                     | public.ecr.aws/ebs-csi-driver/charts/aws-ebs-csi-driver:2.68.1                       |
 
 ## Releases
 
