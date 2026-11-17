@@ -15,7 +15,7 @@
   "groupSingleUpdates": true,
   "prBodyNotes": ["/kind cleanup\n\n```release-note\nNONE\n```"],
   "gomod": {
-    "postUpdateOptions": ["gomodTidyAll"]
+    "postUpdateOptions": ["gomodTidyAll", "gomodUpdateImportPaths"]
   },
   "pip_requirements": {
     "managerFilePatterns": ["/^hack/tools/.*-requirements\\.in$/"]
@@ -97,6 +97,19 @@
       "description": "Keep Helm test images on the master variant",
       "matchPackageNames": ["us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e"],
       "versioning": "regex:^v(?<patch>\\d{8})-[a-f0-9]+(?<compatibility>-master)$"
+    },
+    {
+      "description": "Keep indirect Go dependencies on the current major version",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Update the e2e Go module separately",
+      "matchManagers": ["gomod"],
+      "matchFileNames": ["tests/e2e/go.mod"],
+      "groupName": "e2e Go dependencies"
     }
   ],
   "customManagers": [
