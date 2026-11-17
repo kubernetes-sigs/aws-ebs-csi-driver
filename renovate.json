@@ -97,6 +97,12 @@
       "description": "Keep Helm test images on the master variant",
       "matchPackageNames": ["us-central1-docker.pkg.dev/k8s-staging-test-infra/images/kubekins-e2e"],
       "versioning": "regex:^v(?<patch>\\d{8})-[a-f0-9]+(?<compatibility>-master)$"
+    },
+    {
+      "description": "Skip Go major version upgrades",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ],
   "customManagers": [
