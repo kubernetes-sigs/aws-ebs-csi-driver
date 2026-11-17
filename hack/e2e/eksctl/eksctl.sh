@@ -101,9 +101,18 @@ function eksctl_cluster_exists() {
 function eksctl_delete_cluster() {
   EKSCTL_BIN=${1}
   CLUSTER_NAME=${2}
+  KUBECONFIG=${3}
 
   CLUSTER_NAME="${CLUSTER_NAME//./-}"
 
   loudecho "Deleting cluster ${CLUSTER_NAME}"
+  # EKS waits up to 5 minutes for each node to drain, and PodDisruptionBudgets
+  # can stop it from evicting the last replica. Delete PDBs and workloads first
+  # so there's nothing to evict. Delete aws-node before them, or ipamd may start releasing
+  # an ENI for the freed pod IPs and orphan it, failing the VPC delete.
+  if timeout 120 kubectl --kubeconfig "${KUBECONFIG}" -n kube-system delete daemonset aws-node --ignore-not-found --cascade=foreground; then
+    timeout 60 kubectl --kubeconfig "${KUBECONFIG}" delete pdb --all --all-namespaces || true
+    timeout 120 kubectl --kubeconfig "${KUBECONFIG}" delete deployments,statefulsets --all --all-namespaces --cascade=foreground || true
+  fi
   ${EKSCTL_BIN} delete cluster "${CLUSTER_NAME}"
 }
