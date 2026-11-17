@@ -1,3 +1,58 @@
+# v1.68.1
+
+## Changes by Kind
+
+### Bug or Regression
+
+- Fix alpha Windows hostprocess support when deployed using Helm ([#3126](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/pull/3126), [@ConnorJC3](https://github.com/ConnorJC3))
+
+## CVEs Addressed
+
+- [CVE-2026-86805](https://explore.alas.aws.amazon.com/CVE-2026-86805.html) (High) in `glibc`, `glibc-common`, and `glibc-minimal-langpack`
+- [CVE-2026-108472](https://explore.alas.aws.amazon.com/CVE-2026-108472.html) (High) in `xfsprogs`
+- [CVE-2026-97054](https://pkg.go.dev/vuln/GO-2026-6859) in Go standard library `net/http`
+
+## Dependencies
+
+<details><summary>Added</summary>
+
+_Nothing has changed._
+
+</details>
+
+<details><summary>Changed</summary>
+
+- github.com/aws/aws-sdk-go-v2: [v1.47.8 → v1.48.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.47.8...v1.48.0)
+- github.com/aws/aws-sdk-go-v2/config: [v1.33.16 → v1.33.18](https://github.com/aws/aws-sdk-go-v2/compare/v1.33.16...v1.33.18)
+- github.com/aws/aws-sdk-go-v2/credentials: [v1.20.16 → v1.21.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.16...v1.21.0)
+- github.com/aws/aws-sdk-go-v2/feature/ec2/imds: [v1.20.8 → v1.20.9](https://github.com/aws/aws-sdk-go-v2/compare/v1.20.8...v1.20.9)
+- github.com/aws/aws-sdk-go-v2/internal/configsources: [v1.5.11 → v1.5.12](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.11...v1.5.12)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints/v2: [v2.8.11 → v2.8.12](https://github.com/aws/aws-sdk-go-v2/compare/v2.8.11...v2.8.12)
+- github.com/aws/aws-sdk-go-v2/internal/v4a: [v1.5.11 → v1.5.12](https://github.com/aws/aws-sdk-go-v2/compare/v1.5.11...v1.5.12)
+- github.com/aws/aws-sdk-go-v2/service/ec2: [v1.344.2 → v1.347.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.344.2...v1.347.0)
+- github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding: [v1.13.24 → v1.13.25](https://github.com/aws/aws-sdk-go-v2/compare/v1.13.24...v1.13.25)
+- github.com/aws/aws-sdk-go-v2/service/internal/presigned-url: [v1.14.11 → v1.14.12](https://github.com/aws/aws-sdk-go-v2/compare/v1.14.11...v1.14.12)
+- github.com/aws/aws-sdk-go-v2/service/sagemaker: [v1.287.1 → v1.290.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.287.1...v1.290.0)
+- github.com/aws/aws-sdk-go-v2/service/signin: [v1.12.4 → v1.13.1](https://github.com/aws/aws-sdk-go-v2/compare/v1.12.4...v1.13.1)
+- github.com/aws/aws-sdk-go-v2/service/sso: [v1.39.4 → v1.39.5](https://github.com/aws/aws-sdk-go-v2/compare/v1.39.4...v1.39.5)
+- github.com/aws/aws-sdk-go-v2/service/ssooidc: [v1.44.4 → v1.44.5](https://github.com/aws/aws-sdk-go-v2/compare/v1.44.4...v1.44.5)
+- github.com/aws/aws-sdk-go-v2/service/sts: [v1.51.9 → v1.52.0](https://github.com/aws/aws-sdk-go-v2/compare/v1.51.9...v1.52.0)
+- github.com/aws/smithy-go: [v1.28.8 → v1.28.9](https://github.com/aws/smithy-go/compare/v1.28.8...v1.28.9)
+- github.com/prometheus/common: [v0.73.1 → v0.74.0](https://github.com/prometheus/common/compare/v0.73.1...v0.74.0)
+- golang.org/x/sync: v0.24.0 → v0.25.0
+- golang.org/x/term: v0.47.0 → v0.48.0
+- golang.org/x/text: v0.43.0 → v0.44.0
+- google.golang.org/genproto/googleapis/api: d1e00e9 → 09e21b2
+- google.golang.org/genproto/googleapis/rpc: d1e00e9 → 09e21b2
+
+</details>
+
+<details><summary>Removed</summary>
+
+_Nothing has changed._
+
+</details>
+
 # v1.68.0
 
 ## Changes by Kind
