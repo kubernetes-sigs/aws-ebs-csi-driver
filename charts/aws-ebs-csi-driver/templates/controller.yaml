@@ -32,15 +32,13 @@ spec:
         {{- if .Values.controller.podLabels }}
         {{- toYaml .Values.controller.podLabels | nindent 8 }}
         {{- end }}
-      {{- if .Values.controller.podAnnotations }}
       annotations:
-        {{- $annotations := dict }}
+        {{- $annotations := dict "eks.amazonaws.com/skip-containers" "csi-provisioner,csi-attacher,csi-snapshotter,csi-resizer,volumemodifier,csi-external-health-monitor-controller,liveness-probe" }}
         {{- range $key, $value := .Values.controller.podAnnotations }}
         {{- $valueString := ternary "" (toString $value) (kindIs "invalid" $value) }}
         {{- $_ := set $annotations (tpl $key $) (tpl $valueString $) }}
         {{- end }}
         {{- toYaml $annotations | nindent 8 }}
-      {{- end }}
     spec:
       nodeSelector:
         kubernetes.io/os: linux
@@ -287,6 +285,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-prov
@@ -364,6 +363,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-attach
@@ -428,6 +428,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-snap
@@ -504,6 +505,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- with .Values.sidecars.volumemodifier.volumeMounts }}
           {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -561,6 +563,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-health
@@ -688,6 +691,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-resizer
@@ -727,6 +731,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+              readOnly: true
           {{- if .Values.controller.enableMetrics }}
           ports:
             - name: metrics-lp

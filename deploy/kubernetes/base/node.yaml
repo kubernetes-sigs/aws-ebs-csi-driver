@@ -21,6 +21,8 @@ spec:
       labels:
         app: "ebs-csi-node"
         app.kubernetes.io/name: "aws-ebs-csi-driver"
+      annotations:
+        eks.amazonaws.com/skip-containers: node-driver-registrar,liveness-probe
     spec:
       affinity:
         nodeAffinity:
@@ -130,10 +132,9 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
+              readOnly: true
             - name: registration-dir
               mountPath: /registration
-            - name: probe-dir
-              mountPath: "/var/lib/kubelet/plugins/ebs.csi.aws.com/"
           resources:
             requests:
               cpu: 10m
@@ -142,7 +143,12 @@ spec:
               memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: "public.ecr.aws/csi-components/livenessprobe:v2.20.0-eksbuild.6"
@@ -152,6 +158,7 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
+              readOnly: true
           resources:
             requests:
               cpu: 10m
@@ -160,7 +167,12 @@ spec:
               memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: kubelet-dir
@@ -179,6 +191,4 @@ spec:
           hostPath:
             path: /dev
             type: Directory
-        - name: probe-dir
-          emptyDir: {}
 

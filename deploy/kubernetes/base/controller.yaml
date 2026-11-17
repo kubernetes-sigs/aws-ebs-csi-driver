@@ -23,6 +23,8 @@ spec:
       labels:
         app: ebs-csi-controller
         app.kubernetes.io/name: "aws-ebs-csi-driver"
+      annotations:
+        eks.amazonaws.com/skip-containers: csi-provisioner,csi-attacher,csi-snapshotter,csi-resizer,volumemodifier,csi-external-health-monitor-controller,liveness-probe
     spec:
       nodeSelector:
         kubernetes.io/os: linux
@@ -135,6 +137,9 @@ spec:
               memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
@@ -162,6 +167,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           resources:
             limits:
               memory: 256Mi
@@ -170,6 +176,9 @@ spec:
               memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
@@ -193,6 +202,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           resources:
             limits:
               memory: 256Mi
@@ -201,6 +211,9 @@ spec:
               memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
@@ -223,6 +236,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           resources:
             limits:
               memory: 256Mi
@@ -231,6 +245,9 @@ spec:
               memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
@@ -257,6 +274,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+              readOnly: true
           resources:
             limits:
               memory: 256Mi
@@ -265,6 +283,9 @@ spec:
               memory: 40Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
@@ -278,6 +299,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+              readOnly: true
           resources:
             requests:
               cpu: 10m
@@ -286,7 +308,12 @@ spec:
               memory: 32Mi
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
             readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
           terminationMessagePolicy: FallbackToLogsOnError
       volumes:
         - name: socket-dir

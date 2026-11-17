@@ -17,6 +17,7 @@ limitations under the License.
 package helmtemplate
 
 import (
+	"os/exec"
 	"slices"
 	"testing"
 )
@@ -631,6 +632,44 @@ func TestNodeComponentOnly(t *testing.T) {
 	t.Run("nodeExists", func(t *testing.T) {
 		mustFind(t, resources, "DaemonSet", "ebs-csi-node")
 	})
+}
+
+func TestSnapshotterRBAC(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{name: "disabledByDefault"},
+		{name: "v1beta1", args: []string{"--api-versions", "snapshot.storage.k8s.io/v1beta1"}, want: true},
+		{name: "v1", args: []string{"--api-versions", "snapshot.storage.k8s.io/v1"}, want: true},
+		{name: "forceEnable", args: []string{"--set", "sidecars.snapshotter.forceEnable=true"}, want: true},
+		{name: "nodeOnly", args: []string{"--set", "nodeComponentOnly=true"}},
+		{name: "nodeOnlyWithCRDs", args: []string{"--set", "nodeComponentOnly=true", "--api-versions", "snapshot.storage.k8s.io/v1"}},
+		{name: "nodeOnlyForceEnable", args: []string{"--set", "nodeComponentOnly=true,sidecars.snapshotter.forceEnable=true"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"template", releaseName, chartPath()}, tc.args...)
+			output, err := exec.CommandContext(t.Context(), helmBin(), args...).CombinedOutput()
+			if err != nil {
+				t.Fatalf("helm template failed: %v\n%s", err, output)
+			}
+			resources := parseYAMLDocs(t, output)
+			controller, found := find(resources, "Deployment", "ebs-csi-controller")
+			if got := found && hasContainer(podSpec(t, controller), "csi-snapshotter"); got != tc.want {
+				t.Errorf("snapshotter rendered: %v, want %v", got, tc.want)
+			}
+			for kind, name := range map[string]string{
+				"ClusterRole":        "ebs-external-snapshotter-role",
+				"ClusterRoleBinding": "ebs-csi-snapshotter-binding",
+			} {
+				if _, got := find(resources, kind, name); got != tc.want {
+					t.Errorf("%s/%s rendered: %v, want %v", kind, name, got, tc.want)
+				}
+			}
+		})
+	}
 }
 
 // TestUseOldCSIDriver verifies that setting useOldCSIDriver=true omits
