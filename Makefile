@@ -18,7 +18,7 @@
 
 ## Variables/Functions
 
-VERSION?=v1.68.0
+VERSION?=v1.68.1
 
 # Retry goproxy pulls on Prow to avoid flaked jobs
 ifneq ($(PROW_JOB_ID),)
