@@ -33,6 +33,8 @@ function kops_create_cluster() {
   KOPS_PATCH_NODE_FILE=${11}
   KOPS_STATE_FILE=${12}
   GOMPLATE_BIN=${13}
+  AWS_BIN=${14}
+  REGION=${15}
   declare -x KOPS_TOO_NEW_VERSION=true
 
   if kops_cluster_exists "${CLUSTER_NAME}" "${KOPS_BIN}" "${KOPS_STATE_FILE}"; then
@@ -46,6 +48,7 @@ function kops_create_cluster() {
       --node-size="${INSTANCE_TYPE}" \
       --image="${AMI_ID}" \
       --kubernetes-version="${K8S_VERSION}" \
+      --topology private \
       --dry-run \
       -o yaml \
       "${CLUSTER_NAME}" >"${CLUSTER_FILE}"
@@ -66,6 +69,11 @@ function kops_create_cluster() {
 
   loudecho "Updating cluster $CLUSTER_NAME with $CLUSTER_FILE"
   ${KOPS_BIN} update cluster --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --yes
+
+  # Private topology keeps the nodes and control plane out of the public subnets that VPC Block Public
+  # Access blocks, and the exclusions let the internet-facing API load balancer work. Both are harmless
+  # in accounts without VPC Block Public Access.
+  kops_create_bpa_exclusions "${CLUSTER_NAME}" "${AWS_BIN}" "${REGION}"
 
   loudecho "Exporting cluster ${CLUSTER_NAME} kubecfg to ${KUBECONFIG}"
   ${KOPS_BIN} export kubecfg --state "${KOPS_STATE_FILE}" "${CLUSTER_NAME}" --admin --kubeconfig "${KUBECONFIG}"
@@ -93,8 +101,74 @@ function kops_delete_cluster() {
   KOPS_BIN=${1}
   CLUSTER_NAME=${2}
   KOPS_STATE_FILE=${3}
+  # Any VPC BPA exclusions need no cleanup here: AWS deletes an exclusion automatically when its subnet is deleted
   loudecho "Deleting cluster ${CLUSTER_NAME}"
   ${KOPS_BIN} delete cluster --name "${CLUSTER_NAME}" --state "${KOPS_STATE_FILE}" --yes
+}
+
+# These helpers can run inside an `if` condition, where `set -e` does not apply, so every AWS call checks its own result
+
+function kops_create_bpa_exclusions() {
+  CLUSTER_NAME=${1}
+  AWS_BIN=${2}
+  REGION=${3}
+  local subnets exclusions subnet
+  subnets=$(${AWS_BIN} ec2 describe-subnets --region "${REGION}" \
+    --filters "Name=tag:KubernetesCluster,Values=${CLUSTER_NAME}" "Name=tag:SubnetType,Values=Utility" \
+    --query 'Subnets[].SubnetId' --output text) || return 1
+  if [[ -z "${subnets}" ]]; then
+    echo "No utility subnets found for cluster ${CLUSTER_NAME}" >&2
+    return 1
+  fi
+  exclusions=$(kops_list_bpa_exclusions "${CLUSTER_NAME}" "${AWS_BIN}" "${REGION}") || return 1
+
+  for subnet in ${subnets}; do
+    if awk -v arn_suffix="subnet/${subnet}" '$2 !~ /^delete-/ && $3 ~ arn_suffix "$"' <<<"${exclusions}" | grep -q .; then
+      loudecho "VPC BPA exclusion already exists for utility subnet ${subnet}"
+      continue
+    fi
+    loudecho "Creating VPC BPA exclusion for utility subnet ${subnet}"
+    ${AWS_BIN} ec2 create-vpc-block-public-access-exclusion --region "${REGION}" \
+      --subnet-id "${subnet}" \
+      --internet-gateway-exclusion-mode allow-bidirectional \
+      --tag-specifications "ResourceType=vpc-block-public-access-exclusion,Tags=[{Key=KubernetesCluster,Value=${CLUSTER_NAME}}]" >/dev/null || return 1
+  done
+
+  kops_wait_bpa_exclusions "${CLUSTER_NAME}" "${AWS_BIN}" "${REGION}" "$(wc -w <<<"${subnets}")"
+}
+
+# Prints one "<exclusion-id> <state> <resource-arn>" line per live exclusion tagged with the cluster name.
+
+function kops_list_bpa_exclusions() {
+  CLUSTER_NAME=${1}
+  AWS_BIN=${2}
+  REGION=${3}
+  ${AWS_BIN} ec2 describe-vpc-block-public-access-exclusions --region "${REGION}" --max-results 100 \
+    --filters "Name=tag:KubernetesCluster,Values=${CLUSTER_NAME}" \
+    "Name=state,Values=create-in-progress,create-complete,create-failed,update-in-progress,update-complete,update-failed" \
+    --query 'VpcBlockPublicAccessExclusions[].[ExclusionId,State,ResourceArn]' --output text
+}
+
+# Waits until the expected number of exclusions are active, so the API is reachable before validation
+function kops_wait_bpa_exclusions() {
+  CLUSTER_NAME=${1}
+  AWS_BIN=${2}
+  REGION=${3}
+  EXPECTED=${4}
+  local exclusions
+  for _ in $(seq 60); do
+    exclusions=$(kops_list_bpa_exclusions "${CLUSTER_NAME}" "${AWS_BIN}" "${REGION}") || return 1
+    if awk '$2 ~ /-failed$/' <<<"${exclusions}" | grep -q .; then
+      echo "VPC BPA exclusion for cluster ${CLUSTER_NAME} failed: ${exclusions}" >&2
+      return 1
+    fi
+    if (($(awk '$2 == "create-complete" || $2 == "update-complete"' <<<"${exclusions}" | grep -c .) >= EXPECTED)); then
+      return 0
+    fi
+    sleep 5
+  done
+  echo "Timed out waiting for VPC BPA exclusions for cluster ${CLUSTER_NAME} to become active" >&2
+  return 1
 }
 
 # TODO switch this to python, work exclusively with yaml, use kops toolbox

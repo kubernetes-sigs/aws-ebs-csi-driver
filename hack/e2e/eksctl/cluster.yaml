@@ -51,6 +51,7 @@ managedNodeGroups:
     # and IRSA/Pod Identity support
     disablePodIMDS: true
     instanceTypes: [{{ .Env.INSTANCE_TYPE }}]
+    privateNetworking: true
     ssh:
       allow: false
 {{- if and (eq .Env.WINDOWS "true") (not (env.Getenv "WINDOWS_AMI")) }}
@@ -59,6 +60,7 @@ managedNodeGroups:
     desiredCapacity: 3
     disablePodIMDS: true
     instanceTypes: [m7a.2xlarge]
+    privateNetworking: true
     ssh:
       allow: false
       enableSsm: true
@@ -88,6 +90,7 @@ nodeGroups:
     desiredCapacity: 3
     disablePodIMDS: true
     instanceType: m7a.2xlarge
+    privateNetworking: true
     ssh:
       allow: false
       enableSsm: true
