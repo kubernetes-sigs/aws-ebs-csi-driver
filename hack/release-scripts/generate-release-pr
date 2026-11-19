@@ -89,7 +89,7 @@ parse_args() {
 update_readme() {
   log "Updating README.md"
   chart_version=$(yq '.version' "$CHART_PATH")
-  $SED "/^## Container Images$/,+5 s/$PREV_DRIVER_VERSION/$NEW_DRIVER_VERSION/g" -i "$README_PATH"
+  $SED "/^## Container Images$/,/^## Helm Charts$/ s/$PREV_DRIVER_VERSION/$NEW_DRIVER_VERSION/g" -i "$README_PATH"
   $SED "/^## Helm Charts$/,/^## Releases$/ s#aws-ebs-csi-driver:[0-9][0-9.]*#aws-ebs-csi-driver:$chart_version#g" -i "$README_PATH"
   $SED "/^## Helm Charts$/,/^## Releases$/ s/^| [0-9][0-9.]*[[:space:]]*|/| $chart_version        |/" -i "$README_PATH"
 

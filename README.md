@@ -23,6 +23,26 @@ The [Amazon Elastic Block Store](https://aws.amazon.com/ebs/) Container Storage 
 | v1.68.1        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.68.1                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.68.1                      |
 | v1.67.2        | registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.67.2                                           | public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.67.2                      |
 
+### Image Signing
+
+Official EBS CSI Driver images published to ECR Public and `registry.k8s.io` are signed with [cosign](https://github.com/sigstore/cosign).
+
+ECR Public images use the public key in [`ecr-public-images.pub`](./ecr-public-images.pub):
+
+```sh
+cosign verify --key ecr-public-images.pub \
+  public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver:v1.68.1
+```
+
+`registry.k8s.io` images use Kubernetes release signing:
+
+```sh
+cosign verify \
+  --certificate-identity=krel-trust@k8s-releng-prod.iam.gserviceaccount.com \
+  --certificate-oidc-issuer=https://accounts.google.com \
+  registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.68.1
+```
+
 ## Helm Charts
 
 The Helm chart is published through the GitHub Pages Helm repository and as an OCI artifact in both public registries.
