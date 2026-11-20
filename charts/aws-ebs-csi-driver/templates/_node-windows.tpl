@@ -26,10 +26,8 @@ spec:
         {{- if .Values.node.podLabels }}
         {{- toYaml .Values.node.podLabels | nindent 8 }}
         {{- end }}
-      {{- with .Values.node.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- toYaml (mergeOverwrite (dict "eks.amazonaws.com/skip-containers" "node-driver-registrar,liveness-probe") (.Values.node.podAnnotations | default dict)) | nindent 8 }}
     spec:
       {{- with .Values.node.affinity }}
       affinity: {{- toYaml . | nindent 8 }}
@@ -237,10 +235,6 @@ spec:
               mountPath: C:\csi
             - name: registration-dir
               mountPath: C:\registration
-            {{- if not .Values.node.windowsHostProcess }}
-            - name: probe-dir
-              mountPath: C:\var\lib\kubelet\plugins\ebs.csi.aws.com
-            {{- end }}
           {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -252,6 +246,13 @@ spec:
             limits:
               memory: 150Mi
           {{- end }}
+          securityContext:
+            windowsOptions:
+              {{- if .Values.node.windowsHostProcess }}
+              runAsUserName: 'NT AUTHORITY\SYSTEM'
+              {{- else }}
+              runAsUserName: ContainerAdministrator
+              {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
         - name: liveness-probe
           image: {{ printf "%s%s:%s" (default "" .Values.image.containerRegistry) .Values.sidecars.livenessProbe.image.repository .Values.sidecars.livenessProbe.image.tag | quote }}
@@ -285,6 +286,13 @@ spec:
             limits:
               memory: 150Mi
           {{- end }}
+          securityContext:
+            windowsOptions:
+              {{- if .Values.node.windowsHostProcess }}
+              runAsUserName: 'NT AUTHORITY\SYSTEM'
+              {{- else }}
+              runAsUserName: ContainerAdministrator
+              {{- end }}
           terminationMessagePolicy: FallbackToLogsOnError
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -318,14 +326,6 @@ spec:
           hostPath:
             path: \\.\pipe\csi-proxy-filesystem-v1
             type: ""
-      {{- end }}
-      {{- if not .Values.node.windowsHostProcess }}
-        - name: probe-dir
-          {{- if .Values.node.probeDirVolume }}
-          {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
       {{- end }}
       {{- if .Values.node.dnsConfig }}
       dnsConfig:
