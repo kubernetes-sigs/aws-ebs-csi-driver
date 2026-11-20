@@ -17,6 +17,7 @@ limitations under the License.
 package helmtemplate
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 )
@@ -822,6 +823,68 @@ func TestHealthMonitor(t *testing.T) {
 		}
 		if hasArg(c, "--http-endpoint=0.0.0.0:3308") {
 			t.Errorf("%s should not serve metrics without controller.enableMetrics, got args %v", container, containerArgs(c))
+		}
+	})
+}
+
+// TestLeaderElectionOverrides verifies that every controller sidecar with leaderElection values honors
+// enabled=false and the lease tuning values documented in values.yaml.
+func TestLeaderElectionOverrides(t *testing.T) {
+	sidecars := []struct {
+		valuesKey string
+		container string
+	}{
+		{"provisioner", "csi-provisioner"},
+		{"attacher", "csi-attacher"},
+		{"resizer", "csi-resizer"},
+		{"volumemodifier", "volumemodifier"},
+	}
+	leaseArgs := []string{
+		"--leader-election-lease-duration=30s",
+		"--leader-election-renew-deadline=20s",
+		"--leader-election-retry-period=10s",
+	}
+
+	render := func(t *testing.T, enabled bool) obj {
+		t.Helper()
+		sets := []string{"controller.volumeModificationFeature.enabled=true"}
+		for _, s := range sidecars {
+			prefix := "sidecars." + s.valuesKey + ".leaderElection."
+			sets = append(sets,
+				fmt.Sprintf("%senabled=%t", prefix, enabled),
+				prefix+"leaseDuration=30s",
+				prefix+"renewDeadline=20s",
+				prefix+"retryPeriod=10s",
+			)
+		}
+		resources := renderChartWithSet(t, sets...)
+		return podSpec(t, mustFind(t, resources, "Deployment", "ebs-csi-controller"))
+	}
+
+	t.Run("enabledWithLeaseTuning", func(t *testing.T) {
+		ps := render(t, true)
+		for _, s := range sidecars {
+			c := findContainer(t, ps, s.container)
+			for _, arg := range append([]string{"--leader-election=true"}, leaseArgs...) {
+				if !hasArg(c, arg) {
+					t.Errorf("%s should have %s, got args %v", s.container, arg, containerArgs(c))
+				}
+			}
+		}
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		ps := render(t, false)
+		for _, s := range sidecars {
+			c := findContainer(t, ps, s.container)
+			if !hasArg(c, "--leader-election=false") {
+				t.Errorf("%s should have --leader-election=false, got args %v", s.container, containerArgs(c))
+			}
+			for _, arg := range leaseArgs {
+				if hasArg(c, arg) {
+					t.Errorf("%s should not have %s when leader election is disabled, got args %v", s.container, arg, containerArgs(c))
+				}
+			}
 		}
 	})
 }
