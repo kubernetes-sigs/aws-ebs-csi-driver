@@ -1,0 +1,13 @@
+{{$defaultArgs := dict
+  "NodeName" "ebs-csi-node"
+}}
+{{- include "networkpolicy-node" (deepCopy $ | mustMerge $defaultArgs) -}}
+{{- range $name, $values := .Values.additionalDaemonSets }}
+{{$args := dict
+  "NodeName" (printf "ebs-csi-node-%s" $name)
+  "Values" (dict
+    "node" (deepCopy $.Values.node | mustMerge $values)
+  )
+}}
+{{- include "networkpolicy-node" (deepCopy $ | mustMerge $args) -}}
+{{- end }}
