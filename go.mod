@@ -4,8 +4,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.21
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.349.0
-	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.291.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.350.0
+	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.293.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0
 	github.com/aws/smithy-go v1.28.9
 	github.com/awslabs/volume-modifier-for-k8s v0.9.6
@@ -97,7 +97,7 @@ require (
 	github.com/prometheus/procfs v0.23.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect

@@ -3,7 +3,7 @@ module github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e
 require (
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.21
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.349.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.350.0
 	github.com/aws/aws-sdk-go-v2/service/fis v1.46.12
 	github.com/google/uuid v1.6.0
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
@@ -33,7 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.291.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.293.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
@@ -112,7 +112,7 @@ require (
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.72.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
