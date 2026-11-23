@@ -179,6 +179,23 @@ else
     }
 
     if [[ "${WINDOWS}" == true ]]; then
+
+      VOLUME_EXPAND_ARTIFACTS="${ARTIFACTS:-${PWD}/_artifacts}/volume-expand"
+      mkdir -p "${VOLUME_EXPAND_ARTIFACTS}"
+      loudecho "Running volume-expand tests (with flake retries) in the background"
+      (
+        export ARTIFACTS="${VOLUME_EXPAND_ARTIFACTS}" XDG_CACHE_HOME="${PWD}/_rundir/volume-expand-cache"
+        GINKGO_PARALLEL=5
+        sleep 90 &&
+          run_kubetest2 "e2e-kubernetes-volume-expand" \
+            "${GINKGO_SKIP}" \
+            "${GINKGO_WINDOWS_VOLUME_EXPAND_FOCUS:-${GINKGO_FOCUS}.*(${WINDOWS_VOLUME_EXPAND_REGEX})}" \
+            "--flake-attempts=2"
+      ) >"${VOLUME_EXPAND_ARTIFACTS}/volume-expand.log" 2>&1 &
+      VOLUME_EXPAND_PID=$!
+
+      trap 'pkill -P "${VOLUME_EXPAND_PID}"' INT
+
       # Pass 1: Run all tests except volume-expand (no retries).
       loudecho "Running non-volume-expand tests (no retries)"
       run_kubetest2 "e2e-kubernetes" \
@@ -186,21 +203,11 @@ else
         "${GINKGO_FOCUS}"
       TEST_PASSED=$?
 
-      # Preserve Pass 1 JUnit results before Pass 2 overwrites them.
-      # kubetest2 writes JUnit XML to $ARTIFACTS (or ./_artifacts if unset).
-      _JUNIT_DIR="${ARTIFACTS:-_artifacts}"
-      for f in "${_JUNIT_DIR}"/junit*.xml; do
-        [ -f "$f" ] && mv "$f" "${f%.xml}_main.xml"
-      done
-
-      # Pass 2: Run only volume-expand tests with flake retries to tolerate
-      # transient defragsvc contention on Windows (StorageWMI error 4).
-      loudecho "Running volume-expand tests (with flake retries)"
-      run_kubetest2 "e2e-kubernetes-volume-expand" \
-        "${GINKGO_SKIP}" \
-        "${GINKGO_WINDOWS_VOLUME_EXPAND_FOCUS:-${GINKGO_FOCUS}.*(${WINDOWS_VOLUME_EXPAND_REGEX})}" \
-        "--flake-attempts=2"
+      wait "${VOLUME_EXPAND_PID}"
       VOLUME_EXPAND_PASSED=$?
+      trap - INT
+      loudecho "Volume-expand tests output"
+      cat "${VOLUME_EXPAND_ARTIFACTS}/volume-expand.log"
 
       if [[ ${VOLUME_EXPAND_PASSED} -ne 0 ]]; then
         loudecho "WARNING: Volume expansion tests failed."
