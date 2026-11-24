@@ -849,6 +849,15 @@
                 "enabled": {
                   "type": "boolean",
                   "default": true
+                },
+                "leaseDuration": {
+                  "type": "string"
+                },
+                "renewDeadline": {
+                  "type": "string"
+                },
+                "retryPeriod": {
+                  "type": "string"
                 }
               }
             },
@@ -906,6 +915,15 @@
                 "enabled": {
                   "type": "boolean",
                   "default": true
+                },
+                "leaseDuration": {
+                  "type": "string"
+                },
+                "renewDeadline": {
+                  "type": "string"
+                },
+                "retryPeriod": {
+                  "type": "string"
                 }
               }
             },
@@ -1021,6 +1039,15 @@
                 "enabled": {
                   "type": "boolean",
                   "default": true
+                },
+                "leaseDuration": {
+                  "type": "string"
+                },
+                "renewDeadline": {
+                  "type": "string"
+                },
+                "retryPeriod": {
+                  "type": "string"
                 }
               }
             },
@@ -1212,6 +1239,15 @@
                 "enabled": {
                   "type": "boolean",
                   "default": true
+                },
+                "leaseDuration": {
+                  "type": "string"
+                },
+                "renewDeadline": {
+                  "type": "string"
+                },
+                "retryPeriod": {
+                  "type": "string"
                 }
               }
             },
