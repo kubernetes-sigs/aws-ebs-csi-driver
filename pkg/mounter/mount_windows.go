@@ -122,6 +122,14 @@ func (m *NodeMounter) FormatAndMountSensitiveWithFormatOptions(source string, ta
 // Command to determine ref count would be something like:
 // Get-Volume -UniqueId "\\?\Volume{7c3da0c1-0000-0000-0000-010000000000}\" | Get-Partition | Select AccessPaths
 func (m *NodeMounter) GetDeviceNameFromMount(mountPath string) (string, int, error) {
+	exists, err := m.PathExists(mountPath)
+	if err != nil {
+		return "", 0, fmt.Errorf("error checking path %q exists: %w", mountPath, err)
+	}
+	if !exists {
+		return "", 0, nil
+	}
+
 	switch proxyMounter := m.SafeFormatAndMount.Interface.(type) {
 	// HACK change csi-proxy behavior instead of relying on fragile internal
 	// implementation details!
@@ -152,7 +160,7 @@ func handleGetDeviceNameFromMountError(err error) (string, int, error) {
 		return "", 0, nil
 	}
 	// Handling common error pattern as seen in previous implementations
-	pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist|^not a mounted folder$`
+	pattern := `(Get-Item -Path \S+).Target, output: , error: <nil>|because it does not exist|not a mounted folder`
 	matched, matchErr := regexp.MatchString(pattern, err.Error())
 	if matched {
 		return "", 0, nil // No device found, but not an error condition
