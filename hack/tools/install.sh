@@ -19,7 +19,7 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 # https://github.com/aws/aws-cli/tags
-AWSCLI_VERSION="2.42.1"
+AWSCLI_VERSION="2.42.4"
 # https://github.com/helm/chart-testing
 CT_VERSION="v3.15.0"
 # https://github.com/eksctl-io/eksctl
@@ -46,7 +46,7 @@ KUSTOMIZE_VERSION="v5.8.3"
 # https://github.com/golang/mock
 MOCKGEN_VERSION="v1.6.0"
 # https://github.com/kubernetes/release
-RELEASE_NOTES_VERSION="v0.23.0"
+RELEASE_NOTES_VERSION="v0.23.1"
 # https://github.com/mvdan/sh
 SHFMT_VERSION="v3.14.1"
 # https://pypi.org/project/yamale/
