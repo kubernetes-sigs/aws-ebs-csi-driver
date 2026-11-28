@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.27.4@sha256:205c7636d74e0ffbe3d007162df7d74f859f5a8c8322dfb9f907977686c126cf AS builder
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.27.4@sha256:5f1b98fa02fe396ebce2a0227a0e08309e11792915b9dd2e1f71053d7e7e6666 AS builder
 WORKDIR /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
 RUN go env -w GOCACHE=/gocache GOMODCACHE=/gomodcache
 COPY go.* .
@@ -24,7 +24,7 @@ ARG TARGETARCH
 ARG VERSION
 RUN --mount=type=cache,target=/gomodcache --mount=type=cache,target=/gocache OS=$TARGETOS ARCH=$TARGETARCH GOFIPS140=certified make
 
-FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:ee68af581c606c2f958eb6945e5484fc41a37a7d18649b15b667a7f366a1d842 AS linux-al2023
+FROM public.ecr.aws/eks-distro-build-tooling/eks-distro-minimal-base-csi-ebs:latest-al23@sha256:3aea9813806f4508d22f8eeee860ed29aed66befc0e842f20424bc88fde6fa8b AS linux-al2023
 COPY --from=builder /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver /bin/aws-ebs-csi-driver
 ENV GODEBUG=fips140=off
 ENTRYPOINT ["/bin/aws-ebs-csi-driver"]

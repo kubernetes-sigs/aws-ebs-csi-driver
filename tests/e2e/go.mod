@@ -1,9 +1,9 @@
 module github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.48.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.21
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.350.0
+	github.com/aws/aws-sdk-go-v2 v1.48.2
+	github.com/aws/aws-sdk-go-v2/config v1.33.23
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.350.2
 	github.com/aws/aws-sdk-go-v2/service/fis v1.46.12
 	github.com/google/uuid v1.6.0
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
@@ -26,19 +26,19 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.21.3 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.12 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.25 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.293.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.14.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0 // indirect
-	github.com/aws/smithy-go v1.28.9 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.5 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.11 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.27 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sagemaker v1.293.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.14.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.39.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.53.2 // indirect
+	github.com/aws/smithy-go v1.28.11 // indirect
 	github.com/awslabs/volume-modifier-for-k8s v0.9.6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -153,7 +153,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20261104182252-5bee61fc5225 // indirect
 	k8s.io/kubectl v0.37.2 // indirect
 	k8s.io/kubelet v0.37.2 // indirect
-	k8s.io/mount-utils v0.37.2 // indirect
+	k8s.io/mount-utils v0.37.3 // indirect
 	k8s.io/streaming v0.37.3 // indirect
 	k8s.io/utils v0.0.0-20261023123148-ca04ba58ecab // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.37.1 // indirect
