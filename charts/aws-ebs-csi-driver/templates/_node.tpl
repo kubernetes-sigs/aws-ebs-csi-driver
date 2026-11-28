@@ -30,10 +30,8 @@ spec:
         {{- if .Values.node.podLabels }}
         {{- toYaml .Values.node.podLabels | nindent 8 }}
         {{- end }}
-      {{- with .Values.node.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- toYaml (mergeOverwrite (dict "eks.amazonaws.com/skip-containers" "node-driver-registrar,liveness-probe") (.Values.node.podAnnotations | default dict)) | nindent 8 }}
     spec:
       {{- with .Values.node.affinity }}
       affinity: {{- toYaml . | nindent 8 }}
@@ -235,10 +233,9 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
+              readOnly: true
             - name: registration-dir
               mountPath: /registration
-            - name: probe-dir
-              mountPath: {{ printf "%s/plugins/ebs.csi.aws.com/" (trimSuffix "/" .Values.node.kubeletPath) | quote }}
           {{- with .Values.sidecars.nodeDriverRegistrar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -275,6 +272,7 @@ spec:
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
+              readOnly: true
           {{- with .Values.sidecars.livenessProbe.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -324,12 +322,6 @@ spec:
             path: /etc/selinux/config
             type: File
         {{- end }}
-        - name: probe-dir
-          {{- if .Values.node.probeDirVolume }}
-          {{- toYaml .Values.node.probeDirVolume | nindent 10 }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
         {{- with .Values.node.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

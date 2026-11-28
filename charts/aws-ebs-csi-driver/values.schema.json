@@ -538,9 +538,6 @@
           "description": "Add additional volumes to be mounted onto the node pods",
           "default": []
         },
-        "probeDirVolume": {
-          "type": "object"
-        },
         "namespaceOverride": {
           "type": ["string", "null"],
           "description": "Allows you to deploy aws-ebs-csi-node daemonset to separate namespace (make sure namespace exists before deploy)",
